@@ -1,0 +1,44 @@
+{
+  "name": "json",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google-cloud/storage": "^7.16.0",
+    "bcryptjs": "^2.4.3",
+    "connect-mongo": "^5.1.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-session": "^1.18.1",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.4.0",
+    "form-data": "^4.0.4",
+    "get-intrinsic": "1.2.2",
+    "gopd": "1.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.0",
+    "node-fetch": "^3.3.2",
+    "node-geocoder": "^4.4.1",
+    "nodemailer": "^6.10.1",
+    "nodemon": "^3.1.9",
+    "pdfkit": "^0.17.1",
+    "qs": "6.11.0",
+    "side-channel": "1.0.4",
+    "side-channel-map": "^1.0.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "axios": "^1.8.1",
+    "debug": "^4.4.0",
+    "kill-port": "^2.0.1"
+  }
+}

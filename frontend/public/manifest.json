@@ -1,0 +1,35 @@
+{
+  "short_name": "JM Computer",
+  "name": "JM Computer - Soluciones IT en Paraguay",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "maskable_icon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#16a34a",
+  "background_color": "#ffffff",
+  "description": "Especialistas en tecnología en Paraguay. Venta de computadoras gamer, equipos de última generación y componentes de PC.",
+  "lang": "es-PY",
+  "dir": "ltr",
+  "categories": ["shopping", "technology", "computers"]
+}
