@@ -1,0 +1,311 @@
+# Query: bluetec
+
+222 results - 48 files
+
+backend/.env:
+   7: EMAIL_USER=ventas@bluetec.com.py
+  19: BANCARD_CONFIRMATION_URL=https://bluetec.vercel.app/api/bancard/confirm     
+  27: REACT_APP_FIREBASE_STORAGE_BUCKET=eccomerce-bluetec-saopaulo
+
+backend/index.js:
+  52:     'https://www.zenn.com.py',  // ✅ AGREGAR ESTE
+  53:     'https://zenn.com.py',      // ✅ AGREGAR ESTE TAMBIÉN (sin www)
+  54:     'https://zenn.vercel.app'   // ✅ AGREGAR ESTE POR SI ACASO
+
+backend/controller/bancard/bancardCardsController.js:
+  118:                 description: description || "Pago BlueTec con tarjeta registrada",
+  198:                 description: description || "Pago BlueTec con tarjeta registrada",
+  308:                 'User-Agent': 'Zenn-eCommerce/1.0',
+  676:                 'User-Agent': 'Zenn-eCommerce/1.0',
+  808:                 'User-Agent': 'Zenn-eCommerce/1.0',
+  917:                 'User-Agent': 'Zenn-eCommerce/1.0',
+
+backend/controller/bancard/bancardController.js:
+  338:         const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://Zenn.vercel.app';
+  387:                 'User-Agent': 'Zenn-eCommerce/1.0',
+  692:                 'User-Agent': 'Zenn-eCommerce/1.0'
+  760:                 'User-Agent': 'Zenn-eCommerce/1.0'
+
+backend/controller/bancard/bancardDeliveryController.js:
+  777:                         <!-- Header BlueTec -->
+  779:                             <h1 style="margin: 0; font-size: 24px;">📬 Mensaje de zenn</h1>
+  798:                             <a href="mailto:ventas@bluetec.com.py" style="color: #2A3190; text-decoration: none;">ventas@zenn.com.py</a>
+  803:                                 Zenn Electronicos - Tu tienda tecnológica de confianza
+  813:             from: `"Zenn" <${process.env.EMAIL_USER}>`,
+
+backend/controller/bancard/bancardTransactionsController.js:
+  623:                 'User-Agent': 'Zenn-eCommerce/1.0'
+  748:                 'User-Agent': 'Zenn-eCommerce/1.0'
+
+backend/controller/budget/budgetController.js:
+  447:     doc.text('Zenn EAS', 50, 160);
+  450:     doc.text('Email: ventas@zenn.com.py', 50, 215);
+  950: Zenn EAS
+
+backend/controller/product/channableFeedController.js:
+    6:     STORE_NAME: 'Zenn',
+    7:     STORE_URL: 'https://www.zenn.com.py',
+   15:     DEFAULT_BRAND: 'Zenn',
+  334:         <generator>Zenn Meta Feed v5.1 - Stock Filter</generator>\n`;
+
+backend/routes/index.js:
+  215:                 user_mail: req.user?.email || "test@zenn.com",
+  390:                         description: "Test de pago Zenn",
+  403:                 description: description || "Test de pago con token Zenn - SIN additional_data",
+
+backend/scripts/migrateAllProducts.js:
+  17:         storageBucket: "eccomerce-zenn-saopaulo", // ⚠️ NUEVO BUCKET
+  64:     console.log(`📋 Bucket objetivo: eccomerce-zenn-saopaulo`);
+
+backend/scripts/migrateSingleProduct.js:
+   20:         storageBucket: "eccomerce-zenn-saopaulo", // ⚠️ NUEVO BUCKET
+   59:     console.log(`📋 Bucket objetivo: eccomerce-zenn-saopaulo`);
+  238:         log(`Bucket destino: eccomerce-zenn-saopaulo`, 'INFO');
+  403:         log(`Bucket configurado: eccomerce-zenn-saopaulo`, 'INFO');
+
+backend/services/email-test.js:
+   8:         user: 'ventas@zenn.com.py',
+  23:             from: '"Zenn Test" <ventas@zenn.com.py>',
+  24:             to: 'ventas@zenn.com.py', // Puedes cambiar esto si querés
+
+backend/services/emailService.js:
+    1: // backend/services/emailService.js - SISTEMA COMPLETO DE EMAILS PARA BLUETEC
+   10:             'jmachado@zenn.com.py',
+   21:                 user: process.env.EMAIL_USER, 
+   45:                 from: `"Zenn" <${process.env.EMAIL_USER}>`,
+   88:             subject: `🎉 ¡Compra Confirmada! Pedido #${data.shop_process_id} - BlueTec`,
+   91:                     <!-- Header BlueTec -->
+   94:                         <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">¡Gracias por elegir BlueTec!</p>
+  236:                                 <a href="mailto:ventas@zenn.com.py" 
+  250:                                 <img src="https://zenn.vercel.app/logo.png" alt="Zenn" style="height: 40px;" />
+  253:                                 ¡Gracias por confiar en Zenn! 🙏
+  257:                                 <a href="mailto:ventas@zenn.com.py" style="color: #2A3190;">ventas@zenn.com.py</a>
+  282:             subject: `❌ Problema con tu Compra - Pedido #${data.shop_process_id} - Zenn`,
+  285:                     <!-- Header Zenn -->
+  399:                                 <a href="${process.env.FRONTEND_URL || 'https://zenn.vercel.app'}/carrito" 
+  403:                                 <a href="mailto:ventas@zenn.com.py?subject=Ayuda con Compra ${data.shop_process_id}" 
+  413:                                 <img src="https://zenn.vercel.app/logo.png" alt="Zenn" style="height: 40px;" />
+  419:                                 Zenn - Tu tienda tecnológica de confianza • 
+  420:                                 <a href="mailto:ventas@zenn.com.py" style="color: #2A3190;">ventas@zenn.com.py</a>
+  442:                 from: `"Zenn" <${process.env.EMAIL_USER}>`,
+  478:                 from: `"Zenn Sistema" <${process.env.EMAIL_USER}>`,
+  538:                         <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Notificación Administrativa - Zenn</p>
+  661:                                 <a href="${process.env.FRONTEND_URL || 'https://zenn.vercel.app'}/panel-admin/transacciones-bancard" 
+  666:                                     <a href="${process.env.FRONTEND_URL || 'https://zenn.vercel.app'}/panel-admin/transacciones-bancard?search=${data.shop_process_id}" 
+  677:                                 Notificación automática del Sistema Zenn • ${new Date().toLocaleString('es-ES')}
+  733:                         <p>¡Gracias por elegir Zenn!</p>
+  768:                         <p>¡Gracias por elegir Zenn!</p>
+  785:                         <p>¡Gracias por elegir Zenn!</p>
+  802:                         <p>Email: ventas@zenn.com.py</p>
+  817:                     <p>¡Gracias por elegir Zenn!</p>
+
+BlueTecApp/.env:
+  25: EXPO_PUBLIC_APP_NAME=Zenn Mobile
+
+BlueTecApp/app.config.js:
+   6:     name: process.env.EXPO_PUBLIC_APP_NAME || "Zenn Mobile",
+   7:     slug: "zenn-mobile",
+  22:       bundleIdentifier: "com.zenn.mobile"
+  29:       package: "com.zenn.mobile"
+
+BlueTecApp/App.js:
+  28:             title: 'Zenn - Inicio',
+
+BlueTecApp/app.json:
+  3:     "name": "ZennApp",
+  4:     "slug": "ZennApp",
+
+BlueTecApp/package-lock.json:
+  2:   "name": "zennapp",
+  8:       "name": "zennapp",
+
+BlueTecApp/package.json:
+  2:   "name": "zennapp",
+
+BlueTecApp/src/components/Header.js:
+  86:                 <Text style={styles.logoText}>Zenn</Text>
+
+BlueTecApp/src/constants/config.js:
+  36:     USER_TOKEN: 'zenn_user_token',
+  37:     USER_DATA: 'zenn_user_data',
+  38:     CART_DATA: 'zenn_cart_data',
+  39:     GUEST_ID: 'zenn_guest_id',
+  66:     name: 'Zenn Mobile',
+
+BlueTecApp/src/pages/Home.js:
+  134:         <Text style={styles.productBrand}>{product.brandName || 'Zenn'}</Text>
+  211:           <Text style={styles.welcomeText}>¡Bienvenido a Zenn!</Text>
+
+BlueTecApp/src/pages/Login.js:
+   98:           <Text style={styles.companyName}>Zenn!</Text>
+  115:                   source={require('../../assets/logo.png')} 
+
+frontend/public/index.html:
+    8:     <title>Zenn - Soluciones IT en Paraguay | Computadoras Gamer, Equipos Tecnológicos</title>
+   18:     <meta property="og:title" content="Zenn - Soluciones Tecnológicas en Paraguay"/>
+   21:     <meta property="og:url" content="https://zenn.com.py"/>
+   22:     <meta property="og:image" content="https://zenn.com.py/logo.png"/>
+   23:     <meta property="og:site_name" content="Zenn"/>
+   28:     <meta name="twitter:title" content="Zenn - Soluciones IT en Paraguay"/>
+   30:     <meta name="twitter:image" content="https://zenn.com.py/logo.png"/>
+   49:     <link rel="canonical" href="https://zenn.com.py"/>
+   64:       "name": "Zenn",
+   65:       "alternateName": "Zenn - Soluciones IT en Paraguay",
+   66:       "url": "https://zenn.com.py",
+   67:       "logo": "https://zenn.com.py/logo.png",
+   69:         "https://www.instagram.com/zenn.py"
+   92:       "name": "Zenn",
+   93:       "url": "https://zenn.com.py",
+   96:         "target": "https://zenn.com.py/buscar?q={search_term_string}",
+  114:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=notebooks",
+  115:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=placas_madre",
+  116:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=memorias_ram",
+  117:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=procesador",
+  118:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=tarjeta_grafica",
+  119:           "https://zenn.com.py/categoria-producto?category=informatica&subcategory=discos_duros",
+  120:           "https://zenn.com.py/categoria-producto?category=perifericos&subcategory=monitores",
+  121:           "https://zenn.com.py/categoria-producto?category=perifericos&subcategory=teclados",
+  122:           "https://zenn.com.py/categoria-producto?category=perifericos&subcategory=mouses",
+  123:           "https://zenn.com.py/nosotros"
+  135:       "image": "https://zenn.com.py/logo.png",
+  139:       "url": "https://zenn.com.py",
+  166:           "url": "https://zenn.com.py/categoria-producto?category=informatica&subcategory=notebooks"
+  172:           "url": "https://zenn.com.py/categoria-producto?category=informatica&subcategory=procesador"
+  178:           "url": "https://zenn.com.py/categoria-producto?category=informatica&subcategory=placas_madre"
+  184:           "url": "https://zenn.com.py/categoria-producto?category=informatica&subcategory=tarjeta_grafica"
+  190:           "url": "https://zenn.com.py/categoria-producto?category=informatica&subcategory=memorias_ram"
+
+frontend/src/components/BancardPayButton.js:
+  324:             description: `Compra Zenn - ${cartItems.length} productos`,
+
+frontend/src/components/BannerProduct.js:
+  255:       doc.setTextColor(0, 32, 96); // Color azul BlueTec
+  260:       doc.text(`Zenn - Soluciones Tecnológicas`, 14, 32);
+  267:       doc.text(`Email: ventas@zenn.com.py`, 14, 54);
+  287:         doc.setTextColor(0, 32, 96); // Color azul BlueTec
+  334:             fillColor: [0, 32, 96], // Color azul BlueTec
+  364:       doc.setTextColor(0, 32, 96); // Color azul BlueTec
+
+frontend/src/components/Footer.js:
+  21:                 <span>ventas@zenn.com.py</span>
+  46:                 href="https://www.instagram.com/zenn.py"
+  62:                 href="https://www.facebook.com/people/zenn/100071147355980/#"
+  76:             ©{new Date().getFullYear()} Zenn. Todos los derechos reservados
+
+frontend/src/components/Header.js:
+  248:           <div className="text-white text-lg font-bold tracking-wide" style={{fontFamily: 'Inter, system-ui, -apple-system, sans-serif', fontWeight: '700'}}>Zenn Electronicos</div>
+  565:                       <div className="text-3xl font-bold text-blue-800 mb-4">Zenn</div>
+  585:               <div className="text-white text-lg font-bold tracking-wide" style={{fontFamily: 'Inter, system-ui, -apple-system, sans-serif', fontWeight: '700'}}>Zenn Electronicos</div>
+
+frontend/src/components/MetaPixelTracker.js:
+  26:         console.log('✅ Meta Pixel de Zenn cargado correctamente');
+
+frontend/src/components/QuickPayWithCard.js:
+  95:         description: `Compra Zenn - ${cartItems.length} productos`,
+
+frontend/src/components/RegistrationPromotion.js:
+   81:           title: "¡Únete a Zenn!",
+  209:               "Registrarme en Zenn fue la mejor decisión. Ahora mis compras son súper rápidas y seguras."
+
+frontend/src/components/order/OrderActionButtons.js:
+  40:                     text: `Mira el estado de mi pedido en Zenn`,
+
+frontend/src/components/user/CardManagementPage.js:
+  291:         description: `Pago de prueba Zenn - ${testAmount} PYG`,
+
+frontend/src/pages/BancardConfirmProxy.js:
+  75:         const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
+
+frontend/src/pages/Cart.js:
+  314:                 description: `Compra Zenn - ${validProducts.length} productos`,
+  517:         // Colores corporativos de BlueTec
+  518:         const primaryColor = [42, 49, 144]; // Azul BlueTec #2A3190
+  542:             "Zenn",
+  545:             "Web: www.zenn.com.py"
+  690:         doc.text("Zenn - Tecnología Profesional", pageWidth/2, pageHeight - 10, { align: "center" });
+  702:         doc.save(`Presupuesto-Zenn-${presupuestoNo}.pdf`);
+  721:         let message = `*SOLICITUD DE PRESUPUESTO - Zenn*\n\n`;
+
+frontend/src/pages/CategoryProduct.js:
+  427:     document.title = `${seoTitle} | Zenn`;
+
+frontend/src/pages/Checkout.js:
+  107:                 description: `Compra Zenn - ${cartItems.length} productos`,
+
+frontend/src/pages/Home.js:
+  84:         <title>Zenn | Lo Mejor en Tecnología en Paraguay</title>
+  87:           content="Descubre los mejores productos de informática, notebooks, placas madre, computadoras ensambladas, monitores y más en Zenn. ¡Ofertas exclusivas en Paraguay!"
+
+frontend/src/pages/Nosotros.js:
+   125:         <title>Nosotros | Zenn | Paraguay</title>
+   128:           content="Somos Zenn, la tienda e-commerce líder de insumos informáticos en Paraguay. Descubre nuestra misión, visión y los servicios que ofrecemos."
+   813:                   Zenn comenzó como un sueño de llevar la mejor tecnología a cada rincón de Paraguay. Identificamos la necesidad de ofrecer productos informáticos de calidad con asesoramiento experto y precios competitivos.
+   891:               En Zenn, nos guiamos por principios fundamentales que definen nuestra identidad y la forma en que servimos a nuestros clientes.
+  1071:                         <p className="text-gray-600">ventas@zenn.com.py</p>
+  1117:                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d67695.23063226297!2d-57.529639424448426!3d-25.314952781028982!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x945da9831c090b5b%3A0x448b0dc581658acb!2sBluetec!5e0!3m2!1ses-419!2spy!4v1748808634875!5m2!1ses-419!2spy"
+  1125:                     title="Ubicación de Zenn"
+  1157:                         <p className="font-bold text-blue-600">Zenn</p>
+  1186:               Elegir Zenn significa optar por la excelencia tecnológica y un servicio que supera expectativas.
+
+frontend/src/pages/OrderDetailsPage.js:
+  91:                 text: `Mira el estado de mi pedido en Zenn`,
+
+frontend/src/pages/PaymentCancelled.js:
+   49:     const message = `Hola! Tuve un problema al procesar mi pago en Zenn.%0A%0AID de transacción: ${paymentInfo.shop_process_id}%0AMonto: ${displayPYGCurrency(paymentInfo.amount)}%0AMotivo: Pago cancelado%0A%0A¿Pueden ayudarme a completar mi compra? Gracias!`;
+   55:     const body = `Estimados,%0A%0ATuve un problema al procesar mi pago en Zenn:%0A%0AID de transacción: ${paymentInfo.shop_process_id}%0AMonto: ${displayPYGCurrency(paymentInfo.amount)}%0AMotivo: Pago cancelado%0A%0APor favor ayúdenme a completar mi compra.%0A%0AGracias!`;
+   56:     window.location.href = `mailto:ventas@zenn.com.py?subject=${subject}&body=${body}`;
+  251:             No te preocupes, estamos aquí para ayudarte • Zenn - Tu tecnología de confianza
+
+frontend/src/pages/PaymentSuccess.js:
+  347:                             <p>• El cargo aparecerá en tu estado de cuenta como "Zenn".</p>
+  373:                             href="mailto:ventas@zenn.com.py"
+  376:                             ventas@zenn.com.py
+
+frontend/src/pages/PresentacionCorporativa.js:
+    11:   const ZennLogo = ({ className = "w-20 h-8" }) => (
+    23:         <div className="text-sm font-bold leading-tight">Zenn Alliance</div>
+    32:       title: "Zenn",
+    72:                 Zenn
+   114:                 www.zenn.com.py
+   126:             <ZennLogo className="w-32 h-10" />
+   221:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   311:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   427:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   516:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   585:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   644:                         <p className="opacity-90 text-purple-300 text-sm md:text-base">ventas@zenn.com.py</p>
+   653:                         <p className="opacity-90 text-blue-300 text-sm md:text-base">www.zenn.com.py</p>
+   673:                       <span>Zenn</span>
+   677:                       <span>Zenn</span>
+   681:                       <span>Zenn Electronicos</span>
+   712:             <ZennLogo className="w-24 md:w-32 h-8 md:h-10" />
+   786:       pdf.save('Zenn-Presentacion-Corporativa.pdf');
+   824:                 Zenn - Presentación Corporativa
+   969:                 <h3 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-white bg-clip-text text-transparent">Zenn</h3>
+   992:                   <span className="font-semibold">www.zenn.com.py</span>
+  1022:                   © 2023-2025 Zenn Electronicos - Lo mejor en electronica.
+
+frontend/src/pages/ProductDetails.js:
+  618:         <title>{data.productName ? `${data.productName} | Zenn` : 'Producto | Zenn'}</title>
+  619:         <meta name="description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+  621:         <meta property="og:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+  625:         <link rel="canonical" href={`https://zenn.com.py/producto/${data.slug || params.id}`} />
+  637:                 "item": "https://zenn.com.py"
+  643:                 "item": `https://zenn.com.py/categoria-producto?category=${data.category}`
+  649:                 "item": `https://zenn.com.py/categoria-producto?category=${data.category}&subcategory=${data.subcategory}`
+  655:                 "item": `https://zenn.com.py/producto/${data.slug || params.id}`
+  678:               "url": `https://zenn.com.py/producto/${data.slug || params.id}`,
+  686:                 "name": "Zenn Electronicos"
+
+products-service/pom.xml:
+  14:     <groupId>com.zenn</groupId>
+
+products-service/src/main/java/com/bluetec/products/ProductController.java:
+   1: package com.zenn.products;
+  11: @CrossOrigin(origins = {"http://localhost:3000", "https://zenn.vercel.app"})
+
+products-service/src/main/java/com/bluetec/products/ProductsApplication.java:
+  1: package com.zen.products;
+
+products-service/src/main/resources/application.properties:
+  6: spring.web.cors.allowed-origins=http://localhost:3000,https://zenn.vercel.app
