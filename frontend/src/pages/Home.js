@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
+import CategoryShowcase from '../components/CategoryShowcase';
 
 import VerticalCardProduct from '../components/VerticalCardProduct';
 import InfiniteCarousel from '../components/products/InfiniteCarousel';
@@ -117,9 +118,10 @@ const Home = () => {
           className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4"
         >
           {/* ✅ ELIMINADOS EFECTOS DECORATIVOS QUE PODRÍAN CAUSAR VERDE */}
-          <div className="container mx-auto py-1 sm:py-6 px-4">
+          <div className="w-full px-0 -mt-2 sm:mt-0">
             <BannerProduct />
           </div>
+          <CategoryShowcase />
         </motion.div>
 
         {/* Contenido principal con animaciones */}
