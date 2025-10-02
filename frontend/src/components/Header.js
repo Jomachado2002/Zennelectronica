@@ -598,10 +598,6 @@ const Header = () => {
           )}
         </button>
       </div>
-
-      {/* Espaciador para el contenido */}
-      <div className="h-20 lg:h-20"></div>
-      <div className="lg:hidden h-16"></div>
       
       {/* Estilos globales */}
       <style jsx global>{`
