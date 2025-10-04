@@ -20,8 +20,8 @@ const CategoryShowcase = () => {
   };
 
   return (
-    <section className="w-full bg-white py-4 sm:py-6 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <section className="w-full bg-white py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-4">
         
         {/* ========== TÍTULO COMPACTO ========== */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">

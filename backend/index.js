@@ -8,7 +8,7 @@ try {
       path.join(gopdPath, 'gOPD.js'),
       'module.exports = require("./index.js");'
     );
-    console.log('Fixed gOPD module');
+
   }
 } catch (error) {
   console.error('Error fixing gOPD:', error);
@@ -104,12 +104,12 @@ const startServer = async () => {
     
     // Conectar a la base de datos
     await connectDB();
-    console.log('Conexión a la base de datos establecida');
+   
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {
       app.listen(PORT, () => {
-        console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+      
       });
     }
   } catch (error) {

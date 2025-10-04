@@ -9,7 +9,7 @@ try {
       path.join(gopdPath, 'gOPD.js'),
       'module.exports = require("./index.js");'
     );
-    console.log('Fixed gOPD module');
+   
   }
 } catch (error) {
   console.error('Error fixing gOPD:', error);

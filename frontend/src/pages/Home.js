@@ -108,8 +108,8 @@ const Home = () => {
         </script>
       </Helmet>
       
-      {/* ✅ FONDO BLANCO SÓLIDO - SIN GRADIENTES VERDES */}
-      <div className="min-h-screen bg-white font-inter text-gray-800">
+      {/* ✅ FONDO CON GRADIENTE SUTIL - ESTILO HEADER */}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white font-inter text-gray-800">
         {/* Hero Banner con animación */}
         <motion.div 
           initial="hidden"
@@ -118,21 +118,21 @@ const Home = () => {
           className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4"
         >
           {/* ✅ ELIMINADOS EFECTOS DECORATIVOS QUE PODRÍAN CAUSAR VERDE */}
-          <div className="w-full px-0 -mt-2 sm:mt-0">
+          <div className="w-full -mt-2 sm:mt-0">
             <BannerProduct />
           </div>
           <CategoryShowcase />
         </motion.div>
 
         {/* Contenido principal con animaciones */}
-        <div className="space-y-8 sm:space-y-16 py-8 sm:py-16">
+        <div className="max-w-7xl mx-auto px-4 space-y-8 sm:space-y-16 py-8 sm:py-16">
           {/* Sección: Notebooks */}
           <motion.section 
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={slideUp}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="flex flex-col lg:flex-row items-stretch gap-8">
               {/* Imagen destacada */}
@@ -160,7 +160,15 @@ const Home = () => {
                 <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
                   <div className="flex justify-between items-center mb-6">
                     <div>
-                      <h2 className="text-2xl sm:text-3xl font-bold text-[#002060] mb-4 flex items-center">
+                      <h2 
+                        className="text-2xl sm:text-3xl font-bold mb-4 flex items-center bg-clip-text text-transparent"
+                        style={{
+                          background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}
+                      >
                         <span className="mr-3">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -168,15 +176,25 @@ const Home = () => {
                         </span>
                         Notebooks de Alto Rendimiento
                       </h2>
-                      <div className="h-1 w-32 bg-[#002060] mb-6 rounded-full"></div>
+                      <div 
+                        className="h-1 w-32 mb-6 rounded-full"
+                        style={{
+                          background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                        }}
+                      ></div>
                     </div>
                     
-                    <Link to="/categoria-producto?category=informatica&subcategory=notebooks" 
-                          onClick={() => scrollTop()}>
-                      <button className="px-6 py-3 bg-[#002060] text-white hover:bg-[#003399] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button flex items-center">
-                        Ver más <FaAngleRight className="ml-1" />
-                      </button>
-                    </Link>
+                      <Link to="/categoria-producto?category=informatica&subcategory=notebooks" 
+                            onClick={() => scrollTop()}>
+                        <button 
+                          className="px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center group/btn"
+                          style={{
+                            background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                          }}
+                        >
+                          Ver más <FaAngleRight className="ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                        </button>
+                      </Link>
                   </div>
                   
                   {/* ✅ DATOS POR PROPS - SIN QUERIES DUPLICADAS */}
@@ -198,19 +216,39 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <div className="p-6">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Teléfonos Móviles</h2>
+                    <h2 
+                      className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
+                      Teléfonos Móviles
+                    </h2>
                     <p className="mt-2 text-gray-600 max-w-lg">La última tecnología móvil al alcance de tus manos</p>
-                    <div className="h-1 w-24 bg-[#002060] mt-2 rounded-full"></div>
+                    <div 
+                      className="h-1 w-24 mt-2 rounded-full"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    ></div>
                   </div>
                   <Link to="/categoria-producto?category=telefonia&subcategory=telefonos_moviles" 
                         onClick={() => scrollTop()}>
-                    <button className="mt-4 md:mt-0 px-6 py-3 bg-[#002060] text-white hover:bg-[#003399] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="mt-4 md:mt-0 px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver toda la colección
                     </button>
                   </Link>
@@ -236,19 +274,39 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
               <div className="p-6">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Placas Madre</h2>
+                    <h2 
+                      className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text'
+                      }}
+                    >
+                      Placas Madre
+                    </h2>
                     <p className="mt-2 text-gray-600 max-w-lg">La base perfecta para tu próximo sistema de alto rendimiento</p>
-                    <div className="h-1 w-24 bg-[#002060] mt-2 rounded-full"></div>
+                    <div 
+                      className="h-1 w-24 mt-2 rounded-full"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    ></div>
                   </div>
                   <Link to="/categoria-producto?category=informatica&subcategory=placas_madre" 
                         onClick={() => scrollTop()}>
-                    <button className="mt-4 md:mt-0 px-6 py-3 bg-[#002060] text-white hover:bg-[#003399] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="mt-4 md:mt-0 px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                      Ver más
                     </button>
                   </Link>
@@ -274,13 +332,20 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={staggerChildren}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Mouses */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#002060] to-[#1565C0] p-6 text-white">
-                  <h2 className="text-2xl font-bold flex items-center">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
+                  <h2 
+                    className="text-2xl font-bold flex items-center text-white"
+                  >
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
@@ -288,7 +353,7 @@ const Home = () => {
                     </span>
                     Mouses
                   </h2>
-                  <div className="h-1 w-24 bg-blue-300 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -303,7 +368,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=perifericos&subcategory=mouses"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#002060] text-white hover:bg-[#003399] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -312,7 +382,12 @@ const Home = () => {
               
               {/* Monitores */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#1565C0] to-[#42A5F5] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,7 +396,7 @@ const Home = () => {
                     </span>
                     Monitores
                   </h2>
-                  <div className="h-1 w-20 bg-blue-200 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -336,7 +411,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=perifericos&subcategory=monitores"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#1565C0] text-white hover:bg-[#1976D2] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -345,7 +425,12 @@ const Home = () => {
               
               {/* Memorias RAM */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#003366] to-[#0D47A1] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -369,7 +454,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=informatica&subcategory=memorias_ram"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#0D47A1] text-white hover:bg-[#1565C0] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -378,7 +468,12 @@ const Home = () => {
               
               {/* Discos Duros */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#1A237E] to-[#283593] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -387,7 +482,7 @@ const Home = () => {
                     </span>
                     Discos Duros
                   </h2>
-                  <div className="h-1 w-20 bg-indigo-300 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -402,7 +497,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=informatica&subcategory=discos_duros"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#1A237E] text-white hover:bg-[#283593] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -411,7 +511,12 @@ const Home = () => {
               
               {/* Tarjetas Gráficas */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#2962FF] to-[#448AFF] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -420,7 +525,7 @@ const Home = () => {
                     </span>
                     Tarjetas Gráficas
                   </h2>
-                  <div className="h-1 w-24 bg-blue-300 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -435,7 +540,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=informatica&subcategory=tarjeta_grafica"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#2962FF] text-white hover:bg-[#448AFF] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -444,7 +554,12 @@ const Home = () => {
               
               {/* Gabinetes */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#0277BD] to-[#039BE5] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -453,7 +568,7 @@ const Home = () => {
                     </span>
                     Gabinetes
                   </h2>
-                  <div className="h-1 w-20 bg-blue-200 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -468,7 +583,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=informatica&subcategory=gabinetes"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#0277BD] text-white hover:bg-[#039BE5] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -477,7 +597,12 @@ const Home = () => {
               
               {/* Procesadores */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#01579B] to-[#0288D1] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -486,7 +611,7 @@ const Home = () => {
                     </span>
                     Procesadores
                   </h2>
-                  <div className="h-1 w-24 bg-blue-300 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -501,7 +626,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=informatica&subcategory=procesador"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#01579B] text-white hover:bg-[#0288D1] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -510,7 +640,12 @@ const Home = () => {
               
               {/* Teclados */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-[#1A237E] to-[#303F9F] p-6 text-white">
+                <div 
+                  className="p-6 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -519,7 +654,7 @@ const Home = () => {
                     </span>
                     Teclados
                   </h2>
-                  <div className="h-1 w-20 bg-indigo-300 mt-2 mb-4 rounded-full"></div>
+                  <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ DATOS POR PROPS */}
@@ -534,7 +669,12 @@ const Home = () => {
                 <div className="p-4 pt-0 text-center">
                   <Link to="/categoria-producto?category=perifericos&subcategory=teclados"
                         onClick={() => scrollTop()}>
-                    <button className="px-6 py-2 bg-[#1A237E] text-white hover:bg-[#303F9F] rounded-lg text-sm font-medium transition duration-300 shadow-md shine-button">
+                    <button 
+                      className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                      }}
+                    >
                       Ver más
                     </button>
                   </Link>
@@ -549,28 +689,62 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={slideUp}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="text-center mb-10">
-              <h2 className="inline-block text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#002060] to-[#0D47A1]">
+              <h2 
+                className="inline-block text-3xl font-bold bg-clip-text text-transparent"
+                style={{
+                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
                 Productos Destacados
               </h2>
-              <div className="h-1 w-40 bg-gradient-to-r from-[#002060] to-[#0D47A1] mx-auto mt-3 rounded-full"></div>
+              <div 
+                className="h-1 w-40 mx-auto mt-3 rounded-full"
+                style={{
+                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                }}
+              ></div>
               <p className="text-gray-600 mt-4 max-w-2xl mx-auto">Descubre nuestra selección de productos más recientes y exclusivos</p>
             </div>
             
             <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-800">Últimas novedades</h3>
-                  <div className="h-1 w-20 bg-[#002060] mt-2 rounded-full"></div>
+                  <h3 
+                    className="text-xl font-semibold bg-clip-text text-transparent"
+                    style={{
+                      background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    }}
+                  >
+                    Últimas novedades
+                  </h3>
+                  <div 
+                    className="h-1 w-20 mt-2 rounded-full"
+                    style={{
+                      background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                    }}
+                  ></div>
                 </div>
                 <Link 
                   to="/categoria-producto"
-                  className="text-[#002060] hover:text-[#003399] text-sm font-semibold transition-colors flex items-center"
+                  className="text-sm font-semibold transition-all duration-300 flex items-center group/link"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}
                   onClick={scrollTop}
                 >
-                  Ver todos <FaAngleRight className="ml-1 transition-transform hover:translate-x-1" />
+                  Ver todos <FaAngleRight className="ml-1 transition-transform group-hover/link:translate-x-1" />
                 </Link>
               </div>
               
@@ -584,14 +758,27 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="container mx-auto px-4"
+            className="w-full"
           >
             <div className="bg-white rounded-2xl shadow-lg py-10 px-6">
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-800">
+                <h2 
+                  className="text-3xl font-bold bg-clip-text text-transparent"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}
+                >
                   Marcas Destacadas
                 </h2>
-                <div className="h-1 w-32 bg-[#002060] mx-auto mt-3 rounded-full"></div>
+                <div 
+                  className="h-1 w-32 mx-auto mt-3 rounded-full"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                ></div>
                 <p className="text-gray-600 mt-4 max-w-2xl mx-auto">Trabajamos con las mejores marcas para ofrecerte la mejor calidad y garantía</p>
               </div>
               
@@ -607,9 +794,14 @@ const Home = () => {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={fadeIn}
-            className="container mx-auto px-4"
+            className="w-full"
           >
-            <div className="relative overflow-hidden bg-gradient-to-r from-[#002060] to-[#1565C0] rounded-2xl shadow-xl">
+            <div 
+              className="relative overflow-hidden rounded-2xl shadow-xl"
+              style={{
+                background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+              }}
+            >
               <div className="absolute inset-0 bg-pattern opacity-10"></div>
               
               <div className="relative z-10 px-6 py-12 sm:px-12 text-center sm:text-left">
@@ -621,15 +813,20 @@ const Home = () => {
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button 
                       onClick={openWhatsApp}
-                      className="px-6 py-3 bg-white text-[#002060] hover:bg-gray-100 rounded-lg font-medium transition duration-300 shadow-md shine-button flex items-center justify-center"
+                      className="px-6 py-3 bg-white text-gray-800 hover:bg-gray-100 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group/btn"
                     >
-                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-5 h-5 mr-2 group-hover/btn:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                       </svg>
                       Contactar Asesor
                     </button>
                     <Link to="/nosotros" onClick={() => scrollTop()}>
-                      <button className="px-6 py-3 bg-[#1565C0] text-white hover:bg-[#1976D2] rounded-lg font-medium transition duration-300 shadow-md border border-blue-400 shine-button">
+                      <button 
+                        className="px-6 py-3 text-white rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/30 group/btn"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)'
+                        }}
+                      >
                         NOSOTROS
                       </button>
                     </Link>
