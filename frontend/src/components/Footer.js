@@ -5,7 +5,12 @@ import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
 
 const Footer = () => {
   return (
-    <footer className="bg-gradient-to-r from-[#001440] to-[#002060] text-white py-12">
+    <footer 
+      className="text-white py-12"
+      style={{
+        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+      }}
+    >
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-8">
           {/* Información de Contacto */}
@@ -13,11 +18,11 @@ const Footer = () => {
             <h3 className="text-2xl font-bold mb-6 text-white">Contáctanos</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-center md:justify-start space-x-3">
-                <FontAwesomeIcon icon={faPhone} className="text-blue-300" />
+                <FontAwesomeIcon icon={faPhone} className="text-white/80" />
                 <span>+595 984 133733</span>
               </div>
               <div className="flex items-center justify-center md:justify-start space-x-3">
-                <FontAwesomeIcon icon={faEnvelope} className="text-blue-300" />
+                <FontAwesomeIcon icon={faEnvelope} className="text-white/80" />
                 <span>ventas@zenn.com.py</span>
               </div>
             </div>
@@ -29,11 +34,11 @@ const Footer = () => {
             <div className="space-y-2">
               <div>
                 <p className="font-semibold">Lunes a Viernes</p>
-                <p className="text-blue-300">08:00 a 17:00 hrs</p>
+                <p className="text-white/80">08:00 a 17:00 hrs</p>
               </div>
               <div>
                 <p className="font-semibold">Sábado</p>
-                <p className="text-blue-300">08:30 a 11:00 hrs</p>
+                <p className="text-white/80">08:30 a 11:00 hrs</p>
               </div>
             </div>
           </div>
@@ -46,7 +51,7 @@ const Footer = () => {
                 href="https://www.instagram.com/zenn.py"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-blue-300 transition-colors duration-300"
+                className="text-white hover:text-white/80 transition-colors duration-300"
               >
                 <FontAwesomeIcon icon={faInstagram} size="2x" />
               </a>
@@ -54,7 +59,7 @@ const Footer = () => {
                 href="https://wa.me/+595981150393"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-blue-300 transition-colors duration-300"
+                className="text-white hover:text-white/80 transition-colors duration-300"
               >
                 <FontAwesomeIcon icon={faWhatsapp} size="2x" />
               </a>
@@ -62,7 +67,7 @@ const Footer = () => {
                 href="https://www.facebook.com/people/zenn/100071147355980/#"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-blue-300 transition-colors duration-300"
+                className="text-white hover:text-white/80 transition-colors duration-300"
               >
                 <FontAwesomeIcon icon={faFacebook} size="2x" />
               </a>
@@ -71,8 +76,8 @@ const Footer = () => {
         </div>
         
         {/* Derechos de autor */}
-        <div className="border-t border-blue-800 mt-8 pt-6 text-center">
-          <p className="text-blue-200">
+        <div className="border-t border-white/30 mt-8 pt-6 text-center">
+          <p className="text-white/80">
             ©{new Date().getFullYear()} Zenn. Todos los derechos reservados
           </p>
         </div>

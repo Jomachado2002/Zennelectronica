@@ -170,13 +170,19 @@ useEffect(() => {
                         to={`/producto/${product?.slug || product?._id}`} 
                         key={product._id}
                         data-product-id={product._id}
-                        className='w-full h-[280px] sm:h-[300px] bg-white rounded-lg shadow-sm border hover:shadow-md transition-all duration-200 group/card relative flex flex-col'
+                        className='w-full h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
+                        style={{
+                            border: '2px solid transparent',
+                            backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                            backgroundOrigin: 'border-box',
+                            backgroundClip: 'padding-box, border-box'
+                        }}
                         onClick={scrollTop}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
                         {/* Imagen del producto */}
-                        <div className='h-32 sm:h-36 rounded-t-lg flex items-center justify-center overflow-hidden relative bg-gray-50'>
+                        <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                             {!hasImageError ? (
                                 <>
                                     {/* Imagen principal */}
@@ -207,7 +213,7 @@ useEffect(() => {
                                     )}
                                 </>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
                                     <div className="text-gray-400 text-center">
                                         <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
@@ -217,10 +223,15 @@ useEffect(() => {
                                 </div>
                             )}
 
-                            {/* Badge de descuento - solo si hay descuento */}
+                            {/* Badge de descuento - estilo del Header */}
                             {discount && (
                                 <div className="absolute top-2 left-2">
-                                    <span className='bg-red-500 text-white text-xs font-bold px-2 py-1 rounded'>
+                                    <span 
+                                        className='text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg'
+                                        style={{
+                                            background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                                        }}
+                                    >
                                         -{discount}% OFF
                                     </span>
                                 </div>
@@ -255,10 +266,13 @@ useEffect(() => {
 
                                 <button
                                     onClick={(e) => handleAddToCart(e, product)}
-                                    className='w-full flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 
-                                            text-white px-2 py-1.5 rounded-lg text-xs font-medium transition-colors'
+                                    className='w-full flex items-center justify-center gap-1 text-white px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn'
+                                    style={{
+                                        background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                                    }}
                                 >
-                                    <FaShoppingCart size={11} /> Agregar
+                                    <FaShoppingCart size={11} className="group-hover/btn:scale-110 transition-transform duration-300" /> 
+                                    <span className="group-hover/btn:translate-x-0.5 transition-transform duration-300">Agregar</span>
                                 </button>
                             </div>
                         </div>

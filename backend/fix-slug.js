@@ -9,18 +9,18 @@ async function fixProductSlug() {
   try {
     // Conectar a la base de datos
     await mongoose.connect(MONGO_URI);
-    console.log('Conectado a MongoDB');
+   
     
     // Encontrar el producto específico
     const product = await productModel.findById('67b343ea45a2c1e4df25849d');
     
     if (!product) {
-      console.log('Producto no encontrado');
+      
       mongoose.disconnect();
       return;
     }
     
-    console.log('Producto encontrado:', product.productName);
+    
     
     // Generar slug
     const baseSlug = slugify(product.productName || 'producto', {
@@ -35,9 +35,7 @@ async function fixProductSlug() {
     // Actualizar el producto
     product.slug = uniqueSlug;
     await product.save();
-    
-    console.log('Slug generado:', uniqueSlug);
-    console.log('Producto actualizado exitosamente');
+
     
     mongoose.disconnect();
   } catch (error) {

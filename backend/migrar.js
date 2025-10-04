@@ -100,10 +100,9 @@ async function subirAFirebase(rutaArchivo, urlOriginal) {
     const snapshot = await uploadBytes(referenciaAlmacenamiento, archivoBuffer);
     const urlDescarga = await getDownloadURL(snapshot.ref);
     
-    console.log(`Migrado: ${urlOriginal} -> ${urlDescarga}`);
+    
     return urlDescarga;
   } catch (error) {
-    console.error('Error al subir a Firebase:', error);
     throw error;
   }
 }
@@ -130,7 +129,6 @@ function extraerNombreArchivoDeUrl(url) {
 function guardarMapeoUrl(mapaUrl) {
   const rutaMapeo = path.join(__dirname, 'mapeo_url.json');
   fs.writeFileSync(rutaMapeo, JSON.stringify(mapaUrl, null, 2));
-  console.log(`Mapeo de URL guardado en ${rutaMapeo}`);
 }
 
 // Función principal
@@ -138,7 +136,6 @@ async function migrarImagenes() {
   try {
     // Conectar a MongoDB
     await mongoose.connect(MONGODB_URI);
-    console.log('Conectado a MongoDB');
     
     // Registrar modelo
     let Producto;
@@ -150,7 +147,6 @@ async function migrarImagenes() {
     
     // Obtener productos con imágenes
     const productos = await Producto.find({ productImage: { $exists: true, $ne: [] } });
-    console.log(`Encontrados ${productos.length} productos con imágenes para migrar`);
     
     const mapaUrl = {};
     let productosActualizados = 0;
@@ -159,7 +155,6 @@ async function migrarImagenes() {
     // Procesar cada producto
     for (let i = 0; i < productos.length; i++) {
       const producto = productos[i];
-      console.log(`Procesando producto ${i+1}/${productos.length}: ${producto.productName}`);
       
       const urlsImagenesActualizadas = [];
       let productoActualizado = false;
@@ -197,7 +192,6 @@ async function migrarImagenes() {
       if (productoActualizado) {
         // Actualizar producto
         await Producto.findByIdAndUpdate(producto._id, { productImage: urlsImagenesActualizadas });
-        console.log(`Producto actualizado: ${producto.productName}`);
         productosActualizados++;
       }
     }
@@ -205,9 +199,7 @@ async function migrarImagenes() {
     // Guardar mapeo
     guardarMapeoUrl(mapaUrl);
     
-    console.log(`¡Migración completada con éxito!`);
-    console.log(`Productos actualizados: ${productosActualizados}`);
-    console.log(`Errores encontrados: ${errores}`);
+    
   } catch (error) {
     console.error('La migración falló:', error);
   } finally {
@@ -225,7 +217,6 @@ async function migrarImagenes() {
     
     // Cerrar conexión
     await mongoose.connection.close();
-    console.log('Conexión a MongoDB cerrada');
   }
 }
 

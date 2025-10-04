@@ -59,7 +59,8 @@ const BannerProduct = () => {
 
   return (
     <div className="w-full px-0 mt-0">
-      <div className="relative h-48 sm:h-56 md:h-64 lg:h-72 w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="relative h-48 sm:h-56 md:h-64 lg:h-72 w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg">
         
         {/* Imágenes del carrusel */}
         <div className="relative w-full h-full">
@@ -117,6 +118,7 @@ const BannerProduct = () => {
             />
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

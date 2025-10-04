@@ -9,11 +9,9 @@ async function migrateProductSlugs() {
   try {
     // Conectar directamente a MongoDB
     await mongoose.connect(MONGO_URI);
-    console.log('Conectado a MongoDB');
     
     // Encontrar todos los productos
     const products = await productModel.find({});
-    console.log(`Encontrados ${products.length} productos`);
     
     let updated = 0;
     
@@ -37,13 +35,11 @@ async function migrateProductSlugs() {
         );
         
         updated++;
-        console.log(`[${updated}/${products.length}] Slug generado para: ${product.productName} -> ${uniqueSlug}`);
       } catch (itemError) {
         console.error(`Error en producto ${product._id}:`, itemError.message);
       }
     }
     
-    console.log(`Migración completada. ${updated} productos actualizados.`);
     mongoose.disconnect();
   } catch (error) {
     console.error('Error en la migración:', error);
