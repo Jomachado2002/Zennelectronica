@@ -146,7 +146,7 @@ const BudgetDetails = () => {
   
   const handleStatusChange = async (newStatus) => {
     try {
-      console.log(`Cambiando estado a: ${newStatus}`);
+      
       
       // Mostrar un toast de carga
       const loadingToast = toast.loading("Actualizando estado...");

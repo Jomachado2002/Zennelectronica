@@ -32,7 +32,7 @@ const [fullScreenImage, setFullScreenImage] = useState("");
   // Efecto para cargar datos prellenados
 useEffect(() => {
   if (prefilledData) {
-    console.log('📝 Cargando datos prellenados:', prefilledData);
+    
     setData(prefilledData);
   }
 }, [prefilledData]);

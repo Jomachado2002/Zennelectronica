@@ -32,7 +32,7 @@ const generateSingleBuyToken = (shopProcessId, amount, currency = 'PYG') => {
     // ✅ Generar MD5
     const token = crypto.createHash('md5').update(hashString, 'utf8').digest('hex');
     
-    console.log('🔐 Token generado:', token);
+    
     
     return token;
 };

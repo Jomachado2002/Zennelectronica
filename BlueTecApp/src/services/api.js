@@ -23,7 +23,7 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.log('Error obteniendo token:', error);
+      
     }
     return config;
   },

@@ -1,0 +1,292 @@
+/* ✅ MEJORAS DE COMPATIBILIDAD MÓVIL PARA COMPONENTES DE USUARIO */
+
+/* Viewport y zoom fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific fixes */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Fix para inputs en iOS */
+  input, textarea, select {
+    font-size: 16px !important; /* Previene zoom automático */
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  
+  /* Fix para botones en iOS */
+  button {
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Mejoras de touch para todos los dispositivos */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Fix para elementos clickeables en móviles */
+button, a, [role="button"] {
+  min-height: 44px; /* Tamaño mínimo recomendado por Apple */
+  min-width: 44px;
+  cursor: pointer;
+}
+
+/* Mejoras para formularios en móviles */
+input, textarea, select {
+  min-height: 44px;
+  padding: 12px 16px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  transition: all 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #2A3190;
+  box-shadow: 0 0 0 3px rgba(42, 49, 144, 0.1);
+}
+
+/* Fix para modales en móviles */
+.modal-mobile {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content-mobile {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix para scroll en móviles */
+.scroll-mobile {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+}
+
+/* Mejoras para cards en móviles */
+.card-mobile {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.card-mobile:active {
+  transform: scale(0.98);
+}
+
+/* Fix para gradientes en móviles */
+.gradient-mobile {
+  background: linear-gradient(135deg, #2A3190 0%, #1e236b 100%);
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+}
+
+/* Mejoras para iconos en móviles */
+.icon-mobile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+/* Fix para texto en móviles */
+.text-mobile {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Mejoras para espaciado en móviles */
+.spacing-mobile {
+  padding: 16px;
+}
+
+@media (min-width: 640px) {
+  .spacing-mobile {
+    padding: 24px;
+  }
+}
+
+/* Fix para flexbox en móviles */
+.flex-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .flex-mobile {
+    flex-direction: row;
+    gap: 16px;
+  }
+}
+
+/* Mejoras para grid en móviles */
+.grid-mobile {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .grid-mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-mobile {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+
+/* Fix para imágenes en móviles */
+.img-mobile {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* Mejoras para animaciones en móviles */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Fix para Safari en iOS */
+@supports (-webkit-touch-callout: none) {
+  .safari-fix {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Mejoras para accesibilidad en móviles */
+.sr-only-mobile {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Fix para elementos sticky en móviles */
+.sticky-mobile {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Mejoras para loading states en móviles */
+.loading-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  color: #2A3190;
+}
+
+.loading-mobile .spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #2A3190;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fix para elementos con overflow en móviles */
+.overflow-mobile {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mejoras para estados hover en móviles */
+@media (hover: none) and (pointer: coarse) {
+  .hover-mobile:hover {
+    /* Desactiva hover en dispositivos táctiles */
+    transform: none !important;
+    box-shadow: none !important;
+    background-color: inherit !important;
+  }
+}
+
+/* Fix para elementos con position fixed en móviles */
+.fixed-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* Mejoras para notificaciones en móviles */
+.notification-mobile {
+  position: fixed;
+  top: 20px;
+  left: 16px;
+  right: 16px;
+  z-index: 10000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+  .notification-mobile {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 400px;
+  }
+}

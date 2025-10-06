@@ -34,7 +34,7 @@ const PaymentCancelled = () => {
     // Obtener parámetros de la URL
     const { processId, reason, amount } = getUrlParams();
 
-    console.log('Pago cancelado - Parámetros:', { processId, reason, amount });
+    
 
     setPaymentInfo({
       shop_process_id: processId,

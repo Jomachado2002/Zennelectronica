@@ -29,7 +29,7 @@ const UserProfile = ({ user, onUpdateProfile, onUploadImage }) => {
   const [loading, setLoading] = useState(false);
   
   const handleLocationSave = (locationData) => {
-    console.log('📍 Ubicación guardada:', locationData);
+    
     toast.success('Ubicación actualizada en tu perfil');
     // La ubicación ya está guardada en el backend
   };

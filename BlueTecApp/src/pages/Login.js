@@ -64,7 +64,7 @@ const Login = ({ navigation }) => {
       if (dataApi.success) {
         Alert.alert('¡Bienvenido!', `Hola ${dataApi.user?.name || 'Usuario'}`);
         // TODO: Navegar a Home
-        console.log('Usuario logueado:', dataApi.user);
+        
       } else {
         Alert.alert('Error', dataApi.message || 'Error al iniciar sesión');
       }

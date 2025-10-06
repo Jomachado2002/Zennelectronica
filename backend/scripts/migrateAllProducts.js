@@ -60,8 +60,8 @@ try {
     app = initializeApp(MIGRATION_CONFIG.FIREBASE_CONFIG, 'mass-migration');
     storage = getStorage(app);
     
-    console.log('✅ Firebase inicializado correctamente');
-    console.log(`📋 Bucket objetivo: eccomerce-zenn-saopaulo`);
+    
+    
 } catch (error) {
     console.error('❌ Error inicializando Firebase:', error.message);
     process.exit(1);
@@ -96,7 +96,7 @@ function log(message, type = 'INFO') {
         'STATS': '📊'
     }[type] || '📋';
     
-    console.log(`${emoji} [${timestamp}] ${message}`);
+    
 }
 
 function logProgress() {
@@ -114,7 +114,7 @@ function logProgress() {
     log(`Imágenes: ${migrationStats.migratedImages}/${migrationStats.totalImages}`, 'STATS');
     log(`Tiempo: ${elapsedMinutes}m ${elapsedSeconds}s | ETA: ~${estimatedRemainingTime}m`, 'STATS');
     log(`Lote: ${migrationStats.currentBatch}/${migrationStats.totalBatches}`, 'STATS');
-    console.log('─'.repeat(80));
+    
 }
 
 // Función fetch nativa para descargar imágenes
@@ -340,7 +340,7 @@ async function migrateAllProducts() {
         log(`Total imágenes estimadas: ${migrationStats.totalImages}`, 'INFO');
         log(`Lotes planificados: ${migrationStats.totalBatches}`, 'INFO');
         log(`Tamaño de lote: ${MIGRATION_CONFIG.BATCH_SIZE} productos`, 'INFO');
-        console.log('═'.repeat(80));
+        
         
         if (migrationStats.totalProducts === 0) {
             log('🎉 Todos los productos ya están migrados', 'SUCCESS');
@@ -381,7 +381,7 @@ async function migrateAllProducts() {
         const totalMinutes = Math.floor(totalTime / 60000);
         const totalSeconds = Math.floor((totalTime % 60000) / 1000);
         
-        console.log('═'.repeat(80));
+        
         log('🎉 MIGRACIÓN MASIVA COMPLETADA', 'SUCCESS');
         log('📊 ESTADÍSTICAS FINALES:', 'STATS');
         log(`Total productos procesados: ${migrationStats.processedProducts}`, 'INFO');
@@ -393,10 +393,10 @@ async function migrateAllProducts() {
         log(`Tiempo total: ${totalMinutes}m ${totalSeconds}s`, 'INFO');
         
         if (migrationStats.failedProductsList.length > 0) {
-            console.log('\n❌ PRODUCTOS CON ERRORES:');
+            
             migrationStats.failedProductsList.forEach((item, index) => {
-                console.log(`${index + 1}. ${item.name} (ID: ${item.id})`);
-                console.log(`   Error: ${item.error}`);
+                
+                
             });
         }
         
@@ -437,11 +437,11 @@ async function getStats() {
         
         const pendingProducts = totalProducts - migratedProducts;
         
-        console.log('📊 ESTADÍSTICAS DE MIGRACIÓN:');
-        console.log(`Total productos con imágenes: ${totalProducts}`);
-        console.log(`Productos ya migrados: ${migratedProducts}`);
-        console.log(`Productos pendientes: ${pendingProducts}`);
-        console.log(`Progreso: ${Math.round((migratedProducts / totalProducts) * 100)}%`);
+        
+        
+        
+        
+        
         
         await mongoose.connection.close();
         
@@ -464,9 +464,9 @@ async function main() {
                 await getStats();
                 break;
             default:
-                console.log('Comandos disponibles:');
-                console.log('  migrate  - Migrar todos los productos pendientes');
-                console.log('  stats    - Ver estadísticas de migración');
+                
+                
+                
         }
     } catch (error) {
         log(`💥 Error ejecutando comando '${command}': ${error.message}`, 'ERROR');

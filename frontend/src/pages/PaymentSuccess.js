@@ -45,7 +45,7 @@ const PaymentSuccess = () => {
                            searchParams.get('status') === 'payment_success';
 
     useEffect(() => {
-        console.log("💳 === PÁGINA DE PAGO EXITOSO ===");
+        
         console.log("📋 Parámetros recibidos:", {
             shop_process_id,
             operation_id,
@@ -69,7 +69,7 @@ const PaymentSuccess = () => {
             try {
                 const parsedData = JSON.parse(savedPaymentData);
                 setPaymentData(parsedData);
-                console.log("💾 Datos de pago recuperados:", parsedData);
+                
             } catch (e) {
                 console.error("Error parseando datos de pago:", e);
             }
@@ -87,7 +87,7 @@ const PaymentSuccess = () => {
         if (isPaymentSuccessful) {
             setTimeout(() => {
                 localCartHelper.clearCart();
-                console.log("🛒 Carrito limpiado después del pago exitoso");
+                
             }, 2000);
 
             // Facebook Pixel Tracking, solo si fbq está definido
@@ -98,7 +98,7 @@ const PaymentSuccess = () => {
                     currency: currency_id === 'PYG' ? 'PYG' : 'USD',
                     content_type: 'product'
                 });
-                console.log("🎯 Evento de compra enviado a Facebook Pixel");
+                
             }
         }
     }, [shop_process_id, response_code]);
@@ -106,7 +106,7 @@ const PaymentSuccess = () => {
     const fetchTransactionDetails = async (transactionId) => {
         try {
             setIsLoading(true);
-            console.log("🔍 Consultando detalles de transacción:", transactionId);
+            
 
             const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/status/${transactionId}`, {
                 method: 'GET',
@@ -114,7 +114,7 @@ const PaymentSuccess = () => {
             });
 
             const result = await response.json();
-            console.log("📥 Respuesta de consulta:", result);
+            
 
             if (result.success) {
                 setTransactionDetails(result.data);

@@ -47,7 +47,7 @@ const BankTransferManagement = () => {
  const fetchTransfers = async () => {
     setLoading(true);
     try {
-        console.log('🔄 Obteniendo transferencias con filtros:', filters);
+        
         
         let url = `${SummaryApi.baseURL}/api/admin/bank-transfers`;
         const queryParams = new URLSearchParams();
@@ -61,7 +61,7 @@ const BankTransferManagement = () => {
             url += `?${queryParams.toString()}`;
         }
 
-        console.log('📡 URL de solicitud:', url);
+        
 
         const response = await fetch(url, {
             method: 'GET',
@@ -72,11 +72,11 @@ const BankTransferManagement = () => {
         });
 
         const result = await response.json();
-        console.log('📥 Respuesta del servidor:', result);
+        
 
         if (result.success) {
             const transfersData = result.data?.transfers || [];
-            console.log('✅ Transferencias obtenidas:', transfersData.length);
+            
             
             // ✅ PROCESAR TRANSFERENCIAS PARA MOSTRAR CORRECTAMENTE
             const processedTransfers = transfersData.map(transfer => ({
@@ -122,7 +122,7 @@ const BankTransferManagement = () => {
             const result = await response.json();
 
             if (result.success) {
-                console.log('📊 Estadísticas obtenidas:', result.data);
+                
                 setStats(result.data);
             } else {
                 console.warn('⚠️ Error obteniendo estadísticas:', result.message);
@@ -138,7 +138,7 @@ const BankTransferManagement = () => {
 
         setActionLoading('approve');
         try {
-            console.log('✅ Aprobando transferencia:', selectedTransfer.transfer_id);
+            
             
             const response = await fetch(`${SummaryApi.baseURL}/api/admin/bank-transfers/${selectedTransfer.transfer_id}/approve`, {
                 method: 'PUT',
@@ -177,7 +177,7 @@ const BankTransferManagement = () => {
 
     setActionLoading('reject');
     try {
-        console.log('❌ Rechazando transferencia:', selectedTransfer.transfer_id);
+        
         
         const response = await fetch(`${SummaryApi.baseURL}/api/admin/bank-transfers/${selectedTransfer.transfer_id}/reject`, {
             method: 'PUT',

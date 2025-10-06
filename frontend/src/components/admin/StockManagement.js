@@ -110,7 +110,7 @@ useEffect(() => {
     });
 
     const result = await response.json();
-    console.log('📊 Respuesta del servidor:', result);
+    
 
     if (result.success) {
       setStockAnalysis({
@@ -119,7 +119,7 @@ useEffect(() => {
         newProducts: result.data.newProducts || []
       });
       setActiveTab('results');
-      console.log('✅ Análisis completado:', result.data.summary);
+      
     } else {
       alert('Error en el análisis: ' + result.message);
     }
@@ -172,14 +172,14 @@ const extractBrandFromName = (productName) => {
 
 // Abrir modal de edición
 const openEditProductModal = (product) => {
-  console.log('🔧 Abriendo modal de edición para:', product.productName);
+  
   setSelectedProduct(product);
   setActiveModal(modals.EDIT_PRODUCT);
 };
 
 // Abrir modal de creación con datos prellenados
 const openCreateProductModal = (mayoristasProduct) => {
-  console.log('➕ Abriendo modal de creación para:', mayoristasProduct.name);
+  
   
   const detectedCategory = detectCategoryFromProduct(mayoristasProduct.name);
   

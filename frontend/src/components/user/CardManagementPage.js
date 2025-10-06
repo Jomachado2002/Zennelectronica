@@ -37,7 +37,7 @@ const CardManagementPage = ({
 
   // ✅ CARGAR TARJETAS AL MONTAR EL COMPONENTE
   useEffect(() => {
-    console.log('🔄 CardManagement mounted with user:', user);
+    
     if (user?.id) {
       fetchUserCards();
     }
@@ -47,9 +47,9 @@ const CardManagementPage = ({
     setLoading(true);
     setErrors({});
     try {
-      console.log('📋 Obteniendo tarjetas para usuario:', user?.id);
+      
       const userCards = await onFetchCards(user.id);
-      console.log('📋 Tarjetas obtenidas:', userCards);
+      
       setCards(userCards || []);
     } catch (error) {
       console.error('❌ Error al cargar tarjetas:', error);
@@ -70,7 +70,7 @@ const CardManagementPage = ({
     setErrors({});
     
     try {
-      console.log('💳 Iniciando registro de tarjeta para usuario:', user);
+      
       
       const cardId = Date.now() + Math.floor(Math.random() * 1000);
       
@@ -82,14 +82,14 @@ const CardManagementPage = ({
         return_url: `${window.location.origin}/mi-perfil?tab=cards&status=registered`
       };
 
-      console.log('📤 Enviando datos de catastro:', cardData);
+      
 
       const result = await onRegisterCard(cardData);
-      console.log('📥 Resultado completo del catastro:', result);
+      
 
       if (result.success && result.data?.process_id) {
         const receivedProcessId = result.data.process_id;
-        console.log('✅ Catastro exitoso. Process ID:', receivedProcessId);
+        
         
         setProcessId(receivedProcessId);
         setShowRegisterForm(false);
@@ -113,7 +113,7 @@ const CardManagementPage = ({
 
   // ✅ FUNCIÓN PARA CARGAR SCRIPT DE BANCARD
   const loadBancardScript = (processIdToUse) => {
-    console.log('🔄 Cargando script de Bancard con processId:', processIdToUse);
+    
     
     if (!processIdToUse || processIdToUse.trim() === '') {
       console.error('❌ ProcessId inválido:', processIdToUse);
@@ -137,7 +137,7 @@ const CardManagementPage = ({
     script.async = true;
     
     script.onload = () => {
-      console.log('✅ Script de Bancard cargado, inicializando iframe...');
+      
       setTimeout(() => {
         initializeBancardIframe(processIdToUse);
       }, 300);
@@ -163,7 +163,7 @@ const CardManagementPage = ({
         return;
       }
     try {
-      console.log('🎯 Inicializando iframe con processId:', processIdToUse);
+      
       
       if (!processIdToUse || processIdToUse.trim() === '') {
         console.error('❌ ProcessId vacío en inicialización:', processIdToUse);
@@ -190,9 +190,9 @@ const CardManagementPage = ({
           container.style.width = '100%';
           
           try {
-            console.log('🚀 Creando iframe de Bancard con processId:', processIdToUse);
+            
             window.Bancard.Cards.createForm('bancard-card-container', String(processIdToUse), styles);
-            console.log('✅ Iframe creado exitosamente');
+            
             
             window.addEventListener('message', handleIframeMessage, false);
             
@@ -205,9 +205,9 @@ const CardManagementPage = ({
           setErrors({ iframe: 'Error: Contenedor no encontrado' });
         }
       } else {
-        console.log('⏳ Bancard.Cards no disponible, reintentando...');
+        
         if (window.Bancard) {
-          console.log('📦 Bancard disponible:', Object.keys(window.Bancard));
+          
         }
         setTimeout(() => initializeBancardIframe(processIdToUse), 500);
       }
@@ -224,10 +224,10 @@ const CardManagementPage = ({
 
     setErrors({});
     try {
-      console.log('🗑️ Eliminando tarjeta:', aliasToken);
+      
       const result = await onDeleteCard(user.id, aliasToken);
       if (result.success) {
-        console.log('✅ Tarjeta eliminada exitosamente');
+        
         await fetchUserCards();
         toast.success('Tarjeta eliminada exitosamente');
       } else {
@@ -242,18 +242,18 @@ const CardManagementPage = ({
   // ✅ MANEJAR MENSAJES DEL IFRAME
   const handleIframeMessage = (event) => {
     try {
-      console.log('📨 Mensaje del iframe de catastro:', event.data);
+      
       
       if (typeof event.data === 'object' && event.data.status) {
         if (event.data.status === 'add_new_card_success') {
-          console.log('✅ Tarjeta catastrada exitosamente');
+          
           toast.success('¡Tarjeta registrada exitosamente!');
           setTimeout(() => {
             closeIframe();
             fetchUserCards();
           }, 2000);
         } else if (event.data.status === 'add_new_card_fail') {
-          console.log('❌ Error en catastro de tarjeta');
+          
           setErrors({ iframe: event.data.description || 'Error al catastrar tarjeta' });
           toast.error('Error al registrar tarjeta');
         }
@@ -296,7 +296,7 @@ const CardManagementPage = ({
         }
       };
 
-      console.log('🧪 Procesando pago de prueba:', paymentData);
+      
       toast.info('Procesando pago de prueba...');
 
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/pago-con-token`, {
@@ -313,10 +313,10 @@ const CardManagementPage = ({
       if (result.success) {
         if (result.requires3DS) {
           toast.info('🔐 Verificación 3DS requerida - esto es normal');
-          console.log('Proceso 3DS requerido:', result.data);
+          
         } else {
           toast.success('✅ Pago de prueba exitoso');
-          console.log('Pago directo exitoso:', result.data);
+          
         }
         setShowTestPayment(false);
       } else {

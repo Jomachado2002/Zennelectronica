@@ -6,13 +6,13 @@ class ImageCacheService {
   }
 
   async preloadImages(urls, priority = 'high') {
-    console.log(`🚀 Precargando ${urls.length} imágenes`);
+    
     
     const promises = urls.map(url => this.loadImage(url, priority));
     const results = await Promise.allSettled(promises);
     
     const loaded = results.filter(r => r.status === 'fulfilled').length;
-    console.log(`✅ Cargadas ${loaded}/${urls.length} imágenes`);
+    
     
     return results;
   }

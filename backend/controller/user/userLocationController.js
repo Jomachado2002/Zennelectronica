@@ -2,9 +2,9 @@ const userModel = require("../../models/userModel");
 
 const updateUserLocation = async (req, res) => {
     try {
-        console.log("🗺️ === ACTUALIZANDO UBICACIÓN DE USUARIO ===");
-        console.log("👤 Usuario:", req.userId);
-        console.log("📍 Datos recibidos:", req.body);
+        
+        
+        
 
         const userId = req.userId;
         const { lat, lng, address, googleMapsUrl } = req.body;
@@ -57,7 +57,7 @@ const updateUserLocation = async (req, res) => {
             });
         }
 
-        console.log("✅ Ubicación actualizada exitosamente:", updatedUser.location);
+        
 
         res.json({
             message: "Ubicación actualizada exitosamente",
@@ -78,8 +78,8 @@ const updateUserLocation = async (req, res) => {
 
 const getUserLocation = async (req, res) => {
     try {
-        console.log("🗺️ === OBTENIENDO UBICACIÓN DE USUARIO ===");
-        console.log("👤 Usuario:", req.userId);
+        
+        
 
         const user = await userModel.findById(req.userId).select('location');
         

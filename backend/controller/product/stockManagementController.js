@@ -22,7 +22,7 @@ async function analyzeStockController(req, res) {
             });
         }
 
-        console.log(`🔍 Análisis iniciado para: ${category || 'todas'}/${subcategory || 'todas'}`);
+        
 
         // Construir filtro dinámico
         let productQuery = {};
@@ -34,7 +34,7 @@ async function analyzeStockController(req, res) {
             'productName brandName category subcategory sellingPrice stock'
         );
 
-        console.log(`📦 Productos encontrados en BD: ${myProducts.length}`);
+        
 
         if (myProducts.length === 0) {
             return res.json({
@@ -59,15 +59,15 @@ async function analyzeStockController(req, res) {
 
         // Procesar datos de mayoristas con algoritmo mejorado
         const mayoristasNotebooks = extractMayoristasProductsImproved(mayoristasData);
-        console.log(`📋 Productos de mayoristas extraídos: ${mayoristasNotebooks.length}`);
+        
 
         // Realizar análisis con algoritmo mejorado
         const analysis = performImprovedStockAnalysis(myProducts, mayoristasNotebooks);
 
-        console.log(`✅ Análisis completado:`);
-        console.log(`   - En stock: ${analysis.inStock.length}`);
-        console.log(`   - Sin stock: ${analysis.outOfStock.length}`);
-        console.log(`   - Nuevos disponibles: ${analysis.newProducts.length}`);
+        
+        
+        
+        
 
         res.json({
             message: "Análisis de stock completado",
@@ -121,7 +121,7 @@ function extractMayoristasProductsImproved(mayoristasData) {
         
         if (productInfo.name && productInfo.name.length > 15) {
             products.push(productInfo);
-            console.log(`✅ Producto agregado: ${productInfo.name.substring(0, 50)}... - G$ ${productInfo.price?.toLocaleString()}`);
+            
         }
         i++; // Saltar la línea del precio para no procesarla como producto
     }
@@ -130,7 +130,7 @@ function extractMayoristasProductsImproved(mayoristasData) {
     // Remover duplicados por similitud de nombre
     const uniqueProducts = removeDuplicates(products);
     
-    console.log(`📊 Productos únicos después de filtrar duplicados: ${uniqueProducts.length}`);
+    
     return uniqueProducts;
 }
 
@@ -385,7 +385,7 @@ function performImprovedStockAnalysis(myProducts, mayoristasProducts, selectedCa
     const outOfStock = [];
     const usedMayoristaIndices = new Set();
 
-    console.log(`🔄 Iniciando comparación avanzada: ${myProducts.length} vs ${mayoristasProducts.length}`);
+    
 
     // Analizar cada producto mío contra los de mayoristas
     for (let myProduct of myProducts) {
@@ -436,7 +436,7 @@ function performImprovedStockAnalysis(myProducts, mayoristasProducts, selectedCa
             });
             usedMayoristaIndices.add(bestIndex);
             
-            console.log(`✅ Match: ${myProduct.productName.substring(0, 40)}... (${Math.round(bestScore * 100)}%)`);
+            
         } else {
             outOfStock.push({
                 _id: myProduct._id,
@@ -455,7 +455,7 @@ function performImprovedStockAnalysis(myProducts, mayoristasProducts, selectedCa
                 } : null
             });
             
-            console.log(`❌ Sin stock: ${myProduct.productName.substring(0, 40)}... (mejor: ${Math.round(bestScore * 100)}%)`);
+            
         }
     }
 
@@ -470,8 +470,8 @@ function performImprovedStockAnalysis(myProducts, mayoristasProducts, selectedCa
         subcategory: selectedSubcategory || 'notebooks'
     }));
 
-    console.log(`📊 Análisis final:`);
-    console.log(`   - Productos nuevos encontrados: ${newProducts.length} (SIN LÍMITE)`);
+    
+    
 
     return {
         inStock,

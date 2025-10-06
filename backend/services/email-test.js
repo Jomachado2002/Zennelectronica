@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 async function sendTestEmail() {
     try {
         await transporter.verify();
-        console.log('✅ Conexión SMTP verificada');
+        
 
         const info = await transporter.sendMail({
             from: '"Zenn Test" <ventas@zenn.com.py>',
@@ -27,9 +27,9 @@ async function sendTestEmail() {
             html: '<b>Este es un correo de prueba usando contraseña de aplicación.</b>',
         });
 
-        console.log('📬 Correo enviado exitosamente');
-        console.log('Message ID:', info.messageId);
-        console.log('Revisa la bandeja de entrada.');
+        
+        
+        
     } catch (error) {
         console.error('❌ Error al enviar el correo:');
         console.error(error.message);

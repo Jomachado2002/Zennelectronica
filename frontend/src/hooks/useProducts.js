@@ -27,21 +27,21 @@ export const useHomeProducts = () => {
         // ✅ VERIFICACIÓN CORREGIDA - ACEPTAR TANTO ARRAY COMO OBJETO
         let products = [];
         
-        console.log('🔍 ESTRUCTURA DE DATOS RECIBIDA:', result);
+        
         
         if (result && result.data) {
           // Si result.data ya es un array de productos
           if (Array.isArray(result.data)) {
             products = result.data;
-            console.log('✅ Datos recibidos como ARRAY:', products.length, 'productos');
+            
           }
           // Si result.data es un objeto con la estructura organizada
           else if (typeof result.data === 'object' && result.data !== null) {
-            console.log('✅ Datos recibidos como OBJETO ORGANIZADO');
+            
             
             // Si ya viene organizado por categorías, usarlo directamente
             if (result.data.informatica || result.data.perifericos || result.data.telefonia) {
-              console.log('✅ Datos ya vienen organizados por categoría');
+              
               return {
                 success: true,
                 data: result.data
@@ -50,7 +50,7 @@ export const useHomeProducts = () => {
             // Si es un objeto plano, convertir a array
             else {
               products = Object.values(result.data).flat();
-              console.log('✅ Objeto convertido a array:', products.length, 'productos');
+              
             }
           }
         } else {
@@ -63,7 +63,7 @@ export const useHomeProducts = () => {
           product?.stock === undefined || product?.stock === null || product?.stock > 0
         );
         
-        console.log('✅ Productos después del filtro de stock:', filteredProducts.length);
+        
                 
         // Organizar productos por categoría y subcategoría
         const organizedData = {

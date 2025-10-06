@@ -200,7 +200,7 @@ const SimpleLocationSelector = ({
       lng: event.latLng.lng()
     };
     
-    console.log('🖱️ Clic en mapa:', location);
+    
     
     // ✅ CREAR NUEVO MARCADOR (automáticamente limpia el anterior)
     createMarker(location, mapInstance);
@@ -308,7 +308,7 @@ const SimpleLocationSelector = ({
         })
       };
 
-      console.log('🗺️ Guardando ubicación con datos completos:', payload);
+      
 
       const response = await fetch(isUserLoggedIn ? SummaryApi.location.saveUserLocation.url : SummaryApi.location.saveGuestLocation.url, {
         method: 'POST',

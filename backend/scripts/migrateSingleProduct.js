@@ -55,8 +55,8 @@ try {
     app = initializeApp(MIGRATION_CONFIG.FIREBASE_CONFIG, 'migration-app');
     storage = getStorage(app);
     
-    console.log('✅ Firebase inicializado correctamente');
-    console.log(`📋 Bucket objetivo: eccomerce-zenn-saopaulo`);
+    
+    
 } catch (error) {
     console.error('❌ Error inicializando Firebase:', error.message);
     process.exit(1);
@@ -74,7 +74,7 @@ function log(message, type = 'INFO') {
         'PROGRESS': '🔄'
     }[type] || '📋';
     
-    console.log(`${emoji} [${timestamp}] ${message}`);
+    
 }
 
 // Función fetch nativa para descargar imágenes
@@ -301,15 +301,15 @@ async function migrateSingleProduct() {
         log(`Imágenes migradas: ${newImageUrls.filter(url => !originalImages.includes(url)).length}`, 'SUCCESS');
         log(`Imágenes con error: ${newImageUrls.filter(url => originalImages.includes(url)).length}`, 'WARNING');
         
-        console.log('\n🔗 NUEVAS URLs:');
+        
         newImageUrls.forEach((url, index) => {
-            console.log(`${index + 1}. ${url}`);
+            
         });
         
         if (MIGRATION_CONFIG.CREATE_BACKUP) {
-            console.log('\n💾 URLs ORIGINALES (BACKUP):');
+            
             originalImages.forEach((url, index) => {
-                console.log(`${index + 1}. ${url.substring(0, 80)}...`);
+                
             });
         }
         
@@ -424,10 +424,10 @@ async function main() {
                 await testConnection();
                 break;
             default:
-                console.log('Comandos disponibles:');
-                console.log('  migrate         - Migrar el producto de prueba');
-                console.log('  rollback        - Restaurar URLs originales');
-                console.log('  test-connection - Probar conexión con Firebase SDK');
+                
+                
+                
+                
         }
     } catch (error) {
         log(`💥 Error ejecutando comando '${command}': ${error.message}`, 'ERROR');

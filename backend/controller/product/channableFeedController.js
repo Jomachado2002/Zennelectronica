@@ -290,7 +290,7 @@ function extractProductSpecs(product) {
 // ===== CONTROLADOR PRINCIPAL OPTIMIZADO PARA META =====
 const channableFeedController = async (req, res) => {
     try {
-        console.log('🔄 Generando feed XML optimizado para Meta/Facebook con filtro de stock...');
+        
         
         // ✅ QUERY MEJORADO CON FILTRO DE STOCK Y VALIDACIÓN DE IMÁGENES PARA META
         const query = {
@@ -320,7 +320,7 @@ const channableFeedController = async (req, res) => {
             .sort({ updatedAt: -1 })
             .lean();
         
-        console.log(`✅ ${products.length} productos con stock obtenidos para Meta`);
+        
         
         // Generar XML optimizado para Meta
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -343,22 +343,22 @@ const channableFeedController = async (req, res) => {
                 if (!hasValidStock(product)) {
                     noStockSkipped++;
                     skippedCount++;
-                    console.log(`⚠️ Producto sin stock omitido: ${product.productName} (Stock: ${product.stock}, Status: ${product.stockStatus})`);
+                    
                     return;
                 }
                 
                 // Validaciones básicas
                 if (!product.productName || !product.productImage || product.productImage.length === 0) {
                     skippedCount++;
-                    console.log(`⚠️ Producto omitido - falta nombre o imágenes: ${product.productName || product._id}`);
+                    
                     return;
                 }
                 
                 const validImages = getValidImages(product.productImage);
                 if (validImages.length === 0) {
                     skippedCount++;
-                    console.log(`⚠️ Producto omitido - imágenes no válidas: ${product.productName}`);
-                    console.log(`   Imágenes originales: ${JSON.stringify(product.productImage)}`);
+                    
+                    
                     return;
                 }
                 
@@ -366,7 +366,7 @@ const channableFeedController = async (req, res) => {
                 
                 if (!discountInfo.finalPrice || discountInfo.finalPrice < XML_CONFIG.MIN_PRICE) {
                     skippedCount++;
-                    console.log(`⚠️ Producto omitido - precio no válido: ${product.productName} (Precio: ${discountInfo.finalPrice})`);
+                    
                     return;
                 }
                 
@@ -486,17 +486,17 @@ const channableFeedController = async (req, res) => {
         xml += `    </channel>
 </rss>`;
 
-                console.log(`✅ Feed XML para Meta generado exitosamente:`);
-        console.log(`   - Productos incluidos: ${includedCount}`);
-        console.log(`   - Productos omitidos por falta de stock: ${noStockSkipped}`);
-        console.log(`   - Productos omitidos por otras razones: ${skippedCount - noStockSkipped}`);
-        console.log(`   - Total omitidos: ${skippedCount}`);
-        console.log(`   - Total procesados: ${products.length}`);
-        console.log(`   - Stock mínimo requerido: ${XML_CONFIG.MIN_STOCK}`);
-        console.log(`   - Solo productos con stock disponible incluidos`);
-        console.log(`   - Solo imágenes JPG/PNG para máxima compatibilidad con Meta`);
-        console.log(`   - Máximo 4 imágenes por producto (1 principal + 3 adicionales)`);
-        console.log(`   - Optimizado específicamente para Meta/Facebook`);
+                
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         // Headers optimizados para Meta
         res.set({

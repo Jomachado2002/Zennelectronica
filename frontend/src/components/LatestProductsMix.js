@@ -47,7 +47,7 @@ useEffect(() => {
     const homeCache = queryClient.getQueryData(['category-products', 'all']);
     
     if (homeCache && homeCache.data) {
-        console.log('✅ Usando productos del caché para destacados');
+        
         setLoading(false);
         
         // Procesar datos del caché organizado
@@ -80,7 +80,7 @@ useEffect(() => {
 const fetchDataFromServer = async () => {
     setLoading(true);
     try {
-        console.log('🔄 Cargando productos destacados desde servidor');
+        
         const response = await fetch(`${SummaryApi.baseURL}/api/obtener-productos-home`, {
             method: 'get',
             credentials: 'include'

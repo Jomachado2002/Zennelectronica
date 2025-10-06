@@ -71,9 +71,9 @@ const UserPurchases = ({ user }) => {
       
       if (result.success) {
         setPurchases(result.data.transactions || []);
-        console.log("🔍 DEBUG - Estructura de compras:", result.data.transactions[0]);
-        console.log("🔍 DEBUG - Items del primer pedido:", result.data.transactions[0]?.items);
-        console.log("🔍 DEBUG - Primer item completo:", result.data.transactions[0]?.items?.[0]);
+        
+        
+        
       }
     } catch (error) {
       console.error('Error al cargar compras:', error);
@@ -370,7 +370,7 @@ Por favor, ¿me pueden ayudar?`;
                                   alt={item.name}
                                   className="w-full h-full object-contain"
                                   onError={(e) => {
-                                    console.log('Error cargando imagen:', productImage);
+                                    
                                     e.target.style.display = 'none';
                                     e.target.nextSibling.style.display = 'flex';
                                   }}

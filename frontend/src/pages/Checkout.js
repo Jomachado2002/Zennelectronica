@@ -536,7 +536,7 @@ ${selectedLocation.google_maps_url || 'No disponible'}
     };
 
     const handleLocationSave = (locationData) => {
-    console.log('📍 Ubicación recibida en checkout:', locationData);
+    
     
     // ✅ GUARDAR TODOS LOS DATOS DE UBICACIÓN
     setSelectedLocation({
@@ -608,7 +608,7 @@ const hasValidLocation = () => {
 };
 
     const handlePaymentSuccess = (paymentData) => {
-        console.log('Pago exitoso desde checkout:', paymentData);
+        
         toast.success('Redirigiendo al procesamiento de pago...');
     };
 
@@ -1261,7 +1261,7 @@ const hasValidLocation = () => {
                                         totalAmount={totalPrice}
                                         customerData={prepareBancardData()}
                                         onPaymentStart={() => {
-                                            console.log('Iniciando pago desde checkout');
+                                            
                                             toast.info('Procesando pago...');
                                         }}
                                         onPaymentSuccess={handlePaymentSuccess}

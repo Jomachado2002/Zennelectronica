@@ -55,10 +55,10 @@ const QuickPayWithCard = ({
       
       if (result.success && result.data?.cards) {
         setCards(result.data.cards);
-        console.log('✅ Tarjetas cargadas:', result.data.cards);
+        
       } else {
         setCards([]);
-        console.log('ℹ️ Usuario sin tarjetas registradas');
+        
       }
     } catch (error) {
       console.error('❌ Error cargando tarjetas:', error);
@@ -82,7 +82,7 @@ const QuickPayWithCard = ({
     onPaymentStart();
 
     try {
-      console.log('💳 Iniciando pago con tarjeta:', card.card_masked_number);
+      
 
       const shopProcessId = generateShopProcessId();
       
@@ -97,7 +97,7 @@ const QuickPayWithCard = ({
         additional_data: '',
       };
 
-      console.log('📤 Datos de pago:', paymentData);
+      
 
       const response = await fetch(`${SummaryApi.baseURL}/api/bancard/pago-con-token`, {
         method: 'POST',
@@ -110,19 +110,19 @@ const QuickPayWithCard = ({
 
       const result = await response.json();
       
-      console.log('📥 Respuesta de pago:', result);
+      
 
       if (result.success) {
         // ✅ VERIFICAR SI NECESITA 3DS
         if (result.requires3DS && result.data?.operation?.process_id) {
-          console.log('🔐 Pago requiere autenticación 3DS');
+          
           setProcessId(result.data.operation.process_id);
           setShow3DSIframe(true);
           setShowCardSelection(false);
           toast.info('🔐 Verificación de seguridad requerida');
         } else {
           // ✅ PAGO PROCESADO DIRECTAMENTE
-          console.log('✅ Pago procesado exitosamente');
+          
           toast.success('✅ Pago realizado exitosamente');
           setShowCardSelection(false);
           onPaymentSuccess({
@@ -180,7 +180,7 @@ const QuickPayWithCard = ({
     script.async = true;
     
     script.onload = () => {
-      console.log('✅ Script 3DS cargado');
+      
       setTimeout(initialize3DSIframe, 100);
     };
     
@@ -208,10 +208,10 @@ const QuickPayWithCard = ({
         if (container) {
           container.innerHTML = '';
           window.Bancard.Charge3DS.createForm('bancard-3ds-container', processId, styles);
-          console.log('✅ Iframe 3DS inicializado');
+          
         }
       } else {
-        console.log('⏳ Bancard.Charge3DS no disponible, reintentando...');
+        
         setTimeout(initialize3DSIframe, 1000);
       }
     } catch (error) {

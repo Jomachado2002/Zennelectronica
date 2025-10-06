@@ -10,13 +10,13 @@ const BancardConfirmProxy = () => {
   useEffect(() => {
     const processConfirmation = async () => {
       try {
-        console.log('🔄 === PROXY BANCARD CONFIRMACIÓN ===');
-        console.log('🌐 URL completa:', window.location.href);
-        console.log('📋 Search params:', window.location.search);
+        
+        
+        
         
         // Obtener todos los parámetros de Bancard
         const params = Object.fromEntries(searchParams);
-        console.log('📋 Parámetros extraídos:', params);
+        
 
         // ✅ VERIFICAR SI TENEMOS PARÁMETROS VÁLIDOS
         const hasValidParams = params.shop_process_id || 
@@ -25,7 +25,7 @@ const BancardConfirmProxy = () => {
                               Object.keys(params).length > 0;
 
         if (!hasValidParams) {
-          console.log('❌ No hay parámetros válidos de Bancard');
+          
           setStatus('error');
           setTimeout(() => {
             navigate('/pago-cancelado?error=no_params');
@@ -39,10 +39,10 @@ const BancardConfirmProxy = () => {
           const savedPayment = sessionStorage.getItem('bancard_payment');
           if (savedPayment) {
             transactionData = JSON.parse(savedPayment);
-            console.log('💾 Datos de transacción recuperados:', transactionData);
+            
           }
         } catch (e) {
-          console.log('⚠️ No se pudieron recuperar datos de transacción');
+          
         }
 
         // ✅ CONSTRUIR OPERATION OBJECT MEJORADO
@@ -69,7 +69,7 @@ const BancardConfirmProxy = () => {
           iva_ticket_number: params.iva_ticket_number || ''
         };
 
-        console.log('📤 Enviando al backend:', operation);
+        
 
         // ✅ ENVIAR AL BACKEND REAL
         const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
@@ -83,10 +83,10 @@ const BancardConfirmProxy = () => {
             body: JSON.stringify({ operation })
           });
 
-          console.log('📥 Backend response status:', response.status);
+          
           
           if (response.ok) {
-            console.log('✅ Backend confirmó correctamente');
+            
           } else {
             console.warn('⚠️ Backend respondió con error:', response.status);
           }

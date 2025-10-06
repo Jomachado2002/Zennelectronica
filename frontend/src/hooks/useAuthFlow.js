@@ -79,10 +79,10 @@ const useAuthFlow = () => {
 
   // ✅ FUNCIÓN PARA INTENTAR UNA ACCIÓN
   const attemptAction = async (action, callback, options = {}) => {
-    console.log(`🎯 Intentando acción: ${action}`);
+    
     
     if (requiresRegistration(action)) {
-      console.log(`🚫 Acción ${action} requiere registro`);
+      
       
       if (options.showPrompt !== false) {
         setShowRegistrationPrompt(true);
@@ -97,7 +97,7 @@ const useAuthFlow = () => {
     }
     
     try {
-      console.log(`✅ Ejecutando acción: ${action}`);
+      
       const result = await callback();
       return {
         success: true,
@@ -147,7 +147,7 @@ const useAuthFlow = () => {
 
   // ✅ FUNCIÓN PARA PROMOVER REGISTRO
   const promoteRegistration = (context = authContext, options = {}) => {
-    console.log('📢 Promoviendo registro en contexto:', context);
+    
     
     const promotionData = {
       context,
@@ -206,7 +206,7 @@ const useAuthFlow = () => {
       
       if (savedContext) {
         const context = JSON.parse(savedContext);
-        console.log('🔄 Restaurando contexto post-auth:', context);
+        
         
         // Limpiar storage
         sessionStorage.removeItem('pre_registration_context');
@@ -260,7 +260,7 @@ const useAuthFlow = () => {
 
   // ✅ FUNCIÓN PARA CONTINUAR COMO INVITADO
   const continueAsGuest = () => {
-    console.log('👤 Usuario continúa como invitado');
+    
     setShowRegistrationPrompt(false);
     
     // Analytics/tracking
