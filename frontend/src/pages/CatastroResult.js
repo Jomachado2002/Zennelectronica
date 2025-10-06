@@ -7,18 +7,18 @@ const CatastroResult = () => {
   const [searchParams] = useSearchParams();
   
   useEffect(() => {
-    console.log('📋 === PÁGINA DE RESULTADO DE CATASTRO ===');
-    console.log('🔍 URL params:', Object.fromEntries(searchParams));
+    
+    
     
     const status = searchParams.get('status');
     const description = searchParams.get('description');
     
-    console.log('📊 Status:', status);
-    console.log('📝 Description:', description);
+    
+    
     
     // Enviar mensaje al parent (si estamos en iframe)
     if (window.parent !== window) {
-      console.log('📨 Enviando mensaje al parent window...');
+      
       
       const message = {
         type: 'bancard_catastro_result',
@@ -27,12 +27,12 @@ const CatastroResult = () => {
         success: status === 'add_new_card_success'
       };
       
-      console.log('📤 Mensaje a enviar:', message);
+      
       window.parent.postMessage(message, '*');
       
     } else {
       // Si no estamos en iframe, redirigir después de mostrar el mensaje
-      console.log('🔄 No estamos en iframe, redirigiendo...');
+      
       
      // setTimeout(() => {
        // window.location.href = '/mi-perfil?tab=cards';

@@ -32,6 +32,6 @@ export const showAlert = (title, message) => {
   if (typeof Alert !== 'undefined') {
     Alert.alert(title, message);
   } else {
-    console.log(`${title}: ${message}`);
+    
   }
 };

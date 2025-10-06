@@ -37,7 +37,7 @@ const Home = ({ navigation }) => {
 
   const loadHomeProducts = async () => {
     try {
-      console.log('🏠 Cargando productos del home...');
+      
       
       // ✅ USAR LA RUTA CORRECTA PARA OBTENER PRODUCTOS
 const response = await fetch(SummaryApi.allProduct.url, {
@@ -68,10 +68,10 @@ const response = await fetch(SummaryApi.allProduct.url, {
           organizedProducts[categoryKey][subcategoryKey].push(product);
         });
 
-        console.log('✅ Productos organizados:', Object.keys(organizedProducts));
+        
         setProducts(organizedProducts);
       } else {
-        console.log('⚠️ No se pudieron cargar productos:', dataApi.message);
+        
         Alert.alert('Aviso', 'No se pudieron cargar los productos');
       }
     } catch (error) {

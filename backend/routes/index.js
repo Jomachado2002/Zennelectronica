@@ -206,7 +206,7 @@
     // Test de catastro de tarjeta
     router.post("/bancard/test-catastro", authToken, async (req, res) => {
         try {
-            console.log("🧪 === TEST DE CATASTRO BANCARD ===");
+            
             
             const testData = {
                 card_id: Math.floor(Math.random() * 100000) + 11000, // ID único
@@ -216,7 +216,7 @@
                 return_url: `${process.env.FRONTEND_URL}/mi-perfil?tab=cards`
             };
 
-            console.log("📤 Datos de test:", testData);
+            
 
             // Usar el controlador existente
             req.body = testData;
@@ -234,7 +234,7 @@
     });
     router.get("/debug/database", authToken, async (req, res) => {
         try {
-            console.log("🔍 === DEBUG DE BASE DE DATOS ===");
+            
             
             // Verificar permisos de admin
             if (req.userRole !== 'ADMIN') {
@@ -262,7 +262,7 @@
                 name: mongoose.connection.name
             };
 
-            console.log("📊 Estado de conexión:", connectionInfo);
+            
 
             // Estadísticas de la colección
             let collectionStats = null;
@@ -272,14 +272,14 @@
             try {
                 // Contar documentos
                 totalDocuments = await BancardTransactionModel.countDocuments({});
-                console.log("📊 Total documentos:", totalDocuments);
+                
 
                 // Obtener estadísticas de la colección
                 const db = mongoose.connection.db;
                 if (db) {
                     try {
                         collectionStats = await db.collection('bancard_transactions').stats();
-                        console.log("📊 Stats de colección obtenidas");
+                        
                     } catch (statsError) {
                         console.warn("⚠️ No se pudieron obtener stats:", statsError.message);
                     }
@@ -294,12 +294,12 @@
                         .limit(5)
                         .lean();
                     
-                    console.log("📋 Documentos de ejemplo obtenidos:", sampleDocuments.length);
+                    
                 }
 
                 // Verificar índices
                 const indexes = await BancardTransactionModel.collection.getIndexes();
-                console.log("📇 Índices disponibles:", Object.keys(indexes));
+                
 
             } catch (queryError) {
                 console.error("❌ Error en consultas:", queryError);
@@ -312,7 +312,7 @@
                 schemaFields: Object.keys(BancardTransactionModel.schema.paths)
             };
 
-            console.log("📄 Información del modelo:", modelInfo);
+            
 
             // Respuesta completa
             res.json({
@@ -375,7 +375,7 @@
     // Test de pago con token
     router.post("/bancard/test-pago-token", authToken, async (req, res) => {
         try {
-            console.log("🧪 === TEST DE PAGO CON TOKEN - VERSIÓN CORREGIDA ===");
+            
             
             const { alias_token, amount, description, promotion_code } = req.body;
             
@@ -409,8 +409,8 @@
                 // ✅ NO incluir additional_data por defecto
             };
 
-            console.log("📤 Datos de test de pago (SIN additional_data problemático):", testPaymentData);
-            console.log("⚠️ NOTA: additional_data removido para evitar error de promoción");
+            
+            
 
             // Usar el controlador corregido
             req.body = testPaymentData;
@@ -430,8 +430,8 @@
     // Test de eliminar tarjeta
     router.delete("/bancard/test-eliminar/:user_id", async (req, res) => {
         try {
-            console.log("🧪 === TEST DE ELIMINAR TARJETA ===");
-            console.log("👤 User ID:", req.params.user_id);
+            
+            
             
             const { alias_token } = req.body;
             
@@ -445,7 +445,7 @@
                 });
             }
 
-            console.log("🗑️ Eliminando tarjeta con token:", alias_token.substring(0, 20) + "...");
+            
 
             // Usar el controlador existente
             await deleteCardController(req, res);
@@ -563,7 +563,7 @@
     // Test de flujo completo de tarjetas
     router.post("/bancard/test-flujo-completo", async (req, res) => {
         try {
-            console.log("🧪 === TEST DE FLUJO COMPLETO DE TARJETAS ===");
+            
             
             const { user_id = 1 } = req.body;
             
@@ -576,7 +576,7 @@
 
             // Test 1: Verificar endpoint de catastro
             try {
-                console.log("📝 Test 1: Verificando endpoint de catastro");
+                
                 
                 testResults.tests_executed.push({
                     test: "catastro_endpoint",
@@ -598,7 +598,7 @@
 
             // Test 2: Verificar endpoint de listado
             try {
-                console.log("📋 Test 2: Verificando endpoint de listado");
+                
                 
                 testResults.tests_executed.push({
                     test: "listar_endpoint",
@@ -620,7 +620,7 @@
 
             // Test 3: Verificar endpoint de pago con token
             try {
-                console.log("💳 Test 3: Verificando endpoint de pago con token");
+                
                 
                 testResults.tests_executed.push({
                     test: "pago_token_endpoint",
@@ -642,7 +642,7 @@
 
             // Test 4: Verificar endpoint de eliminación
             try {
-                console.log("🗑️ Test 4: Verificando endpoint de eliminación");
+                
                 
                 testResults.tests_executed.push({
                     test: "eliminar_endpoint",
@@ -664,7 +664,7 @@
 
             // Test 5: Verificar configuración de Bancard
             try {
-                console.log("🔧 Test 5: Verificando configuración de Bancard");
+                
                 const { validateBancardConfig } = require('../helpers/bancardUtils');
                 const validation = validateBancardConfig();
                 
@@ -932,7 +932,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
 
     router.get("/debug/auth-status", authToken, async (req, res) => {
         try {
-            console.log("🔍 === DEBUG AUTH STATUS ===");
+            
             
             const debugInfo = {
                 timestamp: new Date().toISOString(),
@@ -1098,10 +1098,10 @@ router.post("/actualizar-producto", authToken, updateProductController);
 
     router.get("/bancard/redirect/success", (req, res) => {
         try {
-            console.log("🎉 === BANCARD SUCCESS REDIRECT ===");
-            console.log("📋 Query params recibidos:", req.query);
-            console.log("🌐 Headers:", req.headers);
-            console.log("🔗 URL completa:", req.originalUrl);
+            
+            
+            
+            
             
             // Obtener TODOS los parámetros que envía Bancard
             const params = req.query;
@@ -1113,7 +1113,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
             // URL final hacia tu página PaymentSuccess.js existente
             const finalUrl = `${frontendUrl}/pago-exitoso?${redirectParams}`;
             
-            console.log("✅ Redirigiendo a página de éxito:", finalUrl);
+            
             
             // Redirección HTTP 302 (temporal) hacia el frontend
             res.redirect(302, finalUrl);
@@ -1129,10 +1129,10 @@ router.post("/actualizar-producto", authToken, updateProductController);
 
     router.get("/bancard/redirect/cancel", (req, res) => {
         try {
-            console.log("❌ === BANCARD CANCEL/ERROR REDIRECT ===");
-            console.log("📋 Query params recibidos:", req.query);
-            console.log("🌐 Headers:", req.headers);
-            console.log("🔗 URL completa:", req.originalUrl);
+            
+            
+            
+            
             
             // Obtener TODOS los parámetros que envía Bancard
             const params = req.query;
@@ -1144,7 +1144,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
             // URL final hacia tu página PaymentCancelled.js existente
             const finalUrl = `${frontendUrl}/pago-cancelado?${redirectParams}`;
             
-            console.log("❌ Redirigiendo a página de cancelación:", finalUrl);
+            
             
             // Redirección HTTP 302 (temporal) hacia el frontend
             res.redirect(302, finalUrl);
@@ -1247,10 +1247,10 @@ router.post("/bancard/test-email", authToken, async (req, res) => {
         // ✅ ENVIAR EMAIL SEGÚN TIPO
         if (email_type === 'purchase_approved' || email_type === 'purchase_rejected') {
             const isApproved = email_type === 'purchase_approved';
-            console.log(`🧪 Enviando email de prueba: ${email_type}`);
+            
             emailResult = await emailService.sendPurchaseConfirmationEmail(transaction, isApproved);
         } else {
-            console.log(`🧪 Enviando email de prueba: ${email_type}`);
+            
             emailResult = await emailService.sendDeliveryUpdateEmail(transaction, email_type);
         }
 

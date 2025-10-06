@@ -43,7 +43,7 @@ const AllProducts = () => {
         credentials: 'include'
       })
       const dataResponse = await response.json()
-      console.log('📊 Respuesta del servidor:', dataResponse); // DEBUG
+       // DEBUG
 let products = [];
 if (dataResponse?.data) {
   if (Array.isArray(dataResponse.data)) {

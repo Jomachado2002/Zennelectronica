@@ -7,7 +7,7 @@ const uploadProductPermission = require('../../helpers/permission');
  */
 async function getUserProfileController(req, res) {
     try {
-        console.log("Obteniendo perfil para userId:", req.userId);
+        
         
         const user = await userModel.findById(req.userId).select('-password');
         

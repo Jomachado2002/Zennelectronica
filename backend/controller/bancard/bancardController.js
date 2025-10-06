@@ -22,21 +22,21 @@ const bancardConfirmController = async (req, res) => {
     const startTime = Date.now();
     
     try {
-        console.log("🔔 ============================================");
-        console.log("🔔 CONFIRMACIÓN RECIBIDA DE BANCARD - CON EMAILS");
-        console.log("🔔 ============================================");
-        console.log("📅 Timestamp:", new Date().toISOString());
-        console.log("🌐 IP origen:", req.ip || req.connection.remoteAddress);
-        console.log("📋 Headers:", JSON.stringify(req.headers, null, 2));
-        console.log("📦 Body completo:", JSON.stringify(req.body, null, 2));
-        console.log("🔗 Query params:", JSON.stringify(req.query, null, 2));
+        
+        
+        
+        
+        
+        
+        
+        
 
         // ✅ RESPONDER INMEDIATAMENTE A BANCARD
         const responseData = {
             status: "success"
         };
 
-        console.log("📤 Respondiendo a Bancard:", responseData);
+        
         res.status(200).json(responseData);
 
         // ✅ PROCESAR EN BACKGROUND CON EMAILS
@@ -60,7 +60,7 @@ const bancardConfirmController = async (req, res) => {
  */
 const processConfirmationWithEmails = async (body, query, headers, clientIp) => {
     try {
-        console.log("🔄 Procesando confirmación en background CON EMAILS...");
+        
         
         const queryParams = query || {};
         const { operation } = body || {};
@@ -86,13 +86,13 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
             },
         };
 
-        console.log("📊 DATOS PROCESADOS:", transactionData);
+        
 
         const isSuccessful = (transactionData.response === 'S' && transactionData.response_code === '00') ||
                            queryParams.status === 'success' ||
                            (transactionData.authorization_number && transactionData.ticket_number);
 
-        console.log("🎯 Resultado:", isSuccessful ? "EXITOSO" : "FALLIDO");
+        
 
         // ✅ BUSCAR Y ACTUALIZAR TRANSACCIÓN
         if (transactionData.shop_process_id) {
@@ -125,18 +125,18 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             bancard_confirmed: true
                         });
 
-                        console.log("✅ Transacción APROBADA y actualizada");
+                        
                         shouldSendEmail = true;
 
                         // ✅ ENVIAR EMAIL DE COMPRA APROBADA
                         try {
                             const updatedTransaction = await BancardTransactionModel.findById(transaction._id);
                             
-                            console.log("📧 Enviando email de compra APROBADA...");
+                            
                             const emailResult = await emailService.sendPurchaseConfirmationEmail(updatedTransaction, true);
                             
                             if (emailResult.success) {
-                                console.log("✅ Email de compra aprobada enviado:", emailResult.messageId);
+                                
                                 emailSent = true;
                             } else {
                                 console.error("❌ Error enviando email de compra aprobada:", emailResult.error);
@@ -145,7 +145,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             // ✅ ENVIAR NOTIFICACIÓN A ADMINS
                             const adminEmailResult = await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_aprobado');
                             if (adminEmailResult.success) {
-                                console.log("✅ Notificación admin enviada:", adminEmailResult.messageId);
+                                
                             }
 
                         } catch (emailError) {
@@ -164,18 +164,18 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             bancard_confirmed: true
                         });
 
-                        console.log("❌ Transacción RECHAZADA y actualizada");
+                        
                         shouldSendEmail = true;
 
                         // ✅ ENVIAR EMAIL DE COMPRA RECHAZADA
                         try {
                             const updatedTransaction = await BancardTransactionModel.findById(transaction._id);
                             
-                            console.log("📧 Enviando email de compra RECHAZADA...");
+                            
                             const emailResult = await emailService.sendPurchaseConfirmationEmail(updatedTransaction, false);
                             
                             if (emailResult.success) {
-                                console.log("✅ Email de compra rechazada enviado:", emailResult.messageId);
+                                
                                 emailSent = true;
                             } else {
                                 console.error("❌ Error enviando email de compra rechazada:", emailResult.error);
@@ -184,7 +184,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             // ✅ ENVIAR NOTIFICACIÓN A ADMINS
                             const adminEmailResult = await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_rechazado');
                             if (adminEmailResult.success) {
-                                console.log("✅ Notificación admin enviada:", adminEmailResult.messageId);
+                                
                             }
 
                         } catch (emailError) {
@@ -192,14 +192,14 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                         }
                     }
 
-                    console.log("📧 Estado de emails:", { shouldSendEmail, emailSent });
+                    
                 }
             } catch (dbError) {
                 console.error("⚠️ Error actualizando BD:", dbError);
             }
         }
 
-        console.log("✅ Procesamiento background completado CON EMAILS");
+        
 
     } catch (error) {
         console.error("❌ Error en procesamiento background con emails:", error);
@@ -208,9 +208,9 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
 
 const bancardConfirmGetController = (req, res) => {
     try {
-        console.log("🔍 === GET REQUEST A CONFIRMACIÓN BANCARD ===");
-        console.log("Query params:", req.query);
-        console.log("Headers:", req.headers);
+        
+        
+        
         
         res.status(200).json({
             status: "success",
@@ -237,10 +237,10 @@ const bancardConfirmGetController = (req, res) => {
  */
 const createPaymentController = async (req, res) => {
     try {
-        console.log("🛒 === INICIO PROCESO DE PAGO OCASIONAL BANCARD - CON EMAILS ===");
-        console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-        console.log("👤 Usuario autenticado:", req.isAuthenticated);
-        console.log("🆔 User ID:", req.userId);
+        
+        
+        
+        
         
         const configValidation = validateBancardConfig();
         if (!configValidation.isValid) {
@@ -253,7 +253,7 @@ const createPaymentController = async (req, res) => {
             });
         }
 
-        console.log("✅ Configuración de Bancard válida");
+        
 
         const {
             amount,
@@ -322,10 +322,10 @@ const createPaymentController = async (req, res) => {
             });
         }
 
-        console.log("🔗 URL de confirmación desde ENV:", confirmationUrl);
+        
 
         const shopProcessId = generateShopProcessId();
-        console.log("🆔 Shop Process ID generado:", shopProcessId);
+        
         
         const formattedAmount = formatAmount(amount);
         
@@ -336,7 +336,7 @@ const createPaymentController = async (req, res) => {
         const token = generateSingleBuyToken(shopProcessId, formattedAmount, currency);
 
         const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
-        console.log("🔗 Backend URL para redirecciones:", backendUrl);
+        
 
         // ✅ PAYLOAD PARA PAGO OCASIONAL
         const payload = {
@@ -364,8 +364,8 @@ const createPaymentController = async (req, res) => {
                     additional_data: payload.operation.additional_data
                 });
             } else {
-                console.log("⚠️ Formato de promoción inválido para pago ocasional, ignorando:", promotion_code);
-                console.log("💡 Formato requerido: '099VS ORO000045' (Entidad+Marca+Producto+Afinidad)");
+                
+                
             }
         }
 
@@ -378,7 +378,7 @@ const createPaymentController = async (req, res) => {
         });
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy`;
-        console.log("🌐 URL de Bancard:", bancardUrl);
+        
         
         const response = await axios.post(bancardUrl, payload, {
             headers: {
@@ -393,12 +393,12 @@ const createPaymentController = async (req, res) => {
             }
         });
 
-        console.log("📥 Response status:", response.status);
-        console.log("📥 Response data:", JSON.stringify(response.data, null, 2));
+        
+        
 
         if (response.status === 200 && response.data) {
             if (response.data.status === 'success') {
-                console.log("✅ Pago ocasional creado exitosamente en Bancard");
+                
                 
                 const processId = response.data.process_id;
                 const iframeUrl = `${getBancardBaseUrl()}/checkout/javascript/dist/bancard-checkout-4.0.0.js`;
@@ -560,10 +560,10 @@ const createPaymentController = async (req, res) => {
 
                     // ✅ ENVIAR NOTIFICACIÓN A ADMINS DE NUEVA COMPRA INICIADA
                     try {
-                        console.log("📧 Enviando notificación admin de nueva compra...");
+                        
                         const adminEmailResult = await emailService.sendAdminNotificationEmail(savedTransaction, 'nueva_compra');
                         if (adminEmailResult.success) {
-                            console.log("✅ Notificación admin de nueva compra enviada:", adminEmailResult.messageId);
+                            
                         } else {
                             console.error("❌ Error enviando notificación admin:", adminEmailResult.error);
                         }
@@ -573,7 +573,7 @@ const createPaymentController = async (req, res) => {
 
                 } catch (dbError) {
                     console.error("⚠️ Error guardando transacción en BD:", dbError);
-                    console.log("⚠️ Continuando con el pago aunque hubo error en BD");
+                    
                 }
                 
                 console.log("🔗 URLs generadas:", {
@@ -659,8 +659,8 @@ const getTransactionStatusController = async (req, res) => {
     try {
         const { transactionId } = req.params;
         
-        console.log("🔍 === CONSULTANDO ESTADO DE TRANSACCIÓN ===");
-        console.log("🔍 Transaction ID:", transactionId);
+        
+        
         
         const configValidation = validateBancardConfig();
         if (!configValidation.isValid) {
@@ -682,7 +682,7 @@ const getTransactionStatusController = async (req, res) => {
             }
         };
 
-        console.log("📤 Payload para consulta:", JSON.stringify(payload, null, 2));
+        
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
         
@@ -694,7 +694,7 @@ const getTransactionStatusController = async (req, res) => {
             timeout: 30000
         });
 
-        console.log("📥 Estado obtenido de Bancard:", response.status, JSON.stringify(response.data, null, 2));
+        
 
         res.json({
             message: "Estado obtenido exitosamente",
@@ -716,7 +716,7 @@ const getTransactionStatusController = async (req, res) => {
 
 const rollbackPaymentController = async (req, res) => {
     try {
-        console.log("🔄 === INICIANDO ROLLBACK DE PAGO ===");
+        
         
         const { shop_process_id } = req.body;
         
@@ -737,7 +737,7 @@ const rollbackPaymentController = async (req, res) => {
             });
         }
 
-        console.log("🔄 Procesando rollback para:", shop_process_id);
+        
 
         const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${shop_process_id}rollback0.00`;
         const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
@@ -750,7 +750,7 @@ const rollbackPaymentController = async (req, res) => {
             }
         };
 
-        console.log("📤 Payload de rollback:", JSON.stringify(payload, null, 2));
+        
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/rollback`;
         
@@ -762,7 +762,7 @@ const rollbackPaymentController = async (req, res) => {
             timeout: 30000
         });
 
-        console.log("📥 Respuesta de rollback:", response.status, JSON.stringify(response.data, null, 2));
+        
 
         if (response.status === 200 && response.data.status === 'success') {
             try {
@@ -775,7 +775,7 @@ const rollbackPaymentController = async (req, res) => {
                         status: 'rolled_back'
                     }
                 );
-                console.log("✅ Transacción marcada como rollback en BD");
+                
             } catch (dbError) {
                 console.error("⚠️ Error actualizando rollback en BD:", dbError);
             }
@@ -820,7 +820,7 @@ const rollbackPaymentController = async (req, res) => {
 };
 
 const bancardHealthController = (req, res) => {
-    console.log("🏥 Health check de Bancard");
+    
     
     const configValidation = validateBancardConfig();
     

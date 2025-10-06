@@ -57,7 +57,7 @@ const UserProfilePage = () => {
   const fetchUserDetails = async () => {
     setLoading(true);
     try {
-      console.log('🔄 Recargando datos del usuario...');
+      
       
       const response = await fetch(SummaryApi.current_user.url, {
         method: SummaryApi.current_user.method,
@@ -71,7 +71,7 @@ const UserProfilePage = () => {
       const result = await response.json();
       
       if (result.success && result.data) {
-        console.log('✅ Datos del usuario actualizados:', result.data);
+        
         dispatch(setUserDetails(result.data));
         setUserDataReady(true);
       } else {
@@ -102,7 +102,7 @@ const UserProfilePage = () => {
   // ✅ FUNCIÓN MEJORADA PARA REGISTRO DE TARJETAS CON VALIDACIONES
   const handleRegisterCard = async (cardData) => {
     try {
-      console.log('🆔 === INICIANDO REGISTRO DE TARJETA ===');
+      
       
       // ✅ VALIDAR USUARIO ANTES DE PROCEDER
       if (!user?._id) {
@@ -120,7 +120,7 @@ const UserProfilePage = () => {
         user_mail: user.email
       };
       
-      console.log('📤 Datos enviados (enriquecidos):', enrichedCardData);
+      
       
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas`, {
         method: 'POST',
@@ -150,7 +150,7 @@ const UserProfilePage = () => {
       const result = await response.json();
       
       if (result.success && result.data?.process_id) {
-        console.log('✅ Catastro exitoso! Process ID:', result.data.process_id);
+        
         toast.success('✅ Proceso de catastro iniciado');
         return result;
       } else {
@@ -169,7 +169,7 @@ const UserProfilePage = () => {
   // ✅ FUNCIÓN MEJORADA PARA OBTENER TARJETAS CON VALIDACIONES
   const handleFetchCards = async (userId) => {
     try {
-      console.log('📋 === OBTENIENDO TARJETAS ===');
+      
       
       // ✅ VALIDAR USUARIO
       if (!user?._id) {
@@ -180,7 +180,7 @@ const UserProfilePage = () => {
 
       // ✅ USAR bancardUserId O _id COMO FALLBACK
       const targetUserId = user.bancardUserId || user._id;
-      console.log('🎯 Target User ID:', targetUserId);
+      
       
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`, {
         method: 'GET',
@@ -194,7 +194,7 @@ const UserProfilePage = () => {
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ Tarjetas obtenidas:', result.data);
+        
         return result.data.cards || [];
       } else {
         console.warn('⚠️ Error obteniendo tarjetas:', result.message);
@@ -218,7 +218,7 @@ const UserProfilePage = () => {
   // ✅ FUNCIÓN MEJORADA PARA ELIMINAR TARJETAS
   const handleDeleteCard = async (userId, aliasToken) => {
     try {
-      console.log('🗑️ === ELIMINANDO TARJETA ===');
+      
       
       // ✅ VALIDAR USUARIO
       if (!user?._id) {

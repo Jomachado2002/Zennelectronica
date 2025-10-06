@@ -316,7 +316,7 @@ async function updateBudgetStatusController(req, res) {
           throw new Error("Estado de presupuesto no válido");
       }
 
-      console.log(`Actualizando presupuesto ${budgetId} a estado ${status}`);
+      
 
       const budget = await BudgetModel.findById(budgetId);
       

@@ -52,7 +52,7 @@ const Cart = () => {
         try {
             setLoading(true);
             const cartItems = localCartHelper.getCart();
-            console.log("Datos de carrito cargados:", cartItems);
+            
             setData(cartItems);
         } catch (error) {
             console.error('Error al cargar productos del carrito:', error);
@@ -66,14 +66,14 @@ const Cart = () => {
     const fetchUserCards = useCallback(async () => {
        if (!isLoggedIn || !user?.bancardUserId) return;
 
-       console.log('🔍 Intentando cargar tarjetas para usuario:', user.bancardUserId);
-       console.log('🌐 Backend URL:', process.env.REACT_APP_BACKEND_URL);
+       
+       
        
        setLoadingCards(true);
        try {
            // ✅ VERIFICAR LA URL COMPLETA
            const url = `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/api/bancard/tarjetas/${user.bancardUserId}`;
-           console.log('📡 URL completa:', url);
+           
            
            const response = await fetch(url, {
                method: 'GET',
@@ -83,20 +83,20 @@ const Cart = () => {
                }
            });
 
-           console.log('📥 Response status:', response.status);
+           
            
            if (!response.ok) {
                throw new Error(`HTTP error! status: ${response.status}`);
            }
 
            const result = await response.json();
-           console.log('📋 Resultado completo:', result);
+           
            
            if (result.success && result.data?.cards) {
-               console.log('✅ Tarjetas encontradas:', result.data.cards.length);
+               
                setRegisteredCards(result.data.cards);
            } else {
-               console.log('⚠️ No se encontraron tarjetas o respuesta inválida');
+               
                setRegisteredCards([]);
            }
        } catch (error) {
@@ -179,7 +179,7 @@ const Cart = () => {
             if (result.success && result.data) {
                 // ✅ GUARDAR EN EL ESTADO DEL USUARIO PARA FÁCIL ACCESO
                 user.savedLocation = result.data;
-                console.log('📍 Ubicación del usuario cargada:', result.data);
+                
             }
         } catch (error) {
             console.warn('Error cargando ubicación del usuario:', error);
@@ -187,11 +187,11 @@ const Cart = () => {
     };
 
     useEffect(() => {
-        console.log('🚀 Iniciando carga de datos del carrito...');
+        
         fetchData();
         
         if (isLoggedIn && user?.bancardUserId) {
-            console.log('👤 Usuario logueado detectado, cargando tarjetas...');
+            
             fetchUserCards();
             loadUserSavedLocation(); // ✅ CARGAR UBICACIÓN GUARDADA
             // Pre-llenar datos del usuario si está logueado
@@ -202,7 +202,7 @@ const Cart = () => {
                 address: user.address || ''
             });
         } else {
-            console.log('🚫 Usuario no logueado o sin bancardUserId');
+            
         }
     }, [isLoggedIn, user?.bancardUserId, fetchUserCards]);
 
@@ -270,12 +270,12 @@ const Cart = () => {
 
     // ✅ FUNCIONES PARA BANCARD
     const handlePaymentStart = () => {
-        console.log('Iniciando pago con Bancard...');
+        
         toast.info('Iniciando proceso de pago...');
     };
 
     const handlePaymentSuccess = (paymentData) => {
-        console.log('Pago exitoso:', paymentData);
+        
         toast.success('Redirigiendo a Bancard...');
         
         sessionStorage.setItem('payment_in_progress', JSON.stringify({
@@ -302,7 +302,7 @@ const Cart = () => {
         }
 
         try {
-            console.log('💳 === PROCESANDO PAGO CON TARJETA GUARDADA ===');
+            
             
             const trackingData = captureTrackingData();
             
@@ -375,7 +375,7 @@ const Cart = () => {
                 body: JSON.stringify(paymentData)
             });
 
-            console.log('📥 Response status:', response.status);
+            
             
             if (!response.ok) {
                 const errorText = await response.text();
@@ -384,15 +384,15 @@ const Cart = () => {
             }
 
             const result = await response.json();
-            console.log('📥 Resultado del pago:', result);
+            
             
             if (result.success) {
                 if (result.requires3DS) {
-                    console.log('🔐 Pago requiere verificación 3DS');
+                    
                     toast.info('🔐 Verificación 3DS requerida');
                     
                     if (result.data?.iframe_url) {
-                        console.log('🖼️ Mostrando iframe para 3DS:', result.data.iframe_url);
+                        
                         
                         sessionStorage.setItem('bancard_payment', JSON.stringify({
                             shop_process_id: result.data.shop_process_id,
@@ -426,7 +426,7 @@ const Cart = () => {
                 });
 
                 if (isApproved) {
-                    console.log('✅ Pago procesado directamente');
+                    
                     toast.success('✅ Pago procesado exitosamente');
                     
                     setTimeout(() => {
@@ -434,7 +434,7 @@ const Cart = () => {
                         navigate('/pago-exitoso?shop_process_id=' + (result.data.shop_process_id || Date.now()));
                     }, 1500);
                 } else {
-                    console.log('❌ Pago rechazado por Bancard');
+                    
                     toast.error(`Pago rechazado: ${responseData?.response_description || 'Error desconocido'}`);
                 }
             }

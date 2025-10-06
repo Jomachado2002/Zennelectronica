@@ -9,7 +9,7 @@ const emailService = require('../../services/emailService'); // ✅ IMPORTAR EMA
  */
 const updateDeliveryStatusController = async (req, res) => {
     try {
-        console.log("🚚 === ACTUALIZANDO ESTADO DE DELIVERY CON EMAILS ===");
+        
         
         // ✅ VERIFICAR PERMISOS DE ADMIN
         const hasPermission = await uploadProductPermission(req.userId);
@@ -94,7 +94,7 @@ const updateDeliveryStatusController = async (req, res) => {
             updateData.actual_delivery_date = new Date();
         }
 
-        console.log("🔄 Actualizando transacción...");
+        
         
         // ✅ ACTUALIZAR TRANSACCIÓN
         const updatedTransaction = await BancardTransactionModel.findByIdAndUpdate(
@@ -120,14 +120,14 @@ const updateDeliveryStatusController = async (req, res) => {
         // Solo enviar email si el estado realmente cambió
         if (notify_customer && previousDeliveryStatus !== delivery_status) {
             try {
-                console.log("📧 Enviando email de actualización de delivery...");
+                
                 
                 // ✅ EMAIL AL CLIENTE
                 const customerEmailResult = await emailService.sendDeliveryUpdateEmail(updatedTransaction, delivery_status);
                 emailResults.customer_email = customerEmailResult;
                 
                 if (customerEmailResult.success) {
-                    console.log("✅ Email al cliente enviado:", customerEmailResult.messageId);
+                    
                     
                     // ✅ GUARDAR REGISTRO DE NOTIFICACIÓN EN LA TRANSACCIÓN
                     updatedTransaction.notifications_sent.push({
@@ -160,7 +160,7 @@ const updateDeliveryStatusController = async (req, res) => {
                     emailResults.admin_email = adminEmailResult;
                     
                     if (adminEmailResult.success) {
-                        console.log("✅ Notificación admin enviada:", adminEmailResult.messageId);
+                        
                     } else {
                         console.error("❌ Error enviando notificación admin:", adminEmailResult.error);
                     }
@@ -174,9 +174,9 @@ const updateDeliveryStatusController = async (req, res) => {
                 emailResults.customer_email = { success: false, error: emailError.message };
             }
         } else if (!notify_customer) {
-            console.log("📧 Email de cliente deshabilitado por parámetro notify_customer=false");
+            
         } else {
-            console.log("📧 No se envía email porque el estado no cambió");
+            
         }
 
         // ✅ PREPARAR RESPUESTA
@@ -226,7 +226,7 @@ const updateDeliveryStatusController = async (req, res) => {
  */
 const getDeliveryProgressController = async (req, res) => {
     try {
-        console.log("📊 === OBTENIENDO PROGRESO DE DELIVERY ===");
+        
         
         const { transactionId } = req.params;
 
@@ -359,7 +359,7 @@ const getDeliveryProgressController = async (req, res) => {
  */
 const getDeliveryStatsController = async (req, res) => {
     try {
-        console.log("📊 === OBTENIENDO ESTADÍSTICAS DE DELIVERY ===");
+        
         
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {
@@ -548,7 +548,7 @@ const getDeliveryStatsController = async (req, res) => {
  */
 const addDeliveryAttemptController = async (req, res) => {
     try {
-        console.log("🚛 === AGREGANDO INTENTO DE ENTREGA ===");
+        
         
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {
@@ -592,11 +592,11 @@ const addDeliveryAttemptController = async (req, res) => {
 
             // ✅ ENVIAR EMAIL DE ENTREGADO AUTOMÁTICAMENTE
             try {
-                console.log("📧 Enviando email de entrega exitosa automáticamente...");
+                
                 const emailResult = await emailService.sendDeliveryUpdateEmail(transaction, 'delivered');
                 
                 if (emailResult.success) {
-                    console.log("✅ Email de entrega exitosa enviado:", emailResult.messageId);
+                    
                     
                     // Guardar registro de notificación
                     transaction.notifications_sent.push({
@@ -639,7 +639,7 @@ const addDeliveryAttemptController = async (req, res) => {
  */
 const rateDeliveryController = async (req, res) => {
     try {
-        console.log("⭐ === CALIFICANDO PEDIDO ===");
+        
         
         const { transactionId } = req.params;
         const { rating, feedback } = req.body;
@@ -735,7 +735,7 @@ const rateDeliveryController = async (req, res) => {
  */
 const sendManualNotificationController = async (req, res) => {
     try {
-        console.log("📧 === ENVIANDO NOTIFICACIÓN MANUAL ===");
+        
         
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {
@@ -817,8 +817,8 @@ const sendManualNotificationController = async (req, res) => {
             html: customEmailContent.html
         };
 
-        console.log(`📧 Enviando notificación manual a ${customerEmail}`);
-        console.log(`📧 Con copia oculta a: ${emailService.adminEmails.join(', ')}`);
+        
+        
 
         const emailResult = await emailService.transporter.sendMail(mailOptions);
 
@@ -834,7 +834,7 @@ const sendManualNotificationController = async (req, res) => {
         });
         await transaction.save();
 
-        console.log("✅ Notificación manual enviada:", emailResult.messageId);
+        
 
         res.json({
             message: "Notificación enviada exitosamente",
@@ -879,7 +879,7 @@ function getDeliveryStatusDisplay(status) {
  */
 const resendDeliveryEmailController = async (req, res) => {
     try {
-        console.log("🔄 === REENVIANDO EMAIL DE DELIVERY ===");
+        
         
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {
@@ -929,7 +929,7 @@ const resendDeliveryEmailController = async (req, res) => {
         }
 
         // ✅ REENVIAR EMAIL
-        console.log(`📧 Reenviando email de ${transaction.delivery_status} a ${customerEmail}...`);
+        
         
         const emailResult = await emailService.sendDeliveryUpdateEmail(transaction, transaction.delivery_status);
         
@@ -946,7 +946,7 @@ const resendDeliveryEmailController = async (req, res) => {
             });
             await transaction.save();
 
-            console.log("✅ Email reenviado exitosamente:", emailResult.messageId);
+            
 
             res.json({
                 message: "Email reenviado exitosamente",
@@ -986,7 +986,7 @@ const resendDeliveryEmailController = async (req, res) => {
  */
 const getEmailHistoryController = async (req, res) => {
     try {
-        console.log("📧 === OBTENIENDO HISTORIAL DE EMAILS ===");
+        
         
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {

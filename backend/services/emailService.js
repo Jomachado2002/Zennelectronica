@@ -32,7 +32,7 @@ class EmailService {
             const customerEmail = transactionData.customer_info?.email;
             
             if (!customerEmail) {
-                console.log(`❌ No hay email del cliente para transacción ${transactionData.shop_process_id}`);
+                
                 return { success: false, error: 'No customer email provided' };
             }
 
@@ -48,12 +48,12 @@ class EmailService {
                 html: emailContent.html
             };
 
-            console.log(`📧 Enviando email de compra ${isApproved ? 'APROBADA' : 'RECHAZADA'} a ${customerEmail}`);
-            console.log(`📧 Con copia oculta a: ${this.adminEmails.join(', ')}`);
+            
+            
             
             const result = await this.transporter.sendMail(mailOptions);
             
-            console.log(`✅ Email de compra enviado: ${result.messageId}`);
+            
             
             return { 
                 success: true, 
@@ -431,7 +431,7 @@ class EmailService {
             const customerEmail = transactionData.customer_info?.email;
             
             if (!customerEmail) {
-                console.log(`❌ No hay email para transacción ${transactionData.shop_process_id}`);
+                
                 return { success: false, error: 'No email provided' };
             }
 
@@ -445,12 +445,12 @@ class EmailService {
                 html: emailContent.html
             };
 
-            console.log(`📧 Enviando email de delivery ${newStatus} a ${customerEmail}`);
-            console.log(`📧 Con copia oculta a: ${this.adminEmails.join(', ')}`);
+            
+            
             
             const result = await this.transporter.sendMail(mailOptions);
             
-            console.log(`✅ Email de delivery enviado: ${result.messageId}`);
+            
             
             return { 
                 success: true, 
@@ -480,11 +480,11 @@ class EmailService {
                 html: emailContent.html
             };
 
-            console.log(`📧 Enviando notificación admin (${eventType}) a: ${this.adminEmails.join(', ')}`);
+            
             
             const result = await this.transporter.sendMail(mailOptions);
             
-            console.log(`✅ Notificación admin enviada: ${result.messageId}`);
+            
             
             return { 
                 success: true, 
@@ -709,7 +709,7 @@ class EmailService {
     async verifyEmailConfig() {
         try {
             await this.transporter.verify();
-            console.log('✅ Configuración de email verificada correctamente');
+            
             return true;
         } catch (error) {
             console.error('❌ Error en configuración de email:', error);

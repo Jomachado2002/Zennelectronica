@@ -16,7 +16,7 @@ const ChangeUserRole = ({
 
     const handleOnChangeSelect = (e) => {
         setUserRole(e.target.value);
-        console.log(e.target.value);
+        
     };
 
     const updateUserRole = async () => {
@@ -38,7 +38,7 @@ const ChangeUserRole = ({
             onClose();
             callFunc();
         }
-        console.log("Role Update", responseData);
+        
     };
 
     return (

@@ -113,7 +113,7 @@ export const preloadCriticalImages = (imageUrls = []) => {
     // En conexiones lentas o modo ahorro de datos, ajustar estrategias
     if (isSaveData || isSlowConnection) {
       // No precargar imágenes en conexiones lentas
-      console.log('Conexión lenta detectada: optimizando carga de imágenes');
+      
     } else {
       // Precargar solo imágenes críticas en conexiones normales
       // Banners y productos destacados (a implementar según tus necesidades)

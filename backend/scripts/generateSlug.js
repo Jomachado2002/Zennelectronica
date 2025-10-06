@@ -5,9 +5,9 @@ const { generateSlug, generateUniqueSlug } = require('../helpers/slugGenerator')
 
 async function connectDB() {
   try {
-    console.log("Intentando conectar a:", process.env.MONGODB_URI);
+    
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Conexión a MongoDB establecida');
+    
   } catch (err) {
     console.error('Error de conexión a MongoDB:', err);
     process.exit(1);
@@ -19,7 +19,7 @@ async function generateSlugsForProducts() {
     // Verificar si el modelo tiene campo slug
     const modelFields = Object.keys(ProductModel.schema.paths);
     if (!modelFields.includes('slug')) {
-      console.log('El modelo de producto no tiene campo slug. Añadiéndolo...');
+      
       
       // Actualizar el esquema programáticamente
       ProductModel.schema.add({
@@ -30,7 +30,7 @@ async function generateSlugsForProducts() {
         }
       });
       
-      console.log('Campo slug añadido al modelo.');
+      
     }
     
     // Obtener todos los productos sin slug
@@ -42,7 +42,7 @@ async function generateSlugsForProducts() {
       ]
     });
 
-    console.log(`Encontrados ${products.length} productos sin slug.`);
+    
 
     let updated = 0;
 
@@ -68,21 +68,21 @@ async function generateSlugsForProducts() {
       );
 
       updated++;
-      console.log(`Actualizado ${updated}/${products.length}: ${product.productName} => ${uniqueSlug}`);
+      
     }
 
-    console.log(`Proceso completado. ${updated} productos actualizados.`);
+    
 
   } catch (error) {
     console.error('Error al generar slugs:', error);
   } finally {
     mongoose.disconnect();
-    console.log('Desconectado de MongoDB.');
+    
   }
 }
 
 // Ejecutar la migración
-console.log("Iniciando script de generación de slugs...");
+
 connectDB()
   .then(() => generateSlugsForProducts())
   .catch(err => console.error('Error en el script:', err));

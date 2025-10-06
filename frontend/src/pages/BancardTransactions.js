@@ -169,7 +169,7 @@ const BancardTransactions = () => {
             const result = await response.json();
             if (result.success) {
                 toast.success("Estado consultado correctamente");
-                console.log("Estado de la transacción:", result.data);
+                
             } else {
                 toast.error("Error al consultar estado");
             }
@@ -224,7 +224,7 @@ const BancardTransactions = () => {
 
     const testRollbackForCertification = async () => {
         try {
-            console.log("🧪 === INICIANDO PRUEBA DE ROLLBACK PARA CERTIFICACIÓN ===");
+            
             
             const approvedTransaction = transactions.find(t => t.status === 'approved' && !t.is_rolled_back);
             
@@ -234,7 +234,7 @@ const BancardTransactions = () => {
             }
 
             const shopProcessId = approvedTransaction.shop_process_id;
-            console.log("🎯 Usando transacción para prueba:", shopProcessId);
+            
             
             const userConfirmed = window.confirm(
                 `🔄 PRUEBA DE ROLLBACK PARA CERTIFICACIÓN\n\n` +
@@ -265,11 +265,11 @@ const BancardTransactions = () => {
 
             const result = await response.json();
             
-            console.log("📥 Resultado de prueba de rollback:", result);
+            
 
             if (result.success) {
                 toast.success("✅ PRUEBA DE ROLLBACK EXITOSA - Bancard debería marcar como completado");
-                console.log("✅ Detalles de la prueba:", result.data);
+                
                 
                 alert(
                     `✅ PRUEBA DE ROLLBACK COMPLETADA\n\n` +

@@ -17,7 +17,7 @@ const getAllBancardTransactionsController = async (req, res) => {
     try {
         const hasAdminPermission = await uploadProductPermission(req.userId);
         
-        console.log("🔍 === OBTENIENDO TRANSACCIONES BANCARD CON PRODUCTOS ===");
+        
         console.log("👤 Usuario:", {
             userId: req.userId,
             isAuthenticated: req.isAuthenticated,
@@ -46,13 +46,13 @@ const getAllBancardTransactionsController = async (req, res) => {
 
         // ✅ FILTROS DE PERMISOS
         if (!hasAdminPermission && req.isAuthenticated) {
-            console.log("🔒 Usuario sin permisos admin, filtrando por sus transacciones");
+            
             query.$or = [
                 { created_by: req.userId },
                 { user_bancard_id: req.bancardUserId || req.user?.bancardUserId }
             ];
         } else if (!hasAdminPermission && !req.isAuthenticated) {
-            console.log("🚫 Usuario invitado sin permisos");
+            
             return res.json({
                 message: "Acceso denegado para usuarios no autenticados",
                 data: {
@@ -564,9 +564,9 @@ const rollbackBancardTransactionController = async (req, res) => {
         const { transactionId } = req.params;
         const { reason } = req.body;
 
-        console.log("🔄 === INICIANDO ROLLBACK DESDE ADMIN ===");
-        console.log("Transaction ID:", transactionId);
-        console.log("Reason:", reason);
+        
+        
+        
 
         const transaction = await BancardTransactionModel.findById(transactionId);
         if (!transaction) {
@@ -613,7 +613,7 @@ const rollbackBancardTransactionController = async (req, res) => {
             }
         };
 
-        console.log("📤 Payload de rollback:", JSON.stringify(payload, null, 2));
+        
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/rollback`;
         
@@ -625,7 +625,7 @@ const rollbackBancardTransactionController = async (req, res) => {
             timeout: 30000
         });
 
-        console.log("📥 Respuesta de Bancard:", response.status, JSON.stringify(response.data, null, 2));
+        
 
         if (response.status === 200 && response.data.status === 'success') {
             await BancardTransactionModel.findByIdAndUpdate(transactionId, {
@@ -636,7 +636,7 @@ const rollbackBancardTransactionController = async (req, res) => {
                 status: 'rolled_back'
             });
 
-            console.log("✅ Rollback exitoso");
+            
 
             res.json({
                 message: "Transacción reversada exitosamente",
@@ -738,7 +738,7 @@ const checkBancardTransactionStatusController = async (req, res) => {
             }
         };
 
-        console.log("📤 Payload de consulta:", JSON.stringify(payload, null, 2));
+        
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
         
@@ -750,7 +750,7 @@ const checkBancardTransactionStatusController = async (req, res) => {
             timeout: 30000
         });
 
-        console.log("📥 Estado de Bancard:", response.data);
+        
 
         res.json({
             message: "Estado de transacción consultado",

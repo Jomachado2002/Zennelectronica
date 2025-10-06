@@ -5,12 +5,12 @@ const userModel = require('../models/userModel');
 
 async function authToken(req, res, next) {
     try {
-        console.log('🔐 === MIDDLEWARE AUTHTOKEN ===');
+        
         
         const userAgent = req.headers['user-agent'] || '';
         const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-        console.log('📱 Dispositivo:', isIOS ? 'iOS' : 'Other');
-        console.log('🍪 Cookie header:', req.headers.cookie ? 'PRESENTE' : 'AUSENTE');
+        
+        
 
         // ✅ BUSCAR TOKEN EN MÚLTIPLES LUGARES (ESPECIAL PARA iOS)
         let token = null;
@@ -83,10 +83,10 @@ async function authToken(req, res, next) {
                     
                     return next();
                 } else {
-                    console.log('❌ Usuario no encontrado o inactivo');
+                    
                 }
             } catch (jwtError) {
-                console.log('❌ Token JWT inválido:', jwtError.message);
+                
             }
         }
 

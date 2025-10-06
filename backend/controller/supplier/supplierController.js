@@ -75,17 +75,17 @@ async function createSupplierController(req, res) {
             supplierData.createdByGuest = 'system-user';
         }
 
-        console.log("=== CREANDO PROVEEDOR ===");
-        console.log("UserId:", req.userId);
-        console.log("Datos del proveedor:", supplierData);
+        
+        
+        
 
         // Crear nuevo proveedor
         const newSupplier = new SupplierModel(supplierData);
 
         const savedSupplier = await newSupplier.save();
 
-        console.log("¡PROVEEDOR CREADO EXITOSAMENTE!");
-        console.log("ID:", savedSupplier._id);
+        
+        
 
         res.status(201).json({
             message: "Proveedor creado correctamente",

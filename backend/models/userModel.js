@@ -132,7 +132,7 @@ userSchema.pre('save', async function(next) {
     // Solo generar bancardUserId si es un nuevo usuario y no tiene uno
     if (this.isNew && !this.bancardUserId) {
         try {
-            console.log('🔄 Generando bancardUserId para nuevo usuario:', this.email);
+            
             
             let isUnique = false;
             let newBancardUserId;
@@ -153,18 +153,18 @@ userSchema.pre('save', async function(next) {
                     isUnique = true;
                 } else {
                     attempts++;
-                    console.log(`⚠️ bancardUserId ${newBancardUserId} ya existe, reintentando... (${attempts}/${maxAttempts})`);
+                    
                 }
             }
             
             if (isUnique) {
                 this.bancardUserId = newBancardUserId;
-                console.log(`✅ bancardUserId generado: ${newBancardUserId} para usuario: ${this.email}`);
+                
             } else {
                 console.error('❌ No se pudo generar bancardUserId único después de', maxAttempts, 'intentos');
                 // En caso de emergencia, usar timestamp
                 this.bancardUserId = parseInt(Date.now().toString().slice(-6));
-                console.log(`🆘 Usando bancardUserId de emergencia: ${this.bancardUserId}`);
+                
             }
         } catch (error) {
             console.error('❌ Error generando bancardUserId:', error);
@@ -178,13 +178,13 @@ userSchema.pre('save', async function(next) {
 // ✅ MÉTODO ESTÁTICO PARA ASIGNAR bancardUserId A USUARIOS EXISTENTES
 userSchema.statics.assignBancardUserIds = async function() {
     try {
-        console.log('🔄 Asignando bancardUserId a usuarios existentes...');
+        
         
         const usersWithoutBancardId = await this.find({ 
             bancardUserId: { $exists: false } 
         });
         
-        console.log(`📋 Encontrados ${usersWithoutBancardId.length} usuarios sin bancardUserId`);
+        
         
         for (const user of usersWithoutBancardId) {
             let isUnique = false;
@@ -210,17 +210,17 @@ userSchema.statics.assignBancardUserIds = async function() {
                 await this.findByIdAndUpdate(user._id, { 
                     bancardUserId: newBancardUserId 
                 });
-                console.log(`✅ Asignado bancardUserId ${newBancardUserId} a ${user.email}`);
+                
             } else {
                 const emergencyId = parseInt(Date.now().toString().slice(-6));
                 await this.findByIdAndUpdate(user._id, { 
                     bancardUserId: emergencyId 
                 });
-                console.log(`🆘 Asignado bancardUserId de emergencia ${emergencyId} a ${user.email}`);
+                
             }
         }
         
-        console.log('✅ Proceso de asignación completado');
+        
         return true;
     } catch (error) {
         console.error('❌ Error asignando bancardUserIds:', error);

@@ -23,7 +23,7 @@ const MetaPixelTracker = () => {
       if (typeof window.fbq !== 'undefined') {
         window.fbq('init', '1668993647830344');
         window.fbq('track', 'PageView');
-        console.log('✅ Meta Pixel de Zenn cargado correctamente');
+        
       }
     };
      
@@ -67,7 +67,7 @@ const normalizeContentId = (productData) => {
 
 // ✅ FUNCIÓN PARA TRACKEAR CONTACTO POR WHATSAPP
 export const trackWhatsAppContact = (productData = null) => {
-  console.log('🟢 Tracking WhatsApp contact:', productData?.productName || 'Consulta General');
+  
      
   if (typeof window.fbq !== 'undefined') {
     const contentIds = normalizeContentId(productData);
@@ -87,7 +87,7 @@ export const trackWhatsAppContact = (productData = null) => {
       timestamp: Date.now()
     });
          
-    console.log('✅ Evento WhatsApp enviado a Meta exitosamente con IDs:', contentIds);
+    
   } else {
     console.warn('⚠️ Meta Pixel no está disponible');
   }
@@ -95,7 +95,7 @@ export const trackWhatsAppContact = (productData = null) => {
 
 // ✅ FUNCIÓN PARA TRACKEAR DESCARGA DE PDF
 export const trackPDFDownload = (customerData, cartTotal, cartItems = []) => {
-  console.log('🟢 Tracking PDF download');
+  
      
   if (typeof window.fbq !== 'undefined') {
     // ✅ Extraer IDs de todos los productos en el carrito usando generateCleanId
@@ -122,13 +122,13 @@ export const trackPDFDownload = (customerData, cartTotal, cartItems = []) => {
       cart_items_count: cartItems.length
     });
          
-    console.log('✅ PDF Download enviado a Meta con IDs:', contentIds);
+    
   }
 };
 
 // ✅ FUNCIÓN PARA TRACKEAR AGREGAR AL CARRITO
 export const trackAddToCart = (product) => {
-  console.log('🟢 Tracking Add to Cart:', product?.productName);
+  
      
   if (typeof window.fbq !== 'undefined') {
     const contentIds = normalizeContentId(product);
@@ -141,7 +141,7 @@ export const trackAddToCart = (product) => {
       currency: 'PYG'
     });
          
-    console.log('✅ Add to Cart enviado a Meta con IDs:', contentIds);
+    
   }
 };
 
@@ -159,13 +159,13 @@ export const trackProductInterest = (product, interestLevel, score) => {
       timestamp: Date.now()
     });
     
-    console.log('✅ Product Interest enviado con IDs:', contentIds);
+    
   }
 };
 
 // ✅ FUNCIÓN PARA TRACKEAR VIEW CONTENT
 export const trackViewContent = (product) => {
-  console.log('🟢 Tracking View Content:', product?.productName);
+  
   
   if (typeof window.fbq !== 'undefined') {
     const contentIds = normalizeContentId(product);
@@ -178,13 +178,13 @@ export const trackViewContent = (product) => {
       currency: 'PYG'
     });
     
-    console.log('✅ View Content enviado a Meta con IDs:', contentIds);
+    
   }
 };
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR INICIO DE CHECKOUT
 export const trackInitiateCheckout = (cartItems, totalValue) => {
-  console.log('🟢 Tracking Initiate Checkout');
+  
   
   if (typeof window.fbq !== 'undefined') {
     // ✅ Usar generateCleanId para consistencia
@@ -200,13 +200,13 @@ export const trackInitiateCheckout = (cartItems, totalValue) => {
       num_items: cartItems.length
     });
     
-    console.log('✅ Initiate Checkout enviado con IDs:', contentIds);
+    
   }
 };
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR COMPRA COMPLETADA
 export const trackPurchase = (transactionData, cartItems) => {
-  console.log('🟢 Tracking Purchase');
+  
   
   if (typeof window.fbq !== 'undefined') {
     // ✅ Usar generateCleanId para consistencia
@@ -223,7 +223,7 @@ export const trackPurchase = (transactionData, cartItems) => {
       num_items: cartItems.length
     });
     
-    console.log('✅ Purchase enviado con IDs:', contentIds);
+    
   }
 };
 
@@ -242,7 +242,7 @@ export const trackPageView = (pageData = {}) => {
       });
     }
     
-    console.log('✅ PageView enviado');
+    
   }
 };
 

@@ -35,7 +35,7 @@ export const MetaTracking = {
         timestamp: new Date().toISOString()
       });
       
-      console.log('🎯 META: WhatsApp Lead tracked (OBJETIVO PRINCIPAL)', productData);
+      
     }
   },
 
@@ -57,7 +57,7 @@ export const MetaTracking = {
         has_contact_info: !!(budgetData.customerPhone || budgetData.customerEmail)
       });
       
-      console.log('📊 META: Budget Lead tracked', budgetData);
+      
     }
   },
 
@@ -78,7 +78,7 @@ export const MetaTracking = {
         customer_name: budgetData.customerName
       });
       
-      console.log('🔥 META: Qualified Budget Lead tracked', budgetData);
+      
     }
   },
 
@@ -96,7 +96,7 @@ export const MetaTracking = {
           currency: 'PYG'
         });
         
-        console.log('👀 META: High-value product view tracked', productData);
+        
       }
     }
   },
@@ -114,7 +114,7 @@ export const MetaTracking = {
           num_products: categoryData.productCount || 0
         });
         
-        console.log('📂 META: Strategic category view tracked', categoryData);
+        
       }
     }
   },

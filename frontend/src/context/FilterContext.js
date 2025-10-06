@@ -155,7 +155,7 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
       
       const cachedData = queryClient.getQueryData(['category-products', filterCategoryList[0], filterSubcategoryList[0]]);
       if (cachedData && cachedData.length > 0) {
-        console.log('✅ Usando datos del caché individual');
+        
         return {
           data: cachedData,
           filters: { brands: [], specifications: {} }
@@ -164,7 +164,7 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
     }
     
     // ✅ SI NO ESTÁ EN CACHÉ: Hacer consulta completa con filtros
-    console.log('🔄 Cargando datos con filtros desde servidor');
+    
     const response = await fetch(SummaryApi.filterProduct.url, {
       method: SummaryApi.filterProduct.method,
       headers: {

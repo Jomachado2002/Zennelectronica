@@ -9,9 +9,9 @@ const userModel = require('../../models/userModel');
  */
 const getUserPurchasesController = async (req, res) => {
     try {
-        console.log("🛒 === OBTENIENDO COMPRAS DEL USUARIO ===");
-        console.log("👤 Usuario autenticado:", req.userId);
-        console.log("🔍 Es admin:", req.userRole === 'ADMIN');
+        
+        
+        
 
         // ✅ VERIFICAR AUTENTICACIÓN
         if (!req.isAuthenticated || !req.userId) {
@@ -145,7 +145,7 @@ const getUserPurchasesController = async (req, res) => {
         // ✅ CALCULAR ESTADÍSTICAS DEL USUARIO
         const userStats = await calculateUserPurchaseStats(req.userId);
 
-        console.log(`✅ Encontradas ${processedPurchases.length} compras para el usuario`);
+        
 
         res.json({
             message: "Compras obtenidas exitosamente",
@@ -183,9 +183,9 @@ const getPurchaseDetailsController = async (req, res) => {
     try {
         const { purchaseId } = req.params;
         
-        console.log("🔍 === OBTENIENDO DETALLES DE COMPRA ===");
-        console.log("🆔 Purchase ID:", purchaseId);
-        console.log("👤 Usuario:", req.userId);
+        
+        
+        
 
         if (!req.isAuthenticated || !req.userId) {
             return res.status(401).json({
@@ -291,7 +291,7 @@ const getPurchaseDetailsController = async (req, res) => {
             } : null
         };
 
-        console.log("✅ Detalles de compra obtenidos exitosamente");
+        
 
         res.json({
             message: "Detalles de compra obtenidos exitosamente",
@@ -316,8 +316,8 @@ const getPurchaseDetailsController = async (req, res) => {
  */
 const getUserPurchaseStatsController = async (req, res) => {
     try {
-        console.log("📊 === OBTENIENDO ESTADÍSTICAS DE COMPRAS ===");
-        console.log("👤 Usuario:", req.userId);
+        
+        
 
         if (!req.isAuthenticated || !req.userId) {
             return res.status(401).json({
@@ -352,7 +352,7 @@ const getUserPurchaseStatsController = async (req, res) => {
  */
 const calculateUserPurchaseStats = async (userId) => {
     try {
-        console.log("📊 Calculando estadísticas para usuario:", userId);
+        
 
         const baseQuery = {
             created_by: userId,
@@ -460,7 +460,7 @@ const calculateUserPurchaseStats = async (userId) => {
             }))
         };
 
-        console.log("✅ Estadísticas calculadas exitosamente");
+        
         return stats;
 
     } catch (error) {
@@ -485,8 +485,8 @@ const calculateUserPurchaseStats = async (userId) => {
  */
 const getAllUserPurchasesController = async (req, res) => {
     try {
-        console.log("🛒 === ADMIN: OBTENIENDO TODAS LAS COMPRAS ===");
-        console.log("👤 Usuario:", req.userId, "Role:", req.userRole);
+        
+        
 
         // ✅ VERIFICAR QUE ES ADMIN
         if (req.userRole !== 'ADMIN') {

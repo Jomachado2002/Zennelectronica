@@ -60,16 +60,16 @@ const BancardPayButton = ({
           try {
             data = JSON.parse(event.data);
           } catch (parseError) {
-            console.log('📝 Mensaje como string:', event.data);
+            
             return;
           }
         }
         
-        console.log('📋 Datos parseados del iframe:', data);
+        
         
         if (data && typeof data === 'object') {
           if (data.type === 'payment_success' || data.status === 'success') {
-            console.log('✅ Pago exitoso desde iframe:', data);
+            
             setShowIframe(false);
             setLoading(false);
             setPaymentProcessing(false);
@@ -85,7 +85,7 @@ const BancardPayButton = ({
             setPaymentProcessing(false);
             onPaymentError(new Error(data.message || 'Error en el proceso de pago'));
           } else if (data.type === 'iframe_loaded' || data.message === 'loaded') {
-            console.log('✅ Iframe cargado correctamente');
+            
             setLoading(false);
           }
         }
@@ -97,7 +97,7 @@ const BancardPayButton = ({
   // ✅ CARGAR SCRIPT Y MANEJAR IFRAME
   useEffect(() => {
     if (showIframe && processId) {
-      console.log('🎯 Efecto para cargar script:', { showIframe, processId });
+      
       const timer = setTimeout(() => {
         loadBancardScript();
       }, 100);
@@ -118,7 +118,7 @@ const BancardPayButton = ({
   }, []);
 
   const loadBancardScript = (retryCount = 0) => {
-    console.log('🔄 Cargando script de Bancard... (intento', retryCount + 1, ')');
+    
     
     if (retryCount >= 3) {
       console.error('❌ Máximo de intentos alcanzado para cargar script');
@@ -132,7 +132,7 @@ const BancardPayButton = ({
     const existingScript = document.getElementById('bancard-script');
     if (existingScript) {
       existingScript.remove();
-      console.log('🗑️ Script anterior removido');
+      
     }
 
     const environment = process.env.REACT_APP_BANCARD_ENVIRONMENT || 'staging';
@@ -140,7 +140,7 @@ const BancardPayButton = ({
       ? 'https://vpos.infonet.com.py' 
       : 'https://vpos.infonet.com.py:8888';
 
-    console.log('🌐 Environment detectado:', environment, '- Base URL:', baseUrl);
+    
 
     const script = document.createElement('script');
     script.id = 'bancard-script';
@@ -148,9 +148,9 @@ const BancardPayButton = ({
     script.async = true;
     
     script.onload = () => {
-      console.log('✅ Script de Bancard cargado exitosamente en intento', retryCount + 1);
+      
       if (window.Bancard) {
-        console.log('✅ window.Bancard disponible:', Object.keys(window.Bancard));
+        
         setTimeout(initializeBancardIframe, 200);
       } else {
         console.warn('⚠️ window.Bancard no disponible después de cargar script');
@@ -173,12 +173,12 @@ const BancardPayButton = ({
     };
 
     document.head.appendChild(script);
-    console.log('📤 Script agregado al DOM:', script.src);
+    
   };
 
   const initializeBancardIframe = (retryCount = 0) => {
     try {
-      console.log('🎯 Inicializando iframe de PAGO con processId:', processId, '(intento', retryCount + 1, ')');
+      
       
       if (retryCount >= 5) {
         console.error('❌ Máximo de intentos alcanzado para inicializar iframe');
@@ -208,7 +208,7 @@ const BancardPayButton = ({
         return;
       }
       
-      console.log('✅ window.Bancard.Checkout disponible, creando formulario...');
+      
       
       const styles = {
         'input-background-color': '#ffffff',
@@ -239,9 +239,9 @@ const BancardPayButton = ({
       container.style.overflow = 'hidden';
       
       try {
-        console.log('🚀 Creando formulario con processId:', String(processId));
+        
         window.Bancard.Checkout.createForm('bancard-iframe-container', String(processId), styles);
-        console.log('✅ Iframe de pago inicializado exitosamente');
+        
         
         window.addEventListener('message', handleIframeMessage, false);
         
@@ -256,7 +256,7 @@ const BancardPayButton = ({
         onPaymentError(new Error(`Error al crear formulario: ${createFormError.message}`));
         
         if (retryCount < 3) {
-          console.log('🔄 Reintentando crear formulario...');
+          
           setTimeout(() => initializeBancardIframe(retryCount + 1), 2000);
         }
       }
@@ -416,7 +416,7 @@ ${customerData.location.google_maps_url || 'No disponible'}
             body: JSON.stringify(paymentRequest)
         });
 
-        console.log('📥 Response status:', response.status);
+        
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -434,10 +434,10 @@ ${customerData.location.google_maps_url || 'No disponible'}
         }
 
         const result = await response.json();
-        console.log('📥 Respuesta del backend:', result);
+        
 
         if (result.success && result.data && result.data.process_id) {
-            console.log('✅ Pago creado exitosamente:', result.data);
+            
             
             setProcessId(result.data.process_id);
             setShowIframe(true);
@@ -561,7 +561,7 @@ ${customerData.location.google_maps_url || 'No disponible'}
               <div className="mt-6 text-center">
                 <button
                   onClick={() => {
-                    console.log('🔄 Reintentando cargar iframe...');
+                    
                     setLoading(true);
                     setTimeout(() => {
                       initializeBancardIframe();

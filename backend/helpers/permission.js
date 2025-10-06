@@ -3,18 +3,18 @@ const userModel = require("../models/userModel");
 
 const uploadProductPermission = async (userId) => {
     try {
-        console.log("🔍 === VERIFICANDO PERMISOS ===");
-        console.log("👤 User ID recibido:", userId, "Tipo:", typeof userId);
+        
+        
         
         // ✅ PERMITIR USUARIOS INVITADOS PARA OPERACIONES BÁSICAS
         if (!userId) {
-            console.log("⚠️ No hay userId, devolviendo false para operaciones admin");
+            
             return false; // ✅ CAMBIAR A false - sin userId no hay permisos admin
         }
 
         // ✅ RECHAZAR USUARIOS INVITADOS PARA FUNCIONES ADMIN
         if (typeof userId === 'string' && userId.startsWith('guest-')) {
-            console.log("🚫 Usuario invitado detectado, sin permisos admin");
+            
             return false; // ✅ CAMBIAR A false - guests no tienen permisos admin
         }
 
@@ -22,7 +22,7 @@ const uploadProductPermission = async (userId) => {
         const user = await userModel.findById(userId);
         
         if (!user) {
-            console.log("⚠️ Usuario no encontrado en BD:", userId);
+            
             return false; // ✅ Usuario no existe = sin permisos
         }
         
@@ -36,23 +36,23 @@ const uploadProductPermission = async (userId) => {
         
         // ✅ VERIFICAR QUE EL USUARIO ESTÉ ACTIVO
         if (user.isActive === false) {
-            console.log("🚫 Usuario inactivo, sin permisos:", user.email);
+            
             return false;
         }
         
         // ✅ ADMIN tiene acceso completo
         if (user.role === 'ADMIN') {
-            console.log("✅ Acceso ADMIN concedido");
+            
             return true;
         }
         
                     // ✅ GENERAL puede acceder a su perfil (compatibilidad con iPhone)
             if (user.role === 'GENERAL') {
-                console.log("✅ Usuario GENERAL - acceso a perfil permitido");
+                
                 return true; // ✅ PERMITIR acceso a perfil para GENERAL
             }
         
-        console.log(`🚫 Rol ${user.role} no tiene permisos admin`);
+        
         return false; // ✅ CAMBIAR: sin rol específico = sin permisos
         
     } catch (error) {
@@ -64,18 +64,18 @@ const uploadProductPermission = async (userId) => {
 // ✅ NUEVA FUNCIÓN: Verificar si usuario puede realizar compras
 const canUserMakePurchase = async (userId) => {
     try {
-        console.log("🛒 === VERIFICANDO PERMISOS DE COMPRA ===");
-        console.log("👤 User ID:", userId);
+        
+        
         
         // ✅ PERMITIR USUARIOS INVITADOS PARA COMPRAS
         if (!userId) {
-            console.log("✅ Usuario invitado - puede comprar");
+            
             return true;
         }
 
         // ✅ PERMITIR USUARIOS INVITADOS (guest-xxxx)
         if (typeof userId === 'string' && userId.startsWith('guest-')) {
-            console.log("✅ Usuario invitado identificado - puede comprar");
+            
             return true;
         }
 
@@ -83,18 +83,18 @@ const canUserMakePurchase = async (userId) => {
         const user = await userModel.findById(userId);
         
         if (!user) {
-            console.log("⚠️ Usuario registrado no encontrado, permitiendo como invitado");
+            
             return true; // ✅ Si no se encuentra, permitir como invitado
         }
         
         // ✅ VERIFICAR QUE EL USUARIO ESTÉ ACTIVO
         if (user.isActive === false) {
-            console.log("🚫 Usuario inactivo, no puede comprar");
+            
             return false;
         }
         
         // ✅ USUARIOS REGISTRADOS ACTIVOS PUEDEN COMPRAR
-        console.log("✅ Usuario registrado activo - puede comprar");
+        
         return true;
         
     } catch (error) {

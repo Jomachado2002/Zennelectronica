@@ -36,7 +36,7 @@ const FavoritesPage = ({ user, onNavigate }) => {
 
   const addToCart = (product) => {
     // Lógica para agregar al carrito
-    console.log('Agregando al carrito:', product);
+    
     // Aquí podrías hacer una llamada a tu API de carrito
   };
 
