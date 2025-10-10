@@ -1,5 +1,6 @@
 // backend/controller/user/userProfile.js
 const userModel = require("../../models/userModel");
+const BalanceModel = require("../../models/balanceModel");
 const uploadProductPermission = require('../../helpers/permission');
 
 /**
@@ -217,9 +218,235 @@ async function changePasswordController(req, res) {
     }
 }
 
+/**
+ * ✅ OBTENER SALDO DEL USUARIO
+ */
+async function getUserBalanceController(req, res) {
+    try {
+        const userId = req.userId;
+        
+        const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
+        
+        // Obtener últimas transacciones
+        const recentTransactions = userBalance.transactions
+            .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date))
+            .slice(0, 10);
+
+        res.json({
+            message: "Saldo obtenido exitosamente",
+            data: {
+                user_id: userId,
+                current_balance: userBalance.current_balance,
+                total_loaded: userBalance.total_loaded,
+                total_spent: userBalance.total_spent,
+                last_transaction_date: userBalance.last_transaction_date,
+                recent_transactions: recentTransactions,
+                is_active: userBalance.is_active
+            },
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+        console.error("❌ Error obteniendo saldo del usuario:", error);
+        res.status(500).json({
+            message: "Error al obtener el saldo",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+}
+
+/**
+ * ✅ CARGAR SALDO CON BANCARD
+ */
+async function loadBalanceController(req, res) {
+    try {
+        const userId = req.userId;
+        const { amount, currency = 'PYG', description = 'Carga de saldo' } = req.body;
+
+        // Validaciones
+        if (!amount || amount <= 0) {
+            return res.status(400).json({
+                message: "El monto debe ser mayor a 0",
+                success: false,
+                error: true
+            });
+        }
+
+        // Verificar que el usuario existe
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: "Usuario no encontrado",
+                success: false,
+                error: true
+            });
+        }
+
+        // Llamar al controlador de Bancard para carga de saldo
+        const { loadBalanceController: bancardLoadBalance } = require('../bancard/bancardController');
+        
+        // Modificar req.body para incluir user_id
+        req.body.user_id = userId;
+        req.body.customer_info = {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            address: user.address
+        };
+
+        return await bancardLoadBalance(req, res);
+
+    } catch (error) {
+        console.error("❌ Error cargando saldo:", error);
+        res.status(500).json({
+            message: "Error al cargar saldo",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+}
+
+/**
+ * ✅ PROCESAR PAGO CON SALDO
+ */
+async function payWithBalanceController(req, res) {
+    try {
+        const userId = req.userId;
+        const { amount, description, items = [], customer_info = {}, sale_id = null, reference = null } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({
+                message: "El monto debe ser mayor a 0",
+                success: false,
+                error: true
+            });
+        }
+
+        // Obtener balance del usuario
+        const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
+        
+        // Verificar saldo suficiente
+        if (!userBalance.hasEnoughBalance(amount)) {
+            return res.status(400).json({
+                message: "Saldo insuficiente",
+                success: false,
+                error: true,
+                data: {
+                    current_balance: userBalance.current_balance,
+                    required_amount: amount,
+                    deficit: amount - userBalance.current_balance
+                }
+            });
+        }
+
+        // Procesar pago con saldo
+        await userBalance.addTransaction({
+            type: 'spend',
+            amount: parseFloat(amount),
+            description: description || 'Compra con saldo',
+            reference: reference || sale_id || `PAY-${Date.now()}`,
+            transaction_date: new Date(),
+            status: 'completed',
+            metadata: {
+                items: items,
+                customer_info: customer_info,
+                payment_method: 'balance'
+            }
+        });
+
+        console.log("✅ Pago con saldo procesado:", {
+            user_id: userId,
+            amount: amount,
+            new_balance: userBalance.current_balance
+        });
+
+        res.json({
+            message: "Pago procesado exitosamente con saldo",
+            success: true,
+            error: false,
+            data: {
+                user_id: userId,
+                amount_paid: amount,
+                remaining_balance: userBalance.current_balance,
+                transaction_id: reference || sale_id || `PAY-${Date.now()}`
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error procesando pago con saldo:", error);
+        res.status(500).json({
+            message: "Error al procesar el pago",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+}
+
+/**
+ * ✅ OBTENER HISTORIAL DE TRANSACCIONES DE SALDO
+ */
+async function getBalanceHistoryController(req, res) {
+    try {
+        const userId = req.userId;
+        const { limit = 20, offset = 0, type = null } = req.query;
+
+        const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
+        
+        // Filtrar transacciones por tipo si se especifica
+        let transactions = userBalance.transactions;
+        if (type) {
+            transactions = transactions.filter(t => t.type === type);
+        }
+
+        // Ordenar por fecha descendente
+        transactions = transactions.sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date));
+
+        // Paginación
+        const paginatedTransactions = transactions.slice(
+            parseInt(offset), 
+            parseInt(offset) + parseInt(limit)
+        );
+
+        res.json({
+            message: "Historial de saldo obtenido exitosamente",
+            data: {
+                user_id: userId,
+                current_balance: userBalance.current_balance,
+                transactions: paginatedTransactions,
+                pagination: {
+                    total: transactions.length,
+                    limit: parseInt(limit),
+                    offset: parseInt(offset),
+                    has_more: (parseInt(offset) + parseInt(limit)) < transactions.length
+                }
+            },
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+        console.error("❌ Error obteniendo historial de saldo:", error);
+        res.status(500).json({
+            message: "Error al obtener historial de saldo",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+}
+
 module.exports = {
     getUserProfileController,
     updateUserProfileController,
     uploadProfileImageController,
-    changePasswordController
+    changePasswordController,
+    getUserBalanceController,
+    loadBalanceController,
+    payWithBalanceController,
+    getBalanceHistoryController
 };

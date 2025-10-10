@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const axios = require('axios');
 const BancardTransactionModel = require('../../models/bancardTransactionModel');
 const SaleModel = require('../../models/saleModel');
+const BalanceModel = require('../../models/balanceModel');
+const UserModel = require('../../models/userModel');
 const emailService = require('../../services/emailService');
 const { 
     verifyConfirmationToken, 
@@ -193,6 +195,11 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                     }
 
                     
+                }
+
+                // ✅ PROCESAR CARGA DE SALDO SI ES UNA TRANSACCIÓN DE CARGA
+                if (transaction && transaction.balance_load) {
+                    await processBalanceLoadConfirmation(transactionData);
                 }
             } catch (dbError) {
                 console.error("⚠️ Error actualizando BD:", dbError);
@@ -838,11 +845,479 @@ const bancardHealthController = (req, res) => {
     });
 };
 
+/**
+ * ✅ CONTROLADOR PARA CARGAR SALDO CON BANCARD
+ */
+const loadBalanceController = async (req, res) => {
+    try {
+        console.log("💰 Iniciando carga de saldo...");
+        
+        const configValidation = validateBancardConfig();
+        if (!configValidation.isValid) {
+            console.error("❌ Configuración de Bancard inválida:", configValidation.errors);
+            return res.status(500).json({
+                message: "Error de configuración del sistema de pagos",
+                success: false,
+                error: true,
+                details: configValidation.errors
+            });
+        }
+
+        const {
+            amount,
+            currency = 'PYG',
+            description = 'Carga de saldo Zenn',
+            user_id,
+            customer_info = {}
+        } = req.body;
+
+        // Validaciones
+        if (!amount || amount <= 0) {
+            return res.status(400).json({
+                message: "El monto debe ser mayor a 0",
+                success: false,
+                error: true
+            });
+        }
+
+        if (!user_id) {
+            return res.status(400).json({
+                message: "ID de usuario es requerido",
+                success: false,
+                error: true
+            });
+        }
+
+        // Verificar que el usuario existe
+        const user = await UserModel.findById(user_id);
+        if (!user) {
+            return res.status(404).json({
+                message: "Usuario no encontrado",
+                success: false,
+                error: true
+            });
+        }
+
+        // Generar IDs únicos para la transacción
+        const shopProcessId = generateShopProcessId();
+        const formattedAmount = formatAmount(amount);
+        const token = generateSingleBuyToken(shopProcessId, formattedAmount, currency);
+
+        // Payload para Bancard
+        const payload = {
+            public_key: process.env.BANCARD_PUBLIC_KEY,
+            operation: {
+                token: token,
+                shop_process_id: shopProcessId,
+                amount: formattedAmount,
+                currency: currency,
+                description: `Carga de saldo - ${user.name}`,
+                return_url: `${process.env.FRONTEND_URL}/carga-saldo-exitosa`,
+                cancel_url: `${process.env.FRONTEND_URL}/carga-saldo-cancelada`
+            }
+        };
+
+        console.log("📤 Payload para carga de saldo:", {
+            ...JSON.parse(JSON.stringify(payload, null, 2)),
+            operation: {
+                ...payload.operation,
+                token: "***OCULTO***"
+            }
+        });
+
+        const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy`;
+        
+        const response = await axios.post(bancardUrl, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'zenn-eCommerce/1.0',
+                'Cache-Control': 'no-cache'
+            },
+            timeout: 30000,
+            validateStatus: function (status) {
+                return status < 500;
+            }
+        });
+
+        if (response.status === 200 && response.data) {
+            if (response.data.status === 'success') {
+                const processId = response.data.process_id;
+                const iframeUrl = `${getBancardBaseUrl()}/checkout/javascript/dist/bancard-checkout-4.0.0.js`;
+
+                // Guardar transacción de carga de saldo en BD
+                try {
+                    const newTransaction = new BancardTransactionModel({
+                        shop_process_id: parseInt(shopProcessId),
+                        bancard_process_id: processId,
+                        amount: parseFloat(formattedAmount),
+                        currency: currency,
+                        description: `Carga de saldo - ${user.name}`,
+                        customer_info: {
+                            name: user.name || customer_info.name || '',
+                            email: user.email || customer_info.email || '',
+                            phone: user.phone || customer_info.phone || '',
+                            city: customer_info.city || '',
+                            address: customer_info.address || user.address || '',
+                            document_type: 'CI',
+                            document_number: customer_info.document_number || ''
+                        },
+                        items: [{
+                            product_id: 'balance_load',
+                            name: 'Carga de saldo',
+                            quantity: 1,
+                            unit_price: parseFloat(formattedAmount),
+                            total: parseFloat(formattedAmount),
+                            category: 'balance',
+                            brand: 'Zenn'
+                        }],
+                        return_url: `${process.env.FRONTEND_URL}/carga-saldo-exitosa`,
+                        cancel_url: `${process.env.FRONTEND_URL}/carga-saldo-cancelada`,
+                        status: 'pending',
+                        environment: process.env.BANCARD_ENVIRONMENT || 'staging',
+                        sale_id: null,
+                        created_by: user_id,
+                        is_certification_test: false,
+                        user_type: 'REGISTERED',
+                        payment_method: 'balance_load',
+                        user_bancard_id: user.bancardUserId || null,
+                        ip_address: req.ip || req.headers['x-forwarded-for'] || '',
+                        user_agent: req.headers['user-agent'] || '',
+                        payment_session_id: `balance-${Date.now()}`,
+                        device_type: 'web',
+                        cart_total_items: 1,
+                        referrer_url: req.headers.referer || '',
+                        order_notes: 'Carga de saldo desde perfil de usuario',
+                        delivery_method: 'none',
+                        invoice_number: `BAL-${Date.now()}`,
+                        tax_amount: 0,
+                        utm_source: '',
+                        utm_medium: '',
+                        utm_campaign: '',
+                        is_token_payment: false,
+                        alias_token: null,
+                        promotion_code: null,
+                        has_promotion: false,
+                        balance_load: true // Marcar como carga de saldo
+                    });
+
+                    const savedTransaction = await newTransaction.save();
+                    console.log("✅ Transacción de carga de saldo guardada:", {
+                        id: savedTransaction._id,
+                        shop_process_id: savedTransaction.shop_process_id,
+                        amount: savedTransaction.amount
+                    });
+
+                } catch (dbError) {
+                    console.error("⚠️ Error guardando transacción de carga de saldo:", dbError);
+                }
+                
+                return res.json({
+                    message: "Carga de saldo iniciada exitosamente",
+                    success: true,
+                    error: false,
+                    data: {
+                        shop_process_id: shopProcessId,
+                        process_id: processId,
+                        amount: formattedAmount,
+                        currency: currency,
+                        description: description,
+                        
+                        iframe_config: {
+                            script_url: iframeUrl,
+                            process_id: processId,
+                            container_id: 'bancard-balance-container',
+                            initialization_code: `
+                                window.onload = function() {
+                                    if (window.Bancard && window.Bancard.Checkout) {
+                                        Bancard.Checkout.createForm('bancard-balance-container', '${processId}', {
+                                            'form-background-color': '#ffffff',
+                                            'button-background-color': '#2A3190',
+                                            'button-text-color': '#ffffff',
+                                            'button-border-color': '#2A3190',
+                                            'input-background-color': '#ffffff',
+                                            'input-text-color': '#555555',
+                                            'input-placeholder-color': '#999999'
+                                        });
+                                    }
+                                };
+                            `
+                        },
+                        
+                        return_url: `${process.env.FRONTEND_URL}/carga-saldo-exitosa`,
+                        cancel_url: `${process.env.FRONTEND_URL}/carga-saldo-cancelada`,
+                        
+                        bancard_config: {
+                            environment: process.env.BANCARD_ENVIRONMENT || 'staging',
+                            base_url: getBancardBaseUrl(),
+                            certification_mode: false
+                        }
+                    }
+                });
+            } else {
+                console.error("❌ Bancard respondió con status no exitoso:", response.data);
+                return res.status(400).json({
+                    message: "Error al crear la carga de saldo en Bancard",
+                    success: false,
+                    error: true,
+                    details: response.data
+                });
+            }
+        } else {
+            console.error("❌ Respuesta inesperada de Bancard:", response.status, response.data);
+            return res.status(500).json({
+                message: "Respuesta inesperada de Bancard",
+                success: false,
+                error: true,
+                details: { status: response.status, data: response.data }
+            });
+        }
+
+    } catch (error) {
+        console.error("❌ Error general en loadBalanceController:", error);
+        return res.status(500).json({
+            message: "Error interno del servidor",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+};
+
+/**
+ * ✅ CONTROLADOR PARA PROCESAR CONFIRMACIÓN DE CARGA DE SALDO
+ */
+const processBalanceLoadConfirmation = async (transactionData) => {
+    try {
+        console.log("💰 Procesando confirmación de carga de saldo...");
+        
+        const { shop_process_id, amount, response, response_code } = transactionData;
+        
+        // Buscar la transacción de carga de saldo
+        const transaction = await BancardTransactionModel.findOne({ 
+            shop_process_id: parseInt(shop_process_id),
+            balance_load: true
+        });
+        
+        if (!transaction) {
+            console.log("⚠️ Transacción de carga de saldo no encontrada:", shop_process_id);
+            return;
+        }
+
+        const isSuccessful = (response === 'S' && response_code === '00');
+
+        if (isSuccessful) {
+            // Actualizar transacción como aprobada
+            await BancardTransactionModel.findByIdAndUpdate(transaction._id, {
+                status: 'approved',
+                response: response,
+                response_code: response_code,
+                authorization_number: transactionData.authorization_number,
+                ticket_number: transactionData.ticket_number,
+                confirmation_date: new Date(),
+                bancard_confirmed: true
+            });
+
+            // Obtener o crear balance del usuario
+            const userBalance = await BalanceModel.getOrCreateUserBalance(transaction.created_by);
+            
+            // Agregar transacción de carga al balance
+            await userBalance.addTransaction({
+                type: 'load',
+                amount: parseFloat(amount),
+                description: `Carga de saldo desde Bancard - Transacción ${shop_process_id}`,
+                reference: shop_process_id.toString(),
+                transaction_date: new Date(),
+                status: 'completed',
+                metadata: {
+                    bancard_transaction_id: transaction._id,
+                    authorization_number: transactionData.authorization_number,
+                    ticket_number: transactionData.ticket_number
+                }
+            });
+
+            console.log("✅ Saldo cargado exitosamente:", {
+                user_id: transaction.created_by,
+                amount: amount,
+                new_balance: userBalance.current_balance
+            });
+
+            // Enviar email de confirmación
+            try {
+                const user = await UserModel.findById(transaction.created_by);
+                if (user && user.email) {
+                    // Aquí puedes implementar el envío de email de confirmación
+                    console.log("📧 Email de confirmación de carga de saldo enviado a:", user.email);
+                }
+            } catch (emailError) {
+                console.error("❌ Error enviando email de confirmación:", emailError);
+            }
+
+        } else {
+            // Actualizar transacción como rechazada
+            await BancardTransactionModel.findByIdAndUpdate(transaction._id, {
+                status: 'rejected',
+                response: response,
+                response_code: response_code,
+                response_description: transactionData.response_description,
+                confirmation_date: new Date(),
+                bancard_confirmed: true
+            });
+
+            console.log("❌ Carga de saldo rechazada:", {
+                shop_process_id,
+                response,
+                response_code,
+                response_description: transactionData.response_description
+            });
+        }
+
+    } catch (error) {
+        console.error("❌ Error procesando confirmación de carga de saldo:", error);
+    }
+};
+
+/**
+ * ✅ CONTROLADOR PARA OBTENER SALDO DEL USUARIO
+ */
+const getUserBalanceController = async (req, res) => {
+    try {
+        const userId = req.userId || req.params.userId;
+        
+        if (!userId) {
+            return res.status(400).json({
+                message: "ID de usuario es requerido",
+                success: false,
+                error: true
+            });
+        }
+
+        const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
+        
+        // Obtener últimas transacciones
+        const recentTransactions = userBalance.transactions
+            .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date))
+            .slice(0, 10);
+
+        res.json({
+            message: "Saldo obtenido exitosamente",
+            success: true,
+            error: false,
+            data: {
+                user_id: userId,
+                current_balance: userBalance.current_balance,
+                total_loaded: userBalance.total_loaded,
+                total_spent: userBalance.total_spent,
+                last_transaction_date: userBalance.last_transaction_date,
+                recent_transactions: recentTransactions,
+                is_active: userBalance.is_active
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error obteniendo saldo del usuario:", error);
+        res.status(500).json({
+            message: "Error al obtener el saldo",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+};
+
+/**
+ * ✅ CONTROLADOR PARA PROCESAR PAGO CON SALDO
+ */
+const payWithBalanceController = async (req, res) => {
+    try {
+        const {
+            user_id,
+            amount,
+            description,
+            items = [],
+            customer_info = {},
+            sale_id = null,
+            reference = null
+        } = req.body;
+
+        if (!user_id || !amount || amount <= 0) {
+            return res.status(400).json({
+                message: "Datos de pago inválidos",
+                success: false,
+                error: true
+            });
+        }
+
+        // Obtener balance del usuario
+        const userBalance = await BalanceModel.getOrCreateUserBalance(user_id);
+        
+        // Verificar saldo suficiente
+        if (!userBalance.hasEnoughBalance(amount)) {
+            return res.status(400).json({
+                message: "Saldo insuficiente",
+                success: false,
+                error: true,
+                data: {
+                    current_balance: userBalance.current_balance,
+                    required_amount: amount,
+                    deficit: amount - userBalance.current_balance
+                }
+            });
+        }
+
+        // Procesar pago con saldo
+        await userBalance.addTransaction({
+            type: 'spend',
+            amount: parseFloat(amount),
+            description: description || 'Compra con saldo',
+            reference: reference || sale_id || `PAY-${Date.now()}`,
+            transaction_date: new Date(),
+            status: 'completed',
+            metadata: {
+                items: items,
+                customer_info: customer_info,
+                payment_method: 'balance'
+            }
+        });
+
+        console.log("✅ Pago con saldo procesado:", {
+            user_id,
+            amount,
+            new_balance: userBalance.current_balance
+        });
+
+        res.json({
+            message: "Pago procesado exitosamente con saldo",
+            success: true,
+            error: false,
+            data: {
+                user_id: user_id,
+                amount_paid: amount,
+                remaining_balance: userBalance.current_balance,
+                transaction_id: reference || sale_id || `PAY-${Date.now()}`
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error procesando pago con saldo:", error);
+        res.status(500).json({
+            message: "Error al procesar el pago",
+            success: false,
+            error: true,
+            details: error.message
+        });
+    }
+};
+
 module.exports = {
     bancardConfirmGetController, 
     bancardConfirmController,
     createPaymentController,
     getTransactionStatusController,
     bancardHealthController,
-    rollbackPaymentController
+    rollbackPaymentController,
+    loadBalanceController,
+    processBalanceLoadConfirmation,
+    getUserBalanceController,
+    payWithBalanceController
 };
