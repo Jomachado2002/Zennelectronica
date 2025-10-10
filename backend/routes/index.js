@@ -44,7 +44,8 @@
         createPaymentController,
         getTransactionStatusController,
         bancardHealthController,
-        rollbackPaymentController
+        rollbackPaymentController,
+        processBalanceLoadConfirmation
     } = require('../controller/bancard/bancardController');
 
     // ✅ CONTROLADORES DE TRANSACCIONES BANCARD
@@ -137,7 +138,11 @@
         getUserProfileController,
         updateUserProfileController,
         uploadProfileImageController,
-        changePasswordController
+        changePasswordController,
+        getUserBalanceController,
+        loadBalanceController,
+        payWithBalanceController,
+        getBalanceHistoryController
     } = require('../controller/user/userProfile');
 
     // ===== ✅ NUEVOS CONTROLADORES DE TARJETAS BANCARD =====
@@ -184,6 +189,22 @@
     router.post("/perfil/cambiar-contrasena", authToken, changePasswordController);
 
     // ===========================================
+    // ✅ RUTAS PARA GESTIÓN DE SALDO EN PERFIL
+    // ===========================================
+    
+    // Obtener saldo del usuario
+    router.get("/perfil/saldo", authToken, getUserBalanceController);
+    
+    // Cargar saldo con Bancard
+    router.post("/perfil/cargar-saldo", authToken, loadBalanceController);
+    
+    // Pagar con saldo
+    router.post("/perfil/pagar-con-saldo", authToken, payWithBalanceController);
+    
+    // Historial de transacciones de saldo
+    router.get("/perfil/historial-saldo", authToken, getBalanceHistoryController);
+
+    // ===========================================
     // ✅ NUEVAS RUTAS PARA GESTIÓN DE TARJETAS BANCARD - CERTIFICACIÓN
     // ===========================================
 
@@ -198,6 +219,20 @@
 
     // ✅ PAGAR CON ALIAS TOKEN
     router.post("/bancard/pago-con-token", authToken, chargeWithTokenController);
+
+    // ===========================================
+    // ✅ NUEVAS RUTAS PARA GESTIÓN DE SALDO (usando controladores de userProfile)
+    // ===========================================
+    
+    // ✅ CARGAR SALDO CON BANCARD
+    router.post("/bancard/cargar-saldo", authToken, loadBalanceController);
+    
+    // ✅ OBTENER SALDO DEL USUARIO
+    router.get("/bancard/saldo/:userId", authToken, getUserBalanceController);
+    router.get("/bancard/mi-saldo", authToken, getUserBalanceController);
+    
+    // ✅ PAGAR CON SALDO
+    router.post("/bancard/pagar-con-saldo", authToken, payWithBalanceController);
 
     // ===========================================
     // ✅ ENDPOINTS DE PRUEBA PARA CERTIFICACIÓN BANCARD
