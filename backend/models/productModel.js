@@ -10,6 +10,15 @@ const productSchema = mongoose.Schema({
     description: { type: String },
     price: { type: Number, required: true },
     sellingPrice: { type: Number, required: true },
+    // ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO
+    codigo: { 
+        type: String, 
+        required: true, 
+        unique: true,
+        uppercase: true,
+        trim: true,
+        index: true
+    },
     stock: {
     type: Number,
     default: 0,

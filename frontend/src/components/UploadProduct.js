@@ -24,6 +24,8 @@ const UploadProduct = ({ onClose, fetchData, prefilledData = null }) => {
   description: "",
   price: "",
   sellingPrice: "",
+  // ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO
+  codigo: "",
 });
 
   const [loading, setLoading] = useState(false);
@@ -207,6 +209,25 @@ useEffect(() => {
                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
                          transition-all duration-300'
                 placeholder='Ingresa la marca'
+                required
+              />
+            </div>
+
+            {/* ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO */}
+            <div>
+              <label htmlFor='codigo' className='block text-sm font-medium text-gray-700 mb-1'>
+                Código del Producto
+              </label>
+              <input
+                type='text'
+                id='codigo'
+                name='codigo'
+                value={data.codigo}
+                onChange={handleOnChange}
+                className='w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg 
+                         focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                         transition-all duration-300'
+                placeholder='Ej: NB-001, MO-002, etc.'
                 required
               />
             </div>

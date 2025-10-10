@@ -253,6 +253,13 @@ const fetchDataFromServer = async () => {
                                         {subcategoryInfo.subcategoryLabel}
                                     </div>
                                     
+                                    {/* ✅ NUEVO: CÓDIGO DEL PRODUCTO */}
+                                    {product?.codigo && (
+                                        <div className='absolute top-4 left-4 z-10 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold'>
+                                            {product.codigo}
+                                        </div>
+                                    )}
+                                    
                                     {/* ✅ IMAGEN OPTIMIZADA */}
                                     <div className='block bg-[#f4f7fb] h-48 rounded-t-xl flex items-center justify-center overflow-hidden relative'>
                                         <img

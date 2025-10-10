@@ -316,6 +316,13 @@ const VerticalCardProductOptimized = ({
                           {product?.productName}
                         </h3>
                         
+                        {/* ✅ NUEVO: CÓDIGO DEL PRODUCTO */}
+                        {product?.codigo && (
+                          <div className='text-xs font-bold text-[#002060] bg-blue-50 px-2 py-1 rounded-md inline-block'>
+                            Código: {product.codigo}
+                          </div>
+                        )}
+                        
                         <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
                           {product?.subcategory || product?.brandName}
                         </div>

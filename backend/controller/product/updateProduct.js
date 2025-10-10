@@ -33,6 +33,21 @@ async function updateProductController(req, res) {
             resBody.slug = await generateUniqueSlug(baseSlug, checkExistingSlug);
         }
 
+        // ✅ VALIDAR Y PROCESAR CÓDIGO DEL PRODUCTO SI SE ACTUALIZA
+        if (resBody.codigo) {
+            // Convertir código a mayúsculas y limpiar espacios
+            resBody.codigo = resBody.codigo.toString().toUpperCase().trim();
+            
+            // Verificar si el código ya existe en otro producto
+            const existingCode = await ProductModel.findOne({ 
+                codigo: resBody.codigo,
+                _id: { $ne: _id }
+            });
+            if (existingCode) {
+                throw new Error(`El código "${resBody.codigo}" ya existe en otro producto. Por favor usa un código diferente.`);
+            }
+        }
+
         // Actualizar el producto y devolver el documento actualizado
         const updatedProduct = await ProductModel.findByIdAndUpdate(_id, resBody, { new: true });
 

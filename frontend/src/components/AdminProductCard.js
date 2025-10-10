@@ -22,6 +22,13 @@ const AdminProductCard = ({
           </div>
           <h1 className='text-ellipsis line-clamp-2'>{data.productName}</h1>
           
+          {/* ✅ NUEVO: CÓDIGO DEL PRODUCTO */}
+          {data?.codigo && (
+            <div className='text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md mb-2'>
+              Código: {data.codigo}
+            </div>
+          )}
+          
           <div>
             <p className='font-semibold'>
               {
