@@ -225,6 +225,15 @@ async function getUserBalanceController(req, res) {
     try {
         const userId = req.userId;
         
+        // ✅ VERIFICAR QUE EL USUARIO ESTÉ AUTENTICADO
+        if (!req.isAuthenticated || req.userType === 'GUEST') {
+            return res.status(401).json({
+                message: "Debes iniciar sesión para acceder a tu saldo",
+                success: false,
+                error: true
+            });
+        }
+        
         const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
         
         // Obtener últimas transacciones
@@ -265,6 +274,15 @@ async function loadBalanceController(req, res) {
     try {
         const userId = req.userId;
         const { amount, currency = 'PYG', description = 'Carga de saldo' } = req.body;
+
+        // ✅ VERIFICAR QUE EL USUARIO ESTÉ AUTENTICADO
+        if (!req.isAuthenticated || req.userType === 'GUEST') {
+            return res.status(401).json({
+                message: "Debes iniciar sesión para cargar saldo",
+                success: false,
+                error: true
+            });
+        }
 
         // Validaciones
         if (!amount || amount <= 0) {
@@ -317,6 +335,15 @@ async function payWithBalanceController(req, res) {
     try {
         const userId = req.userId;
         const { amount, description, items = [], customer_info = {}, sale_id = null, reference = null } = req.body;
+
+        // ✅ VERIFICAR QUE EL USUARIO ESTÉ AUTENTICADO
+        if (!req.isAuthenticated || req.userType === 'GUEST') {
+            return res.status(401).json({
+                message: "Debes iniciar sesión para pagar con saldo",
+                success: false,
+                error: true
+            });
+        }
 
         if (!amount || amount <= 0) {
             return res.status(400).json({
@@ -394,6 +421,15 @@ async function getBalanceHistoryController(req, res) {
     try {
         const userId = req.userId;
         const { limit = 20, offset = 0, type = null } = req.query;
+
+        // ✅ VERIFICAR QUE EL USUARIO ESTÉ AUTENTICADO
+        if (!req.isAuthenticated || req.userType === 'GUEST') {
+            return res.status(401).json({
+                message: "Debes iniciar sesión para acceder al historial de saldo",
+                success: false,
+                error: true
+            });
+        }
 
         const userBalance = await BalanceModel.getOrCreateUserBalance(userId);
         
