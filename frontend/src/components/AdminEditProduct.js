@@ -28,6 +28,8 @@ const AdminEditProduct = ({
         sellingPrice: productData?.sellingPrice || "",
         stock: productData?.stock || 0,
         isVipOffer: productData?.isVipOffer || false,
+        // ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO
+        codigo: productData?.codigo || "",
         
         // Campos específicos por categoría inicializados con valores del productData
         // (resto de campos como en el código original)
@@ -155,8 +157,8 @@ const AdminEditProduct = ({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!data.productName || !data.brandName || !data.category || !data.subcategory) {
-            toast.error("Por favor, complete todos los campos requeridos");
+        if (!data.productName || !data.brandName || !data.category || !data.subcategory || !data.codigo) {
+            toast.error("Por favor, complete todos los campos requeridos (incluyendo el código)");
             return;
         }
 
@@ -262,6 +264,25 @@ const AdminEditProduct = ({
                                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
                                            transition-all duration-300'
                                 placeholder='Ingresa la marca'
+                                required
+                            />
+                        </div>
+
+                        {/* ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO */}
+                        <div>
+                            <label htmlFor='codigo' className='block text-sm font-medium text-gray-700 mb-1'>
+                                Código del Producto
+                            </label>
+                            <input
+                                type='text'
+                                id='codigo'
+                                name='codigo'
+                                value={data.codigo}
+                                onChange={handleOnChange}
+                                className='w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg 
+                                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                                           transition-all duration-300'
+                                placeholder='Ej: NB-001, MO-002, etc.'
                                 required
                             />
                         </div>

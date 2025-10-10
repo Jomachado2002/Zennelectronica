@@ -23,6 +23,20 @@ async function UploadProductController(req, res) {
         // Generar slug único
         productData.slug = await generateUniqueSlug(baseSlug, checkExistingSlug);
 
+        // ✅ VALIDAR Y PROCESAR CÓDIGO DEL PRODUCTO
+        if (!productData.codigo) {
+            throw new Error("El código del producto es requerido");
+        }
+        
+        // Convertir código a mayúsculas y limpiar espacios
+        productData.codigo = productData.codigo.toString().toUpperCase().trim();
+        
+        // Verificar si el código ya existe
+        const existingCode = await productModel.findOne({ codigo: productData.codigo });
+        if (existingCode) {
+            throw new Error(`El código "${productData.codigo}" ya existe. Por favor usa un código diferente.`);
+        }
+
         const uploadProduct = new productModel(productData);
         const saveProduct = await uploadProduct.save();
 

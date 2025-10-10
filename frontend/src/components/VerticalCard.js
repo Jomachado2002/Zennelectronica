@@ -242,13 +242,20 @@ useEffect(() => {
                         <div className='p-2.5 flex flex-col flex-grow'>
                             {/* Contenido superior que puede variar */}
                             <div className='flex-grow space-y-1.5'>
-                                <h3 className='font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]'>
-                                    {product?.productName}
-                                </h3>
-                                
-                                <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
-                                    {product?.subcategory || product?.brandName}
-                                </div>
+                        <h3 className='font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]'>
+                            {product?.productName}
+                        </h3>
+                        
+                        {/* ✅ NUEVO: CÓDIGO DEL PRODUCTO */}
+                        {product?.codigo && (
+                            <div className='text-xs font-bold text-[#002060] bg-blue-50 px-2 py-1 rounded-md inline-block'>
+                                Código: {product.codigo}
+                            </div>
+                        )}
+                        
+                        <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
+                            {product?.subcategory || product?.brandName}
+                        </div>
                             </div>
                             
                             {/* Contenido inferior fijo - SIEMPRE EN LA MISMA POSICIÓN */}
