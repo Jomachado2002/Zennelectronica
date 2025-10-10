@@ -42,6 +42,15 @@ const Login = () => {
             const dataApi = await response.json();
 
             if (dataApi.success) {
+                // ✅ MANEJAR TOKEN COMO FALLBACK SI LAS COOKIES FALLAN
+                if (dataApi.token) {
+                    console.log('🔑 Token recibido como fallback, guardando en localStorage');
+                    localStorage.setItem('authToken', dataApi.token);
+                    
+                    // ✅ CONFIGURAR HEADER PARA FUTURAS PETICIONES
+                    window.authToken = dataApi.token;
+                }
+
                 dispatch(setUserDetails(dataApi.user));
                 toast.success(dataApi.message);
 
