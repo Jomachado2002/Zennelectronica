@@ -8,8 +8,6 @@ async function connectDB() {
             useUnifiedTopology: true,
             serverSelectionTimeoutMS: 30000, // 30 segundos
             socketTimeoutMS: 45000, // 45 segundos
-            bufferMaxEntries: 0,
-            bufferCommands: false,
             maxPoolSize: 10,
             minPoolSize: 5,
             maxIdleTimeMS: 30000,
