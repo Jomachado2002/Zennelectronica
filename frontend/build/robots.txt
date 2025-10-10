@@ -1,0 +1,14 @@
+# Robots.txt para jmcomputer.com.py
+
+# Permitir a todos los motores de búsqueda indexar el sitio
+User-agent: *
+Allow: /
+
+# Excluir directorios y páginas no deseadas
+Disallow: /admin/
+Disallow: /wp-admin/
+Disallow: /cgi-bin/
+Disallow: /tmp/
+
+# Sitemap
+Sitemap: https://jmcomputer.com.py/sitemap.xml

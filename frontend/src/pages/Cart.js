@@ -4,13 +4,14 @@ import { useSelector } from 'react-redux';
 import Context from '../context';
 import displayINRCurrency from '../helpers/displayCurrency';
 import { MdDelete, MdShoppingCart, MdDownload, MdWhatsapp } from "react-icons/md";
-import { FaArrowLeft, FaTrash, FaCreditCard, FaUser, FaLock, FaShieldAlt, FaPlus, FaCheckCircle, FaMapMarkerAlt } from "react-icons/fa";
+import { FaArrowLeft, FaTrash, FaCreditCard, FaUser, FaLock, FaShieldAlt, FaPlus, FaCheckCircle, FaMapMarkerAlt, FaWallet } from "react-icons/fa";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import logo from '../helpers/logo.png';
 import { toast } from 'react-toastify';
 import { localCartHelper } from '../helpers/addToCart';
 import BancardPayButton from '../components/BancardPayButton';
+import BalanceService from '../services/balanceService';
 import SummaryApi from '../common';
 import { trackWhatsAppContact, trackPDFDownload, trackInitiateCheckout } from '../components/MetaPixelTracker';
 
@@ -30,6 +31,9 @@ const Cart = () => {
     const [registeredCards, setRegisteredCards] = useState([]);
     const [selectedCard, setSelectedCard] = useState(null);
     const [loadingCards, setLoadingCards] = useState(false);
+    const [userBalance, setUserBalance] = useState(0);
+    const [loadingBalance, setLoadingBalance] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('bancard'); // 'bancard', 'balance'
     
     const context = useContext(Context);
     const navigate = useNavigate();
@@ -194,6 +198,7 @@ const Cart = () => {
             
             fetchUserCards();
             loadUserSavedLocation(); // ✅ CARGAR UBICACIÓN GUARDADA
+            fetchUserBalance(); // ✅ CARGAR SALDO DEL USUARIO
             // Pre-llenar datos del usuario si está logueado
             setCustomerData({
                 name: user.name || '',
@@ -288,6 +293,80 @@ const Cart = () => {
     const handlePaymentError = (error) => {
         console.error('Error en el pago:', error);
         toast.error('Error al procesar el pago. Intenta nuevamente.');
+    };
+
+    // ✅ FUNCIONES PARA SALDO
+    const fetchUserBalance = async () => {
+        if (!isLoggedIn) return;
+        
+        try {
+            setLoadingBalance(true);
+            const result = await BalanceService.getUserBalance();
+            if (result.success) {
+                setUserBalance(result.data.current_balance);
+            }
+        } catch (error) {
+            console.error('Error obteniendo saldo:', error);
+        } finally {
+            setLoadingBalance(false);
+        }
+    };
+
+    const handlePayWithBalance = async () => {
+        if (!isLoggedIn) {
+            toast.error('Debes iniciar sesión para usar el saldo');
+            return;
+        }
+
+        if (userBalance < totalPrice) {
+            toast.error(`Saldo insuficiente. Tienes ${displayINRCurrency(userBalance)} y necesitas ${displayINRCurrency(totalPrice)}`);
+            return;
+        }
+
+        try {
+            const paymentData = {
+                amount: totalPrice,
+                description: `Compra en Zenn - ${validProducts.length} productos`,
+                items: validProducts.map(product => ({
+                    product_id: product.productId._id,
+                    name: product.productId.productName,
+                    price: product.productId.sellingPrice,
+                    quantity: product.quantity
+                })),
+                customer_info: customerData,
+                sale_id: `sale_${Date.now()}`
+            };
+
+            const result = await BalanceService.payWithBalance(paymentData);
+            
+            if (result.success) {
+                toast.success('¡Pago realizado exitosamente con tu saldo!');
+                
+                // Limpiar carrito
+                localCartHelper.clearCart();
+                fetchData();
+                
+                if (context.fetchUserAddToCart) {
+                    context.fetchUserAddToCart();
+                }
+                
+                // Actualizar saldo
+                fetchUserBalance();
+                
+                // Redirigir a página de éxito
+                navigate('/compra-exitosa', { 
+                    state: { 
+                        orderData: result.data,
+                        paymentMethod: 'balance'
+                    } 
+                });
+            } else {
+                toast.error(result.message || 'Error al procesar el pago con saldo');
+            }
+        } catch (error) {
+            console.error('Error en pago con saldo:', error);
+            toast.error('Error al procesar el pago. Intenta nuevamente.');
+        }
     };
 
     const handlePayWithSavedCard = async () => {
@@ -929,10 +1008,53 @@ const Cart = () => {
                                         <span className="text-gray-600">Subtotal</span>
                                         <span className="font-medium text-gray-900">{displayINRCurrency(totalPrice)}</span>
                                     </div>
+                                    {/* Mostrar saldo del usuario si está logueado */}
+                                    {isLoggedIn && (
+                                        <div className="flex justify-between py-2 border-b border-gray-100">
+                                            <div className="flex items-center gap-2">
+                                                <FaWallet className="text-green-600 text-sm" />
+                                                <span className="text-gray-600">Tu saldo</span>
+                                            </div>
+                                            {loadingBalance ? (
+                                                <span className="text-gray-400 text-sm">Cargando...</span>
+                                            ) : (
+                                                <span className={`font-medium ${userBalance >= totalPrice ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {displayINRCurrency(userBalance)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div className="flex justify-between py-3 bg-blue-50 px-3 rounded-lg">
                                     <span className="text-lg font-medium text-[#2A3190]">Total</span>
                                     <span className="text-xl font-bold text-[#2A3190]">{displayINRCurrency(totalPrice)}</span>
                                 </div>
+
+                                {/* Indicador de saldo suficiente/insuficiente */}
+                                {isLoggedIn && !loadingBalance && (
+                                    <div className={`mt-3 p-3 rounded-lg text-center text-sm font-medium ${
+                                        userBalance >= totalPrice 
+                                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                                            : 'bg-red-50 text-red-700 border border-red-200'
+                                    }`}>
+                                        {userBalance >= totalPrice ? (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <FaCheckCircle />
+                                                <span>Saldo suficiente para pagar</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span>Saldo insuficiente</span>
+                                                <Link 
+                                                    to="/mi-perfil?tab=balance"
+                                                    className="underline hover:no-underline"
+                                                >
+                                                    Cargar saldo
+                                                </Link>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* ✅ MOSTRAR ESTADO DE UBICACIÓN PARA USUARIOS LOGUEADOS */}
@@ -977,28 +1099,120 @@ const Cart = () => {
                               <div className="space-y-4">
                                     <h3 className="text-lg font-semibold text-gray-800 mb-4">¿Qué deseas hacer?</h3>
                                     
-                                    {/* Botón Finalizar Compra - Principal */}
-                                    <button
-                                        onClick={() => {
-                                                trackInitiateCheckout(validProducts, totalPrice);
-                                                navigate('/finalizar-compra');
-                                            }}
-                                        disabled={validProducts.length === 0}
-                                        className="w-full bg-[#2A3190] text-white py-4 px-4 rounded-lg hover:bg-[#1e236b] transition-all duration-300 flex items-center justify-between group shadow-md disabled:opacity-50"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-[#1e236b] p-2 rounded-full">
-                                                <FaCreditCard className="text-white" />
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="font-semibold">Finalizar Compra</p>
-                                                <p className="text-sm text-blue-100">Pago seguro con Bancard</p>
+                                    {/* Opciones de Método de Pago */}
+                                    {isLoggedIn && (
+                                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
+                                            <h4 className="font-medium text-blue-900 mb-3">Método de pago</h4>
+                                            <div className="space-y-2">
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="paymentMethod"
+                                                        value="bancard"
+                                                        checked={paymentMethod === 'bancard'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        className="text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <FaCreditCard className="text-blue-600" />
+                                                        <span className="text-sm font-medium">Tarjeta de crédito/débito</span>
+                                                    </div>
+                                                </label>
+                                                
+                                                <label className="flex items-center gap-3 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="paymentMethod"
+                                                        value="balance"
+                                                        checked={paymentMethod === 'balance'}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        className="text-green-600 focus:ring-green-500"
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <FaWallet className="text-green-600" />
+                                                        <span className="text-sm font-medium">
+                                                            Pagar con saldo 
+                                                            {loadingBalance ? (
+                                                                <span className="text-gray-500">(Cargando...)</span>
+                                                            ) : (
+                                                                <span className="font-semibold text-green-700">
+                                                                    ({displayINRCurrency(userBalance)})
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </label>
                                             </div>
                                         </div>
-                                        <div className="bg-[#1e236b] px-3 py-1 rounded-full text-xs font-medium">
-                                            SEGURO
+                                    )}
+
+                                    {/* Botón de Pago Principal */}
+                                    {paymentMethod === 'balance' ? (
+                                        /* Botón Pago con Saldo */
+                                        <button
+                                            onClick={handlePayWithBalance}
+                                            disabled={validProducts.length === 0 || loadingBalance || userBalance < totalPrice}
+                                            className="w-full bg-green-600 text-white py-4 px-4 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center justify-between group shadow-md disabled:opacity-50"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-green-700 p-2 rounded-full">
+                                                    <FaWallet className="text-white" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="font-semibold">Pagar con Saldo</p>
+                                                    <p className="text-sm text-green-100">
+                                                        {userBalance >= totalPrice ? 'Saldo suficiente' : 'Saldo insuficiente'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                                                {userBalance >= totalPrice ? 'LISTO' : 'INSUFICIENTE'}
+                                            </div>
+                                        </button>
+                                    ) : (
+                                        /* Botón Finalizar Compra - Bancard */
+                                        <button
+                                            onClick={() => {
+                                                    trackInitiateCheckout(validProducts, totalPrice);
+                                                    navigate('/finalizar-compra');
+                                                }}
+                                            disabled={validProducts.length === 0}
+                                            className="w-full bg-[#2A3190] text-white py-4 px-4 rounded-lg hover:bg-[#1e236b] transition-all duration-300 flex items-center justify-between group shadow-md disabled:opacity-50"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="bg-[#1e236b] p-2 rounded-full">
+                                                    <FaCreditCard className="text-white" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="font-semibold">Finalizar Compra</p>
+                                                    <p className="text-sm text-blue-100">Pago seguro con Bancard</p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-[#1e236b] px-3 py-1 rounded-full text-xs font-medium">
+                                                SEGURO
+                                            </div>
+                                        </button>
+                                    )}
+
+                                    {/* Enlace para cargar saldo si es insuficiente */}
+                                    {isLoggedIn && paymentMethod === 'balance' && userBalance < totalPrice && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <FaWallet className="text-amber-600" />
+                                                <h4 className="font-medium text-amber-900">Saldo insuficiente</h4>
+                                            </div>
+                                            <p className="text-sm text-amber-700 mb-3">
+                                                Tienes {displayINRCurrency(userBalance)} pero necesitas {displayINRCurrency(totalPrice)} para completar la compra.
+                                            </p>
+                                            <Link
+                                                to="/mi-perfil?tab=balance"
+                                                className="inline-flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                                            >
+                                                <FaPlus className="text-xs" />
+                                                Cargar Saldo
+                                            </Link>
                                         </div>
-                                    </button>
+                                    )}
 
                                     {/* Formulario de datos mínimos para presupuestos */}
                                     {!showCustomerForm && (

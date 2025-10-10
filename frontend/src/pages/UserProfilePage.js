@@ -9,6 +9,8 @@ import CardManagementPage from '../components/user/CardManagementPage';
 import FavoritesPage from '../components/user/FavoritesPage';
 import SettingsPage from '../components/user/SettingsPage';
 import UserPurchases from '../components/user/UserPurchases';
+import BalanceManagement from '../components/user/BalanceManagement';
+import BalanceDisplay from '../components/BalanceDisplay';
 import { BiSolidPurchaseTag } from "react-icons/bi";
 
 import SummaryApi from '../common';
@@ -20,7 +22,8 @@ import {
   FaSignOutAlt,
   FaHome,
   FaSpinner,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaWallet
 } from 'react-icons/fa';
 
 const UserProfilePage = () => {
@@ -94,7 +97,7 @@ const UserProfilePage = () => {
   // ✅ LEER TAB DESDE URL PARAMS
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && ['profile', 'cards', 'favorites', 'settings', 'purchases'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['profile', 'cards', 'balance', 'favorites', 'settings', 'purchases'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
@@ -373,6 +376,7 @@ const UserProfilePage = () => {
   const tabs = [
     { id: 'profile', label: 'Mi Perfil', icon: FaUser },
     { id: 'cards', label: 'Mis Tarjetas', icon: FaCreditCard },
+    { id: 'balance', label: 'Mi Saldo', icon: FaWallet },
     { id: 'purchases', label: 'Mis Compras', icon: BiSolidPurchaseTag },
     { id: 'favorites', label: 'Favoritos', icon: FaHeart },
     { id: 'settings', label: 'Configuración', icon: FaCog }
@@ -442,6 +446,11 @@ const UserProfilePage = () => {
               <div className="text-right hidden md:block">
                 <p className="font-medium text-gray-800">{user.name}</p>
                 <p className="text-sm text-gray-500">{user.email}</p>
+                {/* Mostrar saldo debajo del nombre */}
+                <BalanceDisplay 
+                  className="mt-1"
+                  showLoadButton={false}
+                />
                 {user.bancardUserId && (
                   <p className="text-xs text-blue-600">ID Bancard: {user.bancardUserId}</p>
                 )}
@@ -500,6 +509,12 @@ const UserProfilePage = () => {
             onRegisterCard={handleRegisterCard}
             onDeleteCard={handleDeleteCard}
             onFetchCards={handleFetchCards}
+          />
+        )}
+
+        {activeTab === 'balance' && (
+          <BalanceManagement
+            user={user} // ✅ PASAR USER COMPLETO
           />
         )}
 

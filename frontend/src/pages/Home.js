@@ -6,8 +6,7 @@ import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
 import CategoryShowcase from '../components/CategoryShowcase';
 
-import VerticalCardProduct from '../components/VerticalCardProduct';
-import InfiniteCarousel from '../components/products/InfiniteCarousel';
+import VerticalCardProductOptimized from '../components/VerticalCardProductOptimized';
 import { useHomeProducts } from '../hooks/useProducts';
 import BrandCarousel from '../components/BrandCarousel';
 import NotebookBanner from '../components/NotebookBanner';
@@ -16,7 +15,7 @@ import '../styles/global.css';
 
 // Importar la función scrollTop mejorada
 import scrollTop from '../helpers/scrollTop';
-import VerticalCard from '../components/VerticalCard';
+import { showPerformanceReport } from '../utils/performanceMonitor';
 
 // Animaciones predefinidas
 const fadeIn = {
@@ -70,6 +69,9 @@ const Home = () => {
     };
     
     prefetchCriticalImages();
+    
+    // ✅ MOSTRAR REPORTE DE RENDIMIENTO EN DESARROLLO
+    showPerformanceReport();
   }, []);
 
   // Función para abrir WhatsApp
@@ -197,8 +199,8 @@ const Home = () => {
                       </Link>
                   </div>
                   
-                  {/* ✅ DATOS POR PROPS - SIN QUERIES DUPLICADAS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO - CARGA RÁPIDA */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="notebooks"
                     heading=""
@@ -255,8 +257,8 @@ const Home = () => {
                 </div>
                 
                 <div className="mt-6">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="telefonia"
                     subcategory="telefonos_moviles"
                     heading=""
@@ -313,8 +315,8 @@ const Home = () => {
                 </div>
                 
                 <div className="mt-6">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="placas_madre"
                     heading=""
@@ -356,8 +358,8 @@ const Home = () => {
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="perifericos"
                     subcategory="mouses"
                     heading=""
@@ -399,8 +401,8 @@ const Home = () => {
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="perifericos"
                     subcategory="monitores"
                     heading=""
@@ -442,8 +444,8 @@ const Home = () => {
                   <div className="h-1 w-20 bg-blue-300 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="memorias_ram"
                     heading=""
@@ -485,8 +487,8 @@ const Home = () => {
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="discos_duros"
                     heading=""
@@ -528,8 +530,8 @@ const Home = () => {
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="tarjeta_grafica"
                     heading=""
@@ -571,8 +573,8 @@ const Home = () => {
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="gabinetes"
                     heading=""
@@ -614,8 +616,8 @@ const Home = () => {
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="informatica"
                     subcategory="procesador"
                     heading=""
@@ -657,8 +659,8 @@ const Home = () => {
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ DATOS POR PROPS */}
-                  <VerticalCardProduct
+                  {/* ✅ COMPONENTE OPTIMIZADO */}
+                  <VerticalCardProductOptimized
                     category="perifericos"
                     subcategory="teclados"
                     heading=""
