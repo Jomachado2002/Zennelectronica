@@ -69,17 +69,16 @@ async function userSignInController(req, res) {
 
         
 
-        // ✅ CONFIGURAR COOKIE CON CONFIGURACIÓN ESPECÍFICA PARA VERCEL
-        // ✅ CONFIGURACIÓN ESPECÍFICA PARA iOS/SAFARI
-            const cookieOptions = {
-                httpOnly: true,
-                secure: true, // ✅ SIEMPRE true para HTTPS (requerido por iOS)
-                sameSite: 'none', // ✅ SIEMPRE 'none' para cross-site (requerido por iOS)
-                maxAge: 24 * 60 * 60 * 1000, // 24 horas
-                path: '/' // ✅ PATH explícito
-            };
+        // ✅ CONFIGURACIÓN DE COOKIES SIMPLIFICADA PARA VERCEL
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // true en producción, false en desarrollo
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' en producción, 'lax' en desarrollo
+            maxAge: 24 * 60 * 60 * 1000, // 24 horas
+            path: '/'
+        };
 
-            // ✅ NO configurar domain - dejar que el navegador lo maneje
+        console.log('🍪 Configurando cookie con opciones:', cookieOptions);
             
 
         
@@ -113,8 +112,8 @@ async function userSignInController(req, res) {
 
         
 
-        // ✅ RESPUESTA EXITOSA
-        return res.status(200).json({
+        // ✅ RESPUESTA EXITOSA CON TOKEN COMO FALLBACK
+        const responseData = {
             message: "Inicio de sesión exitoso",
             user: {
                 _id: user._id,
@@ -124,8 +123,22 @@ async function userSignInController(req, res) {
                 profilePic: user.profilePic || ''
             },
             success: true,
-            error: false
+            error: false,
+            // ✅ FALLBACK: Incluir token en respuesta para casos donde cookies fallan
+            token: token,
+            cookie_set: true,
+            environment: process.env.NODE_ENV || 'development'
+        };
+
+        console.log('✅ Login exitoso - Enviando respuesta:', {
+            userId: user._id,
+            email: user.email,
+            role: user.role,
+            cookieOptions: cookieOptions,
+            environment: process.env.NODE_ENV
         });
+
+        return res.status(200).json(responseData);
 
     } catch (err) {
         console.error('❌ Error crítico en signin:', err);

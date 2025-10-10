@@ -19,9 +19,21 @@ function App() {
   const [cartProductCount, setCartProductCount] = useState(0)
   
   const fetchUserDetails = async() => {
+    // ✅ PREPARAR HEADERS CON TOKEN COMO FALLBACK
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // ✅ AGREGAR TOKEN DEL LOCALSTORAGE SI EXISTE
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
     const dataResponse = await fetch(SummaryApi.current_user.url, {
       method: SummaryApi.current_user.method,
-      credentials: 'include'
+      credentials: 'include',
+      headers: headers
     })
     
     const dataApi = await dataResponse.json()
