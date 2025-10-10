@@ -7,7 +7,7 @@ const BannerProduct = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   // ✅ SOLO IMÁGENES - Sin texto ni botones
-  const banners = [
+  const banners = React.useMemo(() => [
     {
       id: 1,
       image: '/banners/banner1.jpg', // Coloca tus imágenes en public/banners/
@@ -33,21 +33,49 @@ const BannerProduct = () => {
       image: '/banners/banner5.jpg',
       alt: 'Banner 5'
     }
-  ];
+  ], []);
 
-  const nextSlide = () => {
+  const nextSlide = React.useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setActiveSlide((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
     setTimeout(() => setIsAnimating(false), 500);
-  };
+  }, [isAnimating, banners.length]);
 
-  const prevSlide = () => {
+  const prevSlide = React.useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setActiveSlide((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
     setTimeout(() => setIsAnimating(false), 500);
-  };
+  }, [isAnimating, banners.length]);
+
+  // ✅ PRECARGAR IMÁGENES CRÍTICAS DEL BANNER
+  useEffect(() => {
+    const preloadBannerImages = () => {
+      banners.forEach((banner, index) => {
+        if (index === 0) {
+          // Primera imagen con prioridad alta
+          const img = new Image();
+          img.fetchPriority = 'high';
+          img.src = banner.image;
+        } else if (index === 1) {
+          // Segunda imagen con prioridad media
+          const img = new Image();
+          img.fetchPriority = 'high';
+          img.src = banner.image;
+        } else {
+          // Resto con prioridad baja
+          setTimeout(() => {
+            const img = new Image();
+            img.fetchPriority = 'low';
+            img.src = banner.image;
+          }, index * 200);
+        }
+      });
+    };
+
+    preloadBannerImages();
+  }, [banners]);
 
   // Auto-play cada 5 segundos
   useEffect(() => {
@@ -55,7 +83,7 @@ const BannerProduct = () => {
       nextSlide();
     }, 5000);
     return () => clearInterval(interval);
-  }, [activeSlide]);
+  }, [activeSlide, nextSlide]);
 
   return (
     <div className="w-full px-0 mt-0">
@@ -75,9 +103,13 @@ const BannerProduct = () => {
                 src={banner.image}
                 alt={banner.alt}
                 className="w-full h-full object-cover"
+                loading={index === activeSlide ? "eager" : "lazy"}
+                fetchPriority={index === activeSlide ? "high" : "low"}
                 onError={(e) => {
                   // Imagen por defecto si no existe
-                  e.target.src = '/banners/default.jpg';
+                  if (e && e.target) {
+                    e.target.src = '/banners/default.jpg';
+                  }
                 }}
               />
               {/* Overlay sutil para mejor contraste con los controles */}

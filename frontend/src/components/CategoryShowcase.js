@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import productCategory from '../helpers/productCategory';
-import { ChevronDown, ShoppingBag } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 const scrollTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -83,14 +83,18 @@ const CategoryShowcase = () => {
                       backgroundClip: 'padding-box, border-box'
                     }}
                   >
-                    {/* Imagen de la subcategoría - MÁS PEQUEÑA */}
+                    {/* ✅ IMAGEN OPTIMIZADA */}
                     <div className="relative h-28 sm:h-36 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                       <img
                         src={`/images/subcategories/${subcategory.value}.jpg`}
                         alt={subcategory.label}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
+                        loading="lazy"
+                        fetchPriority="low"
                         onError={(e) => {
-                          e.target.src = '/images/subcategories/default.jpg';
+                          if (e && e.target) {
+                            e.target.src = '/images/subcategories/default.jpg';
+                          }
                         }}
                       />
                       {/* Overlay con gradiente */}

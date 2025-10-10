@@ -53,6 +53,7 @@ import SaleDetails from "../pages/SaleDetails"
 import PurchaseDetails from "../pages/PurchaseDetails"
 import FinancialDashboard from "../pages/FinancialDashboard"
 import CatastroResult from "../pages/CatastroResult"
+import TestBalance from "../pages/TestBalance"
 
 const router = createBrowserRouter([
     {
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
             {
                  path: "catastro-resultado",
                  element: <CatastroResult />
+            },
+            {
+                path: "test-saldo",
+                element: <TestBalance />
             },
             {
                 path: "categoria-producto",
