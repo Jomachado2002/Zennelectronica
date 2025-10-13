@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { GrSearch } from "react-icons/gr";
-import { CiUser, CiShoppingCart, CiHome } from "react-icons/ci";
+import { CiShoppingCart, CiHome } from "react-icons/ci";
 import { BiCategoryAlt } from "react-icons/bi";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -600,7 +600,7 @@ const Header = () => {
       </div>
       
       {/* Estilos globales */}
-      <style jsx global>{`
+      <style>{`
         @keyframes slideDown {
           from {
             opacity: 0;

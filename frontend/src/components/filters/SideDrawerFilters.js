@@ -1,12 +1,16 @@
 // src/components/filters/SideDrawerFilters.js
 
-import React, { useRef, useEffect, useState } from 'react';
-import { BiX, BiFilter, BiChevronDown, BiChevronUp, BiCheck } from 'react-icons/bi';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { BiX, BiFilter, BiChevronDown, BiChevronUp } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext'; // Ajustada la ruta a context sin 's'
-import productCategory from '../../helpers/productCategory';
 
-const SideDrawerFilters = () => {
+const SideDrawerFilters = ({ 
+  categories = [], 
+  categoriesLoading = false,
+  getSubcategories,
+  getSpecifications
+}) => {
   const { 
     mobileFilterOpen, 
     setMobileFilterOpen, 
@@ -36,12 +40,23 @@ const SideDrawerFilters = () => {
   const drawerRef = useRef(null);
   const [expandedSpecs, setExpandedSpecs] = useState({});
   
+  // Obtener subcategorías para una categoría (datos precargados)
+  const getSubcategoriesForCategory = useCallback((categoryValue) => {
+    return getSubcategories ? getSubcategories(categoryValue) : [];
+  }, [getSubcategories]);
+
+  // Obtener especificaciones para una subcategoría (datos precargados)
+  const getSpecificationsForSubcategory = useCallback((categoryValue, subcategoryValue) => {
+    return getSpecifications ? getSpecifications(categoryValue, subcategoryValue) : [];
+  }, [getSpecifications]);
+  
   // Filtrar marcas por término de búsqueda
   const filteredBrands = availableFilters.brands.filter(brand => 
     brand.toLowerCase().includes(searchBrand.toLowerCase())
   );
   
-  // Función para obtener etiqueta legible para la especificación
+  // Función eliminada - ya no se usa
+  /*
   const getSpecificationLabel = (specKey) => {
     const labels = {
       // Notebooks
@@ -289,6 +304,7 @@ const SideDrawerFilters = () => {
     
     return labels[specKey] || specKey;
   };
+  */
   
   // Cerrar el drawer al hacer clic en el overlay (30% derecho)
   useEffect(() => {
@@ -458,49 +474,69 @@ const SideDrawerFilters = () => {
             {/* Categorías */}
             {activeMobileFilter === 'categories' && (
               <div>
-                <div className="space-y-2">
-                  {productCategory.map((category) => (
-                    <div key={category.value} className="mb-3">
-                      <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-                        <div 
-                          className={`flex items-center justify-between py-2.5 px-3 cursor-pointer ${
-                            filterCategoryList.includes(category.value) ? 'bg-blue-50' : ''
-                          }`}
-                          onClick={() => handleSelectCategory(category.value)}
-                        >
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                              checked={filterCategoryList.includes(category.value)}
-                              onChange={() => {}} // Manejado por onClick del div
-                            />
-                            <span className="text-gray-800 font-medium">{category.label}</span>
+                {categoriesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                    <span className="ml-3 text-gray-600">Cargando categorías...</span>
+                  </div>
+                ) : categories.length > 0 ? (
+                  <div className="space-y-2">
+                    {categories.map((category) => (
+                      <div key={category.value} className="mb-3">
+                        <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+                          <div 
+                            className={`flex items-center justify-between py-2.5 px-3 cursor-pointer ${
+                              filterCategoryList.includes(category.value) ? 'bg-blue-50' : ''
+                            }`}
+                            onClick={() => handleSelectCategory(category.value)}
+                          >
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+                                checked={filterCategoryList.includes(category.value)}
+                                onChange={() => {}} // Manejado por onClick del div
+                              />
+                              <span className="text-gray-800 font-medium">{category.label}</span>
+                            </div>
                           </div>
+                          
+                          {filterCategoryList.includes(category.value) && (
+                            <div className="border-t border-gray-100 bg-gray-50">
+                              {(() => {
+                                const subcategories = getSubcategoriesForCategory(category.value);
+                                return subcategories.length > 0 ? (
+                                  subcategories.map((subcat) => (
+                                    <div 
+                                      key={subcat.value}
+                                      className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+                                        checked={filterSubcategoryList.includes(subcat.value)}
+                                        onChange={() => handleSelectSubcategory(subcat.value)}
+                                      />
+                                      <span className="text-gray-700">{subcat.label}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="py-2.5 px-3 text-xs text-gray-500 italic">
+                                    No hay subcategorías disponibles
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
-                        
-                        {filterCategoryList.includes(category.value) && category.subcategories && (
-                          <div className="border-t border-gray-100 bg-gray-50">
-                            {category.subcategories.map((subcat) => (
-                              <div 
-                                key={subcat.value}
-                                className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0"
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                                  checked={filterSubcategoryList.includes(subcat.value)}
-                                  onChange={() => handleSelectSubcategory(subcat.value)}
-                                />
-                                <span className="text-gray-700">{subcat.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No hay categorías disponibles</p>
+                  </div>
+                )}
               </div>
             )}
             
@@ -603,61 +639,76 @@ const SideDrawerFilters = () => {
       </div>
       
       <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-        {Object.keys(availableFilters.specifications)
-          .filter(key => getSpecificationLabel(key).toLowerCase().includes(searchSpecification.toLowerCase()))
-          .map(specKey => {
-            const hasActiveFilters = specFilters[specKey] && specFilters[specKey].length > 0;
-            
-            return (
-              <div key={specKey} className="border border-gray-200 rounded-md overflow-hidden">
-                <button 
-                  onClick={() => {
-                    setExpandedSpecs(prev => ({
-                      ...prev,
-                      [specKey]: !prev[specKey]
-                    }));
-                  }}
-                  className={`w-full flex items-center justify-between p-3 text-left ${
-                    hasActiveFilters ? 'bg-blue-50 text-blue-700 font-medium' : 'bg-gray-50 text-gray-800'
-                  }`}
-                >
-                  <span>{getSpecificationLabel(specKey)}</span>
-                  {hasActiveFilters && (
-                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                      {specFilters[specKey].length}
+        {(() => {
+          // Obtener especificaciones de la subcategoría actual (datos precargados)
+          const currentSpecifications = [];
+          if (filterCategoryList.length > 0 && filterSubcategoryList.length > 0) {
+            currentSpecifications.push(...getSpecificationsForSubcategory(
+              filterCategoryList[0], 
+              filterSubcategoryList[0]
+            ));
+          }
+
+          const filteredSpecs = currentSpecifications
+            .filter(spec => spec.label.toLowerCase().includes(searchSpecification.toLowerCase()));
+
+          return filteredSpecs.length > 0 ? (
+            filteredSpecs.map(spec => {
+              const hasActiveFilters = specFilters[spec.name] && specFilters[spec.name].length > 0;
+              
+              return (
+                <div key={spec.name} className="border border-gray-200 rounded-md overflow-hidden">
+                  <button 
+                    onClick={() => {
+                      setExpandedSpecs(prev => ({
+                        ...prev,
+                        [spec.name]: !prev[spec.name]
+                      }));
+                    }}
+                    className={`w-full flex items-center justify-between p-3 text-left ${
+                      hasActiveFilters ? 'bg-blue-50 text-blue-700 font-medium' : 'bg-gray-50 text-gray-800'
+                    }`}
+                  >
+                    <span>{spec.label}</span>
+                    {hasActiveFilters && (
+                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {specFilters[spec.name].length}
+                      </span>
+                    )}
+                    <span className="ml-auto text-gray-500">
+                      {expandedSpecs[spec.name] ? <BiChevronUp size={20} /> : <BiChevronDown size={20} />}
                     </span>
-                  )}
-                  <span className="ml-auto text-gray-500">
-                    {expandedSpecs[specKey] ? <BiChevronUp size={20} /> : <BiChevronDown size={20} />}
-                  </span>
-                </button>
-                
-                {expandedSpecs[specKey] && (
-                  <div className="p-3 border-t border-gray-100 bg-white">
-                    <div className="space-y-2">
-                      {availableFilters.specifications[specKey].map(value => (
-                        <label key={`${specKey}-${value}`} className="flex items-center py-2 px-2 rounded hover:bg-gray-50">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                            checked={(specFilters[specKey] || []).includes(value)}
-                            onChange={() => handleSpecFilterChange(specKey, value)}
-                          />
-                          <span className="text-sm text-gray-700">{value}</span>
-                        </label>
-                      ))}
+                  </button>
+                  
+                  {expandedSpecs[spec.name] && (
+                    <div className="p-3 border-t border-gray-100 bg-white">
+                      <div className="space-y-2">
+                        {(availableFilters.specifications[spec.name] || []).map(value => (
+                          <label key={`${spec.name}-${value}`} className="flex items-center py-2 px-2 rounded hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+                              checked={(specFilters[spec.name] || []).includes(value)}
+                              onChange={() => handleSpecFilterChange(spec.name, value)}
+                            />
+                            <span className="text-sm text-gray-700">{value}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        }
-        {Object.keys(availableFilters.specifications).length === 0 && (
-          <p className="text-sm text-gray-500 py-2 text-center italic">
-            Selecciona una categoría para ver las especificaciones disponibles
-          </p>
-        )}
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-gray-500 py-2 text-center italic">
+              {filterSubcategoryList.length > 0 
+                ? "No hay especificaciones disponibles para esta subcategoría" 
+                : "Selecciona una subcategoría para ver las especificaciones disponibles"
+              }
+            </p>
+          );
+        })()}
       </div>
     </div>
   </div>

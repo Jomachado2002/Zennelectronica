@@ -2,8 +2,7 @@
 import React from 'react';
 import { BiX } from 'react-icons/bi';
 import { useFilters } from '../../context/FilterContext';
-import productCategory from '../../helpers/productCategory';
-import { model } from 'mongoose';
+import usePreloadedCategories from '../../hooks/usePreloadedCategories';
 
 const ActiveFiltersBar = () => {
   const { 
@@ -20,6 +19,9 @@ const ActiveFiltersBar = () => {
     clearAllFilters,
     hasActiveFilters
   } = useFilters();
+  
+  // Hook para categorías precargadas
+  const { getCategories, getSubcategories } = usePreloadedCategories();
   
   if (!hasActiveFilters()) return null;
   
@@ -302,7 +304,8 @@ const ActiveFiltersBar = () => {
       <div className="flex flex-wrap">
         {/* Chips de categorías */}
         {filterCategoryList.map(cat => {
-          const category = productCategory.find(c => c.value === cat);
+          const categories = getCategories();
+          const category = categories.find(c => c.value === cat);
           return (
             <FilterChip 
               key={`cat-${cat}`} 
@@ -315,8 +318,10 @@ const ActiveFiltersBar = () => {
         {/* Chips de subcategorías */}
         {filterSubcategoryList.map(sub => {
           let subcategoryLabel = sub;
-          productCategory.forEach(cat => {
-            const foundSub = cat.subcategories?.find(s => s.value === sub);
+          const categories = getCategories();
+          categories.forEach(cat => {
+            const subcategories = getSubcategories(cat.value);
+            const foundSub = subcategories.find(s => s.value === sub);
             if (foundSub) subcategoryLabel = foundSub.label;
           });
           return (

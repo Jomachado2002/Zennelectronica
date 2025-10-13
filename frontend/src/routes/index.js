@@ -34,6 +34,9 @@ import BancardTransactions from "../pages/BancardTransactions"
 // Importar el nuevo componente de dashboard
 import AdminDashboard from "../pages/AdminDashboard"
 
+// Importar componente de gestión de categorías
+import CategoriesManagement from "../components/admin/CategoriesManagement"
+
 // Importar páginas financieras
 import FinancialReports from "../pages/FinancialReports"
 import ClientsList from "../pages/ClientsList"
@@ -169,6 +172,10 @@ const router = createBrowserRouter([
                     {
                         path: "todos-productos",
                         element: <AllProducts />
+                    },
+                    {
+                        path: "categorias",
+                        element: <CategoriesManagement />
                     },
                     
                     

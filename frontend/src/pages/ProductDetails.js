@@ -7,391 +7,11 @@ import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import { trackWhatsAppContact, trackAddToCart, trackViewContent } from '../components/MetaPixelTracker';
-import VerticalCardProduct from '../components/VerticalCardProduct';
 import { useQuery } from '@tanstack/react-query';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
 
-// Lista de todas las posibles especificaciones por categoría
-const specificationsByCategory = {
-  informatica: [
-    'processor', 'memory', 'storage', 'disk', 'graphicsCard', 'notebookScreen', 'notebookBattery',
-    'pcCase', 'pcPowerSupply', 'pcCooling',
-    'motherboardSocket', 'motherboardChipset', 'motherboardFormFactor', 'expansionSlots',
-    'ramType', 'ramSpeed', 'ramCapacity', 'ramLatency',
-    'hddCapacity', 'diskType', 'hddInterface', 'hddRPM', 'diskReadSpeed', 'diskWriteSpeed',
-    'processorModel', 'processorSocket', 'processorCores', 'processorThreads',
-    'processorBaseFreq', 'processorTurboFreq', 'processorCache', 'processorTDP',
-    'psuWattage', 'psuEfficiency', 'psuModular', 'psuFormFactor', 'psuProtections',
-    'graphicCardModel', 'graphicCardMemory', 'graphicCardMemoryType', 'graphicCardBaseFrequency', 'graphicCardTDP','graphicfabricate',
-    'caseFormFactor', 'caseMaterial', 'caseExpansionBays', 'caseIncludedFans', 'caseCoolingSupport', 'caseBacklight','ramText','model',
-    'printerType', 'printerResolution', 'printerSpeed', 'printerColor', 'printerDuplex', 'printerConnectivity', 'printerTrayCapacity',
-      'tonerType', 'tonerPrinterType', 'tonerColor', 'tonerYield', 'tonerCartridgeType', 'tonerCompatibleModel',
-      'scannerType', 'scannerResolution', 'scannerSpeed', 'scannerMaxSize', 'scannerConnectivity', 'scannerFormats'
-  ],
-  perifericos: [
-    'monitorSize', 'monitorResolution', 'monitorRefreshRate', 'monitorPanel', 'monitorConnectivity',
-    'keyboardInterface', 'keyboardLayout', 'keyboardBacklight', 'keyboardSwitches', 'keyboardFeatures',
-    'mouseInterface', 'mouseSensor', 'mouseDPI', 'mouseButtons', 'mouseBacklight',
-    'adapterType', 'adapterInterface', 'adapterSpeed', 'adapterProtocol',
-    'headphoneConnectionType', 'headphoneTechnology', 'headphoneFrequencyResponse', 'headphoneImpedance', 
-    'headphoneNoiseCancel', 'headphoneBatteryLife',
-    'microphoneType', 'microphonePolarPattern', 'microphoneFrequencyRange', 'microphoneConnection', 
-    'microphoneSpecialFeatures'
-  ],
-  cctv: [
-    'cameraResolution', 'cameraLensType', 'cameraIRDistance', 'cameraType', 'cameraConnectivity', 'cameraProtection',
-    'dvrChannels', 'dvrResolution', 'dvrStorageCapacity', 'dvrConnectivity', 'dvrSmartFeatures',
-    'nasMaxCapacity', 'nasBaysNumber', 'nasProcessor', 'nasRAM', 'nasRAIDSupport', 'nasConnectivity'
-  ],
-  impresoras: [
-    'printerType', 'printerResolution', 'printerSpeed', 'printerDuplex', 'printerConnectivity',
-    'printerTrayCapacity', 'printerFunctions', 'printerDisplay',
-    'tonerPrinterType', 'tonerColor', 'tonerYield', 'tonerCartridgeType', 'tonerCompatibleModel'
-  ],
-  energia: [
-    'upsCapacity', 'upsOutputPower', 'upsBackupTime', 'upsOutlets', 'upsType', 'upsConnectivity'
-  ],
-  software_licencias: [
-    'softwareLicenseType', 'softwareLicenseDuration', 'softwareLicenseQuantity', 'softwareVersion', 'softwareFeatures'
-  ],
-  telefonia: [
-    'phoneType', 'phoneScreenSize', 'phoneRAM', 'phoneStorage', 'phoneProcessor', 'phoneCameras',
-    'phoneBattery', 'phoneOS', 'landlineType', 'landlineTechnology', 'landlineDisplay',
-    'landlineFunctions', 'landlineHandsets',
-    'tabletScreenSize', 'tabletScreenResolution', 'tabletProcessor', 'tabletRAM', 
-    'tabletStorage', 'tabletOS', 'tabletConnectivity'
-  ],
-  electronicos: [
-    'cameraType', 'cameraResolution', 'cameraSensor', 'cameraLens', 'cameraVideo', 'cameraISO', 'cameraConnectivity',
-    'droneType', 'droneFlightTime', 'droneRange', 'droneCamera', 'droneStabilization', 'droneSmartFeatures', 'droneWeight',
-    'tvScreenSize', 'tvResolution', 'tvPanelType', 'tvSmartFeatures', 'tvHDR', 'tvConnectivity', 'tvRefreshRate',
-    'speakerType', 'speakerPower', 'speakerConnectivity', 'speakerBatteryLife', 'speakerResistance', 'speakerFrequencyResponse', 'speakerSpecialFeatures',
-    'smartwatchCompatibility', 'smartwatchDisplay', 'smartwatchBatteryLife', 'smartwatchSensors', 'smartwatchResistance', 'smartwatchConnectivity', 'smartwatchSportsFeatures',
-    'scooterMaxSpeed', 'scooterRange', 'scooterBatteryCapacity', 'scooterWeight', 
-    'scooterMaxLoad', 'scooterWheelSize', 'scooterChargingTime',
-    'consoleGeneration', 'consoleStorage', 'consoleType', 'consoleResolution', 
-    'consoleConnectivity', 'consoleIncludedGames', 'consoleControllers',
-    'monopatinMaxSpeed', 'monopatinRange', 'monopatinBatteryLife', 'monopatinWeight', 
-    'monopatinMaxLoad', 'monopatinWheelType', 'monopatinWaterResistance',
-    'controllerCompatibility', 'controllerConnectionType', 'controllerBatteryLife', 
-    'controllerSpecialFeatures', 'controllerVibration', 'controllerWireless',
-    'gameGenre', 'gamePlatform', 'gameAgeRating', 'gameMultiplayer', 
-    'gameLanguage', 'gameReleaseYear', 'gamePhysicalDigital'
-  ],
-
-  redes: [
-    'switchType', 'switchPorts', 'switchPortSpeed', 'switchNetworkLayer', 'switchCapacity',
-    'serverType', 'serverProcessor', 'serverProcessorCount', 'serverRAM', 
-    'serverStorage', 'serverOS',
-    'networkCableType', 'networkCableCategory', 'networkCableLength', 
-    'networkCableShielding', 'networkCableRecommendedUse',
-    'rackType', 'rackUnits', 'rackDepth', 'rackMaterial', 'rackLoadCapacity',
-    'apWiFiStandard', 'apSupportedBands', 'apMaxSpeed', 'apPorts', 'apAntennas'
-  ]
-};
-
-// Mapeo de nombres de campo a nombres legibles
-const fieldNameMapping = {
-  model: "Modelo Procesador",
-  ramText : "Categoria de Memoria",
-  processor: "Procesador",
-  memory: "Memoria RAM",
-  storage: "Almacenamiento",
-  disk: "Disco",
-  graphicsCard: "Tarjeta Gráfica",
-  notebookScreen: "Pantalla",
-  notebookBattery: "Batería",
-  pcCase: "Gabinete",
-  pcPowerSupply: "Fuente de Poder",
-  pcCooling: "Sistema de Enfriamiento",
-  motherboardSocket: "Socket",
-  motherboardChipset: "Chipset",
-  motherboardFormFactor: "Factor de Forma",
-  expansionSlots: "Slots de Expansión",
-  ramType: "Tipo de RAM",
-  ramSpeed: "Velocidad",
-  ramCapacity: "Capacidad",
-  ramLatency: "Latencia",
-  hddCapacity: "Capacidad",
-  diskType: "Tipo de Disco",
-  hddInterface: "Interfaz",
-  hddRPM: "RPM",
-  diskReadSpeed: "Velocidad de Lectura",
-  diskWriteSpeed: "Velocidad de Escritura",
-  processorModel: "Modelo",
-  processorSocket: "Socket",
-  processorCores: "Núcleos",
-  processorThreads: "Hilos",
-  processorBaseFreq: "Frecuencia Base",
-  processorTurboFreq: "Frecuencia Turbo",
-  processorCache: "Caché",
-  processorTDP: "TDP",
-  psuWattage: "Vataje",
-  psuEfficiency: "Eficiencia",
-  psuModular: "Modularidad",
-  psuFormFactor: "Factor de Forma",
-  psuProtections: "Protecciones",
-  monitorSize: "Tamaño",
-  monitorResolution: "Resolución",
-  monitorRefreshRate: "Tasa de Refresco",
-  monitorPanel: "Tipo de Panel",
-  monitorConnectivity: "Conectividad",
-  keyboardInterface: "Interfaz",
-  keyboardLayout: "Layout",
-  keyboardBacklight: "Iluminación",
-  keyboardSwitches: "Switches",
-  keyboardFeatures: "Características",
-  mouseInterface: "Interfaz",
-  mouseSensor: "Sensor",
-  mouseDPI: "DPI",
-  mouseButtons: "Botones",
-  mouseBacklight: "Iluminación",
-  adapterType: "Tipo",
-  adapterInterface: "Interfaz",
-  adapterSpeed: "Velocidad",
-  adapterProtocol: "Protocolo",
-  cameraResolution: "Resolución",
-  cameraLensType: "Tipo de Lente",
-  cameraIRDistance: "Distancia IR",
-  cameraType: "Tipo de Cámara",
-  cameraConnectivity: "Conectividad",
-  cameraProtection: "Protección",
-  dvrChannels: "Canales",
-  dvrResolution: "Resolución",
-  dvrStorageCapacity: "Almacenamiento",
-  dvrConnectivity: "Conectividad",
-  dvrSmartFeatures: "Funciones Inteligentes",
-  nasCapacity: "Capacidad",
-  nasBays: "Bahías",
-  nasRAID: "Soporte RAID",
-  nasConnectivity: "Conectividad",
-  printerType: "Tipo",
-  printerResolution: "Resolución",
-  printerSpeed: "Velocidad",
-  printerDuplex: "Impresión Dúplex",
-  printerConnectivity: "Conectividad",
-  printerTrayCapacity: "Capacidad de Bandeja",
-  printerFunctions: "Funciones",
-  printerDisplay: "Display",
-  upsCapacity: "Capacidad",
-  upsOutputPower: "Potencia de Salida",
-  upsBackupTime: "Tiempo de Respaldo",
-  upsOutlets: "Tomas",
-  upsType: "Tipo",
-  upsConnectivity: "Conectividad",
-  airpodsModel: "Modelo",
-  airpodsBatteryLife: "Duración de Batería",
-  airpodsCharging: "Tipo de Carga",
-  airpodsResistance: "Resistencia",
-  airpodsFeatures: "Características",
-  softwareLicenseType: "Tipo de Licencia",
-  softwareLicenseDuration: "Duración",
-  softwareLicenseQuantity: "Cantidad de Usuarios",
-  softwareVersion: "Versión",
-  softwareFeatures: "Características",
-  phoneType: "Color",
-  phoneScreenSize: "Tamaño de Pantalla",
-  phoneRAM: "RAM",
-  phoneStorage: "Almacenamiento",
-  phoneProcessor: "Procesador",
-  phoneCameras: "Cámaras",
-  phoneBattery: "Batería",
-  phoneOS: "Sistema Operativo",
-  landlineType: "Tipo",
-  landlineTechnology: "Tecnología",
-  landlineDisplay: "Pantalla",
-  landlineFunctions: "Funciones",
-  landlineHandsets: "Auriculares",
-    // Tarjetas Gráficas
-    graphicCardModel: "Modelo",
-    graphicCardMemory: "Memoria",
-    graphicCardMemoryType: "Tipo de Memoria",
-    graphicCardBaseFrequency: "Frecuencia Base",
-    graphicfabricate: "Fabricante",
-    graphicCardTDP: "Consumo (TDP)",
-  
-    // Gabinetes
-    caseFormFactor: "Factor de Forma",
-    caseMaterial: "Material",
-    caseExpansionBays: "Bahías de Expansión",
-    caseIncludedFans: "Ventiladores Incluidos",
-    caseCoolingSupport: "Soporte de Refrigeración",
-    caseBacklight: "Iluminación",
-  
-    // Auriculares
-    headphoneConnectionType: "Tipo de Conexión",
-    headphoneTechnology: "Tecnología de Conexión",
-    headphoneFrequencyResponse: "Respuesta de Frecuencia",
-    headphoneImpedance: "Impedancia",
-    headphoneNoiseCancel: "Cancelación de Ruido",
-    headphoneBatteryLife: "Duración de Batería",
-  
-    // Microfonos
-    microphoneType: "Tipo de Micrófono",
-    microphonePolarPattern: "Patrón Polar",
-    microphoneFrequencyRange: "Rango de Frecuencia",
-    microphoneConnection: "Conexión",
-    microphoneSpecialFeatures: "Características Especiales",
-  
-    // NAS
-    nasMaxCapacity: "Capacidad Máxima",
-    nasBaysNumber: "Número de Bahías",
-    nasProcessor: "Procesador",
-    nasRAM: "Memoria RAM",
-    nasRAIDSupport: "Tipos de RAID Soportados",
-  
-    // Cartuchos de Toner
-    tonerPrinterType: "Tipo de Impresora",
-    tonerColor: "Color",
-    tonerYield: "Rendimiento",
-    tonerCartridgeType: "Tipo de Cartucho",
-    tonerCompatibleModel: "Modelo Compatible",
-  
-    // Tablets
-    tabletScreenSize: "Tamaño de Pantalla",
-    tabletScreenResolution: "Resolución de Pantalla",
-    tabletProcessor: "Procesador",
-    tabletRAM: "Memoria RAM",
-    tabletStorage: "Almacenamiento",
-    tabletOS: "Sistema Operativo",
-    tabletConnectivity: "Conectividad",
-  
-    // Redes - Switch
-    switchType: "Tipo de Switch",
-    switchPorts: "Número de Puertos",
-    switchPortSpeed: "Velocidad de Puertos",
-    switchNetworkLayer: "Capa de Red",
-    switchCapacity: "Capacidad de Conmutación",
-  
-    // Servidores
-    serverType: "Tipo de Servidor",
-    serverProcessor: "Procesador",
-    serverProcessorCount: "Número de Procesadores",
-    serverRAM: "Memoria RAM",
-    serverStorage: "Almacenamiento",
-    serverOS: "Sistema Operativo",
-  
-    // Cables de Red
-    networkCableType: "Tipo de Cable",
-    networkCableCategory: "Categoría",
-    networkCableLength: "Longitud",
-    networkCableShielding: "Blindaje",
-    networkCableRecommendedUse: "Uso Recomendado",
-  
-    // Racks
-    rackType: "Tipo de Rack",
-    rackUnits: "Unidades de Rack (U)",
-    rackDepth: "Profundidad",
-    rackMaterial: "Material",
-    rackLoadCapacity: "Capacidad de Carga",
-  
-    // Access Point
-    apWiFiStandard: "Estándar WiFi",
-    apSupportedBands: "Bandas Soportadas",
-    apMaxSpeed: "Velocidad Máxima",
-    apPorts: "Puertos",
-    apAntennas: "Antenas",
-    printerType: "Tipo de Impresora",
-  printerResolution: "Resolución",
-  printerSpeed: "Velocidad",
-  printerColor: "Impresión Color", 
-  printerDuplex: "Impresión Dúplex",
-  printerConnectivity: "Conectividad",
-  printerTrayCapacity: "Capacidad de Bandeja",
-  tonerType: "Tipo",
-  tonerPrinterType: "Tipo de Impresora",
-  tonerColor: "Color",
-  tonerYield: "Rendimiento",
-  tonerCartridgeType: "Tipo de Cartucho",
-  tonerCompatibleModel: "Modelo Compatible",
-  scannerType: "Tipo de Escáner",
-  scannerResolution: "Resolución",
-  scannerSpeed: "Velocidad",
-  scannerMaxSize: "Tamaño Máximo",
-  scannerConnectivity: "Conectividad",
-  scannerFormats: "Formatos Soportados",
-
-  // NUEVA CATEGORÍA: ELECTRÓNICOS
-  cameraType: "Tipo de Cámara",
-  cameraResolution: "Resolución",
-  cameraSensor: "Sensor",
-  cameraLens: "Lente Incluido",
-  cameraVideo: "Video",
-  cameraISO: "ISO",
-  cameraConnectivity: "Conectividad",
-  droneType: "Tipo de Drone",
-  droneFlightTime: "Tiempo de Vuelo",
-  droneRange: "Alcance",
-  droneCamera: "Cámara",
-  droneStabilization: "Estabilización",
-  droneSmartFeatures: "Funciones Inteligentes",
-  droneWeight: "Peso",
-  tvScreenSize: "Tamaño de Pantalla",
-  tvResolution: "Resolución",
-  tvPanelType: "Tipo de Panel",
-  tvSmartFeatures: "Smart TV",
-  tvHDR: "HDR",
-  tvConnectivity: "Conectividad",
-  tvRefreshRate: "Tasa de Refresco",
-  speakerType: "Tipo de Parlante",
-  speakerPower: "Potencia",
-  speakerConnectivity: "Conectividad",
-  speakerBatteryLife: "Duración de Batería",
-  speakerResistance: "Resistencia",
-  speakerFrequencyResponse: "Respuesta de Frecuencia",
-  speakerSpecialFeatures: "Características Especiales",
-  smartwatchCompatibility: "Compatibilidad",
-  smartwatchDisplay: "Pantalla",
-  smartwatchBatteryLife: "Duración de Batería",
-  smartwatchSensors: "Sensores",
-  smartwatchResistance: "Resistencia",
-  smartwatchConnectivity: "Conectividad",
-  smartwatchSportsFeatures: "Funciones Deportivas",
-  
-  // Scooters Eléctricos
-scooterMaxSpeed: "Velocidad Máxima",
-scooterRange: "Autonomía",
-scooterBatteryCapacity: "Capacidad de Batería",
-scooterWeight: "Peso",
-scooterMaxLoad: "Carga Máxima",
-scooterWheelSize: "Tamaño de Rueda",
-scooterChargingTime: "Tiempo de Carga",
-
-// Consolas
-consoleGeneration: "Generación",
-consoleStorage: "Almacenamiento",
-consoleType: "Tipo",
-consoleResolution: "Resolución",
-consoleConnectivity: "Conectividad",
-consoleIncludedGames: "Juegos Incluidos",
-consoleControllers: "Controles Incluidos",
-
-// Monopatines Eléctricos
-monopatinMaxSpeed: "Velocidad Máxima",
-monopatinRange: "Autonomía",
-monopatinBatteryLife: "Duración de Batería",
-monopatinWeight: "Peso",
-monopatinMaxLoad: "Carga Máxima",
-monopatinWheelType: "Tipo de Rueda",
-monopatinWaterResistance: "Resistencia al Agua",
-
-// Controles de Consola
-controllerCompatibility: "Compatibilidad",
-controllerConnectionType: "Tipo de Conexión",
-controllerBatteryLife: "Duración de Batería",
-controllerSpecialFeatures: "Características Especiales",
-controllerVibration: "Vibración",
-controllerWireless: "Tecnología Inalámbrica",
-
-// Juegos de Consola
-gameGenre: "Género",
-gamePlatform: "Plataforma",
-gameAgeRating: "Clasificación de Edad",
-gameMultiplayer: "Multijugador",
-gameLanguage: "Idioma",
-gameReleaseYear: "Año de Lanzamiento",
-gamePhysicalDigital: "Formato",
-};
+// Las especificaciones ahora se cargan dinámicamente desde la base de datos
 
 
 const ProductDetails = () => {
@@ -419,6 +39,11 @@ const ProductDetails = () => {
   const { fetchUserAddToCart } = useContext(Context);
   const navigate = useNavigate();
 
+  // Hook para categorías precargadas (datos dinámicos)
+  const { 
+    getSpecifications
+  } = usePreloadedCategories();
+
   // Función simplificada para determinar el estado del stock
   const getStockStatus = (stock) => {
     // Si no hay stock definido o es null/undefined, asumir que está en stock
@@ -442,17 +67,17 @@ const ProductDetails = () => {
     return oneYearFromNow.toISOString().split('T')[0]; // Formato YYYY-MM-DD
   };
 
-  // Función para obtener las especificaciones técnicas en formato schema.org
+  // Función para obtener las especificaciones técnicas en formato schema.org (dinámicas)
   const getProductSpecifications = () => {
-    if (!data.category) return [];
+    if (!data.category || !data.subcategory) return {};
     
-    const categorySpecs = specificationsByCategory[data.category] || [];
+    // Obtener especificaciones dinámicamente desde la base de datos
+    const specifications = getSpecifications(data.category, data.subcategory);
     const specs = {};
     
-    categorySpecs.forEach(key => {
-      if (data[key] && data[key].trim !== '') {
-        const label = fieldNameMapping[key] || key;
-        specs[label] = data[key];
+    specifications.forEach(spec => {
+      if (data[spec.name] && data[spec.name].trim !== '') {
+        specs[spec.label] = data[spec.name];
       }
     });
     
@@ -594,16 +219,21 @@ ${productUrl}
     ? Math.round(((data.price - data.sellingPrice) / data.price) * 100)
     : 0;
 
-  // Función para obtener los campos de especificaciones relevantes para el producto actual
+  // Función para obtener los campos de especificaciones relevantes para el producto actual (dinámicas)
   const getRelevantSpecifications = () => {
-    if (!data.category) return [];
+    if (!data.category || !data.subcategory) return [];
     
-    const categorySpecs = specificationsByCategory[data.category] || [];
+    // Obtener especificaciones dinámicamente desde la base de datos
+    const specifications = getSpecifications(data.category, data.subcategory);
     
     // Obtener todas las especificaciones que tienen valores
-    const filledSpecs = categorySpecs
-      .filter(key => data[key] && data[key].trim !== '')
-      .map(key => ({ key, value: data[key], label: fieldNameMapping[key] || key }));
+    const filledSpecs = specifications
+      .filter(spec => data[spec.name] && data[spec.name].trim !== '')
+      .map(spec => ({ 
+        key: spec.name, 
+        value: data[spec.name], 
+        label: spec.label 
+      }));
     
     return filledSpecs;
   };

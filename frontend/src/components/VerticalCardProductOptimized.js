@@ -264,7 +264,7 @@ const VerticalCardProductOptimized = ({
                               showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                             }`}
                             loading={isMobile ? "lazy" : "eager"}
-                            fetchPriority={isMobile ? "low" : "high"}
+                            fetchpriority={isMobile ? "low" : "high"}
                             onError={() => handleImageError(product._id)}
                             decoding="async"
                           />
@@ -278,7 +278,7 @@ const VerticalCardProductOptimized = ({
                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                               }`}
                               loading="lazy"
-                              fetchPriority="low"
+                              fetchpriority="low"
                               decoding="async"
                             />
                           )}

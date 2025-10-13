@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import SummaryApi from '../common';
-import productCategory from '../helpers/productCategory';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
 const FilterContext = createContext();
 
@@ -10,6 +10,9 @@ export const FilterProvider = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const urlSearch = new URLSearchParams(location.search);
+  
+  // Hook para categorías precargadas
+  const { getCategories, getSubcategories } = usePreloadedCategories();
   
   // Estados principales
   const [filterCategoryList, setFilterCategoryList] = useState(urlSearch.get("category") ? [urlSearch.get("category")] : []);
@@ -133,13 +136,13 @@ export const FilterProvider = ({ children }) => {
   
   // Función para buscar la categoría padre de una subcategoría
   const findParentCategory = (subcategory) => {
-    for (const category of productCategory) {
-      if (category.subcategories) {
-        const found = category.subcategories.find(sub => sub.value === subcategory);
-        if (found) {
-          setFilterCategoryList([category.value]);
-          break;
-        }
+    const categories = getCategories();
+    for (const category of categories) {
+      const subcategories = getSubcategories(category.value);
+      const found = subcategories.find(sub => sub.value === subcategory);
+      if (found) {
+        setFilterCategoryList([category.value]);
+        break;
       }
     }
   };
@@ -225,9 +228,11 @@ useEffect(() => {
       setFilterCategoryList([]);
       
       // También limpiamos la subcategoría si pertenece a esta categoría
-      const categoryObj = productCategory.find(c => c.value === category);
-      if (categoryObj && categoryObj.subcategories) {
-        const subcategoryValues = categoryObj.subcategories.map(sub => sub.value);
+      const categories = getCategories();
+      const categoryObj = categories.find(c => c.value === category);
+      if (categoryObj) {
+        const subcategories = getSubcategories(category);
+        const subcategoryValues = subcategories.map(sub => sub.value);
         if (subcategoryValues.some(sub => filterSubcategoryList.includes(sub))) {
           setFilterSubcategoryList([]);
         }
@@ -242,9 +247,11 @@ useEffect(() => {
       setFilterCategoryList([category]);
       
       // Limpiar subcategorías si no son de esta categoría
-      const categoryObj = productCategory.find(c => c.value === category);
-      if (categoryObj && categoryObj.subcategories) {
-        const subcategoryValues = categoryObj.subcategories.map(sub => sub.value);
+      const categories = getCategories();
+      const categoryObj = categories.find(c => c.value === category);
+      if (categoryObj) {
+        const subcategories = getSubcategories(category);
+        const subcategoryValues = subcategories.map(sub => sub.value);
         const validSubcats = filterSubcategoryList.filter(sub => 
           subcategoryValues.includes(sub)
         );

@@ -1,42 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { IoIosClose, IoMdTrash } from "react-icons/io";
-import productCategory from '../helpers/productCategory';
 import { FaUpload } from "react-icons/fa";
 import uploadImage from '../helpers/uploadImage';
 import DisplayImage from './DisplayImage';
 import { FaDeleteLeft } from "react-icons/fa6";
 import SummaryApi from '../common';
 import { toast } from 'react-toastify';
-import ProductSpecifications from './ProductSpecifications';
+import DynamicProductSpecifications from './DynamicProductSpecifications';
+import useCategories from '../hooks/useCategories';
 
 const AdminEditProduct = ({
     onClose,
     productData,
     fetchdata
 }) => {
-    // Inicializar datos con un objeto vacío para cada posible campo de especificación
-    const initialData = {
+    // Hook para obtener categorías dinámicamente
+    const { 
+        loading: categoriesLoading, 
+        getSubcategoriesByCategory,
+        getCategoriesForSelect
+    } = useCategories();
+    const [data, setData] = useState({
         // Datos básicos del producto
-        productName: productData?.productName || "",
-        brandName: productData?.brandName || "",
-        category: productData?.category || "",
-        subcategory: productData?.subcategory || "",
-        productImage: productData?.productImage || [],
-        documentationLink: productData?.documentationLink || "",
-        description: productData?.description || "",
-        price: productData?.price || "",
-        sellingPrice: productData?.sellingPrice || "",
-        stock: productData?.stock || 0,
-        isVipOffer: productData?.isVipOffer || false,
-        // ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO
-        codigo: productData?.codigo || "",
-        
-        // Campos específicos por categoría inicializados con valores del productData
-        // (resto de campos como en el código original)
-        // Se han omitido por brevedad, pero incluirías todos los campos del código original
-    };
-
-    const [data, setData] = useState(initialData);
+        productName: "",
+        brandName: "",
+        category: "",
+        subcategory: "",
+        productImage: [],
+        documentationLink: "",
+        description: "",
+        price: "",
+        sellingPrice: "",
+        stock: 0,
+        isVipOffer: false,
+        codigo: "",
+    });
     const [openFullScreenImage, setOpenFullScreenImage] = useState(false);
     const [fullScreenImage, setFullScreenImage] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
@@ -44,10 +42,27 @@ const AdminEditProduct = ({
     // Efecto para cargar todos los campos del producto desde productData
     useEffect(() => {
         if (productData) {
-            // Asegurarse de que todos los campos sean incluidos
             setData({
-                ...initialData,
-                ...productData
+                productName: productData.productName || "",
+                brandName: productData.brandName || "",
+                category: productData.category || "",
+                subcategory: productData.subcategory || "",
+                productImage: productData.productImage || [],
+                documentationLink: productData.documentationLink || "",
+                description: productData.description || "",
+                price: productData.price || "",
+                sellingPrice: productData.sellingPrice || "",
+                stock: productData.stock || 0,
+                isVipOffer: productData.isVipOffer || false,
+                codigo: productData.codigo || "",
+                // Incluir TODOS los campos del productData (incluyendo especificaciones)
+                ...productData,
+                // Asegurar que los campos básicos no se sobrescriban
+                productName: productData.productName || "",
+                brandName: productData.brandName || "",
+                category: productData.category || "",
+                subcategory: productData.subcategory || "",
+                codigo: productData.codigo || ""
             });
         }
     }, [productData]);
@@ -58,6 +73,7 @@ const AdminEditProduct = ({
             ...prev,
             [name]: type === 'number' ? Number(value) : value
         }));
+        console.log(`🔍 Campo actualizado: ${name} = ${value}`);
     };
 
     const handleUploadProduct = async (e) => {
@@ -168,6 +184,7 @@ const AdminEditProduct = ({
         }
 
         try {
+            console.log('🔍 AdminEditProduct - Datos que se envían al backend:', data);
             const response = await fetch(SummaryApi.updateProduct.url, {
                 method: SummaryApi.updateProduct.method,
                 credentials: 'include',
@@ -191,14 +208,8 @@ const AdminEditProduct = ({
         }
     };
 
-    // Función para obtener el nombre de la subcategoría actual
-    const getCurrentSubcategoryLabel = () => {
-        const category = productCategory.find(cat => cat.value === data.category);
-        if (!category) return 'Producto';
-        
-        const subcategory = category.subcategories.find(subcat => subcat.value === data.subcategory);
-        return subcategory ? subcategory.label : 'Producto';
-    };
+    // Obtener subcategorías dinámicamente
+    const selectedCategorySubcategories = getSubcategoriesByCategory(data.category);
 
     return (
         <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 overflow-y-auto'>
@@ -295,14 +306,21 @@ const AdminEditProduct = ({
                                 id='category'
                                 name='category'
                                 value={data.category}
-                                onChange={handleOnChange}
+                                onChange={(e) => {
+                                    handleOnChange(e);
+                                    // Limpiar subcategoría cuando cambie la categoría
+                                    setData(prev => ({ ...prev, subcategory: "" }));
+                                }}
                                 className='w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg 
                                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
                                            transition-all duration-300'
                                 required
+                                disabled={categoriesLoading}
                             >
-                                <option value="">Selecciona una categoría</option>
-                                {productCategory.map((cat) => (
+                                <option value="">
+                                    {categoriesLoading ? "Cargando categorías..." : "Selecciona una categoría"}
+                                </option>
+                                {getCategoriesForSelect().map((cat) => (
                                     <option key={cat.value} value={cat.value}>{cat.label}</option>
                                 ))}
                             </select>
@@ -323,9 +341,11 @@ const AdminEditProduct = ({
                                                transition-all duration-300'
                                     required
                                 >
-                                    <option value="">Selecciona una subcategoría</option>
-                                    {(productCategory.find(cat => cat.value === data.category)?.subcategories || []).map(subcat => (
-                                        <option key={subcat.value} value={subcat.value}>{subcat.label}</option>
+                                    <option value="">
+                                        {categoriesLoading ? "Cargando subcategorías..." : "Selecciona una subcategoría"}
+                                    </option>
+                                    {selectedCategorySubcategories.map(subcat => (
+                                        <option key={subcat._id || subcat.value} value={subcat.value}>{subcat.label}</option>
                                     ))}
                                 </select>
                             </div>
@@ -506,11 +526,9 @@ const AdminEditProduct = ({
                             {/* Campos específicos por subcategoría */}
                             {data.subcategory && (
                                 <div className='col-span-2 border-t pt-4 mt-4'>
-                                    <h3 className='text-lg font-semibold mb-3 text-gray-800'>
-                                        Especificaciones de {getCurrentSubcategoryLabel()}
-                                    </h3>
-                                    <ProductSpecifications
-                                        subcategory={data.subcategory}
+                                    <DynamicProductSpecifications
+                                        selectedCategory={data.category}
+                                        selectedSubcategory={data.subcategory}
                                         data={data}
                                         handleOnChange={handleOnChange}
                                     />

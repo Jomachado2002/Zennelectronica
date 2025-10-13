@@ -7,7 +7,7 @@ import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
 import SummaryApi from '../common';
-import productCategory from '../helpers/productCategory';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
 const LatestProductsMix = ({ limit = 5 }) => {
     const [data, setData] = useState([]);
@@ -18,6 +18,9 @@ const LatestProductsMix = ({ limit = 5 }) => {
     const loadingList = new Array(limit).fill(null);
 
     const scrollElement = useRef();
+    
+    // Hook para categorías precargadas
+    const { getCategories, getSubcategories } = usePreloadedCategories();
 
     const { fetchUserAddToCart } = useContext(Context);
 
@@ -29,10 +32,12 @@ const LatestProductsMix = ({ limit = 5 }) => {
 
     // Función para obtener etiquetas legibles de categorías/subcategorías
     const getCategoryInfo = (categoryValue, subcategoryValue) => {
-        const category = productCategory.find(cat => cat.value === categoryValue);
+        const categories = getCategories();
+        const category = categories.find(cat => cat.value === categoryValue);
         if (!category) return { categoryLabel: 'Categoría', subcategoryLabel: 'Subcategoría' };
         
-        const subcategory = category.subcategories.find(sub => sub.value === subcategoryValue);
+        const subcategories = getSubcategories(categoryValue);
+        const subcategory = subcategories.find(sub => sub.value === subcategoryValue);
         return {
             categoryLabel: category.label,
             subcategoryLabel: subcategory ? subcategory.label : 'Subcategoría'
@@ -267,7 +272,7 @@ const fetchDataFromServer = async () => {
                                             alt={product.productName}
                                             className='object-contain h-full w-full transform group-hover/card:scale-110 transition-transform duration-500'
                                             loading={index < 3 ? "eager" : "lazy"}
-                                            fetchPriority={index < 3 ? "high" : "low"}
+                                            fetchpriority={index < 3 ? "high" : "low"}
                                         />
                                         <div className='absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300'>
                                             <div className='bg-white/70 p-2 rounded-full'>

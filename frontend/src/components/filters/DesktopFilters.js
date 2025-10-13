@@ -1,5 +1,5 @@
 // src/components/filters/DesktopFilters.js
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { BiSort } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext';
@@ -7,9 +7,13 @@ import FilterAccordion from './FilterAccordion';
 import FilterCheckbox from './FilterCheckbox';
 import PriceFilterAccordion from './PriceFilterAccordion';
 import SpecificationFilter from './SpecificationFilter';
-import productCategory from '../../helpers/productCategory';
 
-const DesktopFilters = () => {
+const DesktopFilters = ({ 
+  categories = [], 
+  categoriesLoading = false,
+  getSubcategories,
+  getSpecifications
+}) => {
   const { 
     filterCategoryList, 
     filterSubcategoryList, 
@@ -27,6 +31,16 @@ const DesktopFilters = () => {
   
   const [searchBrand, setSearchBrand] = useState('');
   
+  // Obtener subcategorías para una categoría (datos precargados)
+  const getSubcategoriesForCategory = useCallback((categoryValue) => {
+    return getSubcategories ? getSubcategories(categoryValue) : [];
+  }, [getSubcategories]);
+
+  // Obtener especificaciones para una subcategoría (datos precargados)
+  const getSpecificationsForSubcategory = useCallback((categoryValue, subcategoryValue) => {
+    return getSpecifications ? getSpecifications(categoryValue, subcategoryValue) : [];
+  }, [getSpecifications]);
+  
   // Filtrar marcas por término de búsqueda
   const filteredBrands = useMemo(() => {
     return availableFilters.brands.filter(brand => 
@@ -34,7 +48,8 @@ const DesktopFilters = () => {
     );
   }, [availableFilters.brands, searchBrand]);
   
-  // Obtener etiqueta para especificación
+  // Función eliminada - ya no se usa
+  /*
   const getSpecificationLabel = (specKey) => {
     const labels = {
      // Notebooks
@@ -282,6 +297,7 @@ const DesktopFilters = () => {
     
     return labels[specKey] || specKey;
   };
+  */
   
   return (
     <div className="space-y-1">
@@ -345,29 +361,47 @@ const DesktopFilters = () => {
         count={filterCategoryList.length}
       >
         <div className="px-1 max-h-60 overflow-y-auto">
-          {productCategory.map((category) => (
-            <div key={category.value} className="mb-2">
-              <FilterCheckbox
-                label={category.label}
-                checked={filterCategoryList.includes(category.value)}
-                onChange={() => handleSelectCategory(category.value)}
-                bold={true}
-              />
-              
-              {filterCategoryList.includes(category.value) && category.subcategories && (
-                <div className="ml-6 mt-1 space-y-1 border-l-2 border-blue-200 pl-2">
-                  {category.subcategories.map((subcat) => (
-                    <FilterCheckbox
-                      key={subcat.value}
-                      label={subcat.label}
-                      checked={filterSubcategoryList.includes(subcat.value)}
-                      onChange={() => handleSelectSubcategory(subcat.value)}
-                    />
-                  ))}
-                </div>
-              )}
+          {categoriesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <span className="ml-3 text-gray-600">Cargando categorías...</span>
             </div>
-          ))}
+          ) : categories.length > 0 ? (
+            categories.map((category) => (
+              <div key={category.value} className="mb-2">
+                <FilterCheckbox
+                  label={category.label}
+                  checked={filterCategoryList.includes(category.value)}
+                  onChange={() => handleSelectCategory(category.value)}
+                  bold={true}
+                />
+                
+                {filterCategoryList.includes(category.value) && (
+                  <div className="ml-6 mt-1 space-y-1 border-l-2 border-blue-200 pl-2">
+                    {(() => {
+                      const subcategories = getSubcategoriesForCategory(category.value);
+                      return subcategories.length > 0 ? (
+                        subcategories.map((subcat) => (
+                          <FilterCheckbox
+                            key={subcat.value}
+                            label={subcat.label}
+                            checked={filterSubcategoryList.includes(subcat.value)}
+                            onChange={() => handleSelectSubcategory(subcat.value)}
+                          />
+                        ))
+                      ) : (
+                        <div className="text-xs text-gray-500 py-1 italic">No hay subcategorías disponibles</div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 py-2 text-center">
+              No hay categorías disponibles
+            </p>
+          )}
         </div>
       </FilterAccordion>
 
@@ -416,19 +450,36 @@ const DesktopFilters = () => {
       {/* Especificaciones */}
       <div className="mt-4">
         <h3 className="text-md font-semibold text-[#002060] mb-2 border-b pb-2">Especificaciones</h3>
-        {Object.keys(availableFilters.specifications).map(specKey => (
-          <SpecificationFilter
-            key={specKey}
-            title={getSpecificationLabel(specKey)}
-            specKey={specKey}
-            options={availableFilters.specifications[specKey] || []}
-          />
-        ))}
-        {Object.keys(availableFilters.specifications).length === 0 && (
-          <p className="text-sm text-gray-500 py-2 text-center italic">
-            Selecciona una categoría para ver las especificaciones disponibles
-          </p>
-        )}
+        {(() => {
+          // Obtener especificaciones de la subcategoría actual (datos precargados)
+          if (filterCategoryList.length > 0 && filterSubcategoryList.length > 0) {
+            const currentSpecifications = getSpecificationsForSubcategory(
+              filterCategoryList[0], 
+              filterSubcategoryList[0]
+            );
+
+            return currentSpecifications.length > 0 ? (
+              currentSpecifications.map((spec) => (
+                <SpecificationFilter
+                  key={spec.name}
+                  title={spec.label}
+                  specKey={spec.name}
+                  options={availableFilters.specifications[spec.name] || []}
+                />
+              ))
+            ) : (
+              <div className="text-sm text-gray-500 py-2 text-center italic">
+                No hay especificaciones disponibles para esta subcategoría
+              </div>
+            );
+          } else {
+            return (
+              <div className="text-sm text-gray-500 py-2 text-center italic">
+                Selecciona una subcategoría para ver las especificaciones disponibles
+              </div>
+            );
+          }
+        })()}
       </div>
     </div>
   );

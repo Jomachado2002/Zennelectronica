@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import productCategory from '../helpers/productCategory';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import { ChevronRightIcon } from 'lucide-react';
 
 const MobileCategoriesPage = () => {
+  const { getCategories, getSubcategories } = usePreloadedCategories();
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-10 p-4 shadow-md bg-blue-600 text-white flex items-center">
@@ -11,7 +13,7 @@ const MobileCategoriesPage = () => {
       </header>
 
       <div className="p-4 space-y-6">
-        {productCategory.map((category) => (
+        {getCategories().map((category) => (
           <div 
             key={category.id} 
             className="bg-white rounded-xl shadow-md overflow-hidden"
@@ -21,7 +23,7 @@ const MobileCategoriesPage = () => {
             </div>
             
             <div>
-              {category.subcategories.map((subcategory) => (
+              {getSubcategories(category.value).map((subcategory) => (
                 <Link
                   key={subcategory.id}
                   to={`/categoria-producto?category=${category.value}&subcategory=${subcategory.value}`}

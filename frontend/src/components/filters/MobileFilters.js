@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { BiX, BiFilter, BiChevronDown, BiChevronUp, BiCheck } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext'; // Ajustada la ruta a context sin 's'
-import productCategory from '../../helpers/productCategory';
+import usePreloadedCategories from '../../hooks/usePreloadedCategories';
 
 const MobileFilters = () => {
   const { 
@@ -30,6 +30,9 @@ const MobileFilters = () => {
     filterCount,
     clearAllFilters
   } = useFilters();
+  
+  // Hook para categorías precargadas
+  const { getCategories, getSubcategories } = usePreloadedCategories();
   
   const [searchBrand, setSearchBrand] = useState('');
   const [searchSpecification, setSearchSpecification] = useState('');
@@ -451,7 +454,7 @@ const MobileFilters = () => {
               <div>
                 <h3 className="text-lg font-medium mb-3">Categorías</h3>
                 <div className="space-y-2">
-                  {productCategory.map((category) => (
+                  {getCategories().map((category) => (
                     <div key={category.value} className="mb-3">
                       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <div 
@@ -477,9 +480,9 @@ const MobileFilters = () => {
                           </div>
                         </div>
                         
-                        {filterCategoryList.includes(category.value) && category.subcategories && (
+                        {filterCategoryList.includes(category.value) && (
                           <div className="border-t border-gray-100 bg-gray-50">
-                            {category.subcategories.map((subcat) => (
+                            {getSubcategories(category.value).map((subcat) => (
                               <div 
                                 key={subcat.value}
                                 className="flex items-center py-3 px-4 border-b border-gray-100 last:border-b-0"

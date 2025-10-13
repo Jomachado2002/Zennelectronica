@@ -347,7 +347,7 @@ const VerticalCardProduct = ({
                                                 showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                                             } ${!isImageLoaded ? 'opacity-0' : 'opacity-100'}`}
                                             loading={isMobile ? "lazy" : "eager"} // ✅ LAZY EN MOBILE, EAGER EN DESKTOP
-                                            fetchPriority={isMobile ? "low" : "high"} // ✅ PRIORIDAD BAJA EN MOBILE
+                                            fetchpriority={isMobile ? "low" : "high"} // ✅ PRIORIDAD BAJA EN MOBILE
                                             onLoad={() => handleImageLoad(product?._id)}
                                             onError={() => handleImageLoad(product?._id)}
                                         />
@@ -361,7 +361,7 @@ const VerticalCardProduct = ({
                                                     showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                                                 }`}
                                                 loading="lazy"
-                                                fetchPriority="low"
+                                                fetchpriority="low"
                                             />
                                         )}
 

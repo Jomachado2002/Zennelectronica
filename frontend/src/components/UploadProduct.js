@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import ProductSpecifications from './ProductSpecifications';
+import DynamicProductSpecifications from './DynamicProductSpecifications';
 import SummaryApi from '../common';
 import { IoIosClose } from "react-icons/io";
 import { FaUpload } from "react-icons/fa";
 import { FaDeleteLeft } from "react-icons/fa6";
-import productCategory from '../helpers/productCategory';
-import { MdClose } from "react-icons/md";
-import { FaCloudUploadAlt } from "react-icons/fa";
-import { MdDelete } from "react-icons/md";
+import useCategories from '../hooks/useCategories';
 import uploadImage from '../helpers/uploadImage';
 import DisplayImage from './DisplayImage';
 import { toast } from 'react-toastify';
 
 
 const UploadProduct = ({ onClose, fetchData, prefilledData = null }) => {
+  // Hook para obtener categorías dinámicamente
+  const { 
+    loading: categoriesLoading, 
+    getSubcategoriesByCategory,
+    getCategoriesForSelect
+  } = useCategories();
+
   const [data, setData] = useState(prefilledData || {
   productName: "",
   brandName: "",
@@ -150,9 +154,8 @@ useEffect(() => {
     }
   };
 
-  const selectedCategorySubcategories = productCategory.find(
-    (cat) => cat.value === data.category
-  )?.subcategories || [];
+  // Obtener subcategorías dinámicamente
+  const selectedCategorySubcategories = getSubcategoriesByCategory(data.category);
 
   return (
     <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 overflow-y-auto'>
@@ -240,14 +243,21 @@ useEffect(() => {
                 id='category'
                 name='category'
                 value={data.category}
-                onChange={handleOnChange}
+                onChange={(e) => {
+                  handleOnChange(e);
+                  // Limpiar subcategoría cuando cambie la categoría
+                  setData(prev => ({ ...prev, subcategory: "" }));
+                }}
                 className='w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg 
                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
                          transition-all duration-300'
                 required
+                disabled={categoriesLoading}
               >
-                <option value="">Selecciona una categoría</option>
-                {productCategory.map((cat) => (
+                <option value="">
+                  {categoriesLoading ? "Cargando categorías..." : "Selecciona una categoría"}
+                </option>
+                {getCategoriesForSelect().map((cat) => (
                   <option key={cat.value} value={cat.value}>{cat.label}</option>
                 ))}
               </select>
@@ -268,9 +278,11 @@ useEffect(() => {
                            transition-all duration-300'
                   required
                 >
-                  <option value="">Selecciona una subcategoría</option>
+                  <option value="">
+                    {categoriesLoading ? "Cargando subcategorías..." : "Selecciona una subcategoría"}
+                  </option>
                   {selectedCategorySubcategories.map(subcat => (
-                    <option key={subcat.value} value={subcat.value}>{subcat.label}</option>
+                    <option key={subcat._id || subcat.value} value={subcat.value}>{subcat.label}</option>
                   ))}
                 </select>
               </div>
@@ -429,15 +441,9 @@ useEffect(() => {
           {/* Campos específicos por subcategoría */}
           {data.subcategory && (
             <div className='col-span-2 border-t pt-4 mt-4'>
-              <h3 className='text-lg font-semibold mb-3 text-gray-800'>
-                Especificaciones de {productCategory
-                  .find(cat => cat.value === data.category)
-                  ?.subcategories
-                  .find(subcat => subcat.value === data.subcategory)
-                  ?.label || 'Producto'}
-              </h3>
-              <ProductSpecifications
-                subcategory={data.subcategory}
+              <DynamicProductSpecifications
+                selectedCategory={data.category}
+                selectedSubcategory={data.subcategory}
                 data={data}
                 handleOnChange={handleOnChange}
               />

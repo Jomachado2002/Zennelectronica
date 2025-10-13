@@ -1,7 +1,6 @@
 // src/utils/getSeoTitle.js
-import { generatePageTitle } from '../helpers/productCategory';
 
-const getSeoTitle = (location) => {
+const getSeoTitle = (location, categories = []) => {
   const urlSearch = new URLSearchParams(location.search);
   const selectedCategory = urlSearch.get("category") || "";
   const selectedSubcategory = urlSearch.get("subcategory") || "";
@@ -18,9 +17,27 @@ const getSeoTitle = (location) => {
   if (selectedSubcategory === "computadoras_ensambladas")
     return "Computadoras ensambladas de alto rendimiento";
   
-  // Usar la función de generación de título
-  return generatePageTitle(selectedCategory, selectedSubcategory) || 
-         'Equipos de tecnología al mejor precio en Paraguay';
+  // Buscar en las categorías dinámicas
+  if (categories.length > 0) {
+    // Buscar la categoría
+    const categoryObj = categories.find(cat => cat.value === selectedCategory);
+    if (categoryObj) {
+      return `Productos de ${categoryObj.label} al mejor precio en Paraguay`;
+    }
+    
+    // Buscar la subcategoría
+    if (selectedSubcategory) {
+      for (const category of categories) {
+        const subcategoryObj = category.subcategories?.find(sub => sub.value === selectedSubcategory);
+        if (subcategoryObj) {
+          return `${subcategoryObj.label} con envío gratis y garantía oficial`;
+        }
+      }
+    }
+  }
+  
+  // Título por defecto
+  return 'Equipos de tecnología al mejor precio en Paraguay';
 };
 
 export default getSeoTitle;

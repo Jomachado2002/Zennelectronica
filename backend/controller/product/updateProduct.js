@@ -10,6 +10,11 @@ async function updateProductController(req, res) {
 
         const { _id, ...resBody } = req.body;
 
+        console.log('🔍 Backend - Datos recibidos para actualizar producto:', {
+            _id,
+            resBody: JSON.stringify(resBody, null, 2)
+        });
+
         // Verificar si el producto existe
         const existingProduct = await ProductModel.findById(_id);
         if (!existingProduct) {
