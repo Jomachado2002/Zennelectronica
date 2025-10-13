@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BiCategoryAlt } from "react-icons/bi";
 import { FaInfoCircle, FaWhatsapp, FaPhone } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
-import productCategory from '../helpers/productCategory';
+import useDynamicCategories from '../hooks/useDynamicCategories';
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -50,17 +50,33 @@ const MenuCategorias = ({
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(null);
   const [activeSubcategories, setActiveSubcategories] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState([]); // Para móvil
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
   const menuRef = useRef(null);
   const overlayRef = useRef(null);
 
+  // Hook para categorías dinámicas
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    loadSubcategories,
+  } = useDynamicCategories();
+
   // Efecto para actualizar subcategorías cuando cambia la categoría activa (DESKTOP)
   useEffect(() => {
-    if (!isMobile && activeCategoryIndex !== null && productCategory[activeCategoryIndex]) {
-      setActiveSubcategories(productCategory[activeCategoryIndex].subcategories);
-    } else if (!isMobile) {
-      setActiveSubcategories([]);
-    }
-  }, [activeCategoryIndex, isMobile]);
+    const loadSubcategoriesForActiveCategory = async () => {
+      if (!isMobile && activeCategoryIndex !== null && categories[activeCategoryIndex]) {
+        setLoadingSubcategories(true);
+        const subcategories = await loadSubcategories(categories[activeCategoryIndex].value);
+        setActiveSubcategories(subcategories);
+        setLoadingSubcategories(false);
+      } else if (!isMobile) {
+        setActiveSubcategories([]);
+      }
+    };
+
+    loadSubcategoriesForActiveCategory();
+  }, [activeCategoryIndex, isMobile, categories, loadSubcategories]);
 
   // Prevenir scroll cuando el menú está abierto
   useEffect(() => {
@@ -174,103 +190,34 @@ const MenuCategorias = ({
 
             {/* Categorías con Acordeón */}
             <div className="space-y-3">
-              {productCategory.map((category, index) => (
-                <div 
-                  key={category.id} 
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md"
-                >
-                  {/* Header de Categoría */}
-                  <button
-                    className="w-full p-4 flex items-center justify-between transition-colors duration-200"
-                    style={{
-                      background: expandedCategories.includes(index)
-                        ? 'linear-gradient(135deg, rgba(0, 181, 216, 0.1) 0%, rgba(123, 44, 191, 0.1) 100%)'
-                        : 'white'
-                    }}
-                    onClick={() => handleCategoryClick(index)}
-                  >
-                    <div className="flex items-center">
-                      <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
-                        style={{
-                          background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-                        }}
-                      >
-                        <BiCategoryAlt className="text-white" />
-                      </div>
-                      <span className="font-bold text-gray-800 text-left">
-                        {category.label}
-                      </span>
-                    </div>
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className={`h-5 w-5 transition-transform duration-300 ${
-                        expandedCategories.includes(index) ? 'rotate-180' : ''
-                      }`}
-                      style={{ color: '#00B5D8' }}
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {/* Subcategorías (Acordeón) */}
-                  {expandedCategories.includes(index) && (
-                    <div 
-                      className="border-t border-gray-100 bg-gray-50"
-                      style={{
-                        animation: 'slideDown 0.3s ease-out'
-                      }}
-                    >
-                      {category.subcategories.map((subcategory) => (
-                        <a
-                          key={subcategory.id}
-                          href="#"
-                          className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleNavigateWithReload(`/categoria-producto?category=${category.value}&subcategory=${subcategory.value}`);
-                          }}
-                        >
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 rounded-full mr-3 group-hover:scale-150 transition-transform"
-                              style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
-                            />
-                            <span className="text-sm text-gray-700 group-hover:text-cyan-600 font-medium transition-colors">
-                              {subcategory.label}
-                            </span>
-                          </div>
-                          <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 transition-colors" 
-                            viewBox="0 0 20 20" 
-                            fill="currentColor"
-                          >
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </a>
-                      ))}
-                      
-                      {/* Botón "Ver Todo" */}
-                      <a
-                        href="#"
-                        className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg"
-                        style={{
-                          background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleNavigateWithReload(`/categoria-producto?category=${category.value}`);
-                        }}
-                      >
-                        Ver toda la colección →
-                      </a>
-                    </div>
-                  )}
+              {categoriesLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
+                  <span className="ml-3 text-gray-600">Cargando categorías...</span>
                 </div>
-              ))}
+              ) : categoriesError ? (
+                <div className="text-center p-8 text-red-600">
+                  <p>Error al cargar categorías</p>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="mt-2 text-sm text-blue-600 hover:underline"
+                  >
+                    Recargar página
+                  </button>
+                </div>
+              ) : (
+                categories.map((category, index) => (
+                  <CategoryAccordion
+                    key={category.id}
+                    category={category}
+                    index={index}
+                    expandedCategories={expandedCategories}
+                    onCategoryClick={handleCategoryClick}
+                    onNavigateWithReload={handleNavigateWithReload}
+                    loadSubcategories={loadSubcategories}
+                  />
+                ))
+              )}
             </div>
 
             {/* Separador */}
@@ -380,26 +327,37 @@ const MenuCategorias = ({
                 <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   CATEGORÍAS
                 </h3>
-                {productCategory.map((category, index) => (
-                  <div
-                    key={category.id}
-                    className={`px-4 py-3 cursor-pointer flex items-center justify-between border-l-4 ${activeCategoryIndex === index 
-                      ? 'border-l-blue-500 bg-blue-50/50 text-blue-800' 
-                      : 'border-l-transparent text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => handleCategoryClick(index)}
-                  >
-                    <span className="font-medium">{category.label}</span>
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className="h-4 w-4" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                {categoriesLoading ? (
+                  <div className="px-4 py-8 text-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="text-sm text-gray-600 mt-2">Cargando categorías...</p>
                   </div>
-                ))}
+                ) : categoriesError ? (
+                  <div className="px-4 py-8 text-center text-red-600">
+                    <p className="text-sm">Error al cargar categorías</p>
+                  </div>
+                ) : (
+                  categories.map((category, index) => (
+                    <div
+                      key={category.id}
+                      className={`px-4 py-3 cursor-pointer flex items-center justify-between border-l-4 ${activeCategoryIndex === index 
+                        ? 'border-l-blue-500 bg-blue-50/50 text-blue-800' 
+                        : 'border-l-transparent text-gray-700 hover:bg-gray-50'}`}
+                      onClick={() => handleCategoryClick(index)}
+                    >
+                      <span className="font-medium">{category.label}</span>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-4 w-4" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  ))
+                )}
               </div>
               
               {/* Contacto */}
@@ -430,45 +388,58 @@ const MenuCategorias = ({
           
           {/* Panel de subcategorías derecho */}
           <div className="flex-1 py-4 px-6 overflow-y-auto bg-white h-full">
-            {activeCategoryIndex !== null && activeSubcategories.length > 0 ? (
+            {activeCategoryIndex !== null && categories[activeCategoryIndex] ? (
               <>
                 <h2 className="text-xl font-bold text-blue-800 mb-5 pb-2 border-b border-gray-200">
-                  {productCategory[activeCategoryIndex]?.label}
+                  {categories[activeCategoryIndex]?.label}
                 </h2>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  {activeSubcategories.map((subcategory) => (
-                    <a
-                      key={subcategory.id}
-                      href="#"
-                      className="group p-3 hover:bg-blue-50 transition-colors flex items-center"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleNavigateWithReload(`/categoria-producto?category=${productCategory[activeCategoryIndex].value}&subcategory=${subcategory.value}`);
-                      }}
-                    >
-                      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors flex-shrink-0 mr-3">
-                        <BiCategoryAlt className="text-sm" />
-                      </div>
-                      <span className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors text-sm">
-                        {subcategory.label}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                
-                <div className="mt-8 flex justify-end">
-                  <a
-                    href="#"
-                    className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavigateWithReload(`/categoria-producto?category=${productCategory[activeCategoryIndex].value}`);
-                    }}
-                  >
-                    Ver toda la colección
-                  </a>
-                </div>
+                {loadingSubcategories ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span className="ml-3 text-gray-600">Cargando subcategorías...</span>
+                  </div>
+                ) : activeSubcategories.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      {activeSubcategories.map((subcategory) => (
+                        <a
+                          key={subcategory.id}
+                          href="#"
+                          className="group p-3 hover:bg-blue-50 transition-colors flex items-center"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleNavigateWithReload(`/categoria-producto?category=${categories[activeCategoryIndex].value}&subcategory=${subcategory.value}`);
+                          }}
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors flex-shrink-0 mr-3">
+                            <BiCategoryAlt className="text-sm" />
+                          </div>
+                          <span className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors text-sm">
+                            {subcategory.label}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-8 flex justify-end">
+                      <a
+                        href="#"
+                        className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavigateWithReload(`/categoria-producto?category=${categories[activeCategoryIndex].value}`);
+                        }}
+                      >
+                        Ver toda la colección
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No hay subcategorías disponibles</p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center px-4">
@@ -483,6 +454,136 @@ const MenuCategorias = ({
         </div>
       </div>
     </>
+  );
+};
+
+// Componente para el acordeón de categorías móvil
+const CategoryAccordion = ({ 
+  category, 
+  index, 
+  expandedCategories, 
+  onCategoryClick, 
+  onNavigateWithReload,
+  loadSubcategories 
+}) => {
+  const [subcategories, setSubcategories] = useState([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
+  const handleCategoryClick = async () => {
+    if (!expandedCategories.includes(index)) {
+      // Si se está expandiendo, cargar subcategorías
+      setLoadingSubcategories(true);
+      const subs = await loadSubcategories(category.value);
+      setSubcategories(subs);
+      setLoadingSubcategories(false);
+    }
+    onCategoryClick(index);
+  };
+
+  return (
+    <div 
+      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md"
+    >
+      {/* Header de Categoría */}
+      <button
+        className="w-full p-4 flex items-center justify-between transition-colors duration-200"
+        style={{
+          background: expandedCategories.includes(index)
+            ? 'linear-gradient(135deg, rgba(0, 181, 216, 0.1) 0%, rgba(123, 44, 191, 0.1) 100%)'
+            : 'white'
+        }}
+        onClick={handleCategoryClick}
+      >
+        <div className="flex items-center">
+          <div 
+            className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
+            style={{
+              background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+            }}
+          >
+            <BiCategoryAlt className="text-white" />
+          </div>
+          <span className="font-bold text-gray-800 text-left">
+            {category.label}
+          </span>
+        </div>
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          className={`h-5 w-5 transition-transform duration-300 ${
+            expandedCategories.includes(index) ? 'rotate-180' : ''
+          }`}
+          style={{ color: '#00B5D8' }}
+          fill="none" 
+          viewBox="0 0 24 24" 
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Subcategorías (Acordeón) */}
+      {expandedCategories.includes(index) && (
+        <div 
+          className="border-t border-gray-100 bg-gray-50"
+          style={{
+            animation: 'slideDown 0.3s ease-out'
+          }}
+        >
+          {loadingSubcategories ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-500"></div>
+              <span className="ml-2 text-sm text-gray-600">Cargando...</span>
+            </div>
+          ) : (
+            <>
+              {subcategories.map((subcategory) => (
+                <a
+                  key={subcategory.id}
+                  href="#"
+                  className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigateWithReload(`/categoria-producto?category=${category.value}&subcategory=${subcategory.value}`);
+                  }}
+                >
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 rounded-full mr-3 group-hover:scale-150 transition-transform"
+                      style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
+                    />
+                    <span className="text-sm text-gray-700 group-hover:text-cyan-600 font-medium transition-colors">
+                      {subcategory.label}
+                    </span>
+                  </div>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 transition-colors" 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </a>
+              ))}
+              
+              {/* Botón "Ver Todo" */}
+              <a
+                href="#"
+                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigateWithReload(`/categoria-producto?category=${category.value}`);
+                }}
+              >
+                Ver toda la colección →
+              </a>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

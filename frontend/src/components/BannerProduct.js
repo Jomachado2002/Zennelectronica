@@ -104,7 +104,7 @@ const BannerProduct = () => {
                 alt={banner.alt}
                 className="w-full h-full object-cover"
                 loading={index === activeSlide ? "eager" : "lazy"}
-                fetchPriority={index === activeSlide ? "high" : "low"}
+                fetchpriority={index === activeSlide ? "high" : "low"}
                 onError={(e) => {
                   // Imagen por defecto si no existe
                   if (e && e.target) {

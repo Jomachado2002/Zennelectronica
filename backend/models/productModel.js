@@ -386,6 +386,9 @@ lastUpdatedFinance: { type: Date },              // Fecha de última actualizaci
     timestamps: true
 });
 
+// ✅ PERMITIR CAMPOS DINÁMICOS PARA ESPECIFICACIONES
+// Esto permite que cualquier campo que no esté definido en el esquema se guarde en la BD
+productSchema.set('strict', false);
 
 // Creamos un índice para el slug para búsquedas más rápidas
 productSchema.index({ slug: 1 }, { unique: true, sparse: true });

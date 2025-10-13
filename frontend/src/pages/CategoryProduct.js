@@ -7,7 +7,7 @@ import { FilterProvider, useFilters } from '../context/FilterContext';
 
 import DesktopFilters from '../components/filters/DesktopFilters';
 import SideDrawerFilters from '../components/filters/SideDrawerFilters';
-import productCategory from '../helpers/productCategory';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
 import VerticalCard from '../components/VerticalCard';
@@ -57,7 +57,7 @@ const useScrollDirection = () => {
 };
 
 // Componente para filtros activos en línea
-const InlineActiveFilters = ({ productCategories }) => {
+const InlineActiveFilters = ({ categories }) => {
   const { 
     filterCategoryList, 
     filterSubcategoryList, 
@@ -342,8 +342,8 @@ const InlineActiveFilters = ({ productCategories }) => {
     <div className="flex flex-wrap items-center">
       {/* Chips de filtros */}
       <div className="flex flex-wrap flex-grow">
-        {productCategories && filterCategoryList.map(cat => {
-          const category = productCategories.find(c => c.value === cat);
+        {categories && filterCategoryList.map(cat => {
+          const category = categories.find(c => c.value === cat);
           return (
             <FilterChip 
               key={`cat-${cat}`} 
@@ -353,9 +353,9 @@ const InlineActiveFilters = ({ productCategories }) => {
           );
         })}
         
-        {productCategories && filterSubcategoryList.map(sub => {
+        {categories && filterSubcategoryList.map(sub => {
           let subcategoryLabel = sub;
-          productCategories.forEach(cat => {
+          categories.forEach(cat => {
             const foundSub = cat.subcategories?.find(s => s.value === sub);
             if (foundSub) subcategoryLabel = foundSub.label;
           });
@@ -420,10 +420,20 @@ const CategoryProductContent = () => {
   const location = useLocation();
   const { isVisible } = useScrollDirection();
   
+  // Hook para categorías precargadas
+  const { 
+    getCategories, 
+    getSubcategories, 
+    getSpecifications, 
+    loading: categoriesLoading 
+  } = usePreloadedCategories();
+  
+  const categories = getCategories();
+  
   // Configurar metadatos de SEO
   useEffect(() => {
     // Cambiar el título del documento para SEO
-    const seoTitle = getSeoTitle(location);
+    const seoTitle = getSeoTitle(location, categories);
     document.title = `${seoTitle} | Zenn`;
     
     // Actualizar meta description
@@ -431,7 +441,7 @@ const CategoryProductContent = () => {
     if (metaDescription) {
       metaDescription.setAttribute('content', `Compra online ${seoTitle.toLowerCase()} con garantía oficial. Envío a todo Paraguay. Precios competitivos y atención personalizada.`);
     }
-  }, [location]);
+  }, [location, categories]);
 
   return (
     <>
@@ -460,13 +470,13 @@ const CategoryProductContent = () => {
               
               {/* Título de página reducido */}
               <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
-                {getSeoTitle(location)}
+                {getSeoTitle(location, categories)}
               </h1>
             </div>
             
-            {/* Filtros activos - Pasamos productCategory como prop */}
+            {/* Filtros activos - Pasamos categories como prop */}
             <div className="w-full mt-2 sm:mt-0 sm:ml-4">
-              <InlineActiveFilters productCategories={productCategory} />
+              <InlineActiveFilters categories={categories} />
             </div>
           </div>
         </div>
@@ -505,14 +515,24 @@ const CategoryProductContent = () => {
           {/* Sidebar filtros (solo desktop) */}
           <div className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24 max-h-[calc(100vh-150px)] overflow-y-auto bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <DesktopFilters />
+              <DesktopFilters 
+                categories={categories} 
+                categoriesLoading={categoriesLoading}
+                getSubcategories={getSubcategories}
+                getSpecifications={getSpecifications}
+              />
             </div>
           </div>
 
           {/* Lista de productos - Incluye el drawer de filtros en móvil */}
           <div className="flex-grow relative mb-20">
             {/* Drawer lateral para filtros en móvil */}
-            <SideDrawerFilters />
+            <SideDrawerFilters 
+              categories={categories} 
+              categoriesLoading={categoriesLoading}
+              getSubcategories={getSubcategories}
+              getSpecifications={getSpecifications}
+            />
             
             {loading ? (
               <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-sm">

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react'
 import UploadProduct from '../components/UploadProduct'
 import SummaryApi from '../common'
 import AdminProductCard from '../components/AdminProductCard'
-import { FaSearch, FaFilter, FaFileExcel, FaCalculator, FaImage } from 'react-icons/fa'
-import productCategory from '../helpers/productCategory'
+import { FaSearch, FaFilter, FaFileExcel } from 'react-icons/fa'
+import usePreloadedCategories from '../hooks/usePreloadedCategories'
 import * as XLSX from 'xlsx'
 import ProductFinanceModal from '../components/admin/ProductFinanceModal'
 import ExchangeRateConfig from '../components/admin/ExchangeRateConfig'
@@ -18,6 +18,9 @@ const AllProducts = () => {
   
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
+  
+  // Hook para categorías precargadas
+  const { getCategories, getSubcategories } = usePreloadedCategories()
   const [selectedSubcategory, setSelectedSubcategory] = useState('')
   const [sortOption, setSortOption] = useState('newest')
 
@@ -132,9 +135,8 @@ if (dataResponse?.data) {
     applyFiltersAndSort(allProduct)
   }, [searchTerm, selectedCategory, selectedSubcategory, sortOption])
 
-  const getSubcategories = () => {
-    const categoryObj = productCategory.find(cat => cat.value === selectedCategory)
-    return categoryObj ? categoryObj.subcategories : []
+  const getSubcategoriesForCategory = () => {
+    return getSubcategories(selectedCategory)
   }
 
   const exportToExcel = () => {
@@ -184,11 +186,14 @@ if (dataResponse?.data) {
     let description = `Mostrando ${filteredProducts.length} producto${filteredProducts.length !== 1 ? 's' : ''}`
     
     if (selectedCategory) {
-      description += ` en la categoría "${productCategory.find(c => c.value === selectedCategory)?.label || selectedCategory}"`
+      const categories = getCategories()
+      const category = categories.find(c => c.value === selectedCategory)
+      description += ` en la categoría "${category?.label || selectedCategory}"`
     }
     
     if (selectedSubcategory) {
-      const subcategoryLabel = getSubcategories().find(s => s.value === selectedSubcategory)?.label
+      const subcategories = getSubcategoriesForCategory()
+      const subcategoryLabel = subcategories.find(s => s.value === selectedSubcategory)?.label
       description += ` y subcategoría "${subcategoryLabel || selectedSubcategory}"`
     }
     
@@ -277,7 +282,7 @@ if (dataResponse?.data) {
               }}
               className='flex items-center bg-green-100 p-2 rounded-lg hover:bg-green-200 transition-colors'
             >
-              Categoría: {selectedCategory ? productCategory.find(c => c.value === selectedCategory)?.label : 'Todas'}
+              Categoría: {selectedCategory ? getCategories().find(c => c.value === selectedCategory)?.label : 'Todas'}
             </button>
 
             {showCategoryMenu && (
@@ -292,7 +297,7 @@ if (dataResponse?.data) {
                 >
                   Todas las Categorías
                 </button>
-                {productCategory.map(category => (
+                {getCategories().map(category => (
                   <button 
                     key={category.value}
                     onClick={() => {
@@ -319,7 +324,7 @@ if (dataResponse?.data) {
                 }}
                 className='flex items-center bg-green-100 p-2 rounded-lg hover:bg-green-200 transition-colors'
               >
-                Subcategoría: {selectedSubcategory ? getSubcategories().find(s => s.value === selectedSubcategory)?.label : 'Todas'}
+                Subcategoría: {selectedSubcategory ? getSubcategoriesForCategory().find(s => s.value === selectedSubcategory)?.label : 'Todas'}
               </button>
 
               {showSubcategoryMenu && (
@@ -333,7 +338,7 @@ if (dataResponse?.data) {
                   >
                     Todas las Subcategorías
                   </button>
-                  {getSubcategories().map(subcategory => (
+                  {getSubcategoriesForCategory().map(subcategory => (
                     <button 
                       key={subcategory.value}
                       onClick={() => {

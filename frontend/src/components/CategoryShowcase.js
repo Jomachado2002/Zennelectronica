@@ -90,7 +90,7 @@ const CategoryShowcase = () => {
                         alt={subcategory.label}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
                         loading="lazy"
-                        fetchPriority="low"
+                        fetchpriority="low"
                         onError={(e) => {
                           if (e && e.target) {
                             e.target.src = '/images/subcategories/default.jpg';

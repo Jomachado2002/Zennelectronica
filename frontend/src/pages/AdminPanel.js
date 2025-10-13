@@ -15,15 +15,12 @@ import {
   FaSignOutAlt, 
   FaTruck, 
   FaChartLine, 
-  FaCalculator, 
-  FaFileAlt, 
-  FaPlus, 
   FaMoneyBillWave, 
   FaShoppingCart,
   FaTachometerAlt,
   FaHome,
   FaCreditCard, // ✅ NUEVO ICONO PARA BANCARD
-  FaUndo // ✅ ICONO PARA ROLLBACKS
+  FaFolder // ✅ ICONO PARA CATEGORÍAS
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -87,6 +84,12 @@ const AdminPanel = () => {
           label: "Productos",
           icon: <FaBoxOpen className="mr-2" />,
           description: "Gestionar productos"
+        },
+        {
+          path: "categorias",
+          label: "Categorías",
+          icon: <FaFolder className="mr-2" />,
+          description: "Gestionar categorías, subcategorías y especificaciones"
         }
       ]
     },

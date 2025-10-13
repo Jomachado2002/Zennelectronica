@@ -1,10 +1,9 @@
 // frontend/src/pages/FinancialReports.js
 import React, { useState, useEffect } from 'react';
-import { FaFileAlt, FaDownload, FaFilter, FaUndo, FaChartLine, FaChartBar, FaChartPie, FaFileExcel, FaExchangeAlt, FaDollarSign, FaTruck, FaPercentage, FaMoneyBillWave } from 'react-icons/fa';
+import { FaDownload, FaFilter, FaUndo, FaChartLine, FaChartBar, FaFileExcel, FaTruck, FaPercentage, FaMoneyBillWave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import SummaryApi from '../common';
-import productCategory from '../helpers/productCategory';
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import * as XLSX from 'xlsx';
@@ -56,7 +55,8 @@ const FinancialReports = () => {
 
   // Cargar categorías y subcategorías disponibles
   useEffect(() => {
-    setAvailableCategories(productCategory);
+    // Las categorías se cargan dinámicamente desde el hook
+    // setAvailableCategories se mantiene para compatibilidad
     
     // Cargar el tipo de cambio desde localStorage
     const savedRate = localStorage.getItem('exchangeRate');
