@@ -20,6 +20,7 @@ import {
   FaCog
 } from "react-icons/fa";
 import MenuCategorias from './MenuCategorias';
+import SearchPreview from './SearchPreview';
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -73,6 +74,7 @@ const Header = () => {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [showSearchPreview, setShowSearchPreview] = useState(false);
   
   const userDropdownRef = useRef(null);
 
@@ -146,7 +148,27 @@ const Header = () => {
   const handleSearch = (e) => {
     const { value } = e.target;
     setSearch(value);
-    navigate(`/buscar?q=${value}`);
+    
+    // Mostrar preview solo si hay texto
+    const trimmedValue = String(value || '').trim();
+    if (trimmedValue.length >= 2) {
+      setShowSearchPreview(true);
+    } else {
+      setShowSearchPreview(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmedSearch = String(search || '').trim();
+    if (trimmedSearch) {
+      setShowSearchPreview(false);
+      navigate(`/search?q=${encodeURIComponent(trimmedSearch)}`);
+    }
+  };
+
+  const handleCloseSearchPreview = () => {
+    setShowSearchPreview(false);
   };
 
   const toggleCategoryMenu = () => setCategoryMenuOpen(!categoryMenuOpen);
@@ -196,36 +218,47 @@ const Header = () => {
           </Link>
 
           {/* BUSCADOR PREMIUM */}
-          <div className="flex items-center flex-1 justify-center mx-12 max-w-2xl">
-            <div 
-              className="flex items-center w-full bg-white rounded-full transition-all duration-300 group"
-              style={{
-                border: '2px solid transparent',
-                backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
-                backgroundOrigin: 'border-box',
-                backgroundClip: 'padding-box, border-box',
-                boxShadow: scrolled ? '0 2px 12px rgba(0, 181, 216, 0.1)' : '0 2px 8px rgba(0, 181, 216, 0.08)'
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Busca tus productos..."
-                className="w-full outline-none py-3.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
-                onChange={handleSearch}
-                value={search}
-                style={{
-                  fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
-                }}
-              />
+          <div className="flex items-center flex-1 justify-center mx-12 max-w-2xl relative">
+            <form onSubmit={handleSearchSubmit} className="w-full">
               <div 
-                className="mr-2 p-2.5 rounded-full transition-all duration-300 cursor-pointer"
+                className="flex items-center w-full bg-white rounded-full transition-all duration-300 group"
                 style={{
-                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  border: '2px solid transparent',
+                  backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                  backgroundOrigin: 'border-box',
+                  backgroundClip: 'padding-box, border-box',
+                  boxShadow: scrolled ? '0 2px 12px rgba(0, 181, 216, 0.1)' : '0 2px 8px rgba(0, 181, 216, 0.08)'
                 }}
               >
-                <GrSearch className="text-white text-lg" />
+                <input
+                  type="text"
+                  placeholder="Busca tus productos..."
+                  className="w-full outline-none py-3.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
+                  onChange={handleSearch}
+                  value={search}
+                  style={{
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+                  }}
+                />
+                <button 
+                  type="submit"
+                  className="mr-2 p-2.5 rounded-full transition-all duration-300 cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
+                  <GrSearch className="text-white text-lg" />
+                </button>
               </div>
-            </div>
+            </form>
+            
+            {/* Search Preview */}
+            <SearchPreview
+              searchTerm={search}
+              onSearchChange={setSearch}
+              isVisible={showSearchPreview}
+              onClose={handleCloseSearchPreview}
+            />
           </div>
 
           {/* ÁREA DERECHA */}
@@ -479,41 +512,62 @@ const Header = () => {
 
       {/* ============ BARRA DE BÚSQUEDA MÓVIL EXPANDIBLE ============ */}
       {showMobileSearch && (
-        <div 
-          className="lg:hidden fixed top-16 left-0 right-0 z-[90] px-4 py-3 bg-white shadow-lg border-b border-gray-200"
-          style={{
-            animation: 'slideDown 0.3s ease-out'
-          }}
-        >
+        <>
+          {/* Overlay para cerrar con click fuera */}
           <div 
-            className="flex items-center w-full bg-white rounded-full transition-all duration-300"
+            className="lg:hidden fixed inset-0 z-[80] bg-black bg-opacity-20"
+            onClick={toggleMobileSearch}
+            style={{ top: '64px' }}
+          />
+          
+          {/* Barra de búsqueda móvil */}
+          <div 
+            className="lg:hidden fixed top-16 left-0 right-0 z-[90] px-4 py-3 bg-white shadow-lg border-b border-gray-200"
             style={{
-              border: '2px solid transparent',
-              backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
-              backgroundOrigin: 'border-box',
-              backgroundClip: 'padding-box, border-box',
-              boxShadow: '0 2px 8px rgba(0, 181, 216, 0.12)'
+              animation: 'slideDown 0.3s ease-out'
             }}
           >
-            <input
-              type="text"
-              placeholder="Busca tus productos..."
-              className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-sm"
-              onChange={handleSearch}
-              value={search}
-              autoFocus
-            />
-            <button 
-              onClick={toggleMobileSearch}
-              className="text-sm text-white font-medium py-2 px-4 mr-1 rounded-full transition-colors"
-              style={{
-                background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-              }}
-            >
-              Cerrar
-            </button>
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <div 
+                className="flex items-center w-full bg-white rounded-full transition-all duration-300"
+                style={{
+                  border: '2px solid transparent',
+                  backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                  backgroundOrigin: 'border-box',
+                  backgroundClip: 'padding-box, border-box',
+                  boxShadow: '0 2px 8px rgba(0, 181, 216, 0.12)'
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Busca tus productos..."
+                  className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-sm"
+                  onChange={handleSearch}
+                  value={search}
+                  autoFocus
+                />
+                <button 
+                  type="submit"
+                  className="mr-2 p-2.5 rounded-full transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
+                  <GrSearch className="text-white text-lg" />
+                </button>
+              </div>
+              
+              {/* Search Preview para móvil */}
+              <SearchPreview
+                searchTerm={search}
+                onSearchChange={setSearch}
+                isVisible={showSearchPreview}
+                onClose={handleCloseSearchPreview}
+                className="mt-2"
+              />
+            </form>
           </div>
-        </div>
+        </>
       )}
 
       {/* ============ COMPONENTE MENU CATEGORÍAS ============ */}
