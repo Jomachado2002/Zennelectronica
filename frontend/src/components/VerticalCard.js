@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState, useEffect } from 'react';
+import React, { useContext, useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import scrollTop from '../helpers/scrollTop';
 import Context from '../context';
 import addToCart from '../helpers/addToCart';
@@ -8,7 +8,7 @@ import { FaShoppingCart } from 'react-icons/fa';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
 
 const VerticalCard = ({ loading, data = [] }) => {
-    const loadingList = new Array(12).fill(null);
+    const loadingList = useMemo(() => new Array(12).fill(null), []);
     const { fetchUserAddToCart } = useContext(Context);
     const cardContainerRef = useRef(null);
     const [imageErrors, setImageErrors] = useState(new Set());
@@ -17,24 +17,22 @@ const VerticalCard = ({ loading, data = [] }) => {
     const [viewedProducts, setViewedProducts] = useState(new Set());
     const observerRef = useRef(null);
 
-   // ✅ PRELOAD INTELIGENTE Y PROGRESIVO
+   // ✅ PRELOAD ULTRA RÁPIDO - TODAS LAS IMÁGENES INMEDIATAMENTE
 useEffect(() => {
     if (data.length > 0) {
-        // Solo precargar primeras 8 imágenes principales
-        const firstEight = data.slice(0, 8);
-        
-        // Precargar con prioridad
-        firstEight.forEach((product, index) => {
+        // Precargar TODAS las imágenes principales inmediatamente
+        data.forEach((product, index) => {
             if (product?.productImage?.[0]) {
+                // Precargar imagen principal inmediatamente
                 const img = new Image();
                 img.src = product.productImage[0];
+                img.loading = 'eager'; // Forzar carga inmediata
                 
-                // Solo precargar segunda imagen para los primeros 4
-                if (index < 4 && product?.productImage?.[1]) {
-                    setTimeout(() => {
-                        const img2 = new Image();
-                        img2.src = product.productImage[1];
-                    }, 100 * index); // Espaciar la carga
+                // Precargar segunda imagen inmediatamente también
+                if (product?.productImage?.[1]) {
+                    const img2 = new Image();
+                    img2.src = product.productImage[1];
+                    img2.loading = 'eager';
                 }
             }
         });
@@ -77,7 +75,7 @@ useEffect(() => {
         };
     }, [data, viewedProducts]);
 
-    const handleAddToCart = (e, product) => {
+    const handleAddToCart = useCallback((e, product) => {
         e.stopPropagation();
         e.preventDefault();
         
@@ -86,19 +84,19 @@ useEffect(() => {
         
         addToCart(e, product);
         fetchUserAddToCart();
-    };
+    }, [fetchUserAddToCart]);
 
-    const calculateDiscount = (price, sellingPrice) => {
+    const calculateDiscount = useCallback((price, sellingPrice) => {
         if (price && price > 0) {
             const discount = Math.round(((price - sellingPrice) / price) * 100);
             return discount > 0 ? discount : null;
         }
         return null;
-    };
+    }, []);
 
-    const handleImageError = (productId) => {
+    const handleImageError = useCallback((productId) => {
         setImageErrors(prev => new Set([...prev, productId]));
-    };
+    }, []);
 
     if (loading) {
         return (
@@ -192,9 +190,10 @@ useEffect(() => {
                                         className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                             showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                                         }`}
-                                        loading="lazy"
+                                        loading="eager"
                                         onError={() => handleImageError(product._id)}
                                         decoding="async"
+                                        fetchPriority="high"
                                         style={{ contentVisibility: 'auto' }}
                                     />
                                     
@@ -206,8 +205,9 @@ useEffect(() => {
                                             className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                                             }`}
-                                            loading="lazy"
+                                            loading="eager"
                                             decoding="async"
+                                            fetchPriority="low"
                                             style={{ contentVisibility: 'auto' }}
                                         />
                                     )}

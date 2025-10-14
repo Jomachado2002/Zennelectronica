@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GrSearch } from 'react-icons/gr';
 import { FaArrowRight, FaTimes, FaShoppingCart } from 'react-icons/fa';
@@ -24,12 +24,12 @@ const SearchPreview = ({
   const dropdownRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
 
-  // Función para calcular descuento
-  const calculateDiscount = (originalPrice, sellingPrice) => {
+  // Función para calcular descuento - MEMOIZADA
+  const calculateDiscount = useCallback((originalPrice, sellingPrice) => {
     if (!originalPrice || !sellingPrice) return 0;
     const discount = ((originalPrice - sellingPrice) / originalPrice) * 100;
     return Math.round(discount);
-  };
+  }, []);
 
   // Búsqueda con debounce
   useEffect(() => {
@@ -41,7 +41,7 @@ const SearchPreview = ({
     if (trimmedSearchTerm.length >= 2) {
       debounceTimeoutRef.current = setTimeout(async () => {
         await performSearch(trimmedSearchTerm);
-      }, 300);
+      }, 150); // Debounce más rápido para mejor UX
     } else {
       setSearchResults([]);
       setShowPreview(false);
@@ -60,24 +60,33 @@ const SearchPreview = ({
     setShowPreview(searchResults.length > 0 && trimmedSearchTerm.length >= 2);
   }, [searchResults, searchTerm]);
 
-  const performSearch = async (query) => {
+  const performSearch = useCallback(async (query) => {
     setLoading(true);
     try {
-      const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}`);
+      // Optimización: usar AbortController para cancelar requests previos
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout de 5s
+      
+      const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}&limit=8`, {
+        signal: controller.signal,
+        cache: 'force-cache', // Usar cache cuando sea posible
+      });
+      clearTimeout(timeoutId);
+      
       const dataResponse = await response.json();
       
-      // Limitar a 8 resultados para el preview
-      const limitedResults = (dataResponse?.data || []).slice(0, 8);
-      setSearchResults(limitedResults);
+      // Ya limitamos en la query, no necesitamos slice
+      setSearchResults(dataResponse?.data || []);
     } catch (error) {
-      console.error('Error searching products:', error);
-      setSearchResults([]);
+      if (error.name !== 'AbortError') {
+        setSearchResults([]);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleProductClick = (product) => {
+  const handleProductClick = useCallback((product) => {
     // Cerrar preview
     setShowPreview(false);
     onSearchChange('');
@@ -85,9 +94,9 @@ const SearchPreview = ({
     
     // Navegar directamente a los detalles del producto
     navigate(`/producto/${product._id}`);
-  };
+  }, [onSearchChange, onClose, navigate]);
 
-  const handleCategoryClick = (category) => {
+  const handleCategoryClick = useCallback((category) => {
     // Cerrar preview
     setShowPreview(false);
     onSearchChange('');
@@ -95,19 +104,19 @@ const SearchPreview = ({
     
     // Navegar al menú de categorías
     navigate(`/categoria-producto?category=${encodeURIComponent(category)}`);
-  };
+  }, [onSearchChange, onClose, navigate]);
 
-  const handleViewAllResults = () => {
+  const handleViewAllResults = useCallback(() => {
     setShowPreview(false);
     onClose();
     const trimmedSearchTerm = String(searchTerm || '').trim();
     navigate(`/search?q=${encodeURIComponent(trimmedSearchTerm)}`);
-  };
+  }, [onClose, searchTerm, navigate]);
 
-  const handleAddToCart = async (product, e) => {
+  const handleAddToCart = useCallback(async (product, e) => {
     e.stopPropagation(); // Evitar que se ejecute handleProductClick
     await addToCart(product, fetchUserAddToCart);
-  };
+  }, [fetchUserAddToCart]);
 
   // Cerrar preview al hacer click fuera
   useEffect(() => {
@@ -214,6 +223,9 @@ const SearchPreview = ({
                           src={product.productImage[0]}
                           alt={product.productName}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}

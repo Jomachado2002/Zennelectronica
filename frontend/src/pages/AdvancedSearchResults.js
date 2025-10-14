@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FilterProvider, useFilters } from '../context/FilterContext';
@@ -47,7 +47,7 @@ const SearchResultsContent = () => {
   } = useFilters();
 
   // Función para realizar búsqueda con filtros
-  const performAdvancedSearch = async () => {
+  const performAdvancedSearch = useCallback(async () => {
     const trimmedSearchTerm = String(searchTerm || '').trim();
     if (!trimmedSearchTerm) return;
 
@@ -87,7 +87,16 @@ const SearchResultsContent = () => {
       // Aumentar límite para mostrar todos los productos
       searchParams.append('limit', '1000'); // Límite alto para obtener todos los productos
 
-      const response = await fetch(`${SummaryApi.advancedSearchProduct.url}?${searchParams.toString()}`);
+      // Optimización: usar AbortController y cache
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout de 10s
+      
+      const response = await fetch(`${SummaryApi.advancedSearchProduct.url}?${searchParams.toString()}`, {
+        signal: controller.signal,
+        cache: 'force-cache', // Usar cache cuando sea posible
+      });
+      clearTimeout(timeoutId);
+      
       const dataResponse = await response.json();
       
       if (dataResponse.success) {
@@ -98,13 +107,14 @@ const SearchResultsContent = () => {
         setTotalResults(0);
       }
     } catch (error) {
-      console.error('Error performing advanced search:', error);
-      setSearchResults([]);
-      setTotalResults(0);
+      if (error.name !== 'AbortError') {
+        setSearchResults([]);
+        setTotalResults(0);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, filterCategoryList, filterSubcategoryList, filterBrands, specFilters, priceRange, sortBy]);
 
   // Realizar búsqueda cuando cambien los parámetros
   useEffect(() => {
@@ -120,7 +130,7 @@ const SearchResultsContent = () => {
   }, [location.search, searchTerm]);
 
   // Función para manejar búsqueda
-  const handleSearch = (e) => {
+  const handleSearch = useCallback((e) => {
     e.preventDefault();
     const trimmedSearchTerm = String(searchTerm || '').trim();
     if (trimmedSearchTerm) {
@@ -128,18 +138,18 @@ const SearchResultsContent = () => {
       navigate(`/search?q=${encodeURIComponent(trimmedSearchTerm)}`, { replace: true });
       // La búsqueda se ejecutará automáticamente por el useEffect
     }
-  };
+  }, [searchTerm, navigate]);
 
   // Función para limpiar búsqueda
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     setSearchTerm('');
     navigate('/search');
-  };
+  }, [navigate]);
 
   // Función para ordenar
-  const handleSortChange = (value) => {
+  const handleSortChange = useCallback((value) => {
     setSortBy(value);
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
