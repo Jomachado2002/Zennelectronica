@@ -126,6 +126,25 @@ const Home = () => {
           <CategoryShowcase />
         </motion.div>
 
+        {/* SEO Content Section - Hidden visually but accessible to screen readers */}
+        <div className="sr-only">
+          <h1>Zenn - Especialistas en Computadoras Gamer y Soluciones IT en Paraguay</h1>
+          <p>
+            En Zenn somos especialistas en tecnología en Paraguay. Ofrecemos la mejor selección de computadoras gamer, 
+            equipos de última generación, componentes de PC y soluciones informáticas completas para profesionales y entusiastas de la tecnología.
+          </p>
+          <p>
+            Nuestro catálogo incluye notebooks de alto rendimiento, procesadores Intel y AMD, placas madre, 
+            tarjetas gráficas NVIDIA y AMD, memorias RAM, discos duros SSD y HDD, monitores gaming, 
+            teclados mecánicos, mouses gaming y todos los accesorios que necesitas para armar tu PC perfecta.
+          </p>
+          <p>
+            Con años de experiencia en el mercado paraguayo, Zenn se ha consolidado como la tienda de referencia 
+            para la compra de equipos tecnológicos de calidad. Ofrecemos garantía extendida, soporte técnico 
+            especializado y las mejores marcas del mercado internacional.
+          </p>
+        </div>
+
         {/* Contenido principal con animaciones */}
         <div className="max-w-7xl mx-auto px-4 space-y-8 sm:space-y-16 py-8 sm:py-16">
           {/* Sección: Notebooks */}

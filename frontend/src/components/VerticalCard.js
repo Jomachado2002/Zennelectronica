@@ -194,21 +194,29 @@ useEffect(() => {
                                         onError={() => handleImageError(product._id)}
                                         decoding="async"
                                         fetchPriority="high"
-                                        style={{ contentVisibility: 'auto' }}
+                                        style={{ 
+                                            contentVisibility: 'auto',
+                                            willChange: 'transform, opacity'
+                                        }}
+                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                     />
                                     
                                     {/* Imagen de hover (segunda imagen) */}
                                     {secondImage && (
                                         <img
                                             src={secondImage}
-                                            alt={product.productName}
+                                            alt={`${product.productName} - Vista adicional`}
                                             className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                                             }`}
-                                            loading="eager"
+                                            loading="lazy"
                                             decoding="async"
                                             fetchPriority="low"
-                                            style={{ contentVisibility: 'auto' }}
+                                            style={{ 
+                                                contentVisibility: 'auto',
+                                                willChange: 'transform, opacity'
+                                            }}
+                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                         />
                                     )}
                                 </>
