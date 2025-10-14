@@ -146,6 +146,10 @@
             url : `${backendDomain}/api/buscar`,
             method : 'get'
         },
+        advancedSearchProduct : {
+            url : `${backendDomain}/api/search`,
+            method : 'get'
+        },
         filterProduct : {
             url : `${backendDomain}/api/filtrar-productos`,
             method : 'post'

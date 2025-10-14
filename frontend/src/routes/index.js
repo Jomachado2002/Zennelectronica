@@ -12,6 +12,7 @@ import CategoryProduct from "../pages/CategoryProduct"
 import ProductDetails from "../pages/ProductDetails"
 import Cart from '../pages/Cart'
 import SearchProduct from "../pages/SearchProduct"
+import AdvancedSearchResults from "../pages/AdvancedSearchResults"
 import MobileCategoriesPage from "../pages/MobileCategoriesPage"
 import ResetPassword from "../pages/ResetPassword"
 import Checkout from "../pages/Checkout"
@@ -118,6 +119,10 @@ const router = createBrowserRouter([
             {
                 path: "buscar",
                 element: <SearchProduct />
+            },
+            {
+                path: "search",
+                element: <AdvancedSearchResults />
             },
             
             // ✅ NUEVA RUTA PARA PERFIL DE USUARIO

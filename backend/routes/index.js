@@ -22,6 +22,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const { updateAllPricesController } = require('../controller/product/updateAllPrices');
     const channableFeedController = require('../controller/product/channableFeedController');
     const searchProduct = require('../controller/product/searchProduct');
+    const advancedSearchProduct = require('../controller/product/advancedSearchProduct');
     const filterProductController = require('../controller/product/filterProduct');
     const requestPasswordReset = require('../controller/user/requestPasswordReset');
     const resetPassword = require('../controller/user/resetPassword');
@@ -850,6 +851,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.post("/productos-por-categoria", getCategoryWiseProduct);
     router.post("/detalles-producto", getProductDetails);
     router.get("/buscar", searchProduct);
+    router.get("/search", advancedSearchProduct);
     router.post("/filtrar-productos", filterProductController);
     router.post("/solicitar-restablecer-contrasena", requestPasswordReset);
     router.post("/restablecer-contrasena", resetPassword);
