@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GrSearch } from 'react-icons/gr';
 import { FaArrowRight, FaTimes, FaShoppingCart } from 'react-icons/fa';
@@ -67,10 +67,9 @@ const SearchPreview = ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout de 5s
       
-      const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}&limit=8`, {
-        signal: controller.signal,
-        cache: 'force-cache', // Usar cache cuando sea posible
-      });
+             const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}&limit=6`, {
+               signal: controller.signal,
+             });
       clearTimeout(timeoutId);
       
       const dataResponse = await response.json();
@@ -222,10 +221,8 @@ const SearchPreview = ({
                         <img
                           src={product.productImage[0]}
                           alt={product.productName}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          loading="eager"
-                          fetchPriority="high"
-                          decoding="async"
+                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                               loading="lazy"
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}

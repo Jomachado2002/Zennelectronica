@@ -17,25 +17,10 @@ import '../styles/global.css';
 import scrollTop from '../helpers/scrollTop';
 import { showPerformanceReport } from '../utils/performanceMonitor';
 
-// Animaciones predefinidas
+// Animaciones simplificadas para mejor performance
 const fadeIn = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.6 } }
-};
-
-const slideUp = {
-  hidden: { y: 50, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
-};
-
-const staggerChildren = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.2
-    }
-  }
+  visible: { opacity: 1, transition: { duration: 0.3 } }
 };
 
 const Home = () => {
@@ -152,7 +137,7 @@ const Home = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            variants={slideUp}
+            variants={fadeIn}
             className="w-full"
           >
             <div className="flex flex-col lg:flex-row items-stretch gap-8">
@@ -352,7 +337,7 @@ const Home = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            variants={staggerChildren}
+            variants={fadeIn}
             className="w-full"
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -709,7 +694,7 @@ const Home = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
-            variants={slideUp}
+            variants={fadeIn}
             className="w-full"
           >
             <div className="text-center mb-10">

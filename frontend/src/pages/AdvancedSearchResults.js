@@ -91,10 +91,9 @@ const SearchResultsContent = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout de 10s
       
-      const response = await fetch(`${SummaryApi.advancedSearchProduct.url}?${searchParams.toString()}`, {
-        signal: controller.signal,
-        cache: 'force-cache', // Usar cache cuando sea posible
-      });
+             const response = await fetch(`${SummaryApi.advancedSearchProduct.url}?${searchParams.toString()}`, {
+               signal: controller.signal,
+             });
       clearTimeout(timeoutId);
       
       const dataResponse = await response.json();
@@ -170,10 +169,13 @@ const SearchResultsContent = () => {
 
               <div className="flex items-center gap-4">
                 {/* Ordenamiento */}
+                <label htmlFor="sort-select" className="sr-only">Ordenar por</label>
                 <select
+                  id="sort-select"
                   value={sortBy}
                   onChange={(e) => handleSortChange(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  aria-label="Ordenar resultados por"
                 >
                   <option value="">Ordenar por</option>
                   <option value="relevance">Relevancia</option>
@@ -217,10 +219,13 @@ const SearchResultsContent = () => {
               </button>
 
               {/* Ordenamiento */}
+              <label htmlFor="sort-select-mobile" className="sr-only">Ordenar por</label>
               <select
+                id="sort-select-mobile"
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                aria-label="Ordenar resultados por"
               >
                 <option value="">Ordenar por</option>
                 <option value="relevance">Relevancia</option>
