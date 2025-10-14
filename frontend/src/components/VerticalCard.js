@@ -17,14 +17,25 @@ const VerticalCard = ({ loading, data = [] }) => {
     const [viewedProducts, setViewedProducts] = useState(new Set());
     const observerRef = useRef(null);
 
-       // ✅ PRELOAD INTELIGENTE - Solo las primeras 6 imágenes
+       // ✅ PRELOAD INTELIGENTE - Solo las primeras 8 imágenes con timeout
        useEffect(() => {
            if (data.length > 0) {
-               // Precargar solo las primeras 6 imágenes para mejor performance
-               data.slice(0, 6).forEach((product) => {
+               // Precargar solo las primeras 8 imágenes para mejor performance
+               data.slice(0, 8).forEach((product) => {
                    if (product?.productImage?.[0]) {
                        const img = new Image();
                        img.src = product.productImage[0];
+                       img.onload = () => {
+                           console.log('Imagen precargada exitosamente:', product.productImage[0]);
+                       };
+                       img.onerror = () => {
+                           console.log('Error precargando imagen:', product.productImage[0]);
+                           // Intentar con la segunda imagen si existe
+                           if (product?.productImage?.[1]) {
+                               const img2 = new Image();
+                               img2.src = product.productImage[1];
+                           }
+                       };
                    }
                });
            }
@@ -172,38 +183,59 @@ const VerticalCard = ({ loading, data = [] }) => {
                     >
                         {/* Imagen del producto */}
                         <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
-                            {!hasImageError ? (
+                            {/* Siempre mostrar al menos una imagen o placeholder */}
+                            {product.productImage && product.productImage[0] ? (
                                 <>
-                                           {/* Imagen principal */}
-                                           <img
-                                               src={product.productImage[0]}
-                                               alt={product.productName}
-                                               className={`object-contain h-full w-full transition-all duration-300 ease-in-out ${
-                                                   showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                                               }`}
-                                               loading="lazy"
-                                               onError={() => handleImageError(product._id)}
-                                           />
+                                    {/* Imagen principal */}
+                                    <img
+                                        src={product.productImage[0]}
+                                        alt={product.productName}
+                                        className={`object-contain h-full w-full transition-all duration-300 ease-in-out ${
+                                            showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                                        }`}
+                                        loading="eager"
+                                        onError={(e) => {
+                                            console.log('Error cargando imagen principal:', product.productImage[0]);
+                                            e.target.style.display = 'none';
+                                            // Intentar con la segunda imagen si existe
+                                            if (product.productImage[1]) {
+                                                const fallbackImg = e.target.parentElement.querySelector('.fallback-image');
+                                                if (fallbackImg) {
+                                                    fallbackImg.style.display = 'block';
+                                                }
+                                            }
+                                        }}
+                                        onLoad={(e) => {
+                                            e.target.style.display = 'block';
+                                        }}
+                                    />
                                     
-                                           {/* Imagen de hover (segunda imagen) */}
-                                           {secondImage && (
-                                               <img
-                                                   src={secondImage}
-                                                   alt={`${product.productName} - Vista adicional`}
-                                                   className={`absolute inset-0 object-contain h-full w-full transition-all duration-300 ease-in-out ${
-                                                       showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-                                                   }`}
-                                                   loading="lazy"
-                                               />
-                                           )}
+                                    {/* Imagen de hover (segunda imagen) */}
+                                    {product.productImage[1] && (
+                                        <img
+                                            src={product.productImage[1]}
+                                            alt={`${product.productName} - Vista adicional`}
+                                            className={`fallback-image absolute inset-0 object-contain h-full w-full transition-all duration-300 ease-in-out ${
+                                                showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                                            }`}
+                                            loading="lazy"
+                                            style={{ display: 'none' }}
+                                            onError={(e) => {
+                                                console.log('Error cargando imagen secundaria:', product.productImage[1]);
+                                                e.target.style.display = 'none';
+                                            }}
+                                        />
+                                    )}
                                 </>
                             ) : (
+                                /* Placeholder mejorado cuando no hay imagen */
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
                                     <div className="text-gray-400 text-center">
                                         <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                                         </svg>
-                                        <span className="text-xs">Sin imagen</span>
+                                        <span className="text-xs font-medium">Sin imagen</span>
+                                        <span className="text-xs block text-gray-500 mt-1">{product.productName}</span>
                                     </div>
                                 </div>
                             )}
