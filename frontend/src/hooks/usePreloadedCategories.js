@@ -14,7 +14,7 @@ const usePreloadedCategories = () => {
   const loadAllData = useCallback(async () => {
     // Si ya está cargando, esperar a que termine
     if (loadingPromise) {
-      console.log('🔄 usePreloadedCategories: Esperando carga en progreso...');
+      // Esperando carga en progreso...
       try {
         await loadingPromise;
         setData(globalCache);
@@ -30,7 +30,7 @@ const usePreloadedCategories = () => {
 
     // Si ya está en caché, usar los datos
     if (globalCache) {
-      console.log('✅ usePreloadedCategories: Usando datos del caché global');
+      // Usando datos del caché global
       setData(globalCache);
       setLoading(false);
       return;
@@ -40,7 +40,7 @@ const usePreloadedCategories = () => {
       setLoading(true);
       setError(null);
       
-      console.log('📡 usePreloadedCategories: Cargando estructura completa...');
+      // Cargando estructura completa...
       
       // Crear la promesa de carga
       loadingPromise = axiosInstance.get('/api/admin/categories/menu/complete-structure');
@@ -49,7 +49,7 @@ const usePreloadedCategories = () => {
       
       if (response.data.success) {
         const structuredData = response.data.data;
-        console.log('✅ usePreloadedCategories: Estructura completa cargada:', structuredData);
+        // Estructura completa cargada
         
         // Guardar en caché global
         globalCache = structuredData;
