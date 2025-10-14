@@ -8,6 +8,7 @@ import { RouterProvider } from 'react-router-dom';
 import router from './routes';
 import { Provider } from 'react-redux';
 import { store } from './store/store';
+import { initPerformanceOptimizations } from './utils/performanceOptimizations';
 
 // ✅ NUEVAS IMPORTACIONES PARA REACT QUERY
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -40,6 +41,9 @@ root.render(
     </Provider>
   // </React.StrictMode>
 );
+
+// Initialize performance optimizations
+initPerformanceOptimizations();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

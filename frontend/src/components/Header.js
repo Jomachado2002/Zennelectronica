@@ -246,6 +246,8 @@ const Header = () => {
                   style={{
                     background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
                   }}
+                  aria-label="Buscar productos"
+                  title="Buscar productos"
                 >
                   <GrSearch className="text-white text-lg" />
                 </button>
@@ -440,6 +442,9 @@ const Header = () => {
                 border: '2px solid #f3f4f6',
                 background: 'white'
               }}
+              aria-label="Abrir menú de categorías"
+              aria-expanded={desktopMenuOpen}
+              aria-haspopup="true"
             >
               <BiCategoryAlt className="text-xl" />
               <span className="font-medium text-[14px]">Menú</span>
