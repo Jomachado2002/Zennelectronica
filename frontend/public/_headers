@@ -1,38 +1,22 @@
-# Headers for performance optimization
+# Cache headers for better performance
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# Cache static assets for 1 year
-/static/*
+# Cache static assets
+/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Cache images for 1 month
-*.jpg
-  Cache-Control: public, max-age=2592000
-*.jpeg
-  Cache-Control: public, max-age=2592000
-*.png
-  Cache-Control: public, max-age=2592000
-*.webp
-  Cache-Control: public, max-age=2592000
-*.svg
+# Cache images
+/images/*
   Cache-Control: public, max-age=2592000
 
-# Cache fonts for 1 year
-*.woff2
-  Cache-Control: public, max-age=31536000, immutable
-*.woff
-  Cache-Control: public, max-age=31536000, immutable
+# Cache API responses
+/api/*
+  Cache-Control: public, max-age=300
 
-# Cache CSS and JS for 1 week
-*.css
-  Cache-Control: public, max-age=604800
-*.js
-  Cache-Control: public, max-age=604800
-
-# HTML files should not be cached
-*.html
-  Cache-Control: no-cache, no-store, must-revalidate
+# Cache HTML
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

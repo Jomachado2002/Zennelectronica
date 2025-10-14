@@ -158,14 +158,15 @@ const advancedSearchProduct = async (req, res) => {
             monitorRefreshRate: 1
         };
 
-        // ✅ EJECUTAR CONSULTA
+        // ✅ EJECUTAR CONSULTA OPTIMIZADA
         const [products, totalProducts] = await Promise.all([
             productModel.find(filter, projection)
                 .sort(sortOptions)
                 .skip(skip)
                 .limit(parseInt(limit))
-                .lean(),
-            productModel.countDocuments(filter)
+                .lean()
+                .maxTimeMS(5000), // Timeout de 5 segundos
+            productModel.countDocuments(filter).maxTimeMS(3000)
         ]);
 
         // ✅ OBTENER FILTROS DISPONIBLES PARA LOS RESULTADOS

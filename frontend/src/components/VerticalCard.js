@@ -17,27 +17,18 @@ const VerticalCard = ({ loading, data = [] }) => {
     const [viewedProducts, setViewedProducts] = useState(new Set());
     const observerRef = useRef(null);
 
-   // ✅ PRELOAD ULTRA RÁPIDO - TODAS LAS IMÁGENES INMEDIATAMENTE
-useEffect(() => {
-    if (data.length > 0) {
-        // Precargar TODAS las imágenes principales inmediatamente
-        data.forEach((product, index) => {
-            if (product?.productImage?.[0]) {
-                // Precargar imagen principal inmediatamente
-                const img = new Image();
-                img.src = product.productImage[0];
-                img.loading = 'eager'; // Forzar carga inmediata
-                
-                // Precargar segunda imagen inmediatamente también
-                if (product?.productImage?.[1]) {
-                    const img2 = new Image();
-                    img2.src = product.productImage[1];
-                    img2.loading = 'eager';
-                }
-            }
-        });
-    }
-}, [data]);
+       // ✅ PRELOAD INTELIGENTE - Solo las primeras 6 imágenes
+       useEffect(() => {
+           if (data.length > 0) {
+               // Precargar solo las primeras 6 imágenes para mejor performance
+               data.slice(0, 6).forEach((product) => {
+                   if (product?.productImage?.[0]) {
+                       const img = new Image();
+                       img.src = product.productImage[0];
+                   }
+               });
+           }
+       }, [data]);
 // ✅ INTERSECTION OBSERVER PARA TRACKEAR VIEW CONTENT
     useEffect(() => {
         if (!data.length) return;
@@ -183,42 +174,28 @@ useEffect(() => {
                         <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                             {!hasImageError ? (
                                 <>
-                                    {/* Imagen principal */}
-                                    <img
-                                        src={product.productImage[0]}
-                                        alt={product.productName}
-                                        className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
-                                            showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                                        }`}
-                                        loading="eager"
-                                        onError={() => handleImageError(product._id)}
-                                        decoding="async"
-                                        fetchPriority="high"
-                                        style={{ 
-                                            contentVisibility: 'auto',
-                                            willChange: 'transform, opacity'
-                                        }}
-                                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                    />
+                                           {/* Imagen principal */}
+                                           <img
+                                               src={product.productImage[0]}
+                                               alt={product.productName}
+                                               className={`object-contain h-full w-full transition-all duration-300 ease-in-out ${
+                                                   showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                                               }`}
+                                               loading="lazy"
+                                               onError={() => handleImageError(product._id)}
+                                           />
                                     
-                                    {/* Imagen de hover (segunda imagen) */}
-                                    {secondImage && (
-                                        <img
-                                            src={secondImage}
-                                            alt={`${product.productName} - Vista adicional`}
-                                            className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
-                                                showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-                                            }`}
-                                            loading="lazy"
-                                            decoding="async"
-                                            fetchPriority="low"
-                                            style={{ 
-                                                contentVisibility: 'auto',
-                                                willChange: 'transform, opacity'
-                                            }}
-                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                        />
-                                    )}
+                                           {/* Imagen de hover (segunda imagen) */}
+                                           {secondImage && (
+                                               <img
+                                                   src={secondImage}
+                                                   alt={`${product.productName} - Vista adicional`}
+                                                   className={`absolute inset-0 object-contain h-full w-full transition-all duration-300 ease-in-out ${
+                                                       showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                                                   }`}
+                                                   loading="lazy"
+                                               />
+                                           )}
                                 </>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
