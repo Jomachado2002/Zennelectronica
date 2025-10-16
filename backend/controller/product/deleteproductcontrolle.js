@@ -1,8 +1,19 @@
 // controllers/product/deleteProduct.js
 const ProductModel = require('../../models/productModel');
+const uploadProductPermission = require('../../helpers/permission');
 
 async function deleteProductController(req, res) {
     try {
+        // Verificar permisos de manera asíncrona
+        const hasPermission = await uploadProductPermission(req.userId);
+        if (!hasPermission) {
+            return res.status(403).json({
+                message: "Permiso denegado. Se requieren permisos de administrador.",
+                error: true,
+                success: false
+            });
+        }
+
         const { productId } = req.body;
 
         if (!productId) {

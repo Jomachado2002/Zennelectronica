@@ -2,15 +2,15 @@ import React from 'react';
 import useCategories from '../hooks/useCategories';
 
 const DynamicProductSpecifications = ({ 
-  selectedCategory, 
-  selectedSubcategory, 
-  data, 
-  handleOnChange 
+  category, 
+  subcategory, 
+  specifications = {}, 
+  onSpecificationsChange 
 }) => {
   const { getSpecificationsBySubcategory, loading } = useCategories();
 
   // Obtener especificaciones dinámicamente
-  const specifications = getSpecificationsBySubcategory(selectedCategory, selectedSubcategory);
+  const availableSpecifications = getSpecificationsBySubcategory(category, subcategory);
 
   if (loading) {
     return (
@@ -21,7 +21,7 @@ const DynamicProductSpecifications = ({
     );
   }
 
-  if (!selectedCategory || !selectedSubcategory) {
+  if (!category || !subcategory) {
     return (
       <div className="text-gray-500 text-center py-4">
         Selecciona una categoría y subcategoría para ver las especificaciones
@@ -29,7 +29,7 @@ const DynamicProductSpecifications = ({
     );
   }
 
-  if (specifications.length === 0) {
+  if (availableSpecifications.length === 0) {
     return (
       <div className="text-gray-500 text-center py-4">
         No hay especificaciones disponibles para esta subcategoría
@@ -37,19 +37,23 @@ const DynamicProductSpecifications = ({
     );
   }
 
+  const handleSpecificationChange = (fieldName, value) => {
+    const updatedSpecs = { ...specifications, [fieldName]: value };
+    onSpecificationsChange(updatedSpecs);
+  };
+
   const renderInput = (spec) => {
     // Usar el nombre real de la especificación como campo
     const fieldName = spec.name;
-    const currentValue = data[fieldName] || '';
+    const currentValue = specifications[fieldName] || '';
     
     switch (spec.type) {
       case 'number':
         return (
           <input
             type="number"
-            name={fieldName}
             value={currentValue}
-            onChange={handleOnChange}
+            onChange={(e) => handleSpecificationChange(fieldName, e.target.value)}
             placeholder={spec.placeholder}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required={spec.required}
@@ -59,9 +63,8 @@ const DynamicProductSpecifications = ({
       case 'boolean':
         return (
           <select
-            name={fieldName}
             value={currentValue}
-            onChange={handleOnChange}
+            onChange={(e) => handleSpecificationChange(fieldName, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required={spec.required}
           >
@@ -74,9 +77,8 @@ const DynamicProductSpecifications = ({
       case 'select':
         return (
           <select
-            name={fieldName}
             value={currentValue}
-            onChange={handleOnChange}
+            onChange={(e) => handleSpecificationChange(fieldName, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required={spec.required}
           >
@@ -93,9 +95,8 @@ const DynamicProductSpecifications = ({
         return (
           <input
             type="text"
-            name={fieldName}
             value={currentValue}
-            onChange={handleOnChange}
+            onChange={(e) => handleSpecificationChange(fieldName, e.target.value)}
             placeholder={spec.placeholder}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required={spec.required}
@@ -111,7 +112,7 @@ const DynamicProductSpecifications = ({
       </h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {specifications.map((spec, index) => (
+        {availableSpecifications.map((spec, index) => (
           <div key={spec._id || index} className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               {spec.label}

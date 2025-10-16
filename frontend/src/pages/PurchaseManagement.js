@@ -1,27 +1,73 @@
-// frontend/src/pages/PurchaseManagement.js - CON SOPORTE MULTI-MONEDA
+// frontend/src/pages/PurchaseManagement.js - MEJORADO CON INTERFAZ OPTIMIZADA PARA PARAGUAY
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaPlus, FaEdit, FaTrash, FaFileUpload, FaEye, FaFilter, FaShoppingCart, FaReceipt, FaDollarSign } from 'react-icons/fa';
+import { 
+  FaPlus, 
+  FaEdit, 
+  FaTrash, 
+  FaFileUpload, 
+  FaEye, 
+  FaFilter, 
+  FaShoppingCart, 
+  FaReceipt, 
+  FaDollarSign,
+  FaSearch,
+  FaDownload,
+  FaFileExcel,
+  FaCalendarAlt,
+  FaBuilding,
+  FaUser,
+  FaMoneyBillWave,
+  FaCheck,
+  FaTimes,
+  FaExclamationTriangle,
+  FaInfoCircle,
+  FaChartLine,
+  FaBox,
+  FaTruck,
+  FaFileInvoice,
+  FaPrint,
+  FaExpand,
+  FaCompress,
+  FaSyncAlt,
+  FaSort,
+  FaTimes as FaClose
+} from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 import displayPYGCurrency from '../helpers/displayCurrency';
+import * as XLSX from 'xlsx';
+import moment from 'moment';
 
 const PurchaseManagement = () => {
   const [purchases, setPurchases] = useState([]);
+  const [filteredPurchases, setFilteredPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewPurchaseModal, setShowNewPurchaseModal] = useState(false);
   const [showFileUploadModal, setShowFileUploadModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
+  
+  // Filtros mejorados
   const [filters, setFilters] = useState({
+    search: '',
     purchaseType: '',
     paymentStatus: '',
     startDate: '',
     endDate: '',
-    supplierId: ''
+    supplierId: '',
+    amountRange: { min: '', max: '' },
+    includeIVA: '',
+    currency: '',
+    sortBy: 'purchaseDate',
+    sortOrder: 'desc'
   });
 
-  // Estado del formulario de nueva compra CON SOPORTE MULTI-MONEDA
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
+  const [selectedPurchases, setSelectedPurchases] = useState([]);
+
+  // Estado del formulario de nueva compra CON SOPORTE MULTI-MONEDA Y IVA
   const [newPurchaseData, setNewPurchaseData] = useState({
     purchaseType: 'inventario',
     supplierId: '',
@@ -29,7 +75,9 @@ const PurchaseManagement = () => {
       name: '',
       company: '',
       ruc: '',
-      contact: ''
+      contact: '',
+      email: '',
+      phone: ''
     },
     items: [{ 
       description: '', 
@@ -37,14 +85,19 @@ const PurchaseManagement = () => {
       quantity: 1, 
       unitPrice: 0, 
       currency: 'USD', 
-      exchangeRate: 7300 
+      exchangeRate: 7300,
+      ivaIncluded: false,
+      ivaRate: 10
     }],
-    tax: 10, // ✅ IVA por defecto 10%
-    paymentMethod: 'transferencia', // Para compras, más común transferencia
+    tax: 10, // IVA por defecto 10% (Paraguay)
+    paymentMethod: 'transferencia',
     paymentStatus: 'pendiente',
     dueDate: '',
     purchaseDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    invoiceNumber: '',
+    invoiceDate: '',
+    includeIVA: true
   });
 
   const [fileUpload, setFileUpload] = useState({
@@ -52,17 +105,35 @@ const PurchaseManagement = () => {
     receipt: null
   });
 
+  // Estadísticas
+  const [stats, setStats] = useState({
+    total: 0,
+    totalAmount: 0,
+    totalAmountWithIVA: 0,
+    totalIVA: 0,
+    pending: 0,
+    paid: 0,
+    thisMonth: 0,
+    thisMonthAmount: 0
+  });
+
   useEffect(() => {
     fetchPurchases();
     fetchSuppliers();
   }, []);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [filters, purchases]);
 
   const fetchPurchases = async () => {
     setIsLoading(true);
     try {
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
+        if (value && key !== 'amountRange' && key !== 'sortBy' && key !== 'sortOrder' && key !== 'search') {
+          queryParams.append(key, value);
+        }
       });
 
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras?${queryParams.toString()}`, {
@@ -72,7 +143,9 @@ const PurchaseManagement = () => {
 
       const result = await response.json();
       if (result.success) {
-        setPurchases(result.data.purchases || []);
+        const purchasesData = result.data.purchases || [];
+        setPurchases(purchasesData);
+        calculateStats(purchasesData);
       } else {
         toast.error(result.message || "Error al cargar las compras");
       }
@@ -82,6 +155,126 @@ const PurchaseManagement = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const calculateStats = (purchasesData) => {
+    const now = moment();
+    const startOfMonth = moment().startOf('month');
+    
+    const total = purchasesData.length;
+    const totalAmount = purchasesData.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    const totalIVA = purchasesData.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
+    const totalAmountWithIVA = totalAmount + totalIVA;
+    
+    const pending = purchasesData.filter(p => p.paymentStatus === 'pendiente').length;
+    const paid = purchasesData.filter(p => p.paymentStatus === 'pagado').length;
+    
+    const thisMonthPurchases = purchasesData.filter(p => 
+      moment(p.purchaseDate).isSameOrAfter(startOfMonth)
+    );
+    const thisMonth = thisMonthPurchases.length;
+    const thisMonthAmount = thisMonthPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+
+    setStats({
+      total,
+      totalAmount,
+      totalAmountWithIVA,
+      totalIVA,
+      pending,
+      paid,
+      thisMonth,
+      thisMonthAmount
+    });
+  };
+
+  const applyFiltersAndSort = () => {
+    let result = [...purchases];
+
+    // Filtro de búsqueda
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(purchase => 
+        (purchase.invoiceNumber?.toLowerCase() || '').includes(searchLower) ||
+        (purchase.supplierInfo?.name?.toLowerCase() || '').includes(searchLower) ||
+        (purchase.supplierInfo?.company?.toLowerCase() || '').includes(searchLower) ||
+        (purchase.notes?.toLowerCase() || '').includes(searchLower)
+      );
+    }
+
+    // Filtro de tipo de compra
+    if (filters.purchaseType) {
+      result = result.filter(purchase => purchase.purchaseType === filters.purchaseType);
+    }
+
+    // Filtro de estado de pago
+    if (filters.paymentStatus) {
+      result = result.filter(purchase => purchase.paymentStatus === filters.paymentStatus);
+    }
+
+    // Filtro de proveedor
+    if (filters.supplierId) {
+      result = result.filter(purchase => purchase.supplierId === filters.supplierId);
+    }
+
+    // Filtro de rango de monto
+    if (filters.amountRange.min) {
+      result = result.filter(purchase => (purchase.totalAmount || 0) >= Number(filters.amountRange.min));
+    }
+    if (filters.amountRange.max) {
+      result = result.filter(purchase => (purchase.totalAmount || 0) <= Number(filters.amountRange.max));
+    }
+
+    // Filtro de moneda
+    if (filters.currency) {
+      result = result.filter(purchase => purchase.currency === filters.currency);
+    }
+
+    // Filtro de fechas
+    if (filters.startDate) {
+      result = result.filter(purchase => 
+        moment(purchase.purchaseDate).isSameOrAfter(filters.startDate)
+      );
+    }
+    if (filters.endDate) {
+      result = result.filter(purchase => 
+        moment(purchase.purchaseDate).isSameOrBefore(filters.endDate)
+      );
+    }
+
+    // Ordenamiento
+    result.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (filters.sortBy) {
+        case 'purchaseDate':
+          aValue = new Date(a.purchaseDate);
+          bValue = new Date(b.purchaseDate);
+          break;
+        case 'totalAmount':
+          aValue = a.totalAmount || 0;
+          bValue = b.totalAmount || 0;
+          break;
+        case 'supplier':
+          aValue = a.supplierInfo?.name || '';
+          bValue = b.supplierInfo?.name || '';
+          break;
+        case 'invoiceNumber':
+          aValue = a.invoiceNumber || '';
+          bValue = b.invoiceNumber || '';
+          break;
+        default:
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+      }
+
+      if (filters.sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    setFilteredPurchases(result);
   };
 
   const fetchSuppliers = async () => {
@@ -105,54 +298,76 @@ const PurchaseManagement = () => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const applyFilters = () => {
-    fetchPurchases();
+  const handleAmountRangeChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      amountRange: { ...prev.amountRange, [field]: value }
+    }));
   };
 
   const resetFilters = () => {
     setFilters({
+      search: '',
       purchaseType: '',
       paymentStatus: '',
       startDate: '',
       endDate: '',
-      supplierId: ''
+      supplierId: '',
+      amountRange: { min: '', max: '' },
+      includeIVA: '',
+      currency: '',
+      sortBy: 'purchaseDate',
+      sortOrder: 'desc'
     });
   };
 
-  const handleNewPurchaseChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (name.startsWith('supplierInfo.')) {
-      const field = name.split('.')[1];
-      setNewPurchaseData(prev => ({
-        ...prev,
-        supplierInfo: { ...prev.supplierInfo, [field]: value }
-      }));
-    } else {
-      setNewPurchaseData(prev => ({ ...prev, [name]: value }));
-    }
+  const exportToExcel = () => {
+    const excelData = filteredPurchases.map(purchase => ({
+      'Número de Factura': purchase.invoiceNumber || '',
+      'Fecha': purchase.purchaseDate ? moment(purchase.purchaseDate).format('DD/MM/YYYY') : '',
+      'Proveedor': purchase.supplierInfo?.name || purchase.supplierInfo?.company || '',
+      'RUC': purchase.supplierInfo?.ruc || '',
+      'Tipo de Compra': purchase.purchaseType || '',
+      'Subtotal': purchase.totalAmount || 0,
+      'IVA (%)': purchase.tax || 0,
+      'IVA (₲)': purchase.ivaAmount || 0,
+      'Total con IVA': (purchase.totalAmount || 0) + (purchase.ivaAmount || 0),
+      'Moneda': purchase.currency || 'PYG',
+      'Tipo de Cambio': purchase.exchangeRate || 1,
+      'Método de Pago': purchase.paymentMethod || '',
+      'Estado': purchase.paymentStatus || '',
+      'Fecha de Vencimiento': purchase.dueDate ? moment(purchase.dueDate).format('DD/MM/YYYY') : '',
+      'Notas': purchase.notes || ''
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Ajustar anchos de columna
+    ws['!cols'] = [
+      { wch: 20 }, // Número de Factura
+      { wch: 12 }, // Fecha
+      { wch: 25 }, // Proveedor
+      { wch: 15 }, // RUC
+      { wch: 15 }, // Tipo de Compra
+      { wch: 15 }, // Subtotal
+      { wch: 10 }, // IVA (%)
+      { wch: 15 }, // IVA (₲)
+      { wch: 15 }, // Total con IVA
+      { wch: 10 }, // Moneda
+      { wch: 12 }, // Tipo de Cambio
+      { wch: 15 }, // Método de Pago
+      { wch: 12 }, // Estado
+      { wch: 15 }, // Fecha de Vencimiento
+      { wch: 30 }  // Notas
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Compras');
+    XLSX.writeFile(wb, `Compras_${new Date().toLocaleDateString()}.xlsx`);
+    toast.success("Compras exportadas a Excel");
   };
 
-  // ✅ MANEJO MEJORADO DE ITEMS CON MÚLTIPLES MONEDAS
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...newPurchaseData.items];
-    updatedItems[index][field] = value;
-    
-    // Si cambia la moneda, ajustar el tipo de cambio por defecto
-    if (field === 'currency') {
-      if (value === 'USD') {
-        updatedItems[index].exchangeRate = 7300; // Valor por defecto USD
-      } else if (value === 'EUR') {
-        updatedItems[index].exchangeRate = 8000; // Valor por defecto EUR
-      } else if (value === 'PYG') {
-        updatedItems[index].exchangeRate = 1;
-      }
-    }
-    
-    setNewPurchaseData(prev => ({ ...prev, items: updatedItems }));
-  };
-
-  const addItem = () => {
+  const addNewItem = () => {
     setNewPurchaseData(prev => ({
       ...prev,
       items: [...prev.items, { 
@@ -161,85 +376,79 @@ const PurchaseManagement = () => {
         quantity: 1, 
         unitPrice: 0, 
         currency: 'USD', 
-        exchangeRate: 7300 
+        exchangeRate: 7300,
+        ivaIncluded: false,
+        ivaRate: 10
       }]
     }));
   };
 
   const removeItem = (index) => {
-    if (newPurchaseData.items.length > 1) {
-      const updatedItems = newPurchaseData.items.filter((_, i) => i !== index);
-      setNewPurchaseData(prev => ({ ...prev, items: updatedItems }));
-    }
+    setNewPurchaseData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
   };
 
-  // ✅ CÁLCULO TOTAL CON MÚLTIPLES MONEDAS
-  const calculateTotal = () => {
-    const subtotal = newPurchaseData.items.reduce((sum, item) => {
-      let unitPriceInPYG = item.unitPrice;
-      if (item.currency === 'USD') {
-        unitPriceInPYG = item.unitPrice * (item.exchangeRate || 7300);
-      } else if (item.currency === 'EUR') {
-        unitPriceInPYG = item.unitPrice * (item.exchangeRate || 8000);
-      }
-      return sum + (item.quantity * unitPriceInPYG);
-    }, 0);
-    
-    const taxAmount = subtotal * (newPurchaseData.tax / 100);
-    return subtotal + taxAmount;
+  const updateItem = (index, field, value) => {
+    setNewPurchaseData(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
   };
 
-  // ✅ FUNCIÓN PARA FORMATEAR MONEDA
-  const formatCurrency = (amount, currency = 'PYG') => {
-    if (currency === 'PYG') {
-      return displayPYGCurrency(amount);
-    } else if (currency === 'USD') {
-      return `US$ ${amount.toFixed(2)}`;
-    } else if (currency === 'EUR') {
-      return `€ ${amount.toFixed(2)}`;
-    }
-    return `${currency} ${amount.toFixed(2)}`;
+  const calculateItemTotal = (item) => {
+    const subtotal = item.quantity * item.unitPrice;
+    const ivaAmount = item.ivaIncluded ? 0 : (subtotal * (item.ivaRate || 10)) / 100;
+    return subtotal + ivaAmount;
   };
 
-  const handleCreatePurchase = async (e) => {
+  const calculatePurchaseTotal = () => {
+    return newPurchaseData.items.reduce((total, item) => total + calculateItemTotal(item), 0);
+  };
+
+  const handleSubmitPurchase = async (e) => {
     e.preventDefault();
-
-    // Validaciones
-    if (!newPurchaseData.supplierId && !newPurchaseData.supplierInfo.name) {
-      toast.error("Debe seleccionar un proveedor o proporcionar información del proveedor");
-      return;
-    }
-
-    if (newPurchaseData.items.some(item => !item.description || item.quantity <= 0 || item.unitPrice <= 0)) {
-      toast.error("Todos los items deben tener descripción, cantidad y precio válidos");
-      return;
-    }
-
-    // Validar tipos de cambio para monedas extranjeras
-    const hasInvalidExchangeRate = newPurchaseData.items.some(item => 
-      (item.currency === 'USD' || item.currency === 'EUR') && (!item.exchangeRate || item.exchangeRate <= 0)
-    );
-
-    if (hasInvalidExchangeRate) {
-      toast.error("Debe especificar un tipo de cambio válido para monedas extranjeras");
-      return;
-    }
-
+    
     try {
-      setIsLoading(true);
+      const purchaseData = {
+        ...newPurchaseData,
+        totalAmount: newPurchaseData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
+        ivaAmount: newPurchaseData.items.reduce((sum, item) => {
+          const subtotal = item.quantity * item.unitPrice;
+          return sum + (item.ivaIncluded ? 0 : (subtotal * (item.ivaRate || 10)) / 100);
+        }, 0),
+        totalWithIVA: calculatePurchaseTotal()
+      };
+
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras`, {
         method: 'POST',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify(newPurchaseData)
+        body: JSON.stringify(purchaseData)
       });
 
       const result = await response.json();
+      
       if (result.success) {
-        toast.success("Compra registrada correctamente");
+        toast.success("Compra registrada exitosamente");
         setShowNewPurchaseModal(false);
+        resetNewPurchaseForm();
+        fetchPurchases();
+      } else {
+        toast.error(result.message || "Error al registrar la compra");
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error("Error de conexión");
+    }
+  };
+
+  const resetNewPurchaseForm = () => {
         setNewPurchaseData({
           purchaseType: 'inventario',
           supplierId: '',
@@ -247,7 +456,9 @@ const PurchaseManagement = () => {
             name: '',
             company: '',
             ruc: '',
-            contact: ''
+        contact: '',
+        email: '',
+        phone: ''
           },
           items: [{ 
             description: '', 
@@ -255,405 +466,560 @@ const PurchaseManagement = () => {
             quantity: 1, 
             unitPrice: 0, 
             currency: 'USD', 
-            exchangeRate: 7300 
+        exchangeRate: 7300,
+        ivaIncluded: false,
+        ivaRate: 10
           }],
           tax: 10,
           paymentMethod: 'transferencia',
           paymentStatus: 'pendiente',
           dueDate: '',
           purchaseDate: new Date().toISOString().split('T')[0],
-          notes: ''
-        });
-        fetchPurchases();
-      } else {
-        toast.error(result.message || "Error al registrar la compra");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
-    } finally {
-      setIsLoading(false);
+      notes: '',
+      invoiceNumber: '',
+      invoiceDate: '',
+      includeIVA: true
+    });
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'pagado':
+        return 'bg-green-100 text-green-800';
+      case 'pendiente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'vencido':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleUpdatePaymentStatus = async (purchaseId, newStatus) => {
-    try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${purchaseId}/pago`, {
-        method: 'PATCH',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: 'include',
-        body: JSON.stringify({ paymentStatus: newStatus })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Estado de pago actualizado");
-        fetchPurchases();
-      } else {
-        toast.error(result.message || "Error al actualizar estado");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
+  const getPaymentStatusIcon = (status) => {
+    switch (status) {
+      case 'pagado':
+        return <FaCheck className="w-4 h-4 text-green-600" />;
+      case 'pendiente':
+        return <FaExclamationTriangle className="w-4 h-4 text-yellow-600" />;
+      case 'vencido':
+        return <FaTimes className="w-4 h-4 text-red-600" />;
+      default:
+        return <FaInfoCircle className="w-4 h-4 text-gray-600" />;
     }
   };
 
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
+  const togglePurchaseSelection = (purchaseId) => {
+    setSelectedPurchases(prev => 
+      prev.includes(purchaseId) 
+        ? prev.filter(id => id !== purchaseId)
+        : [...prev, purchaseId]
+    );
+  };
+
+  const selectAllPurchases = () => {
+    setSelectedPurchases(filteredPurchases.map(p => p._id));
+  };
+
+  const clearSelection = () => {
+    setSelectedPurchases([]);
+  };
+
+  const getFilterDescription = () => {
+    let description = `Mostrando ${filteredPurchases.length} de ${purchases.length} compras`;
     
-    if ((!fileUpload.invoice && !fileUpload.receipt) || !selectedPurchase) {
-      toast.error("Debe seleccionar al menos un archivo");
-      return;
+    if (filters.purchaseType) {
+      description += ` • Tipo: "${filters.purchaseType}"`
+    }
+    
+    if (filters.paymentStatus) {
+      description += ` • Estado: "${filters.paymentStatus}"`
     }
 
-    const formData = new FormData();
-    if (fileUpload.invoice) formData.append('invoice', fileUpload.invoice);
-    if (fileUpload.receipt) formData.append('receipt', fileUpload.receipt);
-
-    try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${selectedPurchase._id}/documentos`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Documentos subidos correctamente");
-        setShowFileUploadModal(false);
-        setFileUpload({ invoice: null, receipt: null });
-        setSelectedPurchase(null);
-        fetchPurchases();
-      } else {
-        toast.error(result.message || "Error al subir los documentos");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
-    }
-  };
-
-  const handleDeletePurchase = async (purchaseId) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta compra?')) {
-      return;
+    if (filters.startDate && filters.endDate) {
+      description += ` • Período: ${moment(filters.startDate).format('DD/MM/YYYY')} - ${moment(filters.endDate).format('DD/MM/YYYY')}`
     }
 
-    try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${purchaseId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Compra eliminada correctamente");
-        fetchPurchases();
-      } else {
-        toast.error(result.message || "Error al eliminar la compra");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pagado': return 'bg-green-100 text-green-800';
-      case 'pendiente': return 'bg-yellow-100 text-yellow-800';
-      case 'parcial': return 'bg-blue-100 text-blue-800';
-      case 'vencido': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'pagado': return 'Pagado';
-      case 'pendiente': return 'Pendiente';
-      case 'parcial': return 'Parcial';
-      case 'vencido': return 'Vencido';
-      default: return status;
-    }
-  };
-
-  const getPurchaseTypeLabel = (type) => {
-    switch (type) {
-      case 'inventario': return 'Inventario';
-      case 'equipos': return 'Equipos';
-      case 'servicios': return 'Servicios';
-      case 'gastos_operativos': return 'Gastos Operativos';
-      case 'marketing': return 'Marketing';
-      case 'otros': return 'Otros';
-      default: return type;
-    }
+    return description;
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <FaShoppingCart className="mr-2 text-blue-600" />
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center text-gray-900">
+              <FaShoppingCart className="mr-3 text-blue-600" />
           Gestión de Compras
         </h1>
+            <p className="text-gray-600 mt-1">
+              Administra las compras con soporte para IVA de Paraguay y múltiples monedas
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+              className="flex items-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {viewMode === 'table' ? <FaExpand className="w-4 h-4 mr-2" /> : <FaCompress className="w-4 h-4 mr-2" />}
+              {viewMode === 'table' ? 'Vista Tarjetas' : 'Vista Tabla'}
+            </button>
+            
+            <button
+              onClick={fetchPurchases}
+              className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FaSyncAlt className="w-4 h-4 mr-2" />
+              Actualizar
+            </button>
         
         <button
           onClick={() => setShowNewPurchaseModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <FaPlus className="mr-2" /> Nueva Compra
+              <FaPlus className="w-4 h-4 mr-2" />
+              Nueva Compra
         </button>
+          </div>
+        </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex items-center mb-3">
+      {/* Estadísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <FaShoppingCart className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Total</p>
+              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <FaMoneyBillWave className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Subtotal</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalAmount)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-50 rounded-lg">
+              <FaReceipt className="w-5 h-5 text-purple-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">IVA (10%)</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalIVA)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <FaDollarSign className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Total con IVA</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalAmountWithIVA)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-50 rounded-lg">
+              <FaExclamationTriangle className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Pendientes</p>
+              <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <FaCheck className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Pagadas</p>
+              <p className="text-xl font-bold text-gray-900">{stats.paid}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-teal-50 rounded-lg">
+              <FaCalendarAlt className="w-5 h-5 text-teal-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Este Mes</p>
+              <p className="text-xl font-bold text-gray-900">{stats.thisMonth}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <FaChartLine className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Mes (₲)</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.thisMonthAmount)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros y búsqueda */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold flex items-center">
           <FaFilter className="mr-2 text-gray-600" />
-          <h3 className="font-medium">Filtros</h3>
+            Filtros y Búsqueda
+          </h3>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm"
+            >
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            </button>
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 text-sm"
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+        {/* Búsqueda principal */}
+        <div className="mb-4">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Buscar por factura, proveedor, RUC o notas..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Compra
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Compra</label>
             <select
               name="purchaseType"
               value={filters.purchaseType}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los tipos</option>
               <option value="inventario">Inventario</option>
-              <option value="equipos">Equipos</option>
               <option value="servicios">Servicios</option>
-              <option value="gastos_operativos">Gastos Operativos</option>
-              <option value="marketing">Marketing</option>
-              <option value="otros">Otros</option>
+                <option value="gastos">Gastos</option>
+                <option value="equipos">Equipos</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado de Pago
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Pago</label>
             <select
               name="paymentStatus"
               value={filters.paymentStatus}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="parcial">Parcial</option>
               <option value="pagado">Pagado</option>
+                <option value="pendiente">Pendiente</option>
               <option value="vencido">Vencido</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Proveedor
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
             <select
               name="supplierId"
               value={filters.supplierId}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los proveedores</option>
               {suppliers.map(supplier => (
                 <option key={supplier._id} value={supplier._id}>
-                  {supplier.name} {supplier.company ? `(${supplier.company})` : ''}
+                    {supplier.name || supplier.company}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha Desde
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+              <select
+                name="currency"
+                value={filters.currency}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todas las monedas</option>
+                <option value="PYG">Guaraní (₲)</option>
+                <option value="USD">Dólar ($)</option>
+                <option value="EUR">Euro (€)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Mínimo</label>
+              <input
+                type="number"
+                value={filters.amountRange.min}
+                onChange={(e) => handleAmountRangeChange('min', e.target.value)}
+                placeholder="0"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Máximo</label>
+              <input
+                type="number"
+                value={filters.amountRange.max}
+                onChange={(e) => handleAmountRangeChange('max', e.target.value)}
+                placeholder="999999999"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
             <input
               type="date"
               name="startDate"
               value={filters.startDate}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha Hasta
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
             <input
               type="date"
               name="endDate"
               value={filters.endDate}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+              <select
+                name="sortBy"
+                value={filters.sortBy}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="purchaseDate">Fecha</option>
+                <option value="totalAmount">Monto</option>
+                <option value="supplier">Proveedor</option>
+                <option value="invoiceNumber">Número de Factura</option>
+              </select>
         </div>
 
-        <div className="flex justify-end gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+              <select
+                name="sortOrder"
+                value={filters.sortOrder}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="desc">Descendente</option>
+                <option value="asc">Ascendente</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Acciones masivas */}
+      {selectedPurchases.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedPurchases.length} compras seleccionadas
+              </span>
           <button
-            onClick={resetFilters}
-            className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
+                onClick={clearSelection}
+                className="ml-3 text-sm text-blue-600 hover:text-blue-800"
           >
-            Limpiar
+                Limpiar selección
           </button>
+            </div>
+            <div className="flex space-x-2">
           <button
-            onClick={applyFilters}
-            className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 text-sm"
+                onClick={exportToExcel}
+                className="flex items-center px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
-            Aplicar Filtros
+                <FaDownload className="w-3 h-3 mr-1" />
+                Exportar
           </button>
         </div>
       </div>
+        </div>
+      )}
 
-      {/* Tabla de compras */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Cargando compras...</p>
+      {/* Información de filtros */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-gray-600">
+          {getFilterDescription()}
           </div>
-        ) : purchases.length === 0 ? (
-          <div className="p-8 text-center">
-            <FaShoppingCart className="text-5xl text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No se encontraron compras.</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 text-sm"
+          >
+            <FaFileExcel className="w-4 h-4 mr-2" />
+            Exportar Excel
+          </button>
           </div>
-        ) : (
+      </div>
+
+      {/* Lista de compras */}
+      {viewMode === 'table' ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Documentos</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedPurchases.length === filteredPurchases.length && filteredPurchases.length > 0}
+                      onChange={selectedPurchases.length === filteredPurchases.length ? clearSelection : selectAllPurchases}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Factura / Proveedor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Monto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    IVA
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {purchases.map((purchase) => (
-                  <tr key={purchase._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {purchase.purchaseNumber}
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredPurchases.map((purchase, index) => (
+                  <tr key={purchase._id || index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedPurchases.includes(purchase._id)}
+                        onChange={() => togglePurchaseSelection(purchase._id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {getPurchaseTypeLabel(purchase.purchaseType)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <FaBuilding className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            #{purchase.invoiceNumber || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {purchase.supplierInfo?.name || purchase.supplierInfo?.company || 'Proveedor no disponible'}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>
-                        <div className="font-medium">
-                          {purchase.supplierSnapshot?.name || purchase.supplier?.name || purchase.supplierInfo?.name}
+                        {purchase.purchaseDate ? moment(purchase.purchaseDate).format('DD/MM/YYYY') : 'N/A'}
                         </div>
-                        {(purchase.supplierSnapshot?.company || purchase.supplierInfo?.company) && (
-                          <div className="text-xs text-gray-400">
-                            {purchase.supplierSnapshot?.company || purchase.supplierInfo?.company}
+                      <div className="text-xs text-gray-500">
+                        {purchase.purchaseType || 'N/A'}
                           </div>
-                        )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">
+                        {displayPYGCurrency(purchase.totalAmount || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {purchase.currency || 'PYG'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      <div className="font-medium">{displayPYGCurrency(purchase.totalAmount)}</div>
-                      {/* Mostrar si hay items en moneda extranjera */}
-                      {purchase.items?.some(item => item.currency !== 'PYG') && (
-                        <div className="text-xs text-blue-600 flex items-center justify-end">
-                          <FaDollarSign className="mr-1" /> Multi-moneda
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">
+                        {displayPYGCurrency(purchase.ivaAmount || 0)}
                         </div>
-                      )}
+                      <div className="text-xs text-gray-500">
+                        {purchase.tax || 0}%
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">
-                      {purchase.tax}%
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="relative group">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(purchase.paymentStatus)}`}>
-                          {getStatusLabel(purchase.paymentStatus)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getPaymentStatusIcon(purchase.paymentStatus)}
+                        <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
+                          {purchase.paymentStatus || 'N/A'}
                         </span>
-                        
-                        {/* Menú desplegable para cambiar estado */}
-                        <div className="absolute right-0 mt-2 hidden group-hover:block z-10 w-32 bg-white rounded-md shadow-lg">
-                          <div className="py-1">
-                            {['pendiente', 'parcial', 'pagado', 'vencido'].map((status) => (
-                              <button
-                                key={status}
-                                className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${purchase.paymentStatus === status ? 'font-medium' : ''}`}
-                                onClick={() => handleUpdatePaymentStatus(purchase._id, status)}
-                              >
-                                {getStatusLabel(status)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-600">
-                      {new Date(purchase.purchaseDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center space-x-2">
-                        {purchase.invoiceFile && (
-                          <a
-                            href={purchase.invoiceFile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 hover:text-green-800"
-                            title="Ver factura"
-                          >
-                            <FaReceipt />
-                          </a>
-                        )}
-                        {purchase.receiptFile && (
-                          <a
-                            href={purchase.receiptFile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Ver recibo"
-                          >
-                            <FaEye />
-                          </a>
-                        )}
-                        {(!purchase.invoiceFile || !purchase.receiptFile) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
                           <button
-                            onClick={() => {
-                              setSelectedPurchase(purchase);
-                              setShowFileUploadModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Subir documentos"
-                          >
-                            <FaFileUpload />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <Link
-                          to={`/panel-admin/compras/${purchase._id}`}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-900"
                           title="Ver detalles"
                         >
-                          <FaEye />
-                        </Link>
+                          <FaEye className="w-4 h-4" />
+                          </button>
                         <button
-                          onClick={() => handleDeletePurchase(purchase._id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Eliminar compra"
+                          className="text-green-600 hover:text-green-900"
+                          title="Editar"
                         >
-                          <FaTrash />
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-900"
+                          title="Eliminar"
+                        >
+                          <FaTrash className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -662,440 +1028,501 @@ const PurchaseManagement = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPurchases.map((purchase, index) => (
+            <div key={purchase._id || index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    #{purchase.invoiceNumber || 'N/A'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {purchase.supplierInfo?.name || purchase.supplierInfo?.company || 'Proveedor no disponible'}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  {getPaymentStatusIcon(purchase.paymentStatus)}
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Fecha:</span>
+                  <span className="text-sm text-gray-900">
+                    {purchase.purchaseDate ? moment(purchase.purchaseDate).format('DD/MM/YYYY') : 'N/A'}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Subtotal:</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {displayPYGCurrency(purchase.totalAmount || 0)}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">IVA:</span>
+                  <span className="text-sm text-gray-900">
+                    {displayPYGCurrency(purchase.ivaAmount || 0)}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Total:</span>
+                  <span className="text-sm font-bold text-green-600">
+                    {displayPYGCurrency((purchase.totalAmount || 0) + (purchase.ivaAmount || 0))}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Estado:</span>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
+                    {purchase.paymentStatus || 'N/A'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex space-x-2">
+                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  <FaEye className="w-3 h-3 mr-1" />
+                  Ver
+                </button>
+                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  <FaEdit className="w-3 h-3 mr-1" />
+                  Editar
+                </button>
+              </div>
+            </div>
+          ))}
+          </div>
         )}
-      </div>
 
-      {/* Modal para nueva compra - CON SOPORTE MULTI-MONEDA */}
+      {filteredPurchases.length === 0 && !isLoading && (
+        <div className="text-center py-12">
+          <FaShoppingCart className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron compras</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Intenta ajustar los filtros para ver más resultados.
+          </p>
+      </div>
+      )}
+
+      {isLoading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500">Cargando compras...</p>
+        </div>
+      )}
+
+      {/* Modal para nueva compra */}
       {showNewPurchaseModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="font-bold text-xl text-gray-800">Nueva Compra</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+              <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Nueva Compra</h2>
+                  <p className="text-gray-600 mt-1">
+                    Registra una nueva compra con soporte para IVA de Paraguay
+                  </p>
+                </div>
               <button 
-                className="text-3xl text-gray-600 hover:text-black" 
                 onClick={() => setShowNewPurchaseModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl p-2 hover:bg-gray-100 rounded-lg"
               >
-                ×
+                  <FaClose />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePurchase} className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <form onSubmit={handleSubmitPurchase} className="flex-1 overflow-y-auto">
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Compra *
+                        Tipo de Compra <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="purchaseType"
                     value={newPurchaseData.purchaseType}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, purchaseType: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
                     <option value="inventario">Inventario</option>
-                    <option value="equipos">Equipos</option>
                     <option value="servicios">Servicios</option>
-                    <option value="gastos_operativos">Gastos Operativos</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="otros">Otros</option>
+                        <option value="gastos">Gastos</option>
+                        <option value="equipos">Equipos</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Proveedor
+                        Número de Factura <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="supplierId"
-                    value={newPurchaseData.supplierId}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  >
-                    <option value="">Seleccionar proveedor registrado</option>
-                    {suppliers.map(supplier => (
-                      <option key={supplier._id} value={supplier._id}>
-                        {supplier.name} {supplier.company ? `(${supplier.company})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                      <input
+                        type="text"
+                        value={newPurchaseData.invoiceNumber}
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="001-001-0001234"
+                        required
+                      />
                 </div>
 
-                {!newPurchaseData.supplierId && (
-                  <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre del Proveedor *
+                        Fecha de Compra <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="text"
-                        name="supplierInfo.name"
-                        value={newPurchaseData.supplierInfo.name}
-                        onChange={handleNewPurchaseChange}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                        placeholder="Nombre del proveedor"
-                        required={!newPurchaseData.supplierId}
+                        type="date"
+                        value={newPurchaseData.purchaseDate}
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Empresa
+                        Fecha de Vencimiento
+                      </label>
+                      <input
+                        type="date"
+                        value={newPurchaseData.dueDate}
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, dueDate: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    </div>
+
+                  {/* Información del Proveedor */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Proveedor</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Nombre/Razón Social <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        name="supplierInfo.company"
-                        value={newPurchaseData.supplierInfo.company}
-                        onChange={handleNewPurchaseChange}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                        placeholder="Nombre de la empresa"
+                          value={newPurchaseData.supplierInfo.name}
+                          onChange={(e) => setNewPurchaseData(prev => ({ 
+                            ...prev, 
+                            supplierInfo: { ...prev.supplierInfo, name: e.target.value }
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nombre del proveedor"
+                          required
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        RUC
+                          RUC <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
-                        name="supplierInfo.ruc"
-                        value={newPurchaseData.supplierInfo.ruc}
-                        onChange={handleNewPurchaseChange}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                        placeholder="RUC del proveedor"
+                          value={newPurchaseData.supplierInfo.ruc}
+                          onChange={(e) => setNewPurchaseData(prev => ({ 
+                            ...prev, 
+                            supplierInfo: { ...prev.supplierInfo, ruc: e.target.value }
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="1234567-8"
+                          required
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contacto
-                      </label>
-                      <input
-                        type="text"
-                        name="supplierInfo.contact"
-                        value={newPurchaseData.supplierInfo.contact}
-                        onChange={handleNewPurchaseChange}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                        placeholder="Teléfono o email"
-                      />
-                    </div>
-                  </>
-                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Compra
+                          Teléfono
                   </label>
                   <input
-                    type="date"
-                    name="purchaseDate"
-                    value={newPurchaseData.purchaseDate}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
+                          type="tel"
+                          value={newPurchaseData.supplierInfo.phone}
+                          onChange={(e) => setNewPurchaseData(prev => ({ 
+                            ...prev, 
+                            supplierInfo: { ...prev.supplierInfo, phone: e.target.value }
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="(021) 123-456"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Método de Pago
+                          Email
                   </label>
-                  <select
-                    name="paymentMethod"
-                    value={newPurchaseData.paymentMethod}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="tarjeta">Tarjeta</option>
-                    <option value="credito">Crédito</option>
-                  </select>
-                </div>
-
-                {/* ✅ SELECTOR DE IVA */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    IVA (%)
-                  </label>
-                  <select
-                    name="tax"
-                    value={newPurchaseData.tax}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  >
-                    <option value={0}>0% (Exento)</option>
-                    <option value={5}>5%</option>
-                    <option value={10}>10%</option>
-                  </select>
+                        <input
+                          type="email"
+                          value={newPurchaseData.supplierInfo.email}
+                          onChange={(e) => setNewPurchaseData(prev => ({ 
+                            ...prev, 
+                            supplierInfo: { ...prev.supplierInfo, email: e.target.value }
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="proveedor@ejemplo.com"
+                        />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Vencimiento
+                          Contacto
                   </label>
                   <input
-                    type="date"
-                    name="dueDate"
-                    value={newPurchaseData.dueDate}
-                    onChange={handleNewPurchaseChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  />
+                          type="text"
+                          value={newPurchaseData.supplierInfo.contact}
+                          onChange={(e) => setNewPurchaseData(prev => ({ 
+                            ...prev, 
+                            supplierInfo: { ...prev.supplierInfo, contact: e.target.value }
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nombre del contacto"
+                        />
+                      </div>
                 </div>
               </div>
 
-              {/* Items de la compra CON SOPORTE MULTI-MONEDA */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-semibold">Items de la Compra</h3>
+                  {/* Items de la compra */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Items de la Compra</h3>
                   <button
                     type="button"
-                    onClick={addItem}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                        onClick={addNewItem}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    + Agregar Item
+                        <FaPlus className="w-4 h-4 mr-2" />
+                        Agregar Item
                   </button>
                 </div>
 
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Moneda</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">T.C.</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal (₲)</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <div className="space-y-4">
                       {newPurchaseData.items.map((item, index) => (
-                        <tr key={index}>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={item.description}
-                              onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                              className="w-full p-1 border border-gray-300 rounded text-sm"
-                              placeholder="Descripción del item"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <select
-                              value={item.category}
-                              onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                              className="w-full p-1 border border-gray-300 rounded text-sm"
-                            >
-                              <option value="producto">Producto</option>
-                              <option value="servicio">Servicio</option>
-                              <option value="gasto_fijo">Gasto Fijo</option>
-                              <option value="gasto_variable">Gasto Variable</option>
-                              <option value="inversion">Inversión</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                              className="w-16 p-1 border border-gray-300 rounded text-center text-sm"
-                              min="1"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              value={item.unitPrice}
-                              onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
-                              className="w-24 p-1 border border-gray-300 rounded text-right text-sm"
-                              min="0"
-                              step="0.01"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <select
-                              value={item.currency}
-                              onChange={(e) => handleItemChange(index, 'currency', e.target.value)}
-                              className="w-16 p-1 border border-gray-300 rounded text-sm"
-                            >
-                              <option value="PYG">₲</option>
-                              <option value="USD">$</option>
-                              <option value="EUR">€</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-2">
-                            {item.currency !== 'PYG' ? (
-                              <input
-                                type="number"
-                                value={item.exchangeRate}
-                                onChange={(e) => handleItemChange(index, 'exchangeRate', Number(e.target.value))}
-                                className="w-20 p-1 border border-gray-300 rounded text-right text-sm"
-                                min="0"
-                                step="0.01"
-                                required
-                              />
-                            ) : (
-                              <span className="text-gray-400 text-sm">-</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-right text-sm font-medium">
-                            {(() => {
-                              let unitPriceInPYG = item.unitPrice;
-                              if (item.currency === 'USD') {
-                                unitPriceInPYG = item.unitPrice * (item.exchangeRate || 7300);
-                              } else if (item.currency === 'EUR') {
-                                unitPriceInPYG = item.unitPrice * (item.exchangeRate || 8000);
-                              }
-                              return displayPYGCurrency(item.quantity * unitPriceInPYG);
-                            })()}
-                          </td>
-                          <td className="px-3 py-2 text-center">
+                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-medium text-gray-900">Item {index + 1}</h4>
                             {newPurchaseData.items.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => removeItem(index)}
                                 className="text-red-600 hover:text-red-800"
                               >
-                                <FaTrash />
+                                <FaTrash className="w-4 h-4" />
                               </button>
                             )}
-                          </td>
-                        </tr>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                            <div className="lg:col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Descripción <span className="text-red-500">*</span>
+                              </label>
+                            <input
+                              type="text"
+                              value={item.description}
+                                onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Descripción del item"
+                              required
+                            />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Cantidad <span className="text-red-500">*</span>
+                              </label>
+                            <input
+                              type="number"
+                              min="1"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              required
+                            />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Precio Unitario <span className="text-red-500">*</span>
+                              </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              required
+                            />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Moneda
+                              </label>
+                            <select
+                              value={item.currency}
+                                onChange={(e) => updateItem(index, 'currency', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              >
+                                <option value="USD">USD</option>
+                                <option value="PYG">PYG</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                            </div>
+
+                            {item.currency !== 'PYG' && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Tipo de Cambio
+                                </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                  value={item.exchangeRate}
+                                  onChange={(e) => updateItem(index, 'exchangeRate', Number(e.target.value))}
+                                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                              </div>
+                            )}
+                </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                IVA (%)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={item.ivaRate}
+                                onChange={(e) => updateItem(index, 'ivaRate', Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+              </div>
+
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`ivaIncluded-${index}`}
+                                checked={item.ivaIncluded}
+                                onChange={(e) => updateItem(index, 'ivaIncluded', e.target.checked)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <label htmlFor={`ivaIncluded-${index}`} className="ml-2 text-sm text-gray-700">
+                                IVA incluido en el precio
+                              </label>
+                  </div>
+
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">Total del Item:</div>
+                              <div className="text-lg font-bold text-gray-900">
+                                {displayPYGCurrency(calculateItemTotal(item))}
+                  </div>
+                  </div>
+                </div>
+              </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
               </div>
 
-              {/* Totales */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{displayPYGCurrency(calculateTotal() - (calculateTotal() * newPurchaseData.tax / (100 + newPurchaseData.tax)))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>IVA ({newPurchaseData.tax}%):</span>
-                    <span>{displayPYGCurrency(calculateTotal() * newPurchaseData.tax / (100 + newPurchaseData.tax))}</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
-                    <span>Total de la Compra:</span>
-                    <span>{displayPYGCurrency(calculateTotal())}</span>
-                  </div>
-                </div>
+                  {/* Resumen de la compra */}
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de la Compra</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-gray-600">Subtotal:</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {displayPYGCurrency(newPurchaseData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0))}
               </div>
-
-              {/* Notas */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notas
-                </label>
-                <textarea
-                  name="notes"
-                  value={newPurchaseData.notes}
-                  onChange={handleNewPurchaseChange}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  rows="3"
-                  placeholder="Observaciones adicionales..."
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewPurchaseModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Registrando..." : "Registrar Compra"}
-                </button>
-              </div>
-            </form>
           </div>
+                      <div>
+                        <div className="text-sm text-gray-600">IVA Total:</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          {displayPYGCurrency(newPurchaseData.items.reduce((sum, item) => {
+                            const subtotal = item.quantity * item.unitPrice;
+                            return sum + (item.ivaIncluded ? 0 : (subtotal * (item.ivaRate || 10)) / 100);
+                          }, 0))}
         </div>
-      )}
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-600">Total con IVA:</div>
+                        <div className="text-xl font-bold text-green-600">
+                          {displayPYGCurrency(calculatePurchaseTotal())}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-      {/* Modal para subir documentos */}
-      {showFileUploadModal && selectedPurchase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="font-bold text-lg text-gray-800">
-                Subir Documentos - {selectedPurchase.purchaseNumber}
-              </h2>
-              <button 
-                className="text-2xl text-gray-600 hover:text-black" 
-                onClick={() => {
-                  setShowFileUploadModal(false);
-                  setSelectedPurchase(null);
-                  setFileUpload({ invoice: null, receipt: null });
-                }}
-              >
-                ×
-              </button>
+                  {/* Información adicional */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Método de Pago
+                      </label>
+                      <select
+                        value={newPurchaseData.paymentMethod}
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="transferencia">Transferencia</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="tarjeta">Tarjeta</option>
+                      </select>
             </div>
 
-            <form onSubmit={handleFileUpload} className="p-4">
-              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Factura (PDF o Imagen)
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Estado de Pago
                   </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => setFileUpload(prev => ({ ...prev, invoice: e.target.files[0] }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
-                  />
+                      <select
+                        value={newPurchaseData.paymentStatus}
+                        onChange={(e) => setNewPurchaseData(prev => ({ ...prev, paymentStatus: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="pendiente">Pendiente</option>
+                        <option value="pagado">Pagado</option>
+                        <option value="vencido">Vencido</option>
+                      </select>
+                    </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Recibo/Comprobante (PDF o Imagen)
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notas
                   </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => setFileUpload(prev => ({ ...prev, receipt: e.target.files[0] }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Formatos permitidos: PDF, JPG, PNG (Máx. 5MB cada uno)
-                  </p>
+                    <textarea
+                      value={newPurchaseData.notes}
+                      onChange={(e) => setNewPurchaseData(prev => ({ ...prev, notes: e.target.value }))}
+                      rows={3}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Notas adicionales sobre la compra..."
+                    />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowFileUploadModal(false);
-                    setSelectedPurchase(null);
-                    setFileUpload({ invoice: null, receipt: null });
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                    onClick={() => setShowNewPurchaseModal(false)}
+                    className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Subir Documentos
+                    Registrar Compra
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}

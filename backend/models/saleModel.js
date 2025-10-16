@@ -9,9 +9,13 @@ const saleSchema = new mongoose.Schema({
         sparse: true
     },
     saleType: {
-        type: String,
-        enum: ['terminal', 'logistica', 'producto', 'servicio', 'otros'],
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SalesType',
         required: true
+    },
+    saleTypeSnapshot: {
+        name: String,
+        description: String
     },
     client: {
         type: mongoose.Schema.Types.ObjectId,
@@ -22,9 +26,57 @@ const saleSchema = new mongoose.Schema({
         name: String,
         company: String,
         email: String,
-        phone: String
+        phone: String,
+        address: {
+            street: String,
+            city: String,
+            state: String,
+            zip: String,
+            country: String
+        },
+        taxId: String
+    },
+    // ✅ NUEVOS CAMPOS PARA SISTEMA MEJORADO
+    branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Branch',
+        required: true
+    },
+    branchSnapshot: {
+        name: String,
+        code: String,
+        address: {
+            street: String,
+            city: String,
+            state: String,
+            zip: String,
+            country: String
+        }
+    },
+    salesperson: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Salesperson',
+        required: true
+    },
+    salespersonSnapshot: {
+        name: String,
+        document: String,
+        phone: String,
+        email: String
     },
     items: [{
+        // ✅ SOPORTE PARA PRODUCTOS DE BD Y MANUALES
+        product: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'product',
+            required: false // Opcional para productos manuales
+        },
+        productSnapshot: {
+            name: String,
+            code: String,
+            brand: String,
+            category: String
+        },
         description: {
             type: String,
             required: true
@@ -53,7 +105,25 @@ const saleSchema = new mongoose.Schema({
             type: Number,
             required: false // Se calcula automáticamente
         },
+        // ✅ CAMPOS DE IMPUESTOS MEJORADOS
+        taxType: {
+            type: String,
+            enum: ['exempt', 'iva_5', 'iva_10'],
+            default: 'iva_10'
+        },
+        taxRate: {
+            type: Number,
+            default: 10
+        },
+        taxAmount: {
+            type: Number,
+            default: 0
+        },
         subtotal: {
+            type: Number,
+            required: true
+        },
+        subtotalWithTax: {
             type: Number,
             required: true
         }
@@ -62,7 +132,7 @@ const saleSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // ✅ IVA VARIABLE
+    // ✅ IVA VARIABLE MEJORADO
     tax: {
         type: Number,
         enum: [0, 5, 10],
@@ -76,6 +146,61 @@ const saleSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // ✅ NUEVOS CAMPOS PARA SISTEMA MEJORADO
+    currency: {
+        type: String,
+        enum: ['PYG', 'USD', 'EUR'],
+        default: 'PYG'
+    },
+    exchangeRate: {
+        type: Number,
+        default: 1
+    },
+    totalAmountPYG: {
+        type: Number,
+        required: true
+    },
+    totalAmountUSD: {
+        type: Number,
+        required: false
+    },
+    // ✅ CAMPOS DE PAGO MEJORADOS
+    paymentTerms: {
+        type: String,
+        enum: ['efectivo', 'net_15', 'net_30', 'net_60', 'net_90', 'personalizado'],
+        default: 'efectivo'
+    },
+    customPaymentTerms: {
+        type: String
+    },
+    dueDate: {
+        type: Date
+    },
+    // ✅ ARCHIVOS ADJUNTOS
+    attachments: [{
+        filename: String,
+        originalName: String,
+        mimeType: String,
+        size: Number,
+        uploadedAt: {
+            type: Date,
+            default: Date.now
+        },
+        uploadedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'user'
+        }
+    }],
+    // ✅ CAMPOS ADICIONALES
+    amountInWords: {
+        type: String
+    },
+    internalNotes: {
+        type: String
+    },
+    customerNotes: {
+        type: String
+    },
     paymentMethod: {
         type: String,
         enum: ['efectivo', 'transferencia', 'cheque', 'tarjeta', 'credito'],
@@ -85,9 +210,6 @@ const saleSchema = new mongoose.Schema({
         type: String,
         enum: ['pendiente', 'parcial', 'pagado', 'vencido'],
         default: 'pendiente'
-    },
-    dueDate: {
-        type: Date
     },
     saleDate: {
         type: Date,

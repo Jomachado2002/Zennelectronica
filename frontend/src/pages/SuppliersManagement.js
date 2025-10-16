@@ -977,25 +977,25 @@ const SuppliersManagement = () => {
             </div>
           )}
           
-          {/* Estadísticas y análisis de rentabilidad */}
-          <div className="mt-6 p-5 rounded-lg border border-blue-100 bg-blue-50">
-            <h3 className="text-lg font-semibold mb-2 text-blue-700">Análisis de Rentabilidad</h3>
-            <p className="text-blue-800">
-              Esta sección mostrará los análisis de rentabilidad asociados a este proveedor cuando se implementen.
-            </p>
-            <div className="mt-3 flex space-x-2">
-              <Link 
-                to={`/panel-admin/analisis-rentabilidad/nuevo?supplierId=${selectedSupplier._id}`}
-                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-              >
-                Crear Análisis
-              </Link>
-              <Link 
-                to={`/panel-admin/analisis-rentabilidad?supplierId=${selectedSupplier._id}`}
-                className="bg-white text-blue-600 px-3 py-1 rounded text-sm border border-blue-600 hover:bg-blue-50"
-              >
-                Ver Historial
-              </Link>
+          {/* Estadísticas y análisis del proveedor */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h3 className="text-lg font-semibold mb-2 text-green-700">Compras Realizadas</h3>
+              <p className="text-green-800">
+                Total de compras realizadas a este proveedor
+              </p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold mb-2 text-blue-700">Productos Suministrados</h3>
+              <p className="text-blue-800">
+                Lista de productos que suministra este proveedor
+              </p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <h3 className="text-lg font-semibold mb-2 text-purple-700">Rendimiento</h3>
+              <p className="text-purple-800">
+                Análisis de calidad y cumplimiento de entregas
+              </p>
             </div>
           </div>
         </div>

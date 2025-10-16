@@ -37,6 +37,17 @@ async function UploadProductController(req, res) {
             throw new Error(`El código "${productData.codigo}" ya existe. Por favor usa un código diferente.`);
         }
 
+        // ✅ MAPEAR CAMPOS DE PRECIO CORRECTAMENTE
+        // El modelo requiere 'price' pero el frontend envía 'sellingPrice'
+        if (productData.sellingPrice && !productData.price) {
+            productData.price = productData.sellingPrice;
+        }
+        
+        // Asegurar que ambos campos tengan el mismo valor si no se especifica price
+        if (!productData.price && productData.sellingPrice) {
+            productData.price = productData.sellingPrice;
+        }
+
         const uploadProduct = new productModel(productData);
         const saveProduct = await uploadProduct.save();
 

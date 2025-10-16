@@ -21,6 +21,7 @@ const session = require('express-session');
 require('dotenv').config();
 const connectDB = require('./config/db');
 const router = require('./routes');
+const exchangeRateRoutes = require('./routes/exchangeRateRoutes');
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use(session({
 
 // Rutas API
 app.use("/api", router);
+app.use("/api/exchange-rate", exchangeRateRoutes);
 
 // Manejo de errores global
 app.use((err, req, res, next) => {

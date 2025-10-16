@@ -1,58 +1,83 @@
-// frontend/src/pages/SalesManagement.js - CON SOPORTE MULTI-MONEDA
+// frontend/src/pages/SalesManagement.js - MEJORADO CON INTERFAZ OPTIMIZADA PARA VENTAS
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FaPlus, FaEdit, FaTrash, FaFileUpload, FaEye, FaFilter, FaFileInvoiceDollar, FaMoneyBillWave, FaDollarSign } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FaEdit, 
+  FaTrash, 
+  FaEye, 
+  FaFilter, 
+  FaFileInvoiceDollar, 
+  FaMoneyBillWave, 
+  FaDollarSign,
+  FaSearch,
+  FaDownload,
+  FaFileExcel,
+  FaCalendarAlt,
+  FaUser,
+  FaCheck,
+  FaTimes,
+  FaExclamationTriangle,
+  FaInfoCircle,
+  FaChartLine,
+  FaSyncAlt,
+  FaShoppingBag,
+  FaExpand,
+  FaCompress,
+  FaPlus
+} from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 import displayPYGCurrency from '../helpers/displayCurrency';
+import * as XLSX from 'xlsx';
+import moment from 'moment';
 
 const SalesManagement = () => {
+  const navigate = useNavigate();
   const [sales, setSales] = useState([]);
+  const [filteredSales, setFilteredSales] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNewSaleModal, setShowNewSaleModal] = useState(false);
-  const [showFileUploadModal, setShowFileUploadModal] = useState(false);
-  const [selectedSale, setSelectedSale] = useState(null);
+  
+  // Filtros mejorados
   const [filters, setFilters] = useState({
+    search: '',
     saleType: '',
     paymentStatus: '',
     startDate: '',
     endDate: '',
-    clientId: ''
-  });
-
-  // Estado del formulario de nueva venta CON SOPORTE MULTI-MONEDA
-  const [newSaleData, setNewSaleData] = useState({
-    saleType: 'terminal',
     clientId: '',
-    items: [{ 
-      description: '', 
-      quantity: 1, 
-      unitPrice: 0, 
-      currency: 'PYG', 
-      exchangeRate: 7300 
-    }],
-    tax: 10, // ✅ IVA por defecto 10%
-    paymentMethod: 'efectivo',
-    paymentStatus: 'pendiente',
-    dueDate: '',
-    saleDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    amountRange: { min: '', max: '' },
+    includeIVA: '',
+    currency: '',
+    sortBy: 'saleDate',
+    sortOrder: 'desc'
   });
 
-  const [fileUpload, setFileUpload] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
+  const [selectedSales, setSelectedSales] = useState([]);
 
-  useEffect(() => {
-    fetchSales();
-    fetchClients();
-  }, []);
+
+  // Estadísticas
+  const [stats, setStats] = useState({
+    total: 0,
+    totalAmount: 0,
+    totalAmountWithIVA: 0,
+    totalIVA: 0,
+    pending: 0,
+    paid: 0,
+    thisMonth: 0,
+    thisMonthAmount: 0
+  });
 
   const fetchSales = async () => {
     setIsLoading(true);
     try {
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
+        if (value && key !== 'amountRange' && key !== 'sortBy' && key !== 'sortOrder' && key !== 'search') {
+          queryParams.append(key, value);
+        }
       });
 
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas?${queryParams.toString()}`, {
@@ -62,7 +87,25 @@ const SalesManagement = () => {
 
       const result = await response.json();
       if (result.success) {
-        setSales(result.data.sales || []);
+        const salesData = result.data.sales || [];
+        // Mapear los datos para asegurar compatibilidad
+        const mappedSales = salesData.map(sale => ({
+          ...sale,
+          clientInfo: sale.client ? {
+            name: sale.client.name || sale.clientSnapshot?.name,
+            email: sale.client.email || sale.clientSnapshot?.email,
+            phone: sale.client.phone || sale.clientSnapshot?.phone,
+            company: sale.client.company || sale.clientSnapshot?.company
+          } : sale.clientSnapshot,
+          invoiceNumber: sale.saleNumber || sale.invoiceNumber,
+          saleDate: sale.saleDate || sale.createdAt,
+          totalAmount: sale.subtotal || sale.totalAmount,
+          ivaAmount: sale.taxAmount || sale.ivaAmount,
+          tax: sale.taxRate || sale.tax,
+          paymentStatus: sale.paymentStatus || 'pendiente'
+        }));
+        setSales(mappedSales);
+        calculateStats(mappedSales);
       } else {
         toast.error(result.message || "Error al cargar las ventas");
       }
@@ -72,6 +115,120 @@ const SalesManagement = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const calculateStats = (salesData) => {
+    const startOfMonth = moment().startOf('month');
+    
+    const total = salesData.length;
+    const totalAmount = salesData.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    const totalIVA = salesData.reduce((sum, s) => sum + (s.ivaAmount || 0), 0);
+    const totalAmountWithIVA = totalAmount + totalIVA;
+    
+    const pending = salesData.filter(s => s.paymentStatus === 'pendiente').length;
+    const paid = salesData.filter(s => s.paymentStatus === 'pagado').length;
+    
+    const thisMonthSales = salesData.filter(s => 
+      moment(s.saleDate).isSameOrAfter(startOfMonth)
+    );
+    const thisMonth = thisMonthSales.length;
+    const thisMonthAmount = thisMonthSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+
+    setStats({
+      total,
+      totalAmount,
+      totalAmountWithIVA,
+      totalIVA,
+      pending,
+      paid,
+      thisMonth,
+      thisMonthAmount
+    });
+  };
+
+  const applyFiltersAndSort = () => {
+    let result = [...sales];
+
+    // Filtro de búsqueda
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(sale => 
+        (sale.invoiceNumber?.toLowerCase() || '').includes(searchLower) ||
+        (sale.clientInfo?.name?.toLowerCase() || '').includes(searchLower) ||
+        (sale.clientInfo?.email?.toLowerCase() || '').includes(searchLower) ||
+        (sale.notes?.toLowerCase() || '').includes(searchLower)
+      );
+    }
+
+    // Otros filtros...
+    if (filters.saleType) {
+      result = result.filter(sale => sale.saleType === filters.saleType);
+    }
+
+    if (filters.paymentStatus) {
+      result = result.filter(sale => sale.paymentStatus === filters.paymentStatus);
+    }
+
+    if (filters.clientId) {
+      result = result.filter(sale => sale.clientId === filters.clientId);
+    }
+
+    if (filters.amountRange.min) {
+      result = result.filter(sale => (sale.totalAmount || 0) >= Number(filters.amountRange.min));
+    }
+    if (filters.amountRange.max) {
+      result = result.filter(sale => (sale.totalAmount || 0) <= Number(filters.amountRange.max));
+    }
+
+    if (filters.currency) {
+      result = result.filter(sale => sale.currency === filters.currency);
+    }
+
+    if (filters.startDate) {
+      result = result.filter(sale => 
+        moment(sale.saleDate).isSameOrAfter(filters.startDate)
+      );
+    }
+    if (filters.endDate) {
+      result = result.filter(sale => 
+        moment(sale.saleDate).isSameOrBefore(filters.endDate)
+      );
+    }
+
+    // Ordenamiento
+    result.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (filters.sortBy) {
+        case 'saleDate':
+          aValue = new Date(a.saleDate);
+          bValue = new Date(b.saleDate);
+          break;
+        case 'totalAmount':
+          aValue = a.totalAmount || 0;
+          bValue = b.totalAmount || 0;
+          break;
+        case 'client':
+          aValue = a.clientInfo?.name || '';
+          bValue = b.clientInfo?.name || '';
+          break;
+        case 'invoiceNumber':
+          aValue = a.invoiceNumber || '';
+          bValue = b.invoiceNumber || '';
+          break;
+        default:
+          aValue = new Date(a.createdAt);
+          bValue = new Date(b.createdAt);
+      }
+
+      if (filters.sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    setFilteredSales(result);
   };
 
   const fetchClients = async () => {
@@ -90,170 +247,156 @@ const SalesManagement = () => {
     }
   };
 
+  useEffect(() => {
+    fetchSales();
+    fetchClients();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [filters, sales]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const applyFilters = () => {
-    fetchSales();
+  const handleAmountRangeChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      amountRange: { ...prev.amountRange, [field]: value }
+    }));
   };
 
   const resetFilters = () => {
     setFilters({
+      search: '',
       saleType: '',
       paymentStatus: '',
       startDate: '',
       endDate: '',
-      clientId: ''
+      clientId: '',
+      amountRange: { min: '', max: '' },
+      includeIVA: '',
+      currency: '',
+      sortBy: 'saleDate',
+      sortOrder: 'desc'
     });
   };
 
-  const handleNewSaleChange = (e) => {
-    const { name, value } = e.target;
-    setNewSaleData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // ✅ MANEJO MEJORADO DE ITEMS CON MÚLTIPLES MONEDAS
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...newSaleData.items];
-    updatedItems[index][field] = value;
-    
-    // Si cambia la moneda, ajustar el tipo de cambio por defecto
-    if (field === 'currency') {
-      if (value === 'USD') {
-        updatedItems[index].exchangeRate = 7300; // Valor por defecto USD
-      } else if (value === 'EUR') {
-        updatedItems[index].exchangeRate = 8000; // Valor por defecto EUR
-      } else if (value === 'PYG') {
-        updatedItems[index].exchangeRate = 1;
-      }
-    }
-    
-    setNewSaleData(prev => ({ ...prev, items: updatedItems }));
-  };
-
-  const addItem = () => {
-    setNewSaleData(prev => ({
-      ...prev,
-      items: [...prev.items, { 
-        description: '', 
-        quantity: 1, 
-        unitPrice: 0, 
-        currency: 'PYG', 
-        exchangeRate: 1 
-      }]
+  const exportToExcel = () => {
+    const excelData = filteredSales.map(sale => ({
+      'Número de Factura': sale.invoiceNumber || '',
+      'Fecha': sale.saleDate ? moment(sale.saleDate).format('DD/MM/YYYY') : '',
+      'Cliente': sale.clientInfo?.name || sale.clientInfo?.email || '',
+      'Email': sale.clientInfo?.email || '',
+      'Teléfono': sale.clientInfo?.phone || '',
+      'Tipo de Venta': sale.saleType || '',
+      'Subtotal': sale.totalAmount || 0,
+      'IVA (%)': sale.tax || 0,
+      'IVA (₲)': sale.ivaAmount || 0,
+      'Total con IVA': (sale.totalAmount || 0) + (sale.ivaAmount || 0),
+      'Moneda': sale.currency || 'PYG',
+      'Tipo de Cambio': sale.exchangeRate || 1,
+      'Método de Pago': sale.paymentMethod || '',
+      'Estado': sale.paymentStatus || '',
+      'Fecha de Vencimiento': sale.dueDate ? moment(sale.dueDate).format('DD/MM/YYYY') : '',
+      'Notas': sale.notes || ''
     }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    ws['!cols'] = [
+      { wch: 20 }, // Número de Factura
+      { wch: 12 }, // Fecha
+      { wch: 25 }, // Cliente
+      { wch: 25 }, // Email
+      { wch: 15 }, // Teléfono
+      { wch: 15 }, // Tipo de Venta
+      { wch: 15 }, // Subtotal
+      { wch: 10 }, // IVA (%)
+      { wch: 15 }, // IVA (₲)
+      { wch: 15 }, // Total con IVA
+      { wch: 10 }, // Moneda
+      { wch: 12 }, // Tipo de Cambio
+      { wch: 15 }, // Método de Pago
+      { wch: 12 }, // Estado
+      { wch: 15 }, // Fecha de Vencimiento
+      { wch: 30 }  // Notas
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    XLSX.writeFile(wb, `Ventas_${new Date().toLocaleDateString()}.xlsx`);
+    toast.success("Ventas exportadas a Excel");
   };
 
-  const removeItem = (index) => {
-    if (newSaleData.items.length > 1) {
-      const updatedItems = newSaleData.items.filter((_, i) => i !== index);
-      setNewSaleData(prev => ({ ...prev, items: updatedItems }));
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'pagado':
+        return 'bg-green-100 text-green-800';
+      case 'pendiente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'vencido':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // ✅ CÁLCULO TOTAL CON MÚLTIPLES MONEDAS
-  const calculateTotal = () => {
-    const subtotal = newSaleData.items.reduce((sum, item) => {
-      let unitPriceInPYG = item.unitPrice;
-      if (item.currency === 'USD') {
-        unitPriceInPYG = item.unitPrice * (item.exchangeRate || 7300);
-      } else if (item.currency === 'EUR') {
-        unitPriceInPYG = item.unitPrice * (item.exchangeRate || 8000);
-      }
-      return sum + (item.quantity * unitPriceInPYG);
-    }, 0);
-    
-    const taxAmount = subtotal * (newSaleData.tax / 100);
-    return subtotal + taxAmount;
+  const getPaymentStatusIcon = (status) => {
+    switch (status) {
+      case 'pagado':
+        return <FaCheck className="w-4 h-4 text-green-600" />;
+      case 'pendiente':
+        return <FaExclamationTriangle className="w-4 h-4 text-yellow-600" />;
+      case 'vencido':
+        return <FaTimes className="w-4 h-4 text-red-600" />;
+      default:
+        return <FaInfoCircle className="w-4 h-4 text-gray-600" />;
+    }
   };
 
-  // ✅ FUNCIÓN PARA FORMATEAR MONEDA
-  const formatCurrency = (amount, currency = 'PYG') => {
-    if (currency === 'PYG') {
-      return displayPYGCurrency(amount);
-    } else if (currency === 'USD') {
-      return `US$ ${amount.toFixed(2)}`;
-    } else if (currency === 'EUR') {
-      return `€ ${amount.toFixed(2)}`;
-    }
-    return `${currency} ${amount.toFixed(2)}`;
-  };
-
-  const handleCreateSale = async (e) => {
-    e.preventDefault();
-
-    if (!newSaleData.clientId) {
-      toast.error("Debe seleccionar un cliente");
-      return;
-    }
-
-    if (newSaleData.items.some(item => !item.description || item.quantity <= 0 || item.unitPrice <= 0)) {
-      toast.error("Todos los items deben tener descripción, cantidad y precio válidos");
-      return;
-    }
-
-    // Validar tipos de cambio para monedas extranjeras
-    const hasInvalidExchangeRate = newSaleData.items.some(item => 
-      (item.currency === 'USD' || item.currency === 'EUR') && (!item.exchangeRate || item.exchangeRate <= 0)
+  const toggleSaleSelection = (saleId) => {
+    setSelectedSales(prev => 
+      prev.includes(saleId) 
+        ? prev.filter(id => id !== saleId)
+        : [...prev, saleId]
     );
-
-    if (hasInvalidExchangeRate) {
-      toast.error("Debe especificar un tipo de cambio válido para monedas extranjeras");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas`, {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: 'include',
-        body: JSON.stringify(newSaleData)
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Venta creada correctamente");
-        setShowNewSaleModal(false);
-        setNewSaleData({
-          saleType: 'terminal',
-          clientId: '',
-          items: [{ 
-            description: '', 
-            quantity: 1, 
-            unitPrice: 0, 
-            currency: 'PYG', 
-            exchangeRate: 1 
-          }],
-          tax: 10,
-          paymentMethod: 'efectivo',
-          paymentStatus: 'pendiente',
-          dueDate: '',
-          saleDate: new Date().toISOString().split('T')[0],
-          notes: ''
-        });
-        fetchSales();
-      } else {
-        toast.error(result.message || "Error al crear la venta");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
-    } finally {
-      setIsLoading(false);
-    }
   };
 
-  const handleUpdatePaymentStatus = async (saleId, newStatus) => {
+  const selectAllSales = () => {
+    setSelectedSales(filteredSales.map(s => s._id));
+  };
+
+  const clearSelection = () => {
+    setSelectedSales([]);
+  };
+
+  const getFilterDescription = () => {
+    let description = `Mostrando ${filteredSales.length} de ${sales.length} ventas`;
+    
+    if (filters.saleType) {
+      description += ` • Tipo: "${filters.saleType}"`
+    }
+    
+    if (filters.paymentStatus) {
+      description += ` • Estado: "${filters.paymentStatus}"`
+    }
+
+    if (filters.startDate && filters.endDate) {
+      description += ` • Período: ${moment(filters.startDate).format('DD/MM/YYYY')} - ${moment(filters.endDate).format('DD/MM/YYYY')}`
+    }
+
+    return description;
+  };
+
+  const updatePaymentStatus = async (saleId, newStatus) => {
     try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas/${saleId}/pago`, {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas/${saleId}/estado-pago`, {
         method: 'PATCH',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json',
         },
         credentials: 'include',
         body: JSON.stringify({ paymentStatus: newStatus })
@@ -261,10 +404,10 @@ const SalesManagement = () => {
 
       const result = await response.json();
       if (result.success) {
-        toast.success("Estado de pago actualizado");
-        fetchSales();
+        toast.success("Estado de pago actualizado correctamente");
+        fetchSales(); // Recargar las ventas
       } else {
-        toast.error(result.message || "Error al actualizar estado");
+        toast.error(result.message || "Error al actualizar el estado");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -272,42 +415,8 @@ const SalesManagement = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
-    
-    if (!fileUpload || !selectedSale) {
-      toast.error("Debe seleccionar un archivo");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('invoice', fileUpload);
-
-    try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas/${selectedSale._id}/factura`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Factura subida correctamente");
-        setShowFileUploadModal(false);
-        setFileUpload(null);
-        setSelectedSale(null);
-        fetchSales();
-      } else {
-        toast.error(result.message || "Error al subir la factura");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error de conexión");
-    }
-  };
-
-  const handleDeleteSale = async (saleId) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta venta?')) {
+  const deleteSale = async (saleId) => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta venta?")) {
       return;
     }
 
@@ -320,7 +429,7 @@ const SalesManagement = () => {
       const result = await response.json();
       if (result.success) {
         toast.success("Venta eliminada correctamente");
-        fetchSales();
+        fetchSales(); // Recargar las ventas
       } else {
         toast.error(result.message || "Error al eliminar la venta");
       }
@@ -330,281 +439,491 @@ const SalesManagement = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pagado': return 'bg-green-100 text-green-800';
-      case 'pendiente': return 'bg-yellow-100 text-yellow-800';
-      case 'parcial': return 'bg-blue-100 text-blue-800';
-      case 'vencido': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'pagado': return 'Pagado';
-      case 'pendiente': return 'Pendiente';
-      case 'parcial': return 'Parcial';
-      case 'vencido': return 'Vencido';
-      default: return status;
-    }
-  };
-
-  const getSaleTypeLabel = (type) => {
-    switch (type) {
-      case 'terminal': return 'Terminal';
-      case 'logistica': return 'Logística';
-      case 'producto': return 'Producto';
-      case 'servicio': return 'Servicio';
-      case 'otros': return 'Otros';
-      default: return type;
-    }
-  };
-
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold flex items-center">
-          <FaMoneyBillWave className="mr-2 text-green-600" />
-          Gestión de Ventas
-        </h1>
-        
-        <button
-          onClick={() => setShowNewSaleModal(true)}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center"
-        >
-          <FaPlus className="mr-2" /> Nueva Venta
-        </button>
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center text-gray-900">
+              <FaShoppingBag className="mr-3 text-green-600" />
+              Gestión de Ventas
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Administra las ventas con soporte para IVA de Paraguay y múltiples monedas
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+              className="flex items-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {viewMode === 'table' ? <FaExpand className="w-4 h-4 mr-2" /> : <FaCompress className="w-4 h-4 mr-2" />}
+              {viewMode === 'table' ? 'Vista Tarjetas' : 'Vista Tabla'}
+            </button>
+            
+            <button
+              onClick={fetchSales}
+              className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <FaSyncAlt className="w-4 h-4 mr-2" />
+              Actualizar
+            </button>
+            
+            <button
+              onClick={() => navigate('/panel-admin/nueva-venta')}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FaPlus className="w-4 h-4 mr-2" />
+              Nueva Venta
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex items-center mb-3">
-          <FaFilter className="mr-2 text-gray-600" />
-          <h3 className="font-medium">Filtros</h3>
+      {/* Estadísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <FaShoppingBag className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Total</p>
+              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <FaMoneyBillWave className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Subtotal</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalAmount)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <FaFileInvoiceDollar className="w-5 h-5 text-purple-600" />
+              </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">IVA (10%)</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalIVA)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <FaDollarSign className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Total con IVA</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalAmountWithIVA)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-50 rounded-lg">
+              <FaExclamationTriangle className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Pendientes</p>
+              <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <FaCheck className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Pagadas</p>
+              <p className="text-xl font-bold text-gray-900">{stats.paid}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-teal-50 rounded-lg">
+              <FaCalendarAlt className="w-5 h-5 text-teal-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Este Mes</p>
+              <p className="text-xl font-bold text-gray-900">{stats.thisMonth}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <FaChartLine className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-600">Mes (₲)</p>
+              <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.thisMonthAmount)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros y búsqueda */}
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3">
+          <h3 className="text-base font-semibold flex items-center mb-2 sm:mb-0">
+            <FaFilter className="mr-2 text-gray-600" />
+            Filtros y Búsqueda
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-3 py-1 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm"
+            >
+              {showFilters ? 'Ocultar' : 'Filtros'}
+            </button>
+            <button
+              onClick={resetFilters}
+              className="px-3 py-1 text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 text-sm"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        {/* Búsqueda principal */}
+        <div className="mb-4">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Buscar por factura, cliente, email o notas..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Venta
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Venta</label>
             <select
               name="saleType"
               value={filters.saleType}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los tipos</option>
               <option value="terminal">Terminal</option>
-              <option value="logistica">Logística</option>
-              <option value="producto">Producto</option>
-              <option value="servicio">Servicio</option>
-              <option value="otros">Otros</option>
+                <option value="online">Online</option>
+                <option value="mayorista">Mayorista</option>
+                <option value="retail">Retail</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado de Pago
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Pago</label>
             <select
               name="paymentStatus"
               value={filters.paymentStatus}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="parcial">Parcial</option>
               <option value="pagado">Pagado</option>
+                <option value="pendiente">Pendiente</option>
               <option value="vencido">Vencido</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cliente
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
             <select
               name="clientId"
               value={filters.clientId}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Todos los clientes</option>
               {clients.map(client => (
                 <option key={client._id} value={client._id}>
-                  {client.name} {client.company ? `(${client.company})` : ''}
+                    {client.name || client.email}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha Desde
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+              <select
+                name="currency"
+                value={filters.currency}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todas las monedas</option>
+                <option value="PYG">Guaraní (₲)</option>
+                <option value="USD">Dólar ($)</option>
+                <option value="EUR">Euro (€)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Mínimo</label>
+              <input
+                type="number"
+                value={filters.amountRange.min}
+                onChange={(e) => handleAmountRangeChange('min', e.target.value)}
+                placeholder="0"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Máximo</label>
+              <input
+                type="number"
+                value={filters.amountRange.max}
+                onChange={(e) => handleAmountRangeChange('max', e.target.value)}
+                placeholder="999999999"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
             <input
               type="date"
               name="startDate"
               value={filters.startDate}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha Hasta
-            </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
             <input
               type="date"
               name="endDate"
               value={filters.endDate}
               onChange={handleFilterChange}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+              <select
+                name="sortBy"
+                value={filters.sortBy}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="saleDate">Fecha</option>
+                <option value="totalAmount">Monto</option>
+                <option value="client">Cliente</option>
+                <option value="invoiceNumber">Número de Factura</option>
+              </select>
         </div>
 
-        <div className="flex justify-end gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+              <select
+                name="sortOrder"
+                value={filters.sortOrder}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="desc">Descendente</option>
+                <option value="asc">Ascendente</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Acciones masivas */}
+      {selectedSales.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedSales.length} ventas seleccionadas
+              </span>
           <button
-            onClick={resetFilters}
-            className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
+                onClick={clearSelection}
+                className="ml-3 text-sm text-blue-600 hover:text-blue-800"
           >
-            Limpiar
+                Limpiar selección
           </button>
+            </div>
+            <div className="flex space-x-2">
           <button
-            onClick={applyFilters}
-            className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 text-sm"
+                onClick={exportToExcel}
+                className="flex items-center px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
           >
-            Aplicar Filtros
+                <FaDownload className="w-3 h-3 mr-1" />
+                Exportar
           </button>
         </div>
       </div>
+        </div>
+      )}
 
-      {/* Tabla de ventas */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Cargando ventas...</p>
+      {/* Información de filtros */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-gray-600">
+          {getFilterDescription()}
           </div>
-        ) : sales.length === 0 ? (
-          <div className="p-8 text-center">
-            <FaFileInvoiceDollar className="text-5xl text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No se encontraron ventas.</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 text-sm"
+          >
+            <FaFileExcel className="w-4 h-4 mr-2" />
+            Exportar Excel
+          </button>
           </div>
-        ) : (
+      </div>
+
+      {/* Lista de ventas */}
+      {viewMode === 'table' ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Factura</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedSales.length === filteredSales.length && filteredSales.length > 0}
+                      onChange={selectedSales.length === filteredSales.length ? clearSelection : selectAllSales}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Factura / Cliente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Monto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    IVA
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {sales.map((sale) => (
-                  <tr key={sale._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {sale.saleNumber}
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSales.map((sale, index) => (
+                  <tr key={sale._id || index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedSales.includes(sale._id)}
+                        onChange={() => toggleSaleSelection(sale._id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {getSaleTypeLabel(sale.saleType)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      <div>
-                        <div className="font-medium">{sale.clientSnapshot?.name || sale.client?.name}</div>
-                        {sale.clientSnapshot?.company && (
-                          <div className="text-xs text-gray-400">{sale.clientSnapshot.company}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      <div className="font-medium">{displayPYGCurrency(sale.totalAmount)}</div>
-                      {/* Mostrar si hay items en moneda extranjera */}
-                      {sale.items?.some(item => item.currency !== 'PYG') && (
-                        <div className="text-xs text-blue-600 flex items-center justify-end">
-                          <FaDollarSign className="mr-1" /> Multi-moneda
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <FaUser className="h-5 w-5 text-gray-400" />
+                          </div>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">
-                      {sale.tax}%
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="relative group">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(sale.paymentStatus)}`}>
-                          {getStatusLabel(sale.paymentStatus)}
-                        </span>
-                        
-                        {/* Menú desplegable para cambiar estado */}
-                        <div className="absolute right-0 mt-2 hidden group-hover:block z-10 w-32 bg-white rounded-md shadow-lg">
-                          <div className="py-1">
-                            {['pendiente', 'parcial', 'pagado', 'vencido'].map((status) => (
-                              <button
-                                key={status}
-                                className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left ${sale.paymentStatus === status ? 'font-medium' : ''}`}
-                                onClick={() => handleUpdatePaymentStatus(sale._id, status)}
-                              >
-                                {getStatusLabel(status)}
-                              </button>
-                            ))}
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            #{sale.invoiceNumber || 'N/A'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {sale.clientInfo?.name || sale.clientInfo?.email || 'Cliente no disponible'}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-600">
-                      {new Date(sale.saleDate).toLocaleDateString()}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        {sale.saleDate ? moment(sale.saleDate).format('DD/MM/YYYY') : 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {sale.saleType || 'N/A'}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      {sale.invoiceFile ? (
-                        <a
-                          href={sale.invoiceFile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-800"
-                          title="Ver factura"
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">
+                        {displayPYGCurrency(sale.totalAmount || 0)}
+                        </div>
+                      <div className="text-xs text-gray-500">
+                        {sale.currency || 'PYG'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">
+                        {displayPYGCurrency(sale.ivaAmount || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {sale.tax || 0}%
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getPaymentStatusIcon(sale.paymentStatus)}
+                        <select
+                          value={sale.paymentStatus || 'pendiente'}
+                          onChange={(e) => updatePaymentStatus(sale._id, e.target.value)}
+                          className={`ml-2 text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 ${getPaymentStatusColor(sale.paymentStatus)}`}
                         >
-                          <FaEye />
-                        </a>
-                      ) : (
+                          <option value="pendiente">Pendiente</option>
+                          <option value="pagado">Pagado</option>
+                          <option value="vencido">Vencido</option>
+                        </select>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => {
-                            setSelectedSale(sale);
-                            setShowFileUploadModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Subir factura"
-                        >
-                          <FaFileUpload />
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center space-x-2">
-                        <Link
-                          to={`/panel-admin/ventas/${sale._id}`}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-blue-600 hover:text-blue-900"
                           title="Ver detalles"
                         >
-                          <FaEye />
-                        </Link>
+                          <FaEye className="w-4 h-4" />
+                        </button>
                         <button
-                          onClick={() => handleDeleteSale(sale._id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Eliminar venta"
+                          className="text-green-600 hover:text-green-900"
+                          title="Editar"
                         >
-                          <FaTrash />
+                          <FaEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteSale(sale._id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Eliminar"
+                        >
+                          <FaTrash className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -613,353 +932,104 @@ const SalesManagement = () => {
               </tbody>
             </table>
           </div>
-        )}
       </div>
-
-      {/* Modal para nueva venta - CON SOPORTE MULTI-MONEDA */}
-      {showNewSaleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="font-bold text-xl text-gray-800">Nueva Venta</h2>
-              <button 
-                className="text-3xl text-gray-600 hover:text-black" 
-                onClick={() => setShowNewSaleModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSale} className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredSales.map((sale, index) => (
+            <div key={sale._id || index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Venta *
-                  </label>
-                  <select
-                    name="saleType"
-                    value={newSaleData.saleType}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                    required
-                  >
-                    <option value="terminal">Terminal</option>
-                    <option value="logistica">Logística</option>
-                    <option value="producto">Producto</option>
-                    <option value="servicio">Servicio</option>
-                    <option value="otros">Otros</option>
-                  </select>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    #{sale.invoiceNumber || 'N/A'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {sale.clientInfo?.name || sale.clientInfo?.email || 'Cliente no disponible'}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  {getPaymentStatusIcon(sale.paymentStatus)}
+                </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cliente *
-                  </label>
-                  <select
-                    name="clientId"
-                    value={newSaleData.clientId}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                    required
-                  >
-                    <option value="">Seleccionar cliente</option>
-                    {clients.map(client => (
-                      <option key={client._id} value={client._id}>
-                        {client.name} {client.company ? `(${client.company})` : ''}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Fecha:</span>
+                  <span className="text-sm text-gray-900">
+                    {sale.saleDate ? moment(sale.saleDate).format('DD/MM/YYYY') : 'N/A'}
+                  </span>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Venta
-                  </label>
-                  <input
-                    type="date"
-                    name="saleDate"
-                    value={newSaleData.saleDate}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  />
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Subtotal:</span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {displayPYGCurrency(sale.totalAmount || 0)}
+                  </span>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Método de Pago
-                  </label>
-                  <select
-                    name="paymentMethod"
-                    value={newSaleData.paymentMethod}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="tarjeta">Tarjeta</option>
-                    <option value="credito">Crédito</option>
-                  </select>
-                </div>
-
-                {/* ✅ SELECTOR DE IVA */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    IVA (%)
-                  </label>
-                  <select
-                    name="tax"
-                    value={newSaleData.tax}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  >
-                    <option value={0}>0% (Exento)</option>
-                    <option value={5}>5%</option>
-                    <option value={10}>10%</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha de Vencimiento
-                  </label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={newSaleData.dueDate}
-                    onChange={handleNewSaleChange}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  />
-                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">IVA:</span>
+                  <span className="text-sm text-gray-900">
+                    {displayPYGCurrency(sale.ivaAmount || 0)}
+                  </span>
               </div>
 
-              {/* Items de la venta CON SOPORTE MULTI-MONEDA */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-semibold">Items de la Venta</h3>
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                  >
-                    + Agregar Item
-                  </button>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-600">Total:</span>
+                  <span className="text-sm font-bold text-green-600">
+                    {displayPYGCurrency((sale.totalAmount || 0) + (sale.ivaAmount || 0))}
+                  </span>
                 </div>
 
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Moneda</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">T.C.</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal (₲)</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {newSaleData.items.map((item, index) => (
-                        <tr key={index}>
-                          <td className="px-3 py-2">
-                            <input
-                              type="text"
-                              value={item.description}
-                              onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                              className="w-full p-1 border border-gray-300 rounded text-sm"
-                              placeholder="Descripción del item"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                              className="w-16 p-1 border border-gray-300 rounded text-center text-sm"
-                              min="1"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              value={item.unitPrice}
-                              onChange={(e) => handleItemChange(index, 'unitPrice', Number(e.target.value))}
-                              className="w-24 p-1 border border-gray-300 rounded text-right text-sm"
-                              min="0"
-                              step="0.01"
-                              required
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <select
-                              value={item.currency}
-                              onChange={(e) => handleItemChange(index, 'currency', e.target.value)}
-                              className="w-16 p-1 border border-gray-300 rounded text-sm"
-                            >
-                              <option value="PYG">₲</option>
-                              <option value="USD">$</option>
-                              <option value="EUR">€</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-2">
-                            {item.currency !== 'PYG' ? (
-                              <input
-                                type="number"
-                                value={item.exchangeRate}
-                                onChange={(e) => handleItemChange(index, 'exchangeRate', Number(e.target.value))}
-                                className="w-20 p-1 border border-gray-300 rounded text-right text-sm"
-                                min="0"
-                                step="0.01"
-                                required
-                              />
-                            ) : (
-                              <span className="text-gray-400 text-sm">-</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-right text-sm font-medium">
-                            {(() => {
-                              let unitPriceInPYG = item.unitPrice;
-                              if (item.currency === 'USD') {
-                                unitPriceInPYG = item.unitPrice * (item.exchangeRate || 7300);
-                              } else if (item.currency === 'EUR') {
-                                unitPriceInPYG = item.unitPrice * (item.exchangeRate || 8000);
-                              }
-                              return displayPYGCurrency(item.quantity * unitPriceInPYG);
-                            })()}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {newSaleData.items.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeItem(index)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <FaTrash />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Totales */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{displayPYGCurrency(calculateTotal() - (calculateTotal() * newSaleData.tax / (100 + newSaleData.tax)))}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>IVA ({newSaleData.tax}%):</span>
-                    <span>{displayPYGCurrency(calculateTotal() * newSaleData.tax / (100 + newSaleData.tax))}</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
-                    <span>Total de la Venta:</span>
-                    <span>{displayPYGCurrency(calculateTotal())}</span>
-                  </div>
+                  <span className="text-sm font-medium text-gray-600">Estado:</span>
+                  <select
+                    value={sale.paymentStatus || 'pendiente'}
+                    onChange={(e) => updatePaymentStatus(sale._id, e.target.value)}
+                    className={`text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 ${getPaymentStatusColor(sale.paymentStatus)}`}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="vencido">Vencido</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Notas */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notas
-                </label>
-                <textarea
-                  name="notes"
-                  value={newSaleData.notes}
-                  onChange={handleNewSaleChange}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg"
-                  rows="3"
-                  placeholder="Observaciones adicionales..."
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewSaleModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                >
-                  Cancelar
+              <div className="mt-4 flex space-x-2">
+                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  <FaEye className="w-3 h-3 mr-1" />
+                  Ver
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                  disabled={isLoading}
+                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  <FaEdit className="w-3 h-3 mr-1" />
+                  Editar
+                </button>
+                <button 
+                  onClick={() => deleteSale(sale._id)}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
                 >
-                  {isLoading ? "Creando..." : "Crear Venta"}
+                  <FaTrash className="w-3 h-3 mr-1" />
+                  Eliminar
                 </button>
               </div>
-            </form>
           </div>
+          ))}
         </div>
       )}
 
-      {/* Modal para subir factura */}
-      {showFileUploadModal && selectedSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="font-bold text-lg text-gray-800">
-                Subir Factura - {selectedSale.saleNumber}
-              </h2>
-              <button 
-                className="text-2xl text-gray-600 hover:text-black" 
-                onClick={() => {
-                  setShowFileUploadModal(false);
-                  setSelectedSale(null);
-                  setFileUpload(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleFileUpload} className="p-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Archivo de Factura (PDF o Imagen)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setFileUpload(e.target.files[0])}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Formatos permitidos: PDF, JPG, PNG (Máx. 5MB)
+      {filteredSales.length === 0 && !isLoading && (
+        <div className="text-center py-12">
+          <FaShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron ventas</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Intenta ajustar los filtros para ver más resultados.
                 </p>
               </div>
+      )}
 
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFileUploadModal(false);
-                    setSelectedSale(null);
-                    setFileUpload(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Subir Factura
-                </button>
-              </div>
-            </form>
-          </div>
+      {isLoading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500">Cargando ventas...</p>
         </div>
       )}
     </div>

@@ -1,0 +1,22 @@
+# Cache headers for better performance
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Cache static assets
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache images
+/images/*
+  Cache-Control: public, max-age=2592000
+
+# Cache API responses
+/api/*
+  Cache-Control: public, max-age=300
+
+# Cache HTML
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate

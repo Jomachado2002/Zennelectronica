@@ -1,0 +1,180 @@
+RESUMEN DE RESPALDO - PRODUCTOS DE NOTEBOOKS
+================================================
+Fecha: 10/16/2025, 5:57:37 AM
+Total de productos: 166
+Archivo de respaldo: notebooks_backup_2025-10-16T08-57-37-284Z.json
+Tamaño del archivo: 353 KB
+
+LISTA DE PRODUCTOS RESPALDADOS:
+1. Notebook Dell Inspiron 15 3000-3520 Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Carbon Negro (Inglés) (DELL) - 3 imágenes
+2. Notebook HP Probook 460 G11 Intel Core Ultra 7 155U Pantalla Full HD 16" / 32GB de RAM / 1TB SSD - Plata (Inglés) (HP) - 3 imágenes
+3. Notebook Gamer ROG Strix G16 G614JU-NS73 Intel Core i7 13650HX Pantalla WUXGA 16.0  16GB de RAM  512GB SSD  GeForce RTX4050 6GB -Gris (Inglés) (ROG STRIX) - 3 imágenes
+4. Notebook Acer Chromebook 311 CBOA311-1H-C90F Intel Celeron N4500 Pantalla HD 11.6" / 4GB de RAM / 64GB eMMC - Star Negro (Netbook) (Inglés) (ACER) - 3 imágenes
+5. Notebook Acer Chromebook 315 CB315-4H-C7A1 Intel Celeron N4500 Pantalla Full HD 15.6  4GB de RAM  64GB eMMC - Pure Plata (Inglés) (ACER) - 3 imágenes
+6. Notebook HP 15T-FD000 Intel Core i5 1334U Pantalla HD 15.6  8GB de RAM  256GB SSD - Plata (Inglés) (HP) - 3 imágenes
+7. Notebook ASUS Vivobook S16 Flip TP3604VA-WS51T Intel Core i5 1335U Pantalla Touch WUXGA 16.0" / 8GB de RAM / 512GB SSD - Midnight Negro (Inglés) (ASUS) - 3 imágenes
+8. Notebook ASUS Vivobook S16 Flip TP3604VA-EB94T Intel Core i9 13900H Pantalla Touch WUXGA 16.0" / 16GB de RAM / 1TB SSD - Midnight Negro (Inglés) (ASUS) - 3 imágenes
+9. Notebook Gamer MSI Cyborg 15 A13VE-1644US Intel Core i7 13620H Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD / GeForce RTX4050 6GB - Translucent Negro (Inglés) (MSI) - 3 imágenes
+10. Notebook HP ENVY X360 14-FC0023DX Intel Core Ultra 7 155U Pantalla Touch WUXGA 14.0  16GB de RAM  1TB SSD - Gris (Inglés) (HP) - 3 imágenes
+11. Notebook HP Probook 460 G11 Intel Core Ultra 7 155U Pantalla Full HD 16  32GB de RAM  512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+12. Notebook Gamer MSI Katana A15 AI B8VF-270US AMD Ryzen 9 8945HS Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD / GeForce RTX4060 8GB - Cosmos Gris (Inglés) (MSI) - 3 imágenes
+13. Notebook Gamer ASUS TUF FA608WI-AB96 AMD Ryzen AI 9 HX 370 Pantalla WQXGA 16.0  32GB de RAM  1TB SSD  GeForce RTX4070 8GB - Jaeger Gray (Inglés) (ASUS) - 3 imágenes
+14. Notebook Acer Swift 14 AI SF14-11T-X3RZ Snapdragon X Elite Pantalla Touch WQXGA 14.5  16GB de RAM  1TB SSD - Steel Gris (ACER) - 3 imágenes
+15. Notebook HP 250 G10 Intel Core i3 1315U Pantalla HD 15.6" / 8GB de RAM / 256GB SSD - Negro (Español) (HP) - 3 imágenes
+16. Notebook Gamer ROG Zephyrus GU605MZ-G16.U94080 Intel Core Ultra 9 185H Pantalla OLED WQXGA 16.0  32GB de RAM  1TB SSD  GeForce RTX4080 12GB - Eclipse Gris (Inglés) (ASUS) - 3 imágenes
+17. Notebook Gamer ROG Zephyrus G16 GU605MY-G16.U94090 Intel Core Ultra 9 185H Pantalla OLED WQXGA 16.0" / 32GB de RAM / 2TB SSD / GeForce RTX4090 16GB - Eclipse Gris (Inglés) (ASUS) - 3 imágenes
+18. Notebook ASUS Vivobook S 14 M5406WA-DS76 AMD Ryzen AI 9 365 Pantalla OLED WQ+ 14.0  24GB de RAM  512GB SSD - Neutral Negro (Inglés) (ASUS) - 6 imágenes
+19. Notebook Gamer Acer Predator Helios 18 PH18-72-924C Intel Core i9 14900HX Pantalla WQXGA 18  32GB de RAM  1TB SSD  GeForce RTX4090 16GB - Abyssal Negro (Inglés) (ACER) - 3 imágenes
+20. Notebook ASUS Vivobook S 14 Q423SA-U5512 Intel Core Ultra 5 226V Pantalla OLED WUXGA 14.0  16GB de RAM  512GB SSD - Neutral Negro (Inglés) (ASUS) - 3 imágenes
+21. Notebook Gamer Lenovo LOQ 15ARP9 AMD Ryzen 7 7435HS Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4070 8GB - Luna Gris (Inglés) (LENOVO) - 3 imágenes
+22. Notebook HP Omnibook X 14-FE1003DX Snapdragon X Plus Pantalla Tocuh 2.2K 14.0" / 16GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+23. Notebook Dell Latitude 7455 Snapdragon X Elite Pantalla QHD+ 14.0" / 16GB de RAM / 512GB SSD - Gris (Inglés) (DELL) - 3 imágenes
+24. Notebook Gamer ROG Strix Scar 18 G834JYR-R6103W Intel Core i9 14900HX Pantalla WQXGA 18.0  64GB de RAM  2TB SSD  GeForce RTX4090 16GB - Off Negro (Inglés) (ASUS) - 3 imágenes
+25. Notebook Lenovo IdeaPad 5 2-em-1 14Q8X9 Snapdragon X Plus 8 Core Pantalla Touch WUXGA 14.0" / 16GB de RAM / 1TB SSD - Luna Gris (83GH0009US) (Inglés) (LENOVO) - 3 imágenes
+26. Notebook Gamer ROG Strix G18 G814JZR-N6121W Intel Core i9 14900HX Pantalla WQXGA 18.0" / 32GB de RAM / 1TB SSD / GeForce RTX4080 12GB - Eclipse Gris (Español) (ASUS) - 3 imágenes
+27. Notebook Acer Aspire 3 14 A314-36P-3772 Intel Core i3 N305 Pantalla Full HD 14" / 8GB de RAM / 128GB - Pure Plata (Inglés) (ACER) - 3 imágenes
+28. Notebook HP 15-FD0023DX Intel Core i3 1215U Pantalla Touch HD 15.6" / 8GB de RAM / 256GB SSD - Plata (Inglés) (HP) - 3 imágenes
+29. Notebook ASUS Vivobook S15 Q5507QA-S15.X1P512 Snapdragon X Plus Pantalla OLED 15.6" / 16GB de RAM / 512GB SSD - Natural Negro (Inglés) (ASUS) - 3 imágenes
+30. Notebook Dell Inspiron 14 I7440-5311BLU-PUS Intel Core 5 120U Pantalla Touch Full HD+ 14" / 8GB de RAM / 512GB SSD - Ice Azul (Inglés) (DELL) - 3 imágenes
+31. Notebook ASUS Vivobook F1504ZA-WH52 Intel Core i5 1235U Pantalla Full HD 15.6  8GB de RAM  256GB SSD - Quiet Azul (Inglés) (ASUS) - 3 imágenes
+32. Notebook Samsung Galaxy Book 4 Edge NP940XMA-KB1US Snapdragon X Elite Pantalla Touch WQXGA 14" / 16GB de RAM / 512GB eUFS - Sapphire Azul (Inglés) (SAMSUNG) - 3 imágenes
+33. Notebook Dell Inspiron 16 I7640-5359BLU-PUS Intel Core Ultra 5 125U Pantalla Touch Full HD+ / 16GB de RAM / 512GB SSD - Ice Azul (Inglés) (DELL) - 3 imágenes
+34. Notebook Gamer ROG Zephyrus G16 GA605WV-G16.R94060 AMD Ryzen AI 9 HX 370 Pantalla OLED WQXGA 16.0" / 16GB de RAM / 1TB SSD / GeForce RTX4060 8GB - Platinum Blanco (Inglés) (ASUS) - 3 imágenes
+35. Notebook ASUS Vivobook F1605VAP-DS74 Intel Core 7 150U Pantalla WUXGA 16.0" / 16GB de RAM / 1TB SSD - Indie Negro (Inglés) (ASUS) - 3 imágenes
+36. Notebook HP ENVY X360 15-FE1082WM Intel Core Ultra 7 155U Pantalla Touch Full HD 15.6" / 16GB de RAM / 512GB SSD - Gris (Inglés) (HP) - 3 imágenes
+37. Notebook Lenovo IdeaPad 1 15IAU7 Intel Core i5 1235U Pantalla Touch Full HD 15.6" / 8GB de RAM / 512GB SSD - Abyss Azul (82QD00HMUS) (Inglés) (LENOVO) - 3 imágenes
+38. Notebook ASUS E410KA-PM464 Intel Pentium N6000 Pantalla Full HD 14" / 4GB de RAM / 64GB eMMC - Star Negro (Inglés) (ASUS) - 3 imágenes
+39. Notebook HP ENVY X360 16-AD0023DX AMD Ryzen 7 8840HS Pantalla Touch WUXGA 16.0" / 16GB de RAM / 1TB SSD - Gris (Inglés) (HP) - 3 imágenes
+40. Notebook Acer Aspire Vero 16 AV16-51P-58KU Intel Core Ultra 5 125U Pantalla WUXGA 16" / 8GB de RAM / 512GB SSD - Cobblestone Gris (Inglés) (ACER) - 3 imágenes
+41. Notebook HP 15-FD0182WM Intel Core i7 1355U Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD - Plata (Inglés) (HP) - 3 imágenes
+42. Notebook Lenovo Yoga Slim 7 15ILL9 Intel Core Ultra 7 256V Pantalla Touch 2.8K 15.3" / 16GB de RAM / 1TB SSD - Luna Gris (83HM0000US) (Inglés) (LENOVO) - 3 imágenes
+43. Notebook HP 15-FD0095WM Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Plata (Inglés) (HP) - 3 imágenes
+44. Notebook Acer Swift GO 14 SFG14-73T-75FA Intel Core Ultra 7 155H Pantalla Touch WUXGA 14" / 16GB de RAM / 1TB SSD - Pure Plata (Inglés) (ACER) - 3 imágenes
+45. Notebook Acer GadGet ETBook SE E10 Intel Celeron N4020C Pantalla HD 14" / 8GB de RAM / 256GB SSD - Gris (Portugués) (ACER) - 3 imágenes
+46. Notebook Acer GadGet ETBook Plus E10 Intel N100 Pantalla HD 15.6" / 8GB de RAM / 256GB SSD - Gris (Portugués) (ACER) - 5 imágenes
+47. Notebook Lenovo IdeaPad 1 15AMN7 AMD Ryzen 5 7520U Pantalla Full HD 15.6" / 16GB de RAM / 256GB SSD - Abyss Azul (82VG00QFUS) (Inglés) (LENOVO) - 3 imágenes
+48. Notebook Lenovo IdeaPad Slim 3 15ABR8 AMD Ryzen 7 7730U Pantalla Touch Full HD 15.6" / 16GB de RAM / 512GB SSD - Abyss Azul (82XM00BAUS) (Inglés) (LENOVO) - 3 imágenes
+49. Notebook Gamer Dell G5 15-5535 AMD Ryzen 7 7840HS Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4060 8GB - Dark Shadow Gris (Inglés) (DELL) - 3 imágenes
+50. Notebook HP 14-DQ0052DX Intel Celeron N4120 de 1.1GHz Pantalla HD 14" / 4GB de RAM / 64GB eMMC - Blanco (Inglés) (HP) - 3 imágenes
+51. Notebook Lenovo IdeaPad 1 15AMN7 AMD Ryzen 3 7320U Pantalla Full HD 15.6" / 4GB de RAM / 128GB SSD - Abyss Azul (82VG00R2US) (Inglés) (HP) - 3 imágenes
+52. Notebook Gamer HP Victus 15-FA1082WM Intel Core i5 13420H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4050 6GB - Negro (Inglés) (HP) - 3 imágenes
+53. Notebook HP 15-FD0131WM Intel Core i3 N305 Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Plata (Inglés) (HP) - 3 imágenes
+54. Notebook HP 15-FD0005DX Intel Core i5 1235U Pantalla Touch Full HD 15.6" / 8GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+55. Notebook Acer Aspire Vero 16 AV16-51P-7063 Intel Core Ultra 7 155U Pantalla WQXGA 16  16GB de RAM  512GB SSD - Cobblestone Gris (Inglés) (ACER) - 3 imágenes
+56. Notebook Lenovo IdeaPad 1 15IAU7 Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Abyss Azul (82QD00GNUS) (Inglés) (LENOVO) - 3 imágenes
+57. Notebook Gamer ROG Strix G18 G814JZR-N6121W Intel Core i9 14900HX Pantalla WQXGA 18.0" / 32GB de RAM / 1TB SSD / GeForce RTX4080 12GB - Eclipse Gris (Inglés) (ASUS) - 7 imágenes
+58. Notebook ASUS VivoBook 16X K3605ZF-MB348W Intel Core i5 12500H Pantalla WUXGA 16.0 " / 8GB de RAM / 512GB SSD / GeForce RTX2050 4GB - Indie Negro (Inglés) (ASUS) - 6 imágenes
+59. Notebook Gamer ASUS TUF A14 FA401WV-WB94 AMD Ryzen AI HX 370 Pantalla WQXGA 14.0  16GB de RAM  1TB SSD  GeForce RTX4060 8GB - Jaeger Gris (Inglés) (ASUS) - 7 imágenes
+60. Notebook Dell XPS9340-7319BLK-PLUS Intel Core Ultra 7 155H Pantalla Full HD+ 13.4" / 16GB de RAM / 512GB SSD - Graphite (Inglés) (DELL) - 3 imágenes
+61. Notebook Lenovo IdeaPad 5 14AHP9 AMD Ryzen 7 8845HS Pantalla Touch WUXGA 14.0  16GB de RAM  1TB SSD - Cosmic Azul (83DR000GUS) (Inglés) (LENOVO) - 3 imágenes
+62. Notebook Dell Inspiron 16 Plus 7630 Intel Core i7 13620H Pantalla QHD 2.5K 16.0" / 16GB de RAM / 1TB SSD / GeForce RTX4060 8GB - Platinum Plata (Inglés) (DELL) - 3 imágenes
+63. Notebook Lenovo IdeaPad 1 14IGL7 Intel Celeron N4020 Pantalla HD 14.0" / 4GB de RAM / 128GB eMMC - Abyss Azul (82V6009NUS) (LENOVO) - 3 imágenes
+64. Notebook Lenovo IdeaPad 1 15AMN7 AMD Ryzen 5 7520U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Abyss Azul (82VG00J6LM) (LENOVO) - 3 imágenes
+65. Notebook Lenovo IdeaPad 3 15IAU7 Intel Core i7 1255U Pantalla Touch Full HD 15.6" / 16GB de RAM / 512GB SSD - Artic Gris (82RK017QUS) (Inglés) (LENOVO) - 3 imágenes
+66. Notebook Lenovo IdeaPad 5 2-en-1 16IRU9 Intel Core 5 120U Pantalla Touch WUXGA 16.0" / 8GB de RAM / 512GB SSD - Cosmic Azul (83DU0001US) (Inglés) (LENOVO) - 3 imágenes
+67. Notebook ASUS Vivobook GO E1504GA-WS36 i3 N305 Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Mixed Negro (Inglés) (ASUS) - 6 imágenes
+68. Notebook ASUS VivoBook Pro 15 Q543MJ-U93050 Intel Core Ultra 9 185H Pantalla OLED Full HD 15.6  24GB de RAM  2TB SSD  GeForce RTX3050 6GB - Earl Gris (Inglés) (ASUS) - 8 imágenes
+69. Notebook HP 15-FD0107DX Intel Core i7 1255U Pantalla Touch Full HD 15.6" / 16GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+70. Notebook Gamer Acer Nitro V 16 ANV16-41-R5K2 AMD Ryzen 7 8845HS Pantalla WUXGA 16" / 16GB de RAM / 1TB SSD / GeForce RTX4060 8GB - Obsidian Negro (Inglés) (ACER) - 3 imágenes
+71. Notebook Gamer HP Victus 15-FA1657NR Intel Core i7 13620H Pantalla Full HD 15.6  16GB de RAM  512GB SSD  GeForce RTX4060 8GB - Azul (Inglés) (HP) - 3 imágenes
+72. Notebook HP Probook 460 G11 Intel Core Ultra 7 155U Pantalla Full HD 16" / 16GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+73. Notebook Dell Inspiron 16 I5640-7519BLU-PUS Intel Core 7 150U Pantalla Touch Full HD+ 16.0" / 16GB de RAM / 1TB SSD - Ice Azul (Inglés) (DELL) - 3 imágenes
+74. Notebook ASUS E410KA-CL464 Intel Celeron N4500 Pantalla Full HD 14" / 4GB de RAM / 64GB eMMC - Star Negro (Inglés) (ASUS) - 6 imágenes
+75. Notebook ASUS VivoBook Pro 15 Q533MJ-U73050 Intel Core Ultra 7 155H Pantalla OLED Full HD 15.6  16GB de RAM  1TB SSD  GeForce RTX3050 6GB - Earl Gris (Inglés) (ASUS) - 3 imágenes
+76. Notebook Gamer MSI Cyborg 14 A13VF-018US Intel Core i7 13620H Pantalla Full HD+ 14" / 16GB de RAM / 512GB SSD / GeForce RTX4060 8GB - Translucent Negro (Inglés) (MSI) - 3 imágenes
+77. Notebook ASUS Vivobook GO E1504GA-NJ034W Intel Core i3 N305 Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Mixed Negro (Español) (ASUS) - 3 imágenes
+78. Notebook Acer Aspire 16 A16-51GM-71YF Intel Core 7 150U Pantalla WUXGA 16" / 16GB de RAM / 1TB SSD / GeForce RTX2050 4GB - Steel Gris (Inglés) (ACER) - 3 imágenes
+79. Notebook Lenovo Yoga 7 16IML9 Intel Core Ultra 5 125U Pantalla Touch WUXGA 16.0" / 16GB de RAM / 512GB SSD - Storm Gris (83DL0000US) (Inglés) (LENOVO) - 3 imágenes
+80. Notebook Samsung Galaxy Book 4 NP750XGK-KS2US Intel Core 7 150U Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD - Plata (Inglés) (SAMSUNG) - 3 imágenes
+81. Notebook HP 15-FD0999NR Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+82. Notebook Acer Swift GO 16 SFG16-72T-95LG Intel Core Ultra 9 185H Pantalla WUXGA 16" / 32GB de RAM / 1TB SSD - Steel Gris (Inglés) (ACER) - 3 imágenes
+83. Notebook HP 15-FD0079WM Intel N200 Pantalla HD 15.6" / 4GB de RAM / 128GB eMMC - Negro (Inglés) (HP) - 3 imágenes
+84. Notebook HP 14-FQ1035CL AMD Ryzen 7 5700U Pantalla Touch HD 14.0" / 16GB de RAM / 512GB SSD - Negro (Inglés) (HP) - 3 imágenes
+85. Notebook Acer Aspire GO 15 AG15-31P-3947 Intel Core i3 N305 Pantalla Full HD 15.6" / 8GB de RAM / 128GB UFS - Pure Plata (Inglés) (ACER) - 3 imágenes
+86. Notebook HP 14-DQ5009NR Intel Core i3 1215U Pantalla HD 14  8GB de RAM  256GB SSD - Plata (Inglés) (HP) - 3 imágenes
+87. Notebook HP 15-FC0037WM AMD Ryzen 5 7520U Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Azul (Inglés) (HP) - 3 imágenes
+88. Notebook HP ENVY X360 14-ES1013DX Intel Core 5 120U Pantalla Touch Full HD 14.0" / 8GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+89. Notebook HP 15-FC0025DX AMD Ryzen 5 7520U Pantalla Touch HD 15.6" / 8GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+90. Notebook ASUS Vivobook 15 F1504VAP-IS76T Intel Core 7 150U Pantalla Touch Full HD 15.6" / 16GB de RAM / 512GB SSD - Cool Plata (Inglés) (ASUS) - 3 imágenes
+91. Notebook ASUS Vivobook 15 F1502VA-NS96 Intel Core i9 13900H Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD - Quiet Azul (Inglés) (ASUS) - 3 imágenes
+92. Notebook HP ENVY X360 14-FA0013DX AMD Ryzen 5 8640HS Pantalla Touch WUXGA 14.0" / 16GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+93. Notebook Gamer Acer Nitro V 15 ANV15-41-R2Y3 AMD Ryzen 5 7535HS Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4050 6GB - Obsidian Negro (Inglés) (ACER) - 3 imágenes
+94. Notebook Gamer Dell G15 G5530-7388GRY-PUS Intel Core i7 13650HX Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD / GeForce RTX4060 8GB - Dark Shadow Gris (Inglés) (DELL) - 3 imágenes
+95. Notebook Gamer ASUS TUF F15 FX507VI-F15.I74070 Intel Core i7 13620H Pantalla Full HD 15.6" / 16GB de RAM / 1TB SSD / GeForce RTX4070 8GB - Mecha Gris (Inglés) (ASUS) - 3 imágenes
+96. Notebook ASUS Vivobook X1504ZA-NJ041W Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Quiet Azul (Inglés) (ASUS) - 3 imágenes
+97. Notebook Gamer ASUS TUF A15 FA506NF-HN005W AMD Ryzen 5 7535HS Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD / GeForce RTX2050 4GB - Graphite Negro (Inglés) (ASUS) - 3 imágenes
+98. Notebook ASUS Vivobook X1504ZA-NJ041W Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Quiet Azul (Español) (ASUS) - 3 imágenes
+99. Notebook Dell Inspiron 15 I3530-7837BLK-PUS Intel Core i7 1355U Pantalla Touch Full HD 15.6" / 16GB de RAM / 1TB SSD - Carbon Negro Noir (Inglés) (DELL) - 3 imágenes
+100. Notebook Gamer HP Victus 15-FA2013DX Intel Core i5 13420H Pantalla FHD 15.6" / 8GB de RAM / 512GB SSD / GeForce RTX3050 6GB - Negro (Inglés) (HP) - 3 imágenes
+101. Notebook Gamer ROG Zephyrus G16 GU605MI-G16.U94070 Intel Core Ultra 9 185H Pantalla OLED WQXGA 16" / 16GB de RAM / 1TB SSD / GeForce RTX4070 8GB - Eclipse Gris (Inglés) (ASUS) - 3 imágenes
+102. Notebook Gamer ROG Strix G16 G614JIR-N3054W Intel Core i9 14900HX Pantalla WUXGA 16.0" / 16GB de RAM / 1TB SSD / GeForce RTX4070 8GB - Eclipse Gris (Inglés) (ASUS) - 3 imágenes
+103. Notebook ASUS Vivobook X1605VA-MB493W Intel Core i9 13900H Pantalla WUXGA 16.00" / 16GB de RAM / 1TB SSD - Indie Negro (Inglés) (ASUS) - 3 imágenes
+104. Notebook Gamer Acer Nitro V 15 ANV15-51-98N0 Intel Core i9 13900H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4060 8GB - Obsidian Negro (Inglés) (ACER) - 3 imágenes
+105. Notebook Gamer Acer Predator Helios 18 PH18-72-93VM Intel Core i9 14900HX Pantalla WQXGA 18" / 32GB de RAM / 1TB SSD / GeForce RTX4080 12GB - Abyssal Negro (Inglés) (ACER) - 3 imágenes
+106. Notebook ASUS Vivobook X1404ZA-I38128 Intel Core i3 1215U Pantalla Full HD 14.0" / 8GB de RAM / 128GB SSD - Quiet Azul (Inglés) (ASUS) - 3 imágenes
+107. Notebook Gamer Alienware M16 R2 AWM16-7025BLK-PUS Intel Core Ultra 7 155H Pantalla QHD+ 16" / 16GB de RAM / 1TB SSD / GeForce RTX4070 8GB - Dark Metallic Moon (Inglés) (ALIENWARE) - 3 imágenes
+108. Notebook Gamer HP Victus 15-FA1163DX Intel Core i7 12650H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4050 6GB - Azul (Inglés) (HP) - 3 imágenes
+109. Notebook Gamer ASUS TUF FX507ZC4-HN184W Intel Core i5 12500H Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD / GeForce RTX3050 4GB - Mecha Gris (Inglés) (ASUS) - 3 imágenes
+110. Notebook Dell Inspiron 15 I3520-5124BLK-PUS Intel Core i5 1235U Pantalla Touch Full HD 15.6" / 8GB de RAM / 512GB SSD - Negro (Inglés) (DELL) - 3 imágenes
+111. Notebook Gamer Acer Nitro V 15 ANV15-51-73B9 Intel Core i7 13620H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4050 6GB - Obsidian Negro (Inglés) (ACER) - 3 imágenes
+112. Notebook Dell 3000-3520 Intel Core i3 1215U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Carbon Negro (Inglés) (DELL) - 3 imágenes
+113. Notebook Gamer MSI THIN 15 B13UC-1000US Intel Core i5 13420H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX3050 4GB - Cosmos Gris (Inglés) (MSI) - 3 imágenes
+114. Notebook Acer Aspire 3 A315-44P-R7GS AMD Ryzen 7 5700U Tela Full HD 15.6" / 16GB de RAM / 512GB SSD - Pure Plata (Inglés) (ACER) - 3 imágenes
+115. Notebook ASUS VivoBook GO E1504GA-NJ034W Intel Core i3 N305 Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Mixed Negro (Inglés) (ASUS) - 3 imágenes
+116. Notebook Lenovo IdeaPad 1 15IAU7 Intel Core i5 1235U Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD - Cloud Gris (82QD00CJUS) (Inglés) (LENOVO) - 3 imágenes
+117. Notebook Gamer ASUS TUF A16 Advantage Edition FA617NT-A16.R77700 AMD Ryzen 7 7735HS Pantalla WUXGA 16.0  16GB de RAM  512GB SSD  Radeon RX7700S 8GB - Off Negro (Inglés) (ASUS) - 3 imágenes
+118. Notebook Dell 3000-3520 Intel Core i3 1215U Pantalla Full HD 15.6" / 8GB de RAM / 256GB SSD - Carbon Negro (Inglés) (DELL) - 3 imágenes
+119. Notebook Dell Inspiron 15 I3530-7050BLK-PUS Intel Core i7 1355U Pantalla Touch Full HD 15.6  16GB de RAM  512GB SSD - Carbon Negro Noir (Inglés) (DELL) - 3 imágenes
+120. Notebook Lenovo IdeaPad 5 15IAL7 Intel Core i7 1255U Pantalla Touch Full HD 15.6" / 12GB de RAM / 512GB SSD - Abyss Azul (82SF0009US) (LENOVO) - 3 imágenes
+121. Apple MacBook Air MLY43LL/A A2681 M2 Octa Core Pantalla Retina 13.6" / 8 GB / 512 GB SSD - Medianoche (2022) (Apple) - 2 imágenes
+122. Apple MacBook Air MLY23LL/A A2681 M2 Octa Core Pantalla Retina 13.6" / 8 GB RAM / 512 GB SSD - Starlight (2022) (Apple) - 2 imágenes
+123. Notebook Gamer HP Victus 15-FA1163DX Intel Core i7 12650H Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD / GeForce RTX4050 6GB - Azul (Inglés) (HP) - 3 imágenes
+124. NB APPLE MACBOOK PRO MX2H3LL/A A3401 12-CORE M4 PRO 24GB/512GB SSD/14.2" C/CAM SPACE BLACK (2024) (Apple) - 3 imágenes
+125. Apple MacBook Pro MCX14LL/A A3112 M4 10 Core Pantalla Retina 14.2" / 24GB de RAM / 1TB SSD - Silver (2024) (Apple) - 3 imágenes
+126. Apple MacBook Pro MX2E3LL/A A3401 M4 Pro 12 Core Pantalla Retina 14.2" / 24GB de RAM / 512GB SSD - Silver (2024) (Apple) - 3 imágenes
+127. Apple MacBook Pro MW2V3LL/A A3112 M4 10 Core Pantalla Retina 14.2" / 16GB de RAM / 1TB SSD - Space Black (2024) (Apple) - 3 imágenes
+128. Apple MacBook Pro MRX63LL/A A2992 M3 Pro 11 Core Pantalla Retina 14.2" / 18GB de RAM / 512GB SSD - Silver (2023) (Apple) - 3 imágenes
+129. Apple MacBook Pro MW2W3LL/A A3112 M4 10 Core Pantalla Retina 14.2" / 16GB de RAM / 512GB SSD - Silver (2024) (Apple) - 3 imágenes
+130. Apple MacBook Air MC9K4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Starlight (2024) (Apple) - 3 imágenes
+131. Apple MacBook Air MC9H4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Space Gray (2024) (Apple) - 3 imágenes
+132. Apple MacBook Air MC9L4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Midnight (2024) (Apple) - 3 imágenes
+133. Apple MacBook Air MC9J4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Silver (2024) (Apple) - 3 imágenes
+134. Apple MacBook Air MC7C4LL/A A3241 M4 10 Core Pantalla Retina 15.3" / 16GB de RAM / 512GB SSD - Sky (2025) (Apple) - 3 imágenes
+135. Apple MacBook Air MC654LL/A A3240 M4 10 Core Pantalla Retina 13.6" / 24GB de RAM / 512GB SSD - Silver (2025) (Apple) - 3 imágenes
+136. Notebook HP Omnibook 5 16-AG1075CL AMD Ryzen AI 7 350 Tela Touch 2K 16.0" / 32GB de RAM / 1TB SSD - Prata (Inglês) (HP) - 3 imágenes
+137. Notebook Gamer Lenovo LOQ 15IAX9E Intel Core i5 12450HX Pantalla Full HD 15.6" / 8GB de RAM / 512GB SSD / GeForce RTX2050 4GB - Luna Gris (83LK0001US) (Inglés) (LENOVO) - 3 imágenes
+138. Notebook Samsung Galaxy Book 4 NP750XGK-LS2US Intel Core 7 150U Pantalla FHD 15.6  16GB de RAM  512GB SSD - Plata (Inglés) (SAMSUNG) - 3 imágenes
+139. Notebook Acer Chromebook Plus 514 CB514-4HT-359X Intel i3 N305 Pantalla Touch FHD 14" / 8GB de RAM / 512GB SSD - Steel Gris (Inglés) (ACER) - 3 imágenes
+140. Notebook HP Omnibook 5 16-AG1175CL AMD Ryzen AI 7 350 Pantalla Touch 2K 16.0" / 16GB de RAM / 1TB SSD - Plata (Inglés) (HP) - 3 imágenes
+141. Notebook HP Omnibook X Flip 16-AS0023DX Intel Core Ultra 7 256V Pantalla Touch 2K 16.0" / 16GB de RAM / 1TB SSD - Plata (Inglés) (HP) - 3 imágenes
+142. Notebook Gamer MSI Vector A18 HX A9WIG-065US AMD Ryzen 9 9955HX Pantalla QHD+ 18" / 32GB de RAM / 1TB SSD - Cosmos Gris (Inglés) (MSI) - 3 imágenes
+143. Notebook Acer Aspire Go 15 AG15-51P-79LC Intel Core i7 1255U Pantalla WUXGA 15.3" / 16GB de RAM / 512GB SSD - Steel Gris (Inglés) (ACER) - 3 imágenes
+144. Notebook Lenovo IdeaPad Slim 3 15ABR8 AMD Ryzen 7 5825U Pantalla Touch FHD 15.6  16GB de RAM  512GB SSD - Artic Gris (82XM00LMUS) (Inglés) (LENOVO) - 3 imágenes
+145. Apple MacBook Air MGN63LL/A A2337 M1 Octa Core Pantalla Retina 13.3" / 8GB de RAM / 256GB SSD - Gris (2020) (APPLE) - 3 imágenes
+146. Apple MacBook Air MC7X4ZPA A2681 M2 Octa Core Pantalla Retina 13.6  16GB de RAM  256GB SSD - Midnight (2022) (APPLE) - 3 imágenes
+147. Apple MacBook Air MW1M3LL/A A3241 M4 10 Core Pantalla Retina 15.3" / 16GB de RAM / 512GB SSD - Midnight (2025) (APPLE) - 3 imágenes
+148. Apple MacBook Air MW1L3LL/A A3241 M4 10 Core Pantalla Retina 15.3" / 16GB de RAM / 256GB SSD - Midnight (2025) (APPLE) - 3 imágenes
+149. Apple MacBook Air MW1G3LLA A3241 M4 10 Core Pantalla Retina 15.3  16GB de RAM  256GB SSD - Silver (2025) (APPLE) - 3 imágenes
+150. Apple MacBook Air MC7A4LL/A A3241 M4 10 Core Pantalla Retina 15.3" / 16GB de RAM / 256GB SSD - Sky (2025) (APPLE) - 3 imágenes
+151. Apple MacBook Air MC9H4LLA A3114 M3 Octa Core Pantalla Retina 15.3  24GB de RAM  512GB SSD - Space Gray (2024) (APPLE) - 3 imágenes
+152. Apple MacBook Air MC9L4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Midnight (2024) (APPLE) - 3 imágenes
+153. Apple MacBook Air MC9L4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Midnight (2024) (APPLE) - 3 imágenes
+154. Apple MacBook Air MC9L4LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 24GB de RAM / 512GB SSD - Midnight (2024) (APPLE) - 3 imágenes
+155. Apple MacBook Air MW1J3LLA A3241 M4 10 Core Pantalla Retina 15.3  16GB de RAM  256GB SSD - Starlight (2025) (APPLE) - 3 imágenes
+156. Apple MacBook Air MC9G4LLA A3114 M3 Octa Core Pantalla Retina 15.3  16GB de RAM  256GB SSD - Midnight (2024) (APPLE) - 3 imágenes
+157. Apple MacBook Air MRYU3LL/A A3114 M3 Octa Core Pantalla Retina 15.3" / 8GB de RAM / 256GB SSD - Midnight (2024) (APPLE) - 3 imágenes
+158. Apple MacBook Air MW123LL/A A3240 M4 10 Core Pantalla Retina 13.6" / 16GB de RAM / 256GB SSD - Midnight (2025) (APPLE) - 3 imágenes
+159. Notebook Gamer HP Victus 15-FB3093DX AMD Ryzen 7 7445HS Tela FHD 15.6  16GB de RAM  512GB SSD  GeForce RTX4050 6GB - Negro (Inglés) (HP) - 3 imágenes
+160. Notebook Gamer MSI THIN 15 B13VF-2829US Intel Core i5 13420H Pantalla Full HD 15.6  16GB de RAM  512GB SSD  GeForce RTX4060 8GB - Cosmos Gris (Inglés) (MSI) - 3 imágenes
+161. Notebook Lenovo IdeaPad 1 15IJL7 Intel Celeron N4500 Pantalla HD 15.6  4GB de RAM  128GB eMMC - Abyss Azul (82LX00D3US) (Inglés) (LENOVO) - 3 imágenes
+162. Notebook Dell Inspiron 15 3000-3520 i7 1255U Pantalla Full HD 15.6  16GB de RAM  1TB SSD - Carbon Negro (Inglés) (DELL) - 3 imágenes
+163. Notebook Acer Aspire 3 15 A315-24P-R2AG AMD Ryzen 5 7520U Pantalla FHD 15.6" / 8GB de RAM / 512GB SSD - Pure Prata (Inglés) (ACER) - 3 imágenes
+164. Notebook Acer Aspire 3 A325-42 AMD Ryzen 5 7430U Pantalla Full HD 15.6" / 16GB de RAM / 512GB SSD - Plata (Inglés (ACER) - 3 imágenes
+165. Notebook HP 255 G10 AMD Ryzen 7 7730U Pantalla Full HD" / 16GB de RAM / 512GB SSD - Plata (Inglés) (HP) - 3 imágenes
+166. Notebook Lenovo Yoga 7 16IML9 Intel Core Ultra 7 155U Pantalla Touch WUXGA 16.0" / 16GB de RAM / 1TB SSD - Storm Gris (83DL0002US) (Inglés) (Lenovo) - 2 imágenes
+
+NOTAS:
+- Este respaldo contiene todos los datos de los productos de notebooks
+- Las imágenes están referenciadas por sus URLs de Firebase
+- Para restaurar, usar el archivo JSON con los datos completos
+- La eliminación de imágenes de Firebase es irreversible

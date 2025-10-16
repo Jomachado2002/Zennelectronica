@@ -117,9 +117,54 @@ const categoryRoutes = require('./categoryRoutes');
         getAllSalesController,
         getSaleByIdController,
         updateSalePaymentController,
+        updateSalePaymentStatusController,
         uploadSaleInvoiceController,
         deleteSaleController
     } = require('../controller/sales/salesController');
+
+    // ===== ✅ NUEVOS CONTROLADORES DE VENTAS MEJORADAS =====
+    const {
+        createSalesTypeController,
+        getAllSalesTypesController,
+        getSalesTypeByIdController,
+        updateSalesTypeController,
+        deleteSalesTypeController,
+        getActiveSalesTypesController
+    } = require('../controller/sales/salesTypeController');
+
+    const {
+        createBranchController,
+        getAllBranchesController,
+        getBranchByIdController,
+        updateBranchController,
+        deleteBranchController,
+        getActiveBranchesController,
+        getMainBranchController
+    } = require('../controller/sales/branchController');
+
+    const {
+        createSalespersonController,
+        getAllSalespersonsController,
+        getSalespersonByIdController,
+        updateSalespersonController,
+        deleteSalespersonController,
+        searchSalespersonsController,
+        getActiveSalespersonsController,
+        updateSalespersonPerformanceController
+    } = require('../controller/sales/salespersonController');
+
+    const {
+        createEnhancedSaleController,
+        searchProductsForSalesController,
+        searchCustomersForSalesController,
+        getSalesFormDataController,
+        calculateItemTaxController,
+        convertAmountToWordsController,
+        validateRUCController,
+        uploadSalesAttachmentsController,
+        downloadAttachmentController,
+        upload
+    } = require('../controller/sales/enhancedSalesController');
 
     const {
         createPurchaseController,
@@ -156,6 +201,8 @@ const categoryRoutes = require('./categoryRoutes');
         getUserCardsController,
         chargeWithTokenController,
         deleteCardController
+
+        
     } = require('../controller/bancard/bancardCardsController');
 
     // ===========================================
@@ -846,7 +893,6 @@ router.get("/obtener-productos-admin", authToken, async (req, res) => {
 });
 router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/obtener-productos", getHomeProductsController);
-    router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/obtener-categorias", getCategoryProduct);
     router.post("/productos-por-categoria", getCategoryWiseProduct);
     router.post("/detalles-producto", getProductDetails);
@@ -925,10 +971,58 @@ router.post("/actualizar-producto", authToken, updateProductController);
     // ===========================================
     router.post("/finanzas/ventas", authToken, createSaleController);
     router.get("/finanzas/ventas", authToken, getAllSalesController);
+    // Moved specific routes before parameterized routes to avoid conflicts
+    router.get("/finanzas/ventas/formulario-datos", authToken, getSalesFormDataController);
+    router.get("/finanzas/ventas/productos/buscar", authToken, searchProductsForSalesController);
+    router.get("/finanzas/ventas/clientes/buscar", authToken, searchCustomersForSalesController);
+    router.post("/finanzas/ventas/calcular-impuesto", authToken, calculateItemTaxController);
+    router.post("/finanzas/ventas/monto-en-palabras", authToken, convertAmountToWordsController);
+    router.post("/finanzas/ventas/validar-ruc", authToken, validateRUCController);
+    router.post("/finanzas/ventas/upload-attachments", authToken, upload.array('files', 10), uploadSalesAttachmentsController);
+    router.get("/finanzas/ventas/download-attachment/:attachmentId", authToken, downloadAttachmentController);
     router.get("/finanzas/ventas/:saleId", authToken, getSaleByIdController);
     router.patch("/finanzas/ventas/:saleId/pago", authToken, updateSalePaymentController);
+    router.patch("/finanzas/ventas/:saleId/estado-pago", authToken, updateSalePaymentStatusController);
     router.post("/finanzas/ventas/:saleId/factura", authToken, uploadSaleInvoiceController);
     router.delete("/finanzas/ventas/:saleId", authToken, deleteSaleController);
+
+    // ===========================================
+    // ✅ RUTAS DE TIPOS DE VENTA
+    // ===========================================
+    router.post("/finanzas/tipos-venta", authToken, createSalesTypeController);
+    router.get("/finanzas/tipos-venta", authToken, getAllSalesTypesController);
+    router.get("/finanzas/tipos-venta/activos", authToken, getActiveSalesTypesController);
+    router.get("/finanzas/tipos-venta/:salesTypeId", authToken, getSalesTypeByIdController);
+    router.put("/finanzas/tipos-venta/:salesTypeId", authToken, updateSalesTypeController);
+    router.delete("/finanzas/tipos-venta/:salesTypeId", authToken, deleteSalesTypeController);
+
+    // ===========================================
+    // ✅ RUTAS DE SUCURSALES
+    // ===========================================
+    router.post("/finanzas/sucursales", authToken, createBranchController);
+    router.get("/finanzas/sucursales", authToken, getAllBranchesController);
+    router.get("/finanzas/sucursales/activas", authToken, getActiveBranchesController);
+    router.get("/finanzas/sucursales/principal", authToken, getMainBranchController);
+    router.get("/finanzas/sucursales/:branchId", authToken, getBranchByIdController);
+    router.put("/finanzas/sucursales/:branchId", authToken, updateBranchController);
+    router.delete("/finanzas/sucursales/:branchId", authToken, deleteBranchController);
+
+    // ===========================================
+    // ✅ RUTAS DE VENDEDORES
+    // ===========================================
+    router.post("/finanzas/vendedores", authToken, createSalespersonController);
+    router.get("/finanzas/vendedores", authToken, getAllSalespersonsController);
+    router.get("/finanzas/vendedores/activos", authToken, getActiveSalespersonsController);
+    router.get("/finanzas/vendedores/buscar", authToken, searchSalespersonsController);
+    router.get("/finanzas/vendedores/:salespersonId", authToken, getSalespersonByIdController);
+    router.put("/finanzas/vendedores/:salespersonId", authToken, updateSalespersonController);
+    router.patch("/finanzas/vendedores/:salespersonId/rendimiento", authToken, updateSalespersonPerformanceController);
+    router.delete("/finanzas/vendedores/:salespersonId", authToken, deleteSalespersonController);
+
+    // ===========================================
+    // ✅ RUTAS DE VENTAS MEJORADAS
+    // ===========================================
+    router.post("/finanzas/ventas-mejoradas", authToken, createEnhancedSaleController);
 
     // ===========================================
     // RUTAS DE COMPRAS

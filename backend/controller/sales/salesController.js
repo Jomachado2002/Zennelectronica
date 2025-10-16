@@ -72,7 +72,9 @@ async function createSaleController(req, res) {
             };
         });
 
-        const taxAmount = calculatedSubtotal * ((tax || 10) / 100);
+        // Calcular IVA correctamente - si tax es 0, no calcular IVA
+        const taxRate = tax !== undefined ? tax : 10;
+        const taxAmount = taxRate === 0 ? 0 : calculatedSubtotal * (taxRate / 100);
         const calculatedTotal = calculatedSubtotal + taxAmount;
 
         // Crear nueva venta
@@ -87,7 +89,7 @@ async function createSaleController(req, res) {
             },
             items: processedItems,
             subtotal: calculatedSubtotal,
-            tax: tax || 10,
+            tax: taxRate,
             taxAmount,
             totalAmount: calculatedTotal,
             paymentMethod: paymentMethod || 'efectivo',
@@ -404,11 +406,121 @@ async function uploadSaleInvoiceController(req, res) {
     }
 }
 
+/**
+ * Actualizar estado de pago de una venta
+ */
+async function updateSalePaymentStatusController(req, res) {
+    try {
+        const hasPermission = await uploadProductPermission(req.userId);
+        if (!hasPermission) {
+            return res.status(403).json({
+                message: "Permiso denegado",
+                error: true,
+                success: false
+            });
+        }
+
+        const { saleId } = req.params;
+        const { paymentStatus } = req.body;
+
+        if (!paymentStatus || !['pendiente', 'pagado', 'vencido'].includes(paymentStatus)) {
+            return res.status(400).json({
+                message: "Estado de pago inválido",
+                error: true,
+                success: false
+            });
+        }
+
+        const sale = await SaleModel.findByIdAndUpdate(
+            saleId,
+            { 
+                paymentStatus,
+                updatedAt: new Date()
+            },
+            { new: true }
+        ).populate('client', 'name company email phone');
+
+        if (!sale) {
+            return res.status(404).json({
+                message: "Venta no encontrada",
+                error: true,
+                success: false
+            });
+        }
+
+        res.json({
+            message: "Estado de pago actualizado correctamente",
+            data: sale,
+            success: true,
+            error: false
+        });
+
+    } catch (err) {
+        console.error("Error en updateSalePaymentStatusController:", err);
+        res.status(500).json({
+            message: err.message || "Error interno del servidor",
+            error: true,
+            success: false
+        });
+    }
+}
+
+/**
+ * Eliminar una venta (soft delete)
+ */
+async function deleteSaleController(req, res) {
+    try {
+        const hasPermission = await uploadProductPermission(req.userId);
+        if (!hasPermission) {
+            return res.status(403).json({
+                message: "Permiso denegado",
+                error: true,
+                success: false
+            });
+        }
+
+        const { saleId } = req.params;
+
+        const sale = await SaleModel.findByIdAndUpdate(
+            saleId,
+            { 
+                isActive: false,
+                deletedAt: new Date(),
+                deletedBy: req.userId
+            },
+            { new: true }
+        );
+
+        if (!sale) {
+            return res.status(404).json({
+                message: "Venta no encontrada",
+                error: true,
+                success: false
+            });
+        }
+
+        res.json({
+            message: "Venta eliminada correctamente",
+            success: true,
+            error: false
+        });
+
+    } catch (err) {
+        console.error("Error en deleteSaleController:", err);
+        res.status(500).json({
+            message: err.message || "Error interno del servidor",
+            error: true,
+            success: false
+        });
+    }
+}
+
 module.exports = {
     createSaleController,
     getAllSalesController,
     getSaleByIdController,
     updateSalePaymentController,
+    updateSalePaymentStatusController,
     uploadSaleInvoiceController,
     deleteSaleController
 };
