@@ -8,6 +8,7 @@ import SignUp from "../pages/SignUp"
 import AdminPanel from "../pages/AdminPanel"
 import AllUsers from "../pages/AllUsers"
 import AllProducts from "../pages/AllProducts"
+import NewProductPage from "../pages/NewProductPage"
 import CategoryProduct from "../pages/CategoryProduct"
 import ProductDetails from "../pages/ProductDetails"
 import Cart from '../pages/Cart'
@@ -38,6 +39,9 @@ import AdminDashboard from "../pages/AdminDashboard"
 // Importar componente de gestión de categorías
 import CategoriesManagement from "../components/admin/CategoriesManagement"
 
+// Importar página de gestión de tipo de cambio
+import ExchangeRateManagement from "../pages/ExchangeRateManagement"
+
 // Importar páginas financieras
 import FinancialReports from "../pages/FinancialReports"
 import ClientsList from "../pages/ClientsList"
@@ -47,10 +51,6 @@ import BudgetDetails from "../pages/BudgetDetails"
 import NewBudget from "../pages/NewBudget"
 import NewClient from "../pages/NewClient"
 import SuppliersManagement from "../pages/SuppliersManagement"
-import ProfitabilityAnalysis from "../pages/ProfitabilityAnalysis"
-import NewProfitabilityAnalysis from "../pages/NewProfitabilityAnalysis"
-import SupplierPriceComparison from "../pages/SupplierPriceComparison"
-import ProfitabilityAnalysisDetails from "../pages/ProfitabilityAnalysisDetails"
 import SalesManagement from "../pages/SalesManagement"
 import PurchaseManagement from "../pages/PurchaseManagement"
 import SaleDetails from "../pages/SaleDetails"
@@ -58,6 +58,12 @@ import PurchaseDetails from "../pages/PurchaseDetails"
 import FinancialDashboard from "../pages/FinancialDashboard"
 import CatastroResult from "../pages/CatastroResult"
 import TestBalance from "../pages/TestBalance"
+
+// Importar componentes de configuración de ventas
+import SalesTypesManagement from "../pages/SalesTypesManagement"
+import BranchesManagement from "../pages/BranchesManagement"
+import SalespersonsManagement from "../pages/SalespersonsManagement"
+import EnhancedSalesForm from "../pages/EnhancedSalesForm"
 
 const router = createBrowserRouter([
     {
@@ -175,12 +181,20 @@ const router = createBrowserRouter([
                         element: <AllUsers />
                     },
                     {
-                        path: "todos-productos",
+                        path: "productos",
                         element: <AllProducts />
+                    },
+                    {
+                        path: "productos/nuevo",
+                        element: <NewProductPage />
                     },
                     {
                         path: "categorias",
                         element: <CategoriesManagement />
+                    },
+                    {
+                        path: "tipo-cambio",
+                        element: <ExchangeRateManagement />
                     },
                     
                     
@@ -202,6 +216,10 @@ const router = createBrowserRouter([
                     {
                         path: "ventas/:saleId",
                         element: <SaleDetails />
+                    },
+                    {
+                        path: "nueva-venta",
+                        element: <EnhancedSalesForm />
                     },
                     {
                         path: "compras",
@@ -253,23 +271,20 @@ const router = createBrowserRouter([
                         path: "proveedores/:supplierId", 
                         element: <SuppliersManagement />
                     },
-                    // Gestión de análisis de rentabilidad
+                    
+                    // Configuración de Ventas
                     {
-                        path: "analisis-rentabilidad",
-                        element: <ProfitabilityAnalysis />
+                        path: "tipos-venta",
+                        element: <SalesTypesManagement />
                     },
                     {
-                        path: "analisis-rentabilidad/nuevo",
-                        element: <NewProfitabilityAnalysis />
+                        path: "sucursales",
+                        element: <BranchesManagement />
                     },
                     {
-                        path: "analisis-rentabilidad/comparar",
-                        element: <SupplierPriceComparison />
+                        path: "vendedores",
+                        element: <SalespersonsManagement />
                     },
-                    {
-                        path: "analisis-rentabilidad/:analysisId",
-                        element: <ProfitabilityAnalysisDetails />
-                    }
                 
                 ]
             }

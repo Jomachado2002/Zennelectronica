@@ -88,7 +88,7 @@ const Login = () => {
                 toast.success(dataApi.message);
 
                 if (dataApi.user.role === "ADMIN") {
-                    navigate('/panel-admin/todos-productos');
+                    navigate('/panel-admin/productos');
                 } else {
                     navigate('/');
                 }

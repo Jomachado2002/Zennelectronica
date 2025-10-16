@@ -2,7 +2,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 const logger = {
   log: (...args) => {
-    if (isDev) 
+    if (isDev) console.log(...args);
   },
   error: (...args) => {
     console.error(...args); // Siempre muestra errores

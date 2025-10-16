@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://zennelectronica02.vercel.app/sitemap.xml
+
+# Disallow admin panels
+Disallow: /panel-admin/
+Disallow: /admin/
+
+# Allow important pages
+Allow: /
+Allow: /categoria-producto
+Allow: /producto/
+Allow: /buscar
+Allow: /search

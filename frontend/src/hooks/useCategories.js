@@ -10,10 +10,33 @@ const useCategories = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axiosInstance.get('/api/admin/categories/all');
-      setCategories(response.data.data);
+      console.log('🔍 useCategories - Cargando categorías...');
+      
+      // Intentar primero con el endpoint de categorías estructuradas
+      try {
+        const response = await axiosInstance.get('/api/admin/categories/all');
+        console.log('✅ useCategories - Categorías cargadas desde /api/admin/categories/all:', response.data);
+        setCategories(response.data.data || []);
+        return;
+      } catch (adminError) {
+        console.log('⚠️ useCategories - Error con /api/admin/categories/all, intentando con /api/categorias-bd');
+      }
+      
+      // Fallback al endpoint de base de datos directa
+      const response = await axiosInstance.get('/api/categorias-bd');
+      console.log('✅ useCategories - Categorías cargadas desde /api/categorias-bd:', response.data);
+      
+      // Transformar los datos de la BD al formato esperado
+      const transformedCategories = response.data.data.map(category => ({
+        value: category.value || category.name?.toLowerCase().replace(/\s+/g, '_'),
+        label: category.label || category.name,
+        name: category.name,
+        subcategories: category.subcategories || []
+      }));
+      
+      setCategories(transformedCategories);
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      console.error('❌ useCategories - Error fetching categories:', err);
       setError(err.message);
     } finally {
       setLoading(false);

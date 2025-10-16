@@ -453,31 +453,11 @@
         },
 
         // ===========================================
-        // ANÁLISIS DE RENTABILIDAD
+        // COMPARACIÓN DE PROVEEDORES
         // ===========================================
-        createProfitabilityAnalysis: {
-            url: `${backendDomain}/api/finanzas/analisis-rentabilidad`,
-            method: 'post'
-        },
-        getAllProfitabilityAnalyses: {
-            url: `${backendDomain}/api/finanzas/analisis-rentabilidad`,
-            method: 'get'
-        },
-        getProfitabilityAnalysisById: {
-            url: `${backendDomain}/api/finanzas/analisis-rentabilidad`,
-            method: 'get'
-        },
         compareSupplierPrices: {
             url: `${backendDomain}/api/finanzas/comparar-proveedores`,
             method: 'post'
-        },
-        updateAnalysisStatus: {
-            url: `${backendDomain}/api/finanzas/analisis-rentabilidad`,
-            method: 'patch'
-        },
-        deleteAnalysis: {
-            url: `${backendDomain}/api/finanzas/analisis-rentabilidad`,
-            method: 'delete'
         },
         getSupplierProfitability: {
             url: `${backendDomain}/api/finanzas/proveedores`,
@@ -531,6 +511,36 @@
                     method: 'post'
                 }
             },
+
+        // ===========================================
+        // TIPO DE CAMBIO (USD/PYG)
+        // ===========================================
+        exchangeRate: {
+            current: {
+                url: `${backendDomain}/api/exchange-rate/current`,
+                method: 'get'
+            },
+            info: {
+                url: `${backendDomain}/api/exchange-rate/info`,
+                method: 'get'
+            },
+            history: {
+                url: `${backendDomain}/api/exchange-rate/history`,
+                method: 'get'
+            },
+            stats: {
+                url: `${backendDomain}/api/exchange-rate/stats`,
+                method: 'get'
+            },
+            simulate: {
+                url: `${backendDomain}/api/exchange-rate/simulate`,
+                method: 'post'
+            },
+            update: {
+                url: `${backendDomain}/api/exchange-rate/update`,
+                method: 'post'
+            }
+        }
     };
 
     export default SummaryApi;

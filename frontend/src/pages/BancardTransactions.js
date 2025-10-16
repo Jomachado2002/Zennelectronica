@@ -1,3 +1,4 @@
+// frontend/src/pages/BancardTransactions.js - MEJORADO CON INTERFAZ OPTIMIZADA
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { deliveryStatuses, calculateProgress } from '../helpers/deliveryHelpers';
@@ -9,26 +10,43 @@ import OrderSearchAndFilters from '../components/order/OrderSearchAndFilters';
 import { 
     FaCreditCard, 
     FaUndo, 
-    FaEye, 
-    FaSearch, 
-    FaFilter, 
     FaExclamationTriangle, 
     FaCheckCircle, 
     FaTimesCircle, 
     FaClock,
     FaSyncAlt,
     FaFileInvoiceDollar,
-    FaTruck 
+    FaTruck,
+    FaSearch,
+    FaFilter,
+    FaDownload,
+    FaEye,
+    FaChartLine,
+    FaMoneyBillWave,
+    FaUsers,
+    FaCalendarAlt,
+    FaSort,
+    FaTimes,
+    FaCheck,
+    FaExclamationCircle,
+    FaInfoCircle,
+    FaFileExcel,
+    FaPrint,
+    FaExpand,
+    FaCompress,
+    FaArrowUp,
+    FaArrowDown
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 import DeliveryManagement from '../components/admin/DeliveryManagement';
 import TransactionDetailsModal from '../components/admin/TransactionDetailsModal';
-
-
+import * as XLSX from 'xlsx';
+import displayPYGCurrency from '../helpers/displayCurrency';
 
 const BancardTransactions = () => {
     const [transactions, setTransactions] = useState([]);
+    const [filteredTransactions, setFilteredTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showRollbackModal, setShowRollbackModal] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -37,30 +55,43 @@ const BancardTransactions = () => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedDetailsTransaction, setSelectedDetailsTransaction] = useState(null);
     const [rollbackReason, setRollbackReason] = useState('');
+    
+    // Filtros mejorados
     const [filters, setFilters] = useState({
         status: '',
         delivery_status: '',
         startDate: '',
         endDate: '',
-        search: ''
+        search: '',
+        amountRange: { min: '', max: '' },
+        paymentMethod: '',
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
     });
+    
+    const [showFilters, setShowFilters] = useState(false);
+    const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
+    const [selectedTransactions, setSelectedTransactions] = useState([]);
+    
     const [showProductModal, setShowProductModal] = useState(false);
     const [pagination, setPagination] = useState({
         page: 1,
-        limit: 20,
+        limit: 25,
         total: 0,
         pages: 0
     });
 
-    // ✅ FUNCIÓN PARA FORMATEAR MONEDA PYG
-    const displayPYGCurrency = (num) => {
-        const formatter = new Intl.NumberFormat('es-PY', {
-            style: "currency",
-            currency: 'PYG',
-            minimumFractionDigits: 0
-        });
-        return formatter.format(num);
-    };
+    // Estadísticas
+    const [stats, setStats] = useState({
+        total: 0,
+        successful: 0,
+        pending: 0,
+        failed: 0,
+        totalAmount: 0,
+        averageAmount: 0,
+        todayCount: 0,
+        todayAmount: 0
+    });
 
     const fetchTransactions = useCallback(async () => {
         setIsLoading(true);
@@ -68,11 +99,23 @@ const BancardTransactions = () => {
             const queryParams = new URLSearchParams();
             
             Object.entries(filters).forEach(([key, value]) => {
-                if (value) queryParams.append(key, value);
+                if (value && key !== 'amountRange' && key !== 'sortBy' && key !== 'sortOrder') {
+                    queryParams.append(key, value);
+                }
             });
+            
+            // Agregar filtros de rango de monto
+            if (filters.amountRange.min) {
+                queryParams.append('amount_min', filters.amountRange.min);
+            }
+            if (filters.amountRange.max) {
+                queryParams.append('amount_max', filters.amountRange.max);
+            }
             
             queryParams.append('page', pagination.page);
             queryParams.append('limit', pagination.limit);
+            queryParams.append('sortBy', filters.sortBy);
+            queryParams.append('sortOrder', filters.sortOrder);
 
             const response = await fetch(`${SummaryApi.baseURL}/api/bancard/transactions?${queryParams.toString()}`, {
                 method: 'GET',
@@ -81,12 +124,17 @@ const BancardTransactions = () => {
 
             const result = await response.json();
             if (result.success) {
-                setTransactions(result.data.transactions || []);
+                const transactionsData = result.data.transactions || [];
+                setTransactions(transactionsData);
+                setFilteredTransactions(transactionsData);
                 setPagination(prev => ({
                     ...prev,
                     total: result.data.pagination.total,
                     pages: result.data.pagination.pages
                 }));
+                
+                // Calcular estadísticas
+                calculateStats(transactionsData);
             } else {
                 toast.error(result.message || "Error al cargar las transacciones");
             }
@@ -98,6 +146,38 @@ const BancardTransactions = () => {
         }
     }, [filters, pagination.page, pagination.limit]);
 
+    const calculateStats = (transactions) => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        const total = transactions.length;
+        const successful = transactions.filter(t => t.status === 'successful').length;
+        const pending = transactions.filter(t => t.status === 'pending').length;
+        const failed = transactions.filter(t => t.status === 'failed').length;
+        
+        const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        const averageAmount = total > 0 ? totalAmount / total : 0;
+        
+        const todayTransactions = transactions.filter(t => {
+            const transactionDate = new Date(t.createdAt);
+            return transactionDate >= today;
+        });
+        
+        const todayCount = todayTransactions.length;
+        const todayAmount = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        setStats({
+            total,
+            successful,
+            pending,
+            failed,
+            totalAmount,
+            averageAmount,
+            todayCount,
+            todayAmount
+        });
+    };
+
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions]);
@@ -105,756 +185,858 @@ const BancardTransactions = () => {
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
-        setPagination(prev => ({ ...prev, page: 1 }));
+    };
+
+    const handleAmountRangeChange = (field, value) => {
+        setFilters(prev => ({
+            ...prev,
+            amountRange: { ...prev.amountRange, [field]: value }
+        }));
     };
 
     const resetFilters = () => {
         setFilters({
             status: '',
+            delivery_status: '',
             startDate: '',
             endDate: '',
-            search: ''
+            search: '',
+            amountRange: { min: '', max: '' },
+            paymentMethod: '',
+            sortBy: 'createdAt',
+            sortOrder: 'desc'
         });
-        setPagination(prev => ({ ...prev, page: 1 }));
     };
 
-    const handleRollback = async () => {
-        if (!selectedTransaction || !rollbackReason.trim()) {
-            toast.error("Debe proporcionar una razón para el rollback");
-            return;
-        }
+    const exportToExcel = () => {
+        const excelData = filteredTransactions.map(transaction => ({
+            'ID': transaction.id || '',
+            'Usuario': transaction.user?.name || transaction.user?.email || 'N/A',
+            'Monto': transaction.amount || 0,
+            'Moneda': transaction.currency || 'PYG',
+            'Estado': transaction.status || '',
+            'Estado de Envío': transaction.delivery_status || 'N/A',
+            'Método de Pago': transaction.payment_method || 'N/A',
+            'Fecha': transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : '',
+            'Hora': transaction.createdAt ? new Date(transaction.createdAt).toLocaleTimeString() : '',
+            'Descripción': transaction.description || '',
+            'IP': transaction.customer_ip || '',
+            'País': transaction.card_country || '',
+            'Número de Ticket': transaction.ticket_number || '',
+            'Número de Autorización': transaction.authorization_number || ''
+        }));
 
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+
+        // Ajustar anchos de columna
+        ws['!cols'] = [
+            { wch: 15 }, // ID
+            { wch: 25 }, // Usuario
+            { wch: 15 }, // Monto
+            { wch: 10 }, // Moneda
+            { wch: 15 }, // Estado
+            { wch: 20 }, // Estado de Envío
+            { wch: 20 }, // Método de Pago
+            { wch: 12 }, // Fecha
+            { wch: 12 }, // Hora
+            { wch: 30 }, // Descripción
+            { wch: 15 }, // IP
+            { wch: 10 }, // País
+            { wch: 20 }, // Número de Ticket
+            { wch: 20 }  // Número de Autorización
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Transacciones Bancard');
+        XLSX.writeFile(wb, `Transacciones_Bancard_${new Date().toLocaleDateString()}.xlsx`);
+        toast.success("Transacciones exportadas a Excel");
+    };
+
+    const handleTransactionAction = async (transactionId, action, additionalData = {}) => {
         try {
-            setIsLoading(true);
-            
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions/${selectedTransaction._id}/rollback`, {
-                method: 'POST',
+            let endpoint = '';
+            let method = 'POST';
+            let body = { transactionId, ...additionalData };
+
+            switch (action) {
+                case 'rollback':
+                    endpoint = `${SummaryApi.baseURL}/api/bancard/rollback`;
+                    break;
+                case 'update_delivery':
+                    endpoint = `${SummaryApi.baseURL}/api/bancard/update-delivery`;
+                    break;
+                default:
+                    throw new Error('Acción no válida');
+            }
+
+            const response = await fetch(endpoint, {
+                method,
                 headers: {
-                    "Content-Type": "application/json"
+                    'Content-Type': 'application/json'
                 },
                 credentials: 'include',
-                body: JSON.stringify({ reason: rollbackReason })
+                body: JSON.stringify(body)
             });
 
             const result = await response.json();
             
             if (result.success) {
-                toast.success("✅ Transacción reversada exitosamente");
-                setShowRollbackModal(false);
-                setSelectedTransaction(null);
-                setRollbackReason('');
+                toast.success(result.message || 'Acción realizada exitosamente');
                 fetchTransactions();
+                // Cerrar modales
+                setShowRollbackModal(false);
+                setShowDeliveryModal(false);
+                setSelectedTransaction(null);
+                setSelectedDeliveryTransaction(null);
             } else {
-                if (result.requiresManualReversal) {
-                    toast.warn("⚠️ La transacción requiere reversión manual. Contacte a Bancard.");
-                } else {
-                    toast.error(result.message || "Error al reversar transacción");
-                }
+                toast.error(result.message || 'Error al realizar la acción');
             }
         } catch (error) {
-            console.error("❌ Error en rollback:", error);
-            toast.error("Error de conexión al hacer rollback");
-        } finally {
-            setIsLoading(false);
+            console.error('Error:', error);
+            toast.error('Error de conexión');
         }
     };
 
-    const checkTransactionStatus = async (transaction) => {
-        try {
-            const response = await fetch(`${SummaryApi.baseURL}/api/bancard/transactions/${transaction._id}/status`, {
-                method: 'GET',
-                credentials: 'include'
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                toast.success("Estado consultado correctamente");
-                
-            } else {
-                toast.error("Error al consultar estado");
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            toast.error("Error de conexión");
-        }
-    };
-
-    const getPaymentStatusIcon = (status) => {
-    switch (status) {
-        case 'approved': return <FaCheckCircle className="text-green-500" />;
-        case 'rejected': return <FaTimesCircle className="text-red-500" />;
-        case 'rolled_back': return <FaUndo className="text-orange-500" />;
-        case 'pending': return <FaClock className="text-yellow-500" />;
-        case 'failed': return <FaExclamationTriangle className="text-red-500" />;
-        default: return <FaClock className="text-gray-500" />;
-    }
-};
-
-    const getStatusLabel = (status) => {
+    const getStatusIcon = (status) => {
         switch (status) {
-            case 'approved': return 'Aprobado';
-            case 'rejected': return 'Rechazado';
-            case 'rolled_back': return 'Reversado';
-            case 'pending': return 'Pendiente';
-            case 'failed': return 'Fallido';
-            default: return status;
+            case 'successful':
+                return <FaCheckCircle className="w-4 h-4 text-green-600" />;
+            case 'pending':
+                return <FaClock className="w-4 h-4 text-yellow-600" />;
+            case 'failed':
+                return <FaTimesCircle className="w-4 h-4 text-red-600" />;
+            default:
+                return <FaExclamationCircle className="w-4 h-4 text-gray-600" />;
         }
     };
 
     const getStatusColor = (status) => {
+    switch (status) {
+            case 'successful':
+                return 'bg-green-100 text-green-800';
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'failed':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getDeliveryStatusColor = (status) => {
         switch (status) {
-            case 'approved': return 'bg-green-100 text-green-800';
-            case 'rejected': return 'bg-red-100 text-red-800';
-            case 'rolled_back': return 'bg-orange-100 text-orange-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'failed': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'delivered':
+                return 'bg-green-100 text-green-800';
+            case 'in_transit':
+                return 'bg-blue-100 text-blue-800';
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'cancelled':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    const toggleTransactionSelection = (transactionId) => {
+        setSelectedTransactions(prev => 
+            prev.includes(transactionId) 
+                ? prev.filter(id => id !== transactionId)
+                : [...prev, transactionId]
+        );
     };
 
-    const testRollbackForCertification = async () => {
-        try {
-            
-            
-            const approvedTransaction = transactions.find(t => t.status === 'approved' && !t.is_rolled_back);
-            
-            if (!approvedTransaction) {
-                toast.error("❌ No hay transacciones aprobadas para probar rollback. Haz un pago de prueba primero.");
-                return;
-            }
+    const selectAllTransactions = () => {
+        setSelectedTransactions(filteredTransactions.map(t => t.id));
+    };
 
-            const shopProcessId = approvedTransaction.shop_process_id;
-            
-            
-            const userConfirmed = window.confirm(
-                `🔄 PRUEBA DE ROLLBACK PARA CERTIFICACIÓN\n\n` +
-                `Se reversará la transacción #${shopProcessId}\n` +
-                `Monto: ${displayPYGCurrency(approvedTransaction.amount)}\n\n` +
-                `⚠️ Esta es una prueba requerida por Bancard.\n` +
-                `¿Continuar con la prueba?`
-            );
+    const clearSelection = () => {
+        setSelectedTransactions([]);
+    };
 
-            if (!userConfirmed) {
-                toast.info("Prueba de rollback cancelada");
-                return;
-            }
-
-            setIsLoading(true);
-            toast.info("🔄 Ejecutando prueba de rollback...");
-
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/test-rollback`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    shop_process_id: shopProcessId
-                })
-            });
-
-            const result = await response.json();
-            
-            
-
-            if (result.success) {
-                toast.success("✅ PRUEBA DE ROLLBACK EXITOSA - Bancard debería marcar como completado");
-                
-                
-                alert(
-                    `✅ PRUEBA DE ROLLBACK COMPLETADA\n\n` +
-                    `Shop Process ID: ${result.data.shop_process_id}\n` +
-                    `Respuesta Bancard: ${result.data.bancard_response?.status || 'N/A'}\n` +
-                    `Transacción local actualizada: ${result.data.local_transaction_updated ? 'Sí' : 'No'}\n\n` +
-                    `🎯 Ahora Bancard debería marcar "Recibir rollback" como completado.`
-                );
-                
-                fetchTransactions();
-            } else {
-                console.warn("⚠️ Respuesta de prueba:", result);
-                
-                if (result.details?.messages) {
-                    const errorKey = result.details.messages[0]?.key;
-                    if (errorKey === 'TransactionAlreadyConfirmed') {
-                        toast.warn("⚠️ Transacción ya confirmada - Esto es normal. Bancard igual marca como completado.");
-                        alert(
-                            `⚠️ TRANSACCIÓN YA CONFIRMADA\n\n` +
-                            `La transacción ya fue confirmada en Bancard.\n` +
-                            `Esto es normal y Bancard igual marcará como completado.\n\n` +
-                            `✅ La prueba de rollback se ejecutó correctamente.`
-                        );
-                    } else {
-                        toast.error(`❌ Error: ${result.message || 'Error en prueba de rollback'}`);
-                    }
-                } else {
-                    toast.error(result.message || "❌ Error en prueba de rollback");
-                }
-            }
-            
-        } catch (error) {
-            console.error("❌ Error en prueba de rollback:", error);
-            toast.error("❌ Error de conexión en prueba de rollback");
-        } finally {
-            setIsLoading(false);
+    const getFilterDescription = () => {
+        let description = `Mostrando ${filteredTransactions.length} de ${transactions.length} transacciones`;
+        
+        if (filters.status) {
+            description += ` • Estado: "${filters.status}"`
         }
+        
+        if (filters.search) {
+            description += ` • Buscando: "${filters.search}"`
+        }
+
+        if (filters.startDate && filters.endDate) {
+            description += ` • Período: ${filters.startDate} - ${filters.endDate}`
+        }
+
+        return description;
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-6">
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-2">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                    <FaCreditCard className="text-blue-600 text-xl" />
+        <div className="p-6">
+            {/* Header */}
+            <div className="mb-6">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h1 className="text-2xl font-bold flex items-center text-gray-900">
+                            <FaCreditCard className="mr-3 text-blue-600" />
+                            Transacciones Bancard
+                        </h1>
+                        <p className="text-gray-600 mt-1">
+                            Gestiona y monitorea todas las transacciones de pago
+                        </p>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                        <button
+                            onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
+                            className="flex items-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            {viewMode === 'table' ? <FaExpand className="w-4 h-4 mr-2" /> : <FaCompress className="w-4 h-4 mr-2" />}
+                            {viewMode === 'table' ? 'Vista Tarjetas' : 'Vista Tabla'}
+                        </button>
+                        
+                        <button
+                            onClick={fetchTransactions}
+                            className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                            <FaSyncAlt className="w-4 h-4 mr-2" />
+                            Actualizar
+                        </button>
+                    </div>
                 </div>
-                Gestión de Transacciones Bancard
-            </h1>
-            <p className="text-gray-600">
-                Panel administrativo para gestionar pagos y entregas
-            </p>
+            </div>
+
+            {/* Estadísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-blue-50 rounded-lg">
+                            <FaCreditCard className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Total</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-green-50 rounded-lg">
+                            <FaCheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Exitosas</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.successful}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-yellow-50 rounded-lg">
+                            <FaClock className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-red-50 rounded-lg">
+                            <FaTimesCircle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Fallidas</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.failed}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                            <FaMoneyBillWave className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Monto Total</p>
+                            <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalAmount)}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-orange-50 rounded-lg">
+                            <FaChartLine className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Promedio</p>
+                            <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.averageAmount)}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-teal-50 rounded-lg">
+                            <FaCalendarAlt className="w-5 h-5 text-teal-600" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Hoy</p>
+                            <p className="text-xl font-bold text-gray-900">{stats.todayCount}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-indigo-50 rounded-lg">
+                            <FaMoneyBillWave className="w-5 h-5 text-indigo-600" />
+                </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-600">Hoy (₲)</p>
+                            <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.todayAmount)}</p>
+                        </div>
+                    </div>
+                </div>
         </div>
         
-        <div className="flex flex-wrap gap-3">
+            {/* Filtros y búsqueda */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold flex items-center">
+                        <FaFilter className="mr-2 text-gray-600" />
+                        Filtros y Búsqueda
+                    </h3>
+                    <div className="flex space-x-2">
             <button
-                onClick={testRollbackForCertification}
-                disabled={isLoading}
-                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 flex items-center disabled:opacity-50 shadow-md hover:shadow-lg transition-all transform hover:scale-105"
-                title="Probar rollback para certificación Bancard"
-            >
-                <FaUndo className="mr-2" />
-                Test Rollback
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm"
+                        >
+                            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
             </button>
-            
             <button
-                onClick={fetchTransactions}
-                disabled={isLoading}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 flex items-center disabled:opacity-50 shadow-md hover:shadow-lg transition-all transform hover:scale-105"
+                            onClick={resetFilters}
+                            className="px-4 py-2 text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 text-sm"
             >
-                <FaSyncAlt className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'Cargando...' : 'Actualizar'}
+                            Limpiar
             </button>
-            
-            <Link
-                to="/panel-admin/dashboard"
-                className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-4 py-2 rounded-lg hover:from-gray-700 hover:to-gray-800 flex items-center shadow-md hover:shadow-lg transition-all"
-            >
-                📊 Dashboard
-            </Link>
+                    </div>
+                </div>
+
+                {/* Búsqueda principal */}
+                <div className="mb-4">
+                    <div className="relative">
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            name="search"
+                            value={filters.search}
+                            onChange={handleFilterChange}
+                            placeholder="Buscar por ID, usuario, ticket o descripción..."
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+                </div>
+
+                {showFilters && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                            <select
+                                name="status"
+                                value={filters.status}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Todos los estados</option>
+                                <option value="successful">Exitosas</option>
+                                <option value="pending">Pendientes</option>
+                                <option value="failed">Fallidas</option>
+                            </select>
         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Envío</label>
+                            <select
+                                name="delivery_status"
+                                value={filters.delivery_status}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Todos los estados</option>
+                                <option value="pending">Pendiente</option>
+                                <option value="in_transit">En tránsito</option>
+                                <option value="delivered">Entregado</option>
+                                <option value="cancelled">Cancelado</option>
+                            </select>
     </div>
 
-    {/* Estadísticas rápidas */}
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t border-gray-200">
-        <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{pagination.total}</div>
-            <div className="text-sm text-gray-600">Total Transacciones</div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Monto Mínimo</label>
+                            <input
+                                type="number"
+                                value={filters.amountRange.min}
+                                onChange={(e) => handleAmountRangeChange('min', e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
         </div>
-        <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-                {transactions.filter(t => t.status === 'approved').length}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Monto Máximo</label>
+                            <input
+                                type="number"
+                                value={filters.amountRange.max}
+                                onChange={(e) => handleAmountRangeChange('max', e.target.value)}
+                                placeholder="999999999"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
             </div>
-            <div className="text-sm text-gray-600">Aprobadas</div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                            <input
+                                type="date"
+                                name="startDate"
+                                value={filters.startDate}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
         </div>
-        <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">
-                {transactions.filter(t => t.status === 'rejected').length}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+                            <input
+                                type="date"
+                                name="endDate"
+                                value={filters.endDate}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
             </div>
-            <div className="text-sm text-gray-600">Rechazadas</div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+                            <select
+                                name="sortBy"
+                                value={filters.sortBy}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="createdAt">Fecha</option>
+                                <option value="amount">Monto</option>
+                                <option value="status">Estado</option>
+                                <option value="user">Usuario</option>
+                            </select>
         </div>
-        <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-                {transactions.filter(t => t.status === 'pending').length}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+                            <select
+                                name="sortOrder"
+                                value={filters.sortOrder}
+                                onChange={handleFilterChange}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="desc">Descendente</option>
+                                <option value="asc">Ascendente</option>
+                            </select>
             </div>
-            <div className="text-sm text-gray-600">Pendientes</div>
         </div>
+                )}
     </div>
+
+            {/* Acciones masivas */}
+            {selectedTransactions.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                            <span className="text-sm font-medium text-blue-900">
+                                {selectedTransactions.length} transacciones seleccionadas
+                            </span>
+                            <button
+                                onClick={clearSelection}
+                                className="ml-3 text-sm text-blue-600 hover:text-blue-800"
+                            >
+                                Limpiar selección
+                            </button>
 </div>
-
-            {/* Filtros */}
-            <OrderSearchAndFilters
-                filters={filters}
-                onFiltersChange={(newFilters) => {
-                    setFilters(newFilters);
-                    setPagination(prev => ({ ...prev, page: 1 }));
-                }}
-                onReset={resetFilters}
-                showExport={true}
-                onExport={() => {
-                    // Funcionalidad de exportar (implementar después)
-                    toast.info('🚀 Funcionalidad de exportar próximamente');
-                }}
-                totalResults={pagination.total}
-                loading={isLoading}
-            />
-
-            {/* Tabla de transacciones */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-                {isLoading ? (
-                    <div className="p-8 text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="mt-2 text-gray-600">Cargando transacciones...</p>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={exportToExcel}
+                                className="flex items-center px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                            >
+                                <FaDownload className="w-3 h-3 mr-1" />
+                                Exportar
+                            </button>
+                        </div>
                     </div>
-                ) : transactions.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <FaCreditCard className="text-5xl text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">No se encontraron transacciones.</p>
+                </div>
+            )}
+
+            {/* Información de filtros */}
+            <div className="flex justify-between items-center mb-4">
+                <div className="text-sm text-gray-600">
+                    {getFilterDescription()}
                     </div>
-                ) : (
+                <div className="flex space-x-2">
+                    <button
+                        onClick={exportToExcel}
+                        className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 text-sm"
+                    >
+                        <FaFileExcel className="w-4 h-4 mr-2" />
+                        Exportar Excel
+                    </button>
+                    </div>
+            </div>
+
+            {/* Lista de transacciones */}
+            {viewMode === 'table' ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tipo Usuario</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Método Pago</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Productos</th>
-                                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Delivery</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Venta</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTransactions.length === filteredTransactions.length && filteredTransactions.length > 0}
+                                            onChange={selectedTransactions.length === filteredTransactions.length ? clearSelection : selectAllTransactions}
+                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        ID / Usuario
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Monto
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estado
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Envío
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Fecha
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Acciones
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {transactions.map((transaction) => (
-                                    <tr key={transaction._id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-sm">
-                                            <div>
-                                                <div className="font-medium text-gray-900">#{transaction.shop_process_id}</div>
-                                                <div className="text-xs text-gray-500">{transaction.bancard_process_id}</div>
-                                            </div>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredTransactions.map((transaction, index) => (
+                                    <tr key={transaction.id || index} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTransactions.includes(transaction.id)}
+                                                onChange={() => toggleTransactionSelection(transaction.id)}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
                                         </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div>
-                                                <div className="font-medium text-gray-900">
-                                                    {transaction.customer_info?.name || 'N/A'}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10">
+                                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                        <FaUsers className="h-5 w-5 text-gray-400" />
                                                 </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {transaction.customer_info?.email}
                                                 </div>
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {transaction.id || 'N/A'}
+                                            </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {transaction.user?.name || transaction.user?.email || 'Usuario no disponible'}
+                                            </div>
+                                            </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center text-sm">
-                                            <div className="flex flex-col items-center">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                                    transaction.user_type === 'REGISTERED' 
-                                                        ? 'bg-green-100 text-green-800' 
-                                                        : 'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    {transaction.user_type === 'REGISTERED' ? '👤 Registrado' : '👥 Invitado'}
-                                                </span>
-                                                {transaction.device_type && (
-                                                    <span className="text-xs text-gray-500 mt-1">
-                                                        📱 {transaction.device_type}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center text-sm">
-                                            <div className="flex flex-col items-center">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                                    transaction.payment_method === 'saved_card' 
-                                                        ? 'bg-blue-100 text-blue-800' 
-                                                        : 'bg-purple-100 text-purple-800'
-                                                }`}>
-                                                    {transaction.payment_method === 'saved_card' ? '💳 Guardada' : '🆕 Nueva'}
-                                                </span>
-                                                {transaction.is_token_payment && (
-                                                    <span className="text-xs text-green-600 mt-1">
-                                                        🔐 Token
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-center text-sm">
-                                            <div className="flex flex-col items-center">
-                                                <span className="font-medium text-gray-900">
-                                                    {transaction.cart_total_items || transaction.items?.length || 0} items
-                                                </span>
-                                                {transaction.items && transaction.items.length > 0 && (
-                                                    <div className="text-xs text-gray-500 mt-1 max-w-32 truncate">
-                                                        {transaction.items[0].name}
-                                                        {transaction.items.length > 1 && ` +${transaction.items.length - 1}`}
-                                                    </div>
-                                                )}
-                                                {transaction.invoice_number && (
-                                                    <span className="text-xs text-blue-600 mt-1">
-                                                        📄 {transaction.invoice_number}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-right">
-                                            <div className="font-medium text-gray-900">
-                                                {displayPYGCurrency(transaction.amount)}
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <div className="font-medium">
+                                                {displayPYGCurrency(transaction.amount || 0)}
                                             </div>
                                             <div className="text-xs text-gray-500">
-                                                {transaction.currency}
+                                                {transaction.currency || 'PYG'}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <StatusBadge transaction={transaction} showBoth={true} size="xs" />
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                {getStatusIcon(transaction.status)}
+                                                <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
+                                                    {transaction.status || 'N/A'}
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <div className="flex flex-col items-center min-w-32">
-                                                <StatusWithProgress transaction={transaction} showProgress={true} />
-                                                {transaction.tracking_number && (
-                                                    <div className="text-xs text-blue-600 mt-2 bg-blue-50 px-2 py-1 rounded-full">
-                                                        📦 {transaction.tracking_number}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDeliveryStatusColor(transaction.delivery_status)}`}>
+                                                {transaction.delivery_status || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <div>
+                                                {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : 'N/A'}
                                                     </div>
-                                                )}
+                                            <div className="text-xs">
+                                                {transaction.createdAt ? new Date(transaction.createdAt).toLocaleTimeString() : 'N/A'}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 text-center text-sm text-gray-600">
-                                            <div>{formatDate(transaction.transaction_date)}</div>
-                                            {transaction.confirmation_date && (
-                                                <div className="text-xs text-gray-400">
-                                                    Conf: {formatDate(transaction.confirmation_date)}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            {transaction.sale_id ? (
-                                                <Link
-                                                    to={`/panel-admin/ventas/${transaction.sale_id._id}`}
-                                                    className="text-blue-600 hover:text-blue-800 flex items-center justify-center"
-                                                    title="Ver venta relacionada"
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedDetailsTransaction(transaction);
+                                                        setShowDetailsModal(true);
+                                                    }}
+                                                    className="text-blue-600 hover:text-blue-900"
+                                                    title="Ver detalles"
                                                 >
-                                                    <FaFileInvoiceDollar className="mr-1" />
-                                                    {transaction.sale_id.saleNumber}
-                                                </Link>
-                                            ) : (
-                                                <span className="text-gray-400 text-sm">Sin venta</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <AdminOrderActions
-                                                transaction={transaction}
-                                                onDeliveryManage={(trans) => {
-                                                    setSelectedDeliveryTransaction(trans);
-                                                    setShowDeliveryModal(true);
-                                                }}
-                                                onRollback={(trans) => {
-                                                    setSelectedTransaction(trans);
+                                                    <FaEye className="w-4 h-4" />
+                                                </button>
+                                                
+                                                {canRollback(transaction) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedTransaction(transaction);
                                                     setShowRollbackModal(true);
                                                 }}
-                                                onViewDetails={(trans) => {
-                                                    setSelectedDetailsTransaction(trans);
-                                                    setShowDetailsModal(true);
-                                                }}
-                                                onViewProducts={(trans) => {
-                                                    setSelectedTransaction(trans);
-                                                    setShowProductModal(true);
-                                                }}
-                                            />
-                                                                                        
-                                            {/* Información adicional si está rollback */}
-                                            {transaction.is_rolled_back && (
-                                                <div className="text-xs text-orange-600 mt-2 bg-orange-50 px-2 py-1 rounded">
-                                                    <div>Reversado</div>
-                                                    <div>{formatDate(transaction.rollback_date)}</div>
-                                                </div>
-                                            )}
+                                                        className="text-red-600 hover:text-red-900"
+                                                        title="Reversar transacción"
+                                                    >
+                                                        <FaUndo className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                
+                                                {canManageDelivery(transaction) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedDeliveryTransaction(transaction);
+                                                            setShowDeliveryModal(true);
+                                                        }}
+                                                        className="text-green-600 hover:text-green-900"
+                                                        title="Gestionar envío"
+                                                    >
+                                                        <FaTruck className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredTransactions.map((transaction, index) => (
+                        <div key={transaction.id || index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        Transacción #{transaction.id || 'N/A'}
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                        {transaction.user?.name || transaction.user?.email || 'Usuario no disponible'}
+                                    </p>
+                                </div>
+                                <div className="flex items-center">
+                                    {getStatusIcon(transaction.status)}
+                                </div>
             </div>
 
-            {/* Paginación */}
-            {!isLoading && transactions.length > 0 && (
-                <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex-1 flex justify-between sm:hidden">
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium text-gray-600">Monto:</span>
+                                    <span className="text-sm font-bold text-gray-900">
+                                        {displayPYGCurrency(transaction.amount || 0)}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium text-gray-600">Estado:</span>
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
+                                        {transaction.status || 'N/A'}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium text-gray-600">Envío:</span>
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDeliveryStatusColor(transaction.delivery_status)}`}>
+                                        {transaction.delivery_status || 'N/A'}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium text-gray-600">Fecha:</span>
+                                    <span className="text-sm text-gray-900">
+                                        {transaction.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-4 flex space-x-2">
                             <button
-                                onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-                                disabled={pagination.page === 1}
-                                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                            >
-                                Anterior
+                                    onClick={() => {
+                                        setSelectedDetailsTransaction(transaction);
+                                        setShowDetailsModal(true);
+                                    }}
+                                    className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                                >
+                                    <FaEye className="w-3 h-3 mr-1" />
+                                    Ver
                             </button>
+                                
+                                {canRollback(transaction) && (
                             <button
-                                onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages, prev.page + 1) }))}
-                                disabled={pagination.page === pagination.pages}
-                                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                            >
-                                Siguiente
+                                        onClick={() => {
+                                            setSelectedTransaction(transaction);
+                                            setShowRollbackModal(true);
+                                        }}
+                                        className="flex-1 flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                                    >
+                                        <FaUndo className="w-3 h-3 mr-1" />
+                                        Reversar
                             </button>
+                                )}
+                                
+                                {canManageDelivery(transaction) && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedDeliveryTransaction(transaction);
+                                            setShowDeliveryModal(true);
+                                        }}
+                                        className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                                    >
+                                        <FaTruck className="w-3 h-3 mr-1" />
+                                        Envío
+                                    </button>
+                                )}
                         </div>
-                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                            <div>
-                                <p className="text-sm text-gray-700">
-                                    Mostrando{' '}
-                                    <span className="font-medium">
-                                        {((pagination.page - 1) * pagination.limit) + 1}
-                                    </span>{' '}
-                                    a{' '}
-                                    <span className="font-medium">
-                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                                    </span>{' '}
-                                    de{' '}
-                                    <span className="font-medium">{pagination.total}</span>{' '}
-                                    resultados
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {filteredTransactions.length === 0 && !isLoading && (
+                <div className="text-center py-12">
+                    <FaCreditCard className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron transacciones</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Intenta ajustar los filtros para ver más resultados.
                                 </p>
                             </div>
-                            <div>
-                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            )}
+
+            {isLoading && (
+                <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-sm text-gray-500">Cargando transacciones...</p>
+                </div>
+            )}
+
+            {/* Paginación */}
+            {pagination.pages > 1 && (
+                <div className="mt-6 flex justify-center">
+                    <div className="flex space-x-2">
                                     <button
-                                        onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                                         disabled={pagination.page === 1}
-                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="px-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Anterior
                                     </button>
                                     
-                                    {[...Array(Math.min(5, pagination.pages))].map((_, index) => {
-                                        const pageNumber = Math.max(1, pagination.page - 2) + index;
-                                        if (pageNumber > pagination.pages) return null;
-                                        
-                                        return (
+                        <span className="px-3 py-2 text-gray-600">
+                            Página {pagination.page} de {pagination.pages}
+                        </span>
+                        
                                             <button
-                                                key={pageNumber}
-                                                onClick={() => setPagination(prev => ({ ...prev, page: pageNumber }))}
-                                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                                    pageNumber === pagination.page
-                                                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                {pageNumber}
-                                            </button>
-                                        );
-                                    })}
-                                    
-                                    <button
-                                        onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages, prev.page + 1) }))}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                                         disabled={pagination.page === pagination.pages}
-                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                            className="px-3 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Siguiente
                                     </button>
-                                </nav>
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal de Rollback */}
+            {/* Modales */}
             {showRollbackModal && selectedTransaction && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                        <div className="flex justify-between items-center p-4 border-b">
-                            <h2 className="font-bold text-lg text-gray-800 flex items-center">
-                                <FaUndo className="mr-2 text-orange-600" />
-                                🔄 Reversar Transacción
-                            </h2>
+                        <div className="flex justify-between items-center p-6 border-b">
+                            <h2 className="text-xl font-semibold">Reversar Transacción</h2>
                             <button 
-                                className="text-2xl text-gray-600 hover:text-black" 
-                                onClick={() => {
-                                    setShowRollbackModal(false);
-                                    setSelectedTransaction(null);
-                                    setRollbackReason('');
-                                }}
+                                onClick={() => setShowRollbackModal(false)}
+                                className="text-gray-500 hover:text-gray-700 text-2xl"
                             >
                                 ×
                             </button>
                         </div>
 
-                        <div className="p-4">
-                            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div className="flex items-center">
-                                    <FaExclamationTriangle className="text-yellow-600 mr-2" />
-                                    <h3 className="font-medium text-yellow-800">⚠️ ¡Atención!</h3>
-                                </div>
-                                <p className="text-yellow-700 text-sm mt-1">
-                                    Esta acción reversará la transacción #{selectedTransaction.shop_process_id} 
-                                    por {displayPYGCurrency(selectedTransaction.amount)}. 
-                                    <strong>Esta acción no se puede deshacer.</strong>
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Transacción: #{selectedTransaction.id}
+                                </p>
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Monto: {displayPYGCurrency(selectedTransaction.amount || 0)}
                                 </p>
                             </div>
 
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    📝 Razón del rollback *
+                                    Motivo de la reversión
                                 </label>
                                 <textarea
                                     value={rollbackReason}
                                     onChange={(e) => setRollbackReason(e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                                    rows="3"
-                                    placeholder="Explique el motivo de la reversión (ej: Cliente solicitó cancelación, Error en el pedido, etc.)"
-                                    required
-                                ></textarea>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-sm mb-4 bg-gray-50 p-3 rounded-lg">
-                                <div>
-                                    <span className="text-gray-600">👤 Cliente:</span>
-                                    <div className="font-medium">{selectedTransaction.customer_info?.name || 'N/A'}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">📅 Fecha:</span>
-                                    <div className="font-medium">{formatDate(selectedTransaction.transaction_date)}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">🔐 Autorización:</span>
-                                    <div className="font-medium">{selectedTransaction.authorization_number || 'N/A'}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">🌐 Ambiente:</span>
-                                    <div className="font-medium capitalize">{selectedTransaction.environment}</div>
+                                    rows={3}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Describe el motivo de la reversión..."
+                                />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-2">
+                        <div className="flex justify-end space-x-3 p-6 border-t">
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowRollbackModal(false);
-                                        setSelectedTransaction(null);
-                                        setRollbackReason('');
-                                    }}
-                                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                                >
-                                    ❌ Cancelar
-                                </button>
-                                <button
-                                    onClick={handleRollback}
-                                    disabled={!rollbackReason.trim() || isLoading}
-                                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                            🔄 Procesando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <FaUndo className="mr-2" />
-                                            ✅ Confirmar Rollback
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal de Detalles de Productos */}
-            {selectedTransaction && showProductModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-                        <div className="flex justify-between items-center p-4 border-b">
-                            <h2 className="font-bold text-lg text-gray-800 flex items-center">
-                                <FaFileInvoiceDollar className="mr-2 text-blue-600" />
-                                🛒 Detalles de la Compra
-                            </h2>
-                            <button 
-                                className="text-2xl text-gray-600 hover:text-black" 
-                                onClick={() => setShowProductModal(false)}
+                                onClick={() => setShowRollbackModal(false)}
+                                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                             >
-                                ×
-                            </button>
-                        </div>
-
-                        <div className="p-4 max-h-96 overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                                <div>
-                                    <span className="text-gray-600">💳 Transacción:</span>
-                                    <div className="font-medium">#{selectedTransaction.shop_process_id}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">👤 Cliente:</span>
-                                    <div className="font-medium">{selectedTransaction.customer_info?.name || 'N/A'}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">📱 Dispositivo:</span>
-                                    <div className="font-medium capitalize">{selectedTransaction.device_type || 'N/A'}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">🌐 Origen:</span>
-                                    <div className="font-medium">{selectedTransaction.referrer_url || 'Directo'}</div>
-                                </div>
-                            </div>
-
-                            {selectedTransaction.items && selectedTransaction.items.length > 0 ? (
-                                <div>
-                                    <h3 className="font-semibold text-gray-800 mb-3">🛍️ Productos Comprados:</h3>
-                                    <div className="space-y-3">
-                                        {selectedTransaction.items.map((item, index) => (
-                                            <div key={index} className="border border-gray-200 rounded-lg p-3">
-                                                <div className="flex justify-between items-start">
-                                                    <div className="flex-1">
-                                                        <h4 className="font-medium text-gray-800">{item.name}</h4>
-                                                        {item.category && (
-                                                            <p className="text-sm text-gray-500">{item.category}</p>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-medium text-gray-800">
-                                                            {displayPYGCurrency(item.total || (item.quantity * item.unitPrice))}
-                                                        </p>
-                                                        <p className="text-sm text-gray-500">
-                                                            {item.quantity} × {displayPYGCurrency(item.unitPrice)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    📦 No hay información detallada de productos
-                                </div>
-                            )}
-
-                            {selectedTransaction.order_notes && (
-                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-                                    <h4 className="font-medium text-yellow-800 mb-1">📝 Notas del Pedido:</h4>
-                                    <p className="text-yellow-700 text-sm">{selectedTransaction.order_notes}</p>
-                                </div>
-                            )}
+                                Cancelar
+                                </button>
+                                <button
+                                onClick={() => handleTransactionAction(selectedTransaction.id, 'rollback', { reason: rollbackReason })}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            >
+                                Confirmar Reversión
+                                </button>
                         </div>
                     </div>
                 </div>
             )}
+
              {showDeliveryModal && selectedDeliveryTransaction && (
                 <DeliveryManagement
                     transaction={selectedDeliveryTransaction}
-                    onClose={() => {
-                        setShowDeliveryModal(false);
-                        setSelectedDeliveryTransaction(null);
-                    }}
-                    onUpdate={fetchTransactions}
+                    onClose={() => setShowDeliveryModal(false)}
+                    onUpdate={() => fetchTransactions()}
                 />
             )}
-            {/* Modal de Detalles Completos */}
+
             {showDetailsModal && selectedDetailsTransaction && (
                 <TransactionDetailsModal
                     transaction={selectedDetailsTransaction}
-                    onClose={() => {
-                        setShowDetailsModal(false);
-                        setSelectedDetailsTransaction(null);
-                    }}
+                    onClose={() => setShowDetailsModal(false)}
                 />
             )}
         </div>

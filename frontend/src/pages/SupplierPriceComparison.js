@@ -162,10 +162,10 @@ const SupplierPriceComparison = () => {
     <div className="container mx-auto p-4">
       <div className="mb-6">
         <Link 
-          to="/panel-admin/analisis-rentabilidad" 
+          to="/panel-admin/proveedores" 
           className="text-blue-600 hover:underline mb-4 inline-flex items-center"
         >
-          <FaArrowLeft className="mr-2" /> Volver a Análisis de Rentabilidad
+          <FaArrowLeft className="mr-2" /> Volver a Proveedores
         </Link>
         
         <div className="flex justify-between items-center">
@@ -328,14 +328,8 @@ const SupplierPriceComparison = () => {
                     {comparison.supplierOptions.length === 0 ? (
                       <div className="bg-gray-50 p-4 rounded-lg text-center">
                         <p className="text-gray-500">
-                          No se encontraron análisis de rentabilidad para este producto
+                          Función de análisis de rentabilidad eliminada según requerimientos
                         </p>
-                        <Link 
-                          to="/panel-admin/analisis-rentabilidad/nuevo"
-                          className="text-blue-600 hover:underline text-sm mt-2 inline-block"
-                        >
-                          Crear nuevo análisis
-                        </Link>
                       </div>
                     ) : (
                       <>
@@ -487,13 +481,6 @@ const SupplierPriceComparison = () => {
 
                 {/* Acciones rápidas */}
                 <div className="flex flex-wrap gap-2 mt-4">
-                  <Link 
-                    to="/panel-admin/analisis-rentabilidad/nuevo"
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center"
-                  >
-                    <FaPlus className="mr-1" />
-                    Crear Nuevo Análisis
-                  </Link>
                   
                   <Link 
                     to="/panel-admin/presupuestos/nuevo"
