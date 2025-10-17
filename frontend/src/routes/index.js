@@ -65,6 +65,9 @@ import BranchesManagement from "../pages/BranchesManagement"
 import SalespersonsManagement from "../pages/SalespersonsManagement"
 import EnhancedSalesForm from "../pages/EnhancedSalesForm"
 
+// Importar página de sincronización de inventario
+import InventorySyncPage from "../pages/admin/InventorySyncPage"
+
 const router = createBrowserRouter([
     {
         path: "/",
@@ -284,6 +287,12 @@ const router = createBrowserRouter([
                     {
                         path: "vendedores",
                         element: <SalespersonsManagement />
+                    },
+                    
+                    // Sincronización de Inventario
+                    {
+                        path: "sincronizacion-inventario",
+                        element: <InventorySyncPage />
                     },
                 
                 ]

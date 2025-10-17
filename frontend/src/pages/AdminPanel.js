@@ -24,7 +24,8 @@ import {
   FaExpand,
   FaCompress,
   FaDollarSign,
-  FaBuilding
+  FaBuilding,
+  FaSyncAlt
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -110,6 +111,13 @@ const AdminPanel = () => {
           icon: <FaFolder className="w-5 h-5" />,
           description: "Gestionar categorías y especificaciones",
           color: "text-indigo-600 bg-indigo-50"
+        },
+        {
+          path: "sincronizacion-inventario",
+          label: "Sincronización Inventario",
+          icon: <FaSyncAlt className="w-5 h-5" />,
+          description: "Sincronizar inventario con proveedores",
+          color: "text-green-600 bg-green-50"
         }
       ]
     },

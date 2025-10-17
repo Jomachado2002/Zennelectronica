@@ -1523,4 +1523,8 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
     // ===== RUTAS DE ADMINISTRACIÓN DE CATEGORÍAS =====
     router.use('/admin/categories', categoryRoutes);
 
+    // ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
+    const inventorySyncRoutes = require('./inventorySyncRoutes');
+    router.use('/admin/inventory-sync', inventorySyncRoutes);
+
     module.exports = router;
