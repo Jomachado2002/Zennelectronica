@@ -494,7 +494,7 @@ function calculateAdvancedProductSimilarity(myProduct, mayoristasProduct) {
     // Pesos para diferentes características
     const weights = {
         brand: 0.30,           // 30% - Marca es muy importante
-        processor: 0.25,       // 25% - Procesador también
+        processor: 0.20,       // 20% - Procesador también
         ram: 0.15,            // 15% - RAM importante
         storage: 0.10,        // 10% - Almacenamiento
         textSimilarity: 0.20  // 20% - Similitud general de texto

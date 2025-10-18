@@ -6,10 +6,10 @@
  * @param {number} purchasePriceUSD - Precio de compra en USD
  * @param {number} exchangeRate - Tipo de cambio (por defecto: 7300)
  * @param {number} deliveryCost - Costo de envío (por defecto: 30000)
- * @param {number} profitMargin - Margen de ganancia como decimal (por defecto: 0.25 = 25%)
+ * @param {number} profitMargin - Margen de ganancia como porcentaje (por defecto: 20 = 20%)
  * @returns {Object} Objeto con todos los precios calculados
  */
-function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 30000, profitMargin = 0.25) {
+function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 30000, profitMargin = 20) {
     try {
         // Validar parámetros
         if (!purchasePriceUSD || purchasePriceUSD <= 0) {
@@ -22,9 +22,9 @@ function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 3
         const delivery = parseFloat(deliveryCost);
         const margin = parseFloat(profitMargin);
 
-        // Validar que el margen esté entre 0 y 1
-        if (margin < 0 || margin >= 1) {
-            throw new Error('El margen de ganancia debe estar entre 0 y 1 (0-100%)');
+        // Validar que el margen esté entre 0 y 100
+        if (margin < 0 || margin > 100) {
+            throw new Error('El margen de ganancia debe estar entre 0 y 100');
         }
 
         // Cálculo del precio de compra en PYG
@@ -34,7 +34,9 @@ function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 3
         const totalCost = purchasePrice + delivery;
 
         // Precio de venta (aplicando margen de ganancia)
-        const sellingPrice = Math.round(totalCost / (1 - margin));
+        // Convertir porcentaje a decimal para el cálculo
+        const marginDecimal = margin / 100;
+        const sellingPrice = Math.round(totalCost / (1 - marginDecimal));
 
         // Monto de ganancia
         const profitAmount = sellingPrice - totalCost;
@@ -50,7 +52,7 @@ function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 3
             profitAmount: Math.round(profitAmount),
             // Campos adicionales para compatibilidad
             price: 0, // Siempre 0 como especificado
-            profitMarginPercent: Math.round(margin * 100) // Margen como porcentaje
+            profitMarginPercent: Math.round(margin) // Margen como porcentaje
         };
 
     } catch (error) {

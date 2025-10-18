@@ -2,8 +2,9 @@
 // Componente para mostrar productos que coinciden entre sistema y proveedor
 
 import React, { useState } from 'react';
+import { FaEdit, FaExternalLinkAlt } from 'react-icons/fa';
 
-const MatchedProducts = ({ products, method, showPriceChanges }) => {
+const MatchedProducts = ({ products, method, showPriceChanges, onEditProduct }) => {
     const [filterByPriceChanges, setFilterByPriceChanges] = useState(false);
 
     const filteredProducts = filterByPriceChanges 
@@ -35,6 +36,13 @@ const MatchedProducts = ({ products, method, showPriceChanges }) => {
             return '📉'; // Precio bajó
         } else {
             return '➡️'; // Sin cambio
+        }
+    };
+
+    // Función para manejar la edición de productos
+    const handleEditProduct = async (product) => {
+        if (onEditProduct) {
+            onEditProduct(product);
         }
     };
 
@@ -110,6 +118,9 @@ const MatchedProducts = ({ products, method, showPriceChanges }) => {
                                     Estado Código
                                 </th>
                             )}
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Acciones
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -165,6 +176,30 @@ const MatchedProducts = ({ products, method, showPriceChanges }) => {
                                         </span>
                                     </td>
                                 )}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button
+                                        onClick={() => {
+                                            console.log('🖱️ Click en botón Editar');
+                                            console.log('📦 Producto:', product);
+                                            console.log('📦 Product ID:', product.productId);
+                                            console.log('💰 Price Changed:', product.priceChanged);
+                                            handleEditProduct(product);
+                                        }}
+                                        className={`px-3 py-1.5 text-white text-sm rounded-lg flex items-center gap-1 ${
+                                            product.priceChanged 
+                                                ? 'bg-orange-600 hover:bg-orange-700' 
+                                                : 'bg-blue-600 hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        <FaEdit className="w-3 h-3" />
+                                        Editar
+                                        {product.priceChanged && (
+                                            <span className="ml-1 px-1.5 py-0.5 bg-white text-orange-600 rounded-full text-xs font-bold">
+                                                !
+                                            </span>
+                                        )}
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

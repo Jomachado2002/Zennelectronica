@@ -4,9 +4,11 @@ const { generateSlug, generateUniqueSlug } = require('../../helpers/slugGenerato
 
 async function UploadProductController(req, res) {
     try {
+        console.log('📥 UploadProductController - Body recibido:', req.body);
         const sessionUserId = req.userId;
 
-        if (!uploadProductPermission(sessionUserId)) {
+        const hasPermission = await uploadProductPermission(sessionUserId);
+        if (!hasPermission) {
             throw new Error("Permiso Denegado");
         }
 

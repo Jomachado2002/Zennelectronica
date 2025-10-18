@@ -6,26 +6,47 @@ const { initializeApp } = require('firebase/app');
 const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage');
 const { v4: uuidv4 } = require('uuid');
 
-// Configuración de Firebase
+// Configuración de Firebase - usando la misma configuración que funciona en uploadProduct
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-    measurementId: process.env.FIREBASE_MEASUREMENT_ID
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "eccomerce-jmcomputer.firebasestorage.app",
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-// Inicializar Firebase
+// Inicializar Firebase de forma lazy (solo cuando se necesite)
 let app;
 let storage;
 
-try {
-    app = initializeApp(firebaseConfig);
-    storage = getStorage(app);
-} catch (error) {
-    console.error('Error inicializando Firebase Storage:', error.message);
+function initializeFirebase() {
+    if (!app) {
+        try {
+            // Verificar si ya existe una app de Firebase
+            const { getApps } = require('firebase/app');
+            const existingApps = getApps();
+            
+            if (existingApps.length > 0) {
+                console.log('✅ Usando Firebase App existente');
+                app = existingApps[0];
+            } else {
+                console.log('🆕 Inicializando nueva Firebase App');
+                app = initializeApp(firebaseConfig);
+            }
+            
+            // Usar getStorage con la app específica y el bucket específico
+            storage = getStorage(app, `gs://${firebaseConfig.storageBucket}`);
+            console.log('✅ Firebase Storage inicializado correctamente');
+            console.log('📦 Storage bucket:', firebaseConfig.storageBucket);
+        } catch (error) {
+            console.error('❌ Error inicializando Firebase Storage:', error.message);
+            console.error('❌ Configuración:', firebaseConfig);
+            throw error;
+        }
+    }
+    return { app, storage };
 }
 
 /**
@@ -99,8 +120,11 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
 
         console.log(`Subiendo imagen: ${fullPath}`);
 
+        // Inicializar Firebase de forma lazy
+        const { storage: firebaseStorage } = initializeFirebase();
+
         // Crear referencia en Firebase Storage
-        const storageRef = ref(storage, fullPath);
+        const storageRef = ref(firebaseStorage, fullPath);
 
         // Subir archivo
         const snapshot = await uploadBytes(storageRef, imageBuffer, {
@@ -131,50 +155,78 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
  * @param {Object} options - Opciones adicionales
  * @returns {Promise<Object>} Resultado de la importación
  */
-async function importImage(imageUrl, providerCode, options = {}) {
-    const { timeout = 30000, retries = 3 } = options;
-
-    let lastError = null;
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            console.log(`Importando imagen (intento ${attempt}/${retries}): ${imageUrl}`);
-
-            // Descargar imagen
-            const imageBuffer = await downloadImage(imageUrl, timeout);
-
-            // Subir a Firebase
-            const publicUrl = await uploadImageToFirebase(imageBuffer, providerCode, imageUrl);
-
-            return {
-                success: true,
-                providerCode,
+async function importImageFromUrl(imageUrl, providerCode, options = {}) {
+    try {
+        console.log(`📥 Descargando imagen desde: ${imageUrl}`);
+        
+        // 1. Descargar imagen
+        const response = await axios.get(imageUrl, {
+            responseType: 'arraybuffer',
+            timeout: 15000,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        
+        console.log(`✅ Imagen descargada: ${response.data.length} bytes`);
+        
+        // 2. Convertir arraybuffer a File/Blob simulado para uploadImage
+        const buffer = Buffer.from(response.data);
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+        
+        // Crear un objeto similar a un archivo File del navegador
+        const fakeFile = {
+            buffer: buffer,
+            originalname: `${providerCode}.jpg`,
+            mimetype: contentType,
+            size: buffer.length,
+            name: `${providerCode}.jpg` // Agregar name para compatibilidad
+        };
+        
+        console.log(`📤 Subiendo imagen usando método Firebase directo...`);
+        
+        // 3. Inicializar Firebase de forma lazy
+        const { storage: firebaseStorage } = initializeFirebase();
+        
+        const uniqueId = uuidv4();
+        const fileName = `${uniqueId}_${fakeFile.name.replace(/\s+/g, '_')}`;
+        const fullPath = `products/${fileName}`;
+        
+        console.log(`📁 Creando referencia: ${fullPath}`);
+        
+        // Crear referencia en Firebase Storage
+        const storageRef = ref(firebaseStorage, fullPath);
+        
+        // Subir archivo
+        const snapshot = await uploadBytes(storageRef, buffer, {
+            customMetadata: {
+                providerCode: providerCode,
                 originalUrl: imageUrl,
-                publicUrl,
-                fileSize: imageBuffer.length,
-                attempt
-            };
-
-        } catch (error) {
-            lastError = error;
-            console.error(`Error en intento ${attempt}:`, error.message);
-
-            if (attempt < retries) {
-                const delay = attempt * 2000; // Delay progresivo: 2s, 4s, 6s
-                console.log(`Esperando ${delay}ms antes del siguiente intento...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+                uploadedAt: new Date().toISOString(),
+                source: 'inventory_sync'
             }
-        }
+        });
+        
+        // Obtener URL pública
+        const publicUrl = await getDownloadURL(snapshot.ref);
+        
+        console.log(`✅ Imagen subida exitosamente:`, publicUrl);
+        
+        return {
+            success: true,
+            providerCode,
+            originalUrl: imageUrl,
+            publicUrl,
+            fileSize: buffer.length
+        };
+        
+    } catch (error) {
+        console.error(`❌ Error en importImageFromUrl:`, error);
+        throw error;
     }
+}
 
-    // Si todos los intentos fallaron
-    return {
-        success: false,
-        providerCode,
-        originalUrl: imageUrl,
-        error: lastError.message,
-        attempts: retries
-    };
+// Mantener la función original para compatibilidad
+async function importImage(imageUrl, providerCode, options = {}) {
+    return await importImageFromUrl(imageUrl, providerCode, options);
 }
 
 /**
@@ -264,6 +316,7 @@ module.exports = {
     downloadImage,
     uploadImageToFirebase,
     importImage,
+    importImageFromUrl,
     importMultipleImages,
     validateImageUrl
 };

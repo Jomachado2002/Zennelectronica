@@ -193,8 +193,9 @@ async function compareByNameController(req, res) {
  */
 async function updateStockController(req, res) {
     try {
-        console.log('Actualizando estado de stock');
-
+        console.log('🔄 Iniciando actualización de stock');
+        console.log('📊 Body recibido:', req.body);
+        
         const { action, productIds, updateAll, filters } = req.body;
 
         if (!action) {
@@ -211,64 +212,109 @@ async function updateStockController(req, res) {
             });
         }
 
-        let productsToUpdate = [];
+        console.log(`📊 Acción: ${action}`);
 
-        if (updateAll) {
-            // Actualización masiva
-            const query = {};
-            
-            if (filters && filters.notInProviderList && filters.notInProviderList.length > 0) {
-                query._id = { $in: filters.notInProviderList };
-            }
+        let idsToUpdate = [];
 
-            productsToUpdate = await productModel.find(query).select('_id productName codigo');
+        if (updateAll && filters?.notInProviderList) {
+            idsToUpdate = filters.notInProviderList;
+            console.log(`📊 Modo masivo: actualizando ${idsToUpdate.length} productos`);
         } else {
-            // Actualización individual
             if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
                 return res.status(400).json({
                     success: false,
                     error: 'IDs de productos requeridos'
                 });
             }
-
-            productsToUpdate = await productModel.find({
-                _id: { $in: productIds }
-            }).select('_id productName codigo');
+            idsToUpdate = productIds;
+            console.log(`📊 IDs recibidos: ${productIds.length} productos`);
         }
 
-        if (productsToUpdate.length === 0) {
+        // Verificar estado ANTES
+        const productsBeforeUpdate = await productModel.find({ _id: { $in: idsToUpdate } })
+            .select('_id productCode productName stockStatus stock codigo')
+            .lean();
+        
+        console.log(`📊 Productos encontrados: ${productsBeforeUpdate.length}`);
+        console.log('📊 Ejemplos de productos antes:', productsBeforeUpdate.slice(0, 3));
+
+        if (productsBeforeUpdate.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: 'No se encontraron productos para actualizar'
             });
         }
 
-        // Actualizar productos
-        const updateResult = await productModel.updateMany(
-            { _id: { $in: productsToUpdate.map(p => p._id) } },
-            {
-                $set: {
-                    stock: 0,
-                    stockStatus: 'out_of_stock',
-                    updatedAt: new Date()
-                }
+        // IMPORTANTE: Detectar cuántos YA están en el estado deseado
+        const alreadyInDesiredState = productsBeforeUpdate.filter(p => {
+            if (action === 'mark_out_of_stock') {
+                return p.stockStatus === 'out_of_stock' && p.stock === 0;
+            } else if (action === 'mark_in_stock') {
+                return p.stockStatus === 'in_stock' && p.stock > 0;
             }
+            return false;
+        });
+
+        console.log(`⚠️ ${alreadyInDesiredState.length} de ${productsBeforeUpdate.length} productos YA están en el estado deseado`);
+
+        // Obtener solo los IDs que realmente necesitan actualización
+        const idsNeedingUpdate = productsBeforeUpdate
+            .filter(p => !alreadyInDesiredState.find(a => a._id.toString() === p._id.toString()))
+            .map(p => p._id);
+
+        console.log(`✅ ${idsNeedingUpdate.length} productos necesitan actualización`);
+
+        // Si no hay nada que actualizar
+        if (idsNeedingUpdate.length === 0) {
+            return res.json({
+                success: true,
+                updated: 0,
+                alreadyInDesiredState: alreadyInDesiredState.length,
+                message: `Todos los productos ya estaban en el estado deseado`,
+                updatedProducts: []
+            });
+        }
+
+        // Actualizar solo los que necesitan cambio
+        const updateData = action === 'mark_out_of_stock' 
+            ? { stockStatus: 'out_of_stock', stock: 0, updatedAt: new Date() }
+            : { stockStatus: 'in_stock', stock: 1, updatedAt: new Date() };
+
+        const result = await productModel.updateMany(
+            { _id: { $in: idsNeedingUpdate } },
+            { $set: updateData }
         );
 
-        console.log(`Stock actualizado: ${updateResult.modifiedCount} productos`);
+        console.log(`✅ Actualización completada:`, {
+            matchedCount: result.matchedCount,
+            modifiedCount: result.modifiedCount,
+            acknowledged: result.acknowledged
+        });
 
-        res.status(200).json({
+        // Verificar DESPUÉS
+        const productsAfterUpdate = await productModel.find({ _id: { $in: idsNeedingUpdate } })
+            .select('_id productCode productName stockStatus stock codigo')
+            .lean();
+
+        console.log('📊 Productos DESPUÉS de actualizar:', productsAfterUpdate.length);
+        console.log('📊 Ejemplos de productos después:', productsAfterUpdate.slice(0, 3));
+
+        res.json({
             success: true,
-            updatedCount: updateResult.modifiedCount,
-            productsUpdated: productsToUpdate.map(p => ({
-                id: p._id,
-                name: p.productName,
-                code: p.codigo
+            updated: result.modifiedCount,
+            alreadyInDesiredState: alreadyInDesiredState.length,
+            message: `${result.modifiedCount} productos actualizados. ${alreadyInDesiredState.length} ya estaban sin stock.`,
+            updatedProducts: productsAfterUpdate.map(p => ({
+                productId: p._id.toString(),
+                productCode: p.codigo || p.productCode,
+                productName: p.productName,
+                newStatus: p.stockStatus,
+                newStock: p.stock
             }))
         });
 
     } catch (error) {
-        console.error('Error actualizando stock:', error.message);
+        console.error('❌ Error actualizando stock:', error);
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -305,7 +351,7 @@ async function importProductsController(req, res) {
         const {
             deliveryCost = 30000,
             exchangeRate = 7300,
-            profitMargin = 0.25
+            profitMargin = 20
         } = config;
 
         const results = [];

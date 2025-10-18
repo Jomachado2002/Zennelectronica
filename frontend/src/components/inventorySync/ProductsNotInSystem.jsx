@@ -2,6 +2,7 @@
 // Componente para mostrar productos que están en el proveedor pero no en el sistema
 
 import React, { useState } from 'react';
+import { FaBox, FaExternalLinkAlt } from 'react-icons/fa';
 
 const ProductsNotInSystem = ({
     products,
@@ -10,7 +11,10 @@ const ProductsNotInSystem = ({
     onSelectAll,
     onImportSelected,
     onImportAll,
-    isLoading
+    onLoadProduct,
+    isLoading,
+    category,
+    subcategory
 }) => {
     const [showOnlySelected, setShowOnlySelected] = useState(false);
 
@@ -26,6 +30,63 @@ const ProductsNotInSystem = ({
 
     const formatPrice = (price) => {
         return `U$ ${parseFloat(price).toFixed(2)}`;
+    };
+
+    // Helper para extraer marca del nombre del producto
+    const extractBrandFromName = (productName) => {
+        const commonBrands = ['HP', 'Dell', 'Lenovo', 'ASUS', 'Acer', 'Samsung', 'LG', 'Sony', 'Apple', 'Microsoft', 'Razer', 'Corsair', 'Logitech', 'MSI', 'Gigabyte'];
+        const words = productName.split(' ');
+        const foundBrand = words.find(word => commonBrands.includes(word.toUpperCase()));
+        return foundBrand || words[1] || '';
+    };
+
+    // Función para manejar la apertura del modal de carga de producto
+    const handleOpenUploadModal = (product) => {
+        console.log('🔍 Abriendo modal de carga');
+        console.log('📦 Producto original:', product);
+        console.log('🔢 Provider Code:', product.providerCode);
+        
+        const preloadedData = {
+            // Información básica
+            productName: product.productName,
+            productCode: product.providerCode, // ← CRÍTICO
+            codigo: product.providerCode, // ← TAMBIÉN AGREGAR
+            brandName: extractBrandFromName(product.productName),
+            category: category,
+            subcategory: subcategory,
+            description: product.productName, // Usar nombre como descripción inicial
+            
+            // URLs del proveedor
+            documentationLink: product.productUrl, // URL del producto en sitio del proveedor
+            imageUrlFromProvider: product.imageUrl, // URL de la imagen
+            
+            // Precios y costos (valores fijos)
+            purchasePriceUSD: product.priceUSD,
+            exchangeRate: 7300,
+            deliveryCost: 30000,
+            profitMargin: 20, // 20%
+            
+            // Calcular precio sugerido automáticamente
+            // Fórmula: ((purchasePriceUSD * exchangeRate) + deliveryCost) / (1 - (profitMargin / 100))
+            sellingPrice: Math.round(
+                ((product.priceUSD * 7300) + 30000) / (1 - (20 / 100))
+            ),
+            
+            // Stock inicial
+            stock: 1,
+            isVipOffer: false,
+            
+            // Precio anterior (siempre 0 para productos nuevos)
+            price: 0,
+            
+            // Modo importación
+            importMode: true
+        };
+        
+        console.log('📦 Datos precargados:', preloadedData);
+        console.log('🔢 Código en preloadedData:', preloadedData.codigo);
+        
+        onLoadProduct(preloadedData);
     };
 
     return (
@@ -185,15 +246,12 @@ const ProductsNotInSystem = ({
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button
-                                            onClick={() => {
-                                                onProductSelect('notInSystem', product.providerCode, true);
-                                                // Importar individualmente
-                                                onImportSelected();
-                                            }}
+                                            onClick={() => handleOpenUploadModal(product)}
                                             disabled={isLoading}
-                                            className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-400"
+                                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Importar
+                                            <FaBox className="w-3 h-3" />
+                                            Cargar Producto
                                         </button>
                                     </td>
                                 </tr>

@@ -104,21 +104,34 @@ const startServer = async () => {
   try {
     const PORT = process.env.PORT || 8080;
     
+    console.log('🚀 Iniciando servidor...');
+    console.log('📊 Puerto:', PORT);
+    console.log('🌍 Entorno:', process.env.NODE_ENV || 'development');
+    
     // Conectar a la base de datos
+    console.log('🔌 Conectando a la base de datos...');
     await connectDB();
-   
+    console.log('✅ Base de datos conectada exitosamente');
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {
       app.listen(PORT, () => {
-      
+        console.log(`🎉 Servidor ejecutándose en http://localhost:${PORT}`);
+        console.log(`📡 API disponible en http://localhost:${PORT}/api`);
+        console.log(`🧪 Test endpoint: http://localhost:${PORT}/test`);
       });
     }
   } catch (error) {
-    console.error('Error al iniciar el servidor:', error);
+    console.error('❌ Error al iniciar el servidor:', error);
+    console.error('📋 Detalles del error:', error.message);
+    console.error('📋 Stack trace:', error.stack);
+    
     // No salir del proceso en producción
     if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
+      console.log('🔄 Reintentando en 5 segundos...');
+      setTimeout(() => {
+        startServer();
+      }, 5000);
     }
   }
 };

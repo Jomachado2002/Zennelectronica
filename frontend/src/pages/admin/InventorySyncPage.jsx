@@ -6,6 +6,7 @@ import axios from 'axios';
 import axiosInstance from '../../config/axiosInstance';
 import Papa from 'papaparse';
 import useCategories from '../../hooks/useCategories';
+import { toast } from 'react-toastify';
 
 // Componentes
 import CategorySelector from '../../components/inventorySync/CategorySelector';
@@ -15,6 +16,8 @@ import ResultsSummary from '../../components/inventorySync/ResultsSummary';
 import ProductsNotInSystem from '../../components/inventorySync/ProductsNotInSystem';
 import ProductsNotInProvider from '../../components/inventorySync/ProductsNotInProvider';
 import MatchedProducts from '../../components/inventorySync/MatchedProducts';
+import UploadProduct from '../../components/UploadProduct';
+import AdminEditProduct from '../../components/AdminEditProduct';
 import CodeMismatches from '../../components/inventorySync/CodeMismatches';
 
 const InventorySyncPage = () => {
@@ -29,6 +32,13 @@ const InventorySyncPage = () => {
     const [comparisonMethod, setComparisonMethod] = useState('code');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    
+    // Estados para modales
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [preloadedData, setPreloadedData] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editProductData, setEditProductData] = useState(null);
+    const [editExtraData, setEditExtraData] = useState(null);
 
     // Estados de resultados
     const [comparisonResults, setComparisonResults] = useState(null);
@@ -155,7 +165,7 @@ const InventorySyncPage = () => {
                 config: {
                     deliveryCost: 30000,
                     exchangeRate: 7300,
-                    profitMargin: 0.25
+                    profitMargin: 20
                 }
             });
 
@@ -197,7 +207,15 @@ const InventorySyncPage = () => {
             });
 
             if (response.data.success) {
-                alert(`Stock actualizado: ${response.data.updatedCount} productos marcados como sin stock`);
+                if (response.data.alreadyInDesiredState > 0) {
+                    toast.info(
+                        `${response.data.updated} productos actualizados. ${response.data.alreadyInDesiredState} ya estaban sin stock.`,
+                        { duration: 5000 }
+                    );
+                } else {
+                    toast.success(`${response.data.updated} productos marcados sin stock`);
+                }
+                
                 // Recargar comparación para actualizar resultados
                 handleCompare();
             } else {
@@ -241,6 +259,102 @@ const InventorySyncPage = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Función para manejar la carga de productos
+    const handleLoadProduct = (preloadedData) => {
+        setPreloadedData(preloadedData);
+        setShowUploadModal(true);
+    };
+
+    // Función para cerrar el modal de carga
+    const handleCloseUploadModal = () => {
+        setShowUploadModal(false);
+        setPreloadedData(null);
+    };
+
+    // Función para manejar el éxito de la carga
+    const handleUploadSuccess = () => {
+        setShowUploadModal(false);
+        setPreloadedData(null);
+        // Recargar la comparación para actualizar los resultados
+        handleCompare();
+    };
+
+    // Función para manejar la edición de productos
+    const handleEditProduct = async (product) => {
+        try {
+            console.log('🔍 handleEditProduct - Iniciando');
+            console.log('📦 Product ID:', product.productId);
+            console.log('💰 Price Changed:', product.priceChanged);
+            
+            // Construir URL del endpoint
+            const url = `/api/admin/products/${product.productId}`;
+            console.log('🌐 Llamando a:', url);
+            
+            // Cargar producto completo
+            const response = await axiosInstance.get(url);
+            
+            console.log('📥 Response status:', response.status);
+            console.log('📦 Resultado recibido:', response.data);
+            
+            if (response.data.success) {
+                console.log('✅ Producto cargado exitosamente');
+                
+                // Preparar datos extra de sincronización
+                const extraData = {
+                    priceComparison: product.priceChanged ? {
+                        currentPrice: product.currentPrice,
+                        providerPrice: product.providerPrice,
+                        difference: product.priceDifference,
+                        hasIncrease: product.priceDifference > 0,
+                        percentageChange: ((product.priceDifference / product.currentPrice) * 100).toFixed(2)
+                    } : null,
+                    
+                    codeComparison: !product.codeMatch ? {
+                        systemCode: product.productCode,
+                        providerCode: product.providerCode,
+                        warning: product.warning
+                    } : null,
+                    
+                    productUrl: product.productUrl || '',
+                    syncMode: true
+                };
+                
+                console.log('📦 Extra data preparada:', extraData);
+                
+                // Actualizar estados para abrir modal
+                console.log('🔄 Actualizando estados del modal...');
+                setEditProductData(response.data.data);
+                setEditExtraData(extraData);
+                setShowEditModal(true);
+                
+                console.log('✅ Modal de edición debe estar abierto ahora');
+            } else {
+                console.error('❌ Error en resultado:', response.data.message);
+                setError(response.data.message || 'Error al cargar el producto');
+            }
+        } catch (error) {
+            console.error('💥 Error completo en handleEditProduct:', error);
+            console.error('💥 Error stack:', error.stack);
+            setError(`Error al abrir modal: ${error.message}`);
+        }
+    };
+
+    // Función para cerrar el modal de edición
+    const handleCloseEditModal = () => {
+        setShowEditModal(false);
+        setEditProductData(null);
+        setEditExtraData(null);
+    };
+
+    // Función para manejar el éxito de la edición
+    const handleEditSuccess = () => {
+        setShowEditModal(false);
+        setEditProductData(null);
+        setEditExtraData(null);
+        // Recargar la comparación para actualizar los resultados
+        handleCompare();
     };
 
     // Limpiar selecciones
@@ -352,7 +466,10 @@ const InventorySyncPage = () => {
                                     }));
                                     handleImportProducts();
                                 }}
+                                onLoadProduct={handleLoadProduct}
                                 isLoading={isLoading}
+                                category={selectedCategory}
+                                subcategory={selectedSubcategory}
                             />
                         )}
 
@@ -381,6 +498,7 @@ const InventorySyncPage = () => {
                                 products={comparisonResults.matched}
                                 method={comparisonMethod}
                                 showPriceChanges={comparisonResults.summary.priceChanges > 0}
+                                onEditProduct={handleEditProduct}
                             />
                         )}
 
@@ -416,6 +534,39 @@ const InventorySyncPage = () => {
                     )}
                 </div>
             </div>
+            
+            {/* Modal de UploadProduct */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <UploadProduct
+                            onClose={handleCloseUploadModal}
+                            fetchData={handleUploadSuccess}
+                            preloadedData={preloadedData}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de AdminEditProduct */}
+            {showEditModal && editProductData && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <AdminEditProduct
+                            onClose={() => {
+                                console.log('🚪 Cerrando modal de edición');
+                                handleCloseEditModal();
+                            }}
+                            productData={editProductData}
+                            fetchdata={() => {
+                                console.log('🔄 Refrescando datos después de editar');
+                                handleEditSuccess();
+                            }}
+                            extraData={editExtraData}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

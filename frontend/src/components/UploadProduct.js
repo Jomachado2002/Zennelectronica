@@ -1,17 +1,39 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DynamicProductSpecifications from './DynamicProductSpecifications';
 import SummaryApi from '../common';
 import { 
   FaUpload, FaSave, FaTimes, FaImage, FaFileAlt, FaDollarSign,
-  FaInfoCircle, FaEye, FaEyeSlash, FaTrash, FaSync, FaBox
+  FaInfoCircle, FaEye, FaEyeSlash, FaTrash, FaSync, FaBox,
+  FaLink, FaExternalLinkAlt, FaPaste, FaMousePointer, FaFolderOpen,
+  FaCheck, FaExclamationTriangle, FaSpinner, FaCopy
 } from "react-icons/fa";
 import useCategories from '../hooks/useCategories';
 import uploadImage from '../helpers/uploadImage';
+import { 
+  optimizeMultipleImages, 
+  extractImagesFromClipboard, 
+  isValidImageFile, 
+  validateFileSize,
+  getOptimizationStats 
+} from '../helpers/imageOptimizer';
 import DisplayImage from './DisplayImage';
 import { toast } from 'react-toastify';
 
-const UploadProduct = ({ onClose, fetchData }) => {
+const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
   const { getSubcategoriesByCategory, getCategoriesForSelect, getSpecificationsBySubcategory, categories, loading: categoriesLoading } = useCategories();
+  
+  // Referencias
+  const fileInputRef = useRef(null);
+  const imageAreaRef = useRef(null);
+  
+  // Estados para el sistema de imágenes
+  const [isPasteActive, setIsPasteActive] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0, fileName: '' });
+  const [showInstructions, setShowInstructions] = useState(false); // Cambiado a false por defecto
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageSource, setImageSource] = useState('manual');
   
   // Función para normalizar imágenes existentes (solo para carga inicial)
   const normalizeImages = (images) => {
@@ -78,6 +100,10 @@ const UploadProduct = ({ onClose, fetchData }) => {
     isVipOffer: false,
     specifications: {},
     codigo: '',
+    // Campos del proveedor
+    documentationLink: '',
+    imageUrlFromProvider: '',
+    importMode: false,
     // Campos financieros
     purchasePriceUSD: 0,
     exchangeRate: 7300,
@@ -96,187 +122,268 @@ const UploadProduct = ({ onClose, fetchData }) => {
   const [isLoadingExchangeRate, setIsLoadingExchangeRate] = useState(false);
   const [currentExchangeRate, setCurrentExchangeRate] = useState(7300);
 
-  // Actualizar especificaciones cuando cambien la categoría o subcategoría
+  // Cargar datos precargados si existen
   useEffect(() => {
-    if (data.category && data.subcategory && categories.length > 0) {
-      const mappedSpecifications = mapProductSpecifications(data, data.category, data.subcategory);
+    if (preloadedData) {
+      console.log('📥 UploadProduct - Recibiendo preloadedData:', preloadedData);
+      console.log('🔢 Código recibido:', preloadedData.productCode, preloadedData.codigo);
+      
       setData(prev => ({
         ...prev,
-        specifications: mappedSpecifications
+        ...preloadedData,
+        // MAPEO EXPLÍCITO del código
+        codigo: preloadedData.codigo || preloadedData.productCode || ''
       }));
-    }
-  }, [data.category, data.subcategory, categories]);
-
-  // Función para obtener el tipo de cambio actual
-  const fetchCurrentExchangeRate = useCallback(async () => {
-    try {
-      setIsLoadingExchangeRate(true);
-      const response = await fetch(SummaryApi.exchangeRate.current.url);
-      const data = await response.json();
-      if (data.success) {
-        setCurrentExchangeRate(data.data.rate);
-        setData(prev => ({
-          ...prev,
-          exchangeRate: data.data.rate.toString()
-        }));
+      
+      // IMPORTANTE: Establecer preview de imagen si viene del CSV
+      if (preloadedData.imageUrlFromProvider) {
+        console.log('🖼️ Estableciendo preview de imagen del CSV');
+        console.log('🖼️ URL:', preloadedData.imageUrlFromProvider);
+        setImagePreview(preloadedData.imageUrlFromProvider);
+        setImageSource('csv');
       }
-    } catch (error) {
-      console.error('Error fetching exchange rate:', error);
-    } finally {
-      setIsLoadingExchangeRate(false);
+      
+      console.log('✅ Datos establecidos en el estado');
+      console.log('🔢 Código en estado:', preloadedData.codigo || preloadedData.productCode);
+    }
+  }, [preloadedData]);
+
+  // Agregar log adicional cuando el estado cambia
+  useEffect(() => {
+    console.log('🔍 Estado "data" actualizado:');
+    console.log(' - productName:', data.productName);
+    console.log(' - codigo:', data.codigo);
+    console.log(' - category:', data.category);
+  }, [data]);
+
+  // Event listeners para paste y drag & drop
+  useEffect(() => {
+    const handlePaste = (e) => {
+      if (!isPasteActive) return;
+      
+      console.log('📋 Paste detectado en UploadProduct');
+      e.preventDefault();
+      
+      const clipboardData = e.clipboardData;
+      if (clipboardData && clipboardData.items) {
+        handleClipboardImages(clipboardData);
+      }
+    };
+
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      
+      if (isProcessingImages) return;
+      
+      const files = Array.from(e.dataTransfer.files);
+      const imageFiles = files.filter(file => isValidImageFile(file));
+      
+      if (imageFiles.length > 0) {
+        handleImageFiles(imageFiles);
+      }
+    };
+
+    // Agregar listeners
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('dragleave', handleDragLeave);
+    document.addEventListener('drop', handleDrop);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('dragleave', handleDragLeave);
+      document.removeEventListener('drop', handleDrop);
+    };
+  }, [isPasteActive, isProcessingImages]);
+
+  // Activar paste automáticamente al abrir el modal
+  useEffect(() => {
+    if (imageAreaRef.current) {
+      setIsPasteActive(true);
+      imageAreaRef.current.focus();
     }
   }, []);
 
-  // Calcular precios cuando cambien los valores financieros
-  useEffect(() => {
-    const purchasePriceUSD = parseFloat(data.purchasePriceUSD) || 0;
-    const exchangeRate = parseFloat(data.exchangeRate) || 7300;
-    const loanInterest = parseFloat(data.loanInterest) || 0;
-    const deliveryCost = parseFloat(data.deliveryCost) || 0;
-    const profitMargin = parseFloat(data.profitMargin) || 0;
-    const sellingPrice = parseFloat(data.sellingPrice) || 0;
-
-    // Calcular precio de compra en PYG
-    const purchasePricePYG = purchasePriceUSD * exchangeRate;
-    
-    // Calcular costo total correctamente
-    const interestAmount = purchasePricePYG * (loanInterest / 100);
-    const totalCost = purchasePricePYG + interestAmount + deliveryCost;
-    
-    // Calcular ganancia y margen real
-    const profitAmount = sellingPrice - totalCost;
-    const actualProfitMargin = sellingPrice > 0 ? (profitAmount / sellingPrice) * 100 : 0;
-
-    // Calcular precio sugerido con la fórmula correcta
-    const suggestedSellingPrice = profitMargin > 0 && profitMargin < 100 
-      ? totalCost / (1 - (profitMargin / 100)) 
-      : totalCost;
-
-    setData(prev => ({
-      ...prev,
-      purchasePrice: purchasePricePYG,
-      profitAmount: profitAmount,
-      actualProfitMargin: actualProfitMargin,
-      suggestedSellingPrice: Math.round(suggestedSellingPrice),
-      totalCost: totalCost
-    }));
-  }, [data.purchasePriceUSD, data.exchangeRate, data.loanInterest, data.deliveryCost, data.sellingPrice, data.profitMargin]);
-
-  const handleOnChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    let processedValue = value;
-
-    // Manejar campos numéricos
-    if (type === 'number') {
-      // Permitir vacío para poder borrar
-      if (value === '') {
-        processedValue = '';
-      } else {
-        // Convertir a número y evitar decimales innecesarios
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          processedValue = numValue.toString();
-        }
+  // Función para manejar imágenes del portapapeles
+  const handleClipboardImages = async (clipboardData) => {
+    try {
+      console.log('📋 Procesando imágenes del portapapeles...');
+      const imageFiles = await extractImagesFromClipboard(clipboardData);
+      
+      if (imageFiles.length === 0) {
+        toast.info('No se encontraron imágenes en el portapapeles');
+        return;
       }
-    } else if (type === 'checkbox') {
-      processedValue = checked;
-    }
-
-    setData(prev => ({
-      ...prev,
-      [name]: processedValue
-    }));
-
-    // Limpiar errores de validación
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
+      
+      console.log(`📊 ${imageFiles.length} imágenes encontradas en el portapapeles`);
+      await handleImageFiles(imageFiles);
+      
+    } catch (error) {
+      console.error('❌ Error procesando portapapeles:', error);
+      toast.error('Error al procesar imágenes del portapapeles');
     }
   };
 
-  const handleSpecificationsChange = (specs) => {
-    setData(prev => ({
-      ...prev,
-      specifications: specs
-    }));
-  };
-
-  const handleUploadProductImage = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    const maxImages = 10;
-    const remainingSlots = maxImages - data.productImage.length;
+  // Función para manejar archivos de imagen (paste, drag & drop, upload)
+  const handleImageFiles = async (files) => {
+    if (isProcessingImages) return;
     
-    if (remainingSlots <= 0) {
-      toast.warning(`Solo se pueden cargar hasta ${maxImages} imágenes en total`);
+    const maxImages = 10;
+    const currentCount = data.productImage.length;
+    const availableSlots = maxImages - currentCount;
+    
+    if (availableSlots <= 0) {
+      toast.warning(`Máximo ${maxImages} imágenes permitidas`);
       return;
     }
-
-    const filesToUpload = files.slice(0, remainingSlots);
-    const uploadPromises = [];
-
+    
+    // Tomar solo las imágenes que caben
+    const filesToProcess = files.slice(0, availableSlots);
+    
+    if (files.length > availableSlots) {
+      toast.warning(`Solo se procesarán ${availableSlots} imágenes (máximo ${maxImages} permitidas)`);
+    }
+    
+    setIsProcessingImages(true);
+    setProcessingProgress({ current: 0, total: filesToProcess.length, fileName: '' });
+    
     try {
-      for (const file of filesToUpload) {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`La imagen ${file.name} excede el límite de 5MB`);
-          continue;
+      console.log(`🖼️ Procesando ${filesToProcess.length} imágenes...`);
+      
+      // Optimizar imágenes
+      const optimizationResults = await optimizeMultipleImages(
+        filesToProcess,
+        {},
+        (current, total, fileName) => {
+          setProcessingProgress({ current, total, fileName, stage: 'optimizing' });
         }
-
-        if (!file.type.startsWith('image/')) {
-          toast.error(`El archivo ${file.name} no es una imagen válida`);
-          continue;
+      );
+      
+      console.log('✅ Optimización completada, iniciando subida...');
+      
+      // Subir imágenes optimizadas
+      const uploadPromises = optimizationResults.map(async (result, index) => {
+        setProcessingProgress({ 
+          current: index + 1, 
+          total: optimizationResults.length, 
+          fileName: result.file.name,
+          stage: 'uploading'
+        });
+        
+        try {
+          const uploadResult = await uploadImage(result.file);
+          return uploadResult.url;
+        } catch (error) {
+          console.error(`❌ Error subiendo ${result.file.name}:`, error);
+          return null;
         }
-
-        const uploadPromise = uploadImage(file)
-          .then(response => response.url)
-          .catch(error => {
-            console.error(`Error al cargar ${file.name}:`, error);
-            return null;
-          });
-
-        uploadPromises.push(uploadPromise);
-      }
-
+      });
+      
       const uploadedUrls = await Promise.all(uploadPromises);
-      const validUrls = uploadedUrls.filter(url => url !== null);
-
-      if (validUrls.length > 0) {
-        setData(prev => ({
-          ...prev,
-          productImage: [...prev.productImage, ...validUrls]
-        }));
-        toast.success(`${validUrls.length} ${validUrls.length === 1 ? 'imagen cargada' : 'imágenes cargadas'} exitosamente`);
+      const successfulUrls = uploadedUrls.filter(url => url !== null);
+      
+      // Actualizar estado
+      setData(prev => ({
+        ...prev,
+        productImage: [...prev.productImage, ...successfulUrls]
+      }));
+      
+      // Estadísticas
+      const stats = getOptimizationStats(optimizationResults);
+      const successful = optimizationResults.filter(r => r.success).length;
+      
+      if (successful > 0) {
+        toast.success(
+          `✅ ${successful} imágenes cargadas y optimizadas ✨\n` +
+          `📊 Reducción promedio: ${stats.averageReduction}%`
+        );
       }
+      
+      if (stats.failed > 0) {
+        toast.warning(`${stats.failed} imágenes no se pudieron optimizar`);
+      }
+      
+      // Ocultar instrucciones después del primer uso exitoso
+      if (showInstructions) {
+        setShowInstructions(false);
+      }
+      
     } catch (error) {
-      console.error('Error al cargar las imágenes:', error);
-      toast.error('Error al cargar las imágenes');
+      console.error('❌ Error procesando imágenes:', error);
+      toast.error('Error al procesar las imágenes');
+    } finally {
+      setIsProcessingImages(false);
+      setProcessingProgress({ current: 0, total: 0, fileName: '' });
     }
   };
 
-  const handleDeleteImage = async (index) => {
+  // Función para manejar selección de archivos tradicional
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.filter(file => isValidImageFile(file));
+    
+    if (imageFiles.length > 0) {
+      handleImageFiles(imageFiles);
+    } else {
+      toast.warning('Por favor selecciona archivos de imagen válidos');
+    }
+    
+    // Limpiar input
+    e.target.value = '';
+  };
+
+  // Función para eliminar imagen
+  const handleRemoveImage = (index) => {
     setData(prev => ({
       ...prev,
       productImage: prev.productImage.filter((_, i) => i !== index)
     }));
   };
 
-  const handleUseSuggestedPrice = () => {
-    const suggestedPrice = data.suggestedSellingPrice || 0;
-    
-    if (suggestedPrice > 0) {
-      setData(prev => ({
-        ...prev,
-        sellingPrice: suggestedPrice.toString(),
-        price: prev.sellingPrice || '0' // Guardar precio anterior
-      }));
-      toast.success(`Precio sugerido aplicado: ${suggestedPrice.toLocaleString()} Gs`);
-    } else {
-      toast.error('No se pudo calcular el precio sugerido');
+  // Función para mostrar imagen en pantalla completa
+  const handleShowFullImage = (imageUrl) => {
+    setFullScreenImage(imageUrl);
+    setOpenFullScreenImage(true);
+  };
+
+  // Función para copiar al portapapeles
+  const handleCopyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Copiado al portapapeles');
+    } catch (error) {
+      console.error('Error copiando:', error);
+      toast.error('Error al copiar');
     }
+  };
+
+  // Resto de las funciones existentes...
+  const handleOnChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSpecificationChange = (updatedSpecs) => {
+    setData(prev => ({
+      ...prev,
+      specifications: updatedSpecs
+    }));
   };
 
   const validateForm = () => {
@@ -286,537 +393,736 @@ const UploadProduct = ({ onClose, fetchData }) => {
     if (!data.brandName.trim()) errors.brandName = 'La marca es requerida';
     if (!data.category) errors.category = 'La categoría es requerida';
     if (!data.subcategory) errors.subcategory = 'La subcategoría es requerida';
-    if (!data.codigo.trim()) errors.codigo = 'El código del producto es requerido';
     if (!data.description.trim()) errors.description = 'La descripción es requerida';
-    if (data.productImage.length === 0) errors.productImage = 'Al menos una imagen es requerida';
-    if (!data.sellingPrice || data.sellingPrice <= 0) errors.sellingPrice = 'El precio de venta debe ser mayor a 0';
-    if (!data.stock || data.stock < 0) errors.stock = 'El stock debe ser mayor o igual a 0';
+    if (!data.codigo.trim()) errors.codigo = 'El código es requerido';
+    
+    // Validación de imágenes: permitir si hay imágenes manuales O si hay imagen del CSV
+    if (data.productImage.length === 0 && !imagePreview) {
+      errors.productImage = 'Debe cargar al menos una imagen del producto';
+    }
+    
+    if (!data.sellingPrice || data.sellingPrice <= 0) {
+      errors.sellingPrice = 'El precio de venta debe ser mayor a 0';
+    }
+    
+    if (!data.stock || data.stock < 0) {
+      errors.stock = 'El stock debe ser mayor o igual a 0';
+    }
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
-    console.log('🚀 UploadProduct - handleSubmit iniciado');
     e.preventDefault();
     
-    console.log('📋 UploadProduct - Validando formulario...');
     if (!validateForm()) {
-      console.log('❌ UploadProduct - Validación falló');
       toast.error('Por favor corrige los errores en el formulario');
       return;
     }
-    console.log('✅ UploadProduct - Validación exitosa');
-
+    
     setIsSubmitting(true);
+    
     try {
-      // Preparar datos para enviar
+      let finalProductImages = [...data.productImage];
+      
+      // Si hay imagen del CSV y no hay imágenes manuales cargadas
+      if (imageSource === 'csv' && preloadedData?.imageUrlFromProvider && finalProductImages.length === 0) {
+        console.log('📥 Descargando e importando imagen del CSV...');
+        console.log('📥 URL:', preloadedData.imageUrlFromProvider);
+        
+        try {
+          // Llamar al endpoint que descarga y sube la imagen
+          const imageResponse = await fetch('/api/admin/inventory-sync/import-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              imageUrl: preloadedData.imageUrlFromProvider,
+              productCode: data.codigo
+            })
+          });
+          
+          const imageResult = await imageResponse.json();
+          if (imageResult.success) {
+            console.log('✅ Imagen importada:', imageResult.firebaseUrl);
+            finalProductImages = [imageResult.firebaseUrl];
+          } else {
+            console.warn('⚠️ No se pudo importar la imagen:', imageResult.error);
+            toast.warning('Producto creado sin imagen (error al importarla)');
+          }
+        } catch (imageError) {
+          console.error('❌ Error importando imagen:', imageError);
+          toast.warning('Producto se creará sin imagen');
+        }
+      }
+      
+      // Crear producto
       const productDataToSend = {
         ...data,
-        // Mapear price (precio anterior) correctamente
-        price: data.price || 0,
-        // Incluir todas las especificaciones individuales
+        productImage: finalProductImages,
         ...data.specifications
       };
-
-      console.log('📤 UploadProduct - Datos preparados para enviar:', {
-        productName: productDataToSend.productName,
-        sellingPrice: productDataToSend.sellingPrice,
-        price: productDataToSend.price,
-        purchasePriceUSD: productDataToSend.purchasePriceUSD,
-        exchangeRate: productDataToSend.exchangeRate,
-        loanInterest: productDataToSend.loanInterest,
-        deliveryCost: productDataToSend.deliveryCost,
-        profitMargin: productDataToSend.profitMargin,
-        specifications: productDataToSend.specifications
-      });
-
-      console.log('🌐 UploadProduct - Llamando a SummaryApi.uploadProduct...');
-      const response = await fetch(SummaryApi.uploadProduct.url, {
-        method: SummaryApi.uploadProduct.method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+      
+      console.log('📤 Enviando producto:', productDataToSend);
+      
+      const response = await fetch('http://localhost:8080/api/cargar-producto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(productDataToSend)
       });
       
-      const responseData = await response.json();
+      const result = await response.json();
       
-      console.log('📥 UploadProduct - Respuesta recibida:', responseData);
-      
-      if (responseData.success) {
-        console.log('✅ UploadProduct - Producto creado exitosamente');
-        toast.success('Producto creado correctamente');
+      if (result.success) {
+        toast.success('Producto creado exitosamente');
         if (fetchData) fetchData();
         onClose();
       } else {
-        console.log('❌ UploadProduct - Error en la respuesta:', responseData.message);
-        toast.error(responseData.message || 'Error al crear el producto');
+        toast.error(result.message || 'Error al crear producto');
       }
+      
     } catch (error) {
-      console.error('💥 UploadProduct - Error en handleSubmit:', error);
-      console.error('💥 UploadProduct - Error details:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data
-      });
+      console.error('💥 Error:', error);
       toast.error('Error al crear el producto');
     } finally {
-      console.log('🏁 UploadProduct - handleSubmit finalizado');
       setIsSubmitting(false);
     }
   };
 
+  // Función para cargar tipo de cambio
+  const loadExchangeRate = async () => {
+    setIsLoadingExchangeRate(true);
+    try {
+      const response = await fetch('/api/admin/exchange-rate', {
+        credentials: 'include'
+      });
+      const result = await response.json();
+      if (result.success && result.data && result.data.value) {
+        setCurrentExchangeRate(result.data.value);
+        setData(prev => ({
+          ...prev,
+          exchangeRate: result.data.value
+        }));
+      }
+    } catch (error) {
+      console.error('Error cargando tipo de cambio:', error);
+    } finally {
+      setIsLoadingExchangeRate(false);
+    }
+  };
+
+  // Función para calcular precio automáticamente
+  const calculatePrice = () => {
+    const purchasePriceUSD = parseFloat(data.purchasePriceUSD) || 0;
+    const exchangeRate = parseFloat(data.exchangeRate) || 7300;
+    const deliveryCost = parseFloat(data.deliveryCost) || 30000;
+    const profitMargin = parseFloat(data.profitMargin) || 20;
+    
+    if (purchasePriceUSD > 0) {
+      const purchasePrice = purchasePriceUSD * exchangeRate;
+      const totalCost = purchasePrice + deliveryCost;
+      const sellingPrice = Math.round(totalCost / (1 - (profitMargin / 100)));
+      
+      setData(prev => ({
+        ...prev,
+        purchasePrice: Math.round(purchasePrice),
+        sellingPrice: sellingPrice,
+        profitAmount: sellingPrice - totalCost
+      }));
+    }
+  };
+
+  // Calcular precio cuando cambien los valores
+  useEffect(() => {
+    calculatePrice();
+  }, [data.purchasePriceUSD, data.exchangeRate, data.deliveryCost, data.profitMargin]);
+
+  // Cargar tipo de cambio al montar
+  useEffect(() => {
+    loadExchangeRate();
+  }, []);
+
+  const getImageCountStatus = () => {
+    const count = data.productImage.length;
+    if (count >= 10) return { color: 'text-red-600', bg: 'bg-red-100' };
+    if (count >= 8) return { color: 'text-yellow-600', bg: 'bg-yellow-100' };
+    return { color: 'text-green-600', bg: 'bg-green-100' };
+  };
+
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-800">Crear Nuevo Producto</h2>
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {preloadedData ? 'Cargar Producto' : 'Subir Producto'}
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-500 hover:text-gray-700 text-2xl"
           >
-            <FaTimes className="w-6 h-6" />
+            <FaTimes />
           </button>
         </div>
 
-        {/* Content - Single Page Layout */}
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Información Básica */}
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaInfoCircle className="w-5 h-5 text-blue-600 mr-2" />
-                <h3 className="text-lg font-semibold text-blue-800">Información Básica</h3>
-              </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Instrucciones simplificadas */}
+          {showInstructions && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 relative">
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="absolute top-2 right-2 text-blue-500 hover:text-blue-700"
+              >
+                <FaTimes />
+              </button>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-start space-x-3">
+                <FaInfoCircle className="text-blue-500 mt-1" />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto *</label>
-                  <input
-                    type="text"
-                    name="productName"
-                    value={data.productName}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ingrese el nombre del producto"
-                  />
-                  {validationErrors.productName && <p className="text-red-600 text-sm mt-1">{validationErrors.productName}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
-                  <input
-                    type="text"
-                    name="brandName"
-                    value={data.brandName}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ingrese la marca"
-                  />
-                  {validationErrors.brandName && <p className="text-red-600 text-sm mt-1">{validationErrors.brandName}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
-                  <select
-                    name="category"
-                    value={data.category}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    {(() => {
-                      const categoriesForSelect = getCategoriesForSelect();
-                      console.log('🔍 UploadProduct - Categorías para select:', categoriesForSelect);
-                      return categoriesForSelect.map(cat => (
-                        <option key={cat.value} value={cat.value}>{cat.label}</option>
-                      ));
-                    })()}
-                  </select>
-                  {validationErrors.category && <p className="text-red-600 text-sm mt-1">{validationErrors.category}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subcategoría *</label>
-                  <select
-                    name="subcategory"
-                    value={data.subcategory}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={!data.category}
-                  >
-                    <option value="">Seleccionar subcategoría</option>
-                    {(() => {
-                      const subcategories = getSubcategoriesByCategory(data.category);
-                      console.log('🔍 UploadProduct - Subcategorías para select:', {
-                        category: data.category,
-                        subcategories: subcategories
-                      });
-                      return subcategories.map(sub => (
-                        <option key={sub.value} value={sub.value}>{sub.label}</option>
-                      ));
-                    })()}
-                  </select>
-                  {validationErrors.subcategory && <p className="text-red-600 text-sm mt-1">{validationErrors.subcategory}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Código del Producto *</label>
-                  <input
-                    type="text"
-                    name="codigo"
-                    value={data.codigo}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ej: INF-001"
-                  />
-                  {validationErrors.codigo && <p className="text-red-600 text-sm mt-1">{validationErrors.codigo}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
-                  <textarea
-                    name="description"
-                    value={data.description}
-                    onChange={handleOnChange}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción detallada del producto"
-                  />
-                  {validationErrors.description && <p className="text-red-600 text-sm mt-1">{validationErrors.description}</p>}
+                  <h3 className="font-semibold text-blue-800 mb-2">💡 Tip rápido</h3>
+                  <p className="text-sm text-blue-700">
+                    Copia imágenes desde cualquier lugar y presiona <kbd className="bg-blue-100 px-2 py-1 rounded">Ctrl+V</kbd> aquí para pegarlas automáticamente.
+                    También puedes arrastrar archivos o hacer click en "Subir Imágenes".
+                  </p>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Imágenes */}
-            <div className="bg-green-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaImage className="w-5 h-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-green-800">Imágenes del Producto</h3>
+          {/* Preview de Imagen del Proveedor */}
+          {imageSource === 'csv' && imagePreview && (
+            <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+              <div className="flex items-center mb-3">
+                <FaImage className="w-5 h-5 text-blue-600 mr-2" />
+                <h4 className="font-semibold text-blue-800">Imagen del Proveedor</h4>
               </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview del proveedor" 
+                    className="w-32 h-32 object-cover rounded-lg border-2 border-blue-300 shadow-sm"
+                    onError={(e) => {
+                      console.error('❌ Error cargando preview de imagen');
+                      console.error('❌ URL que falló:', imagePreview);
+                      e.target.src = 'https://via.placeholder.com/150?text=Error';
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Preview de imagen cargado exitosamente');
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700 mb-3">
+                    Esta imagen se descargará automáticamente del proveedor y se subirá a nuestro servidor al guardar el producto.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('🔗 Abriendo imagen original');
+                        window.open(imagePreview, '_blank');
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    >
+                      🔗 Ver Imagen Original
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('❌ Cambiando a upload manual');
+                        setImageSource('manual');
+                        setImagePreview(null);
+                      }}
+                      className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700"
+                    >
+                      ❌ Usar Otra Imagen
+                    </button>
+                    {data.documentationLink && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          console.log('📄 Abriendo página del producto');
+                          window.open(data.documentationLink, '_blank');
+                        }}
+                        className="px-3 py-1.5 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
+                      >
+                        📄 Ver Producto en Sitio
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Área de Imágenes Simplificada */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">
+                Imágenes del Producto
+              </label>
+              <div className="flex items-center space-x-2">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${getImageCountStatus().bg} ${getImageCountStatus().color}`}>
+                  {data.productImage.length} / 10
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInstructions(true)}
+                  className="text-blue-500 hover:text-blue-700 text-sm"
+                >
+                  💡 Ayuda
+                </button>
+              </div>
+            </div>
+
+            {/* Área de Paste y Drag & Drop Simplificada */}
+            <div
+              ref={imageAreaRef}
+              tabIndex={0}
+              onClick={() => {
+                if (isPasteActive) {
+                  fileInputRef.current?.click();
+                } else {
+                  setIsPasteActive(true);
+                  if (imageAreaRef.current) {
+                    imageAreaRef.current.focus();
+                  }
+                }
+              }}
+              onFocus={() => setIsPasteActive(true)}
+              onBlur={() => setIsPasteActive(false)}
+              className={`
+                relative min-h-[150px] border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all duration-200
+                ${isPasteActive ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}
+                ${isDragOver ? 'border-blue-400 bg-blue-50' : ''}
+                ${isProcessingImages ? 'pointer-events-none opacity-75' : ''}
+              `}
+            >
+              {/* Grid de Imágenes */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {data.productImage.map((image, index) => (
                   <div key={index} className="relative group">
-                    <img
-                      src={image}
-                      alt={`Producto ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
+                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
+                      <img
+                        src={image}
+                        alt={`Producto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onClick={() => handleShowFullImage(image)}
+                      />
+                    </div>
+                    
+                    {/* Número de orden */}
+                    <div className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                      {index + 1}
+                    </div>
+                    
+                    {/* Botones de acción */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="flex space-x-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setFullScreenImage(image);
-                            setOpenFullScreenImage(true);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShowFullImage(image);
                           }}
-                          className="p-2 bg-white text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+                          className="p-2 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full text-gray-700 hover:text-blue-600 transition-colors"
                         >
-                          <FaEye className="w-4 h-4" />
+                          <FaEye />
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteImage(index)}
-                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(index);
+                          }}
+                          className="p-2 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full text-gray-700 hover:text-red-600 transition-colors"
                         >
-                          <FaTrash className="w-4 h-4" />
+                          <FaTrash />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
                 
+                {/* Botón de subir (solo si hay espacio) */}
                 {data.productImage.length < 10 && (
-                  <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg h-32 hover:border-gray-400 transition-colors">
-                    <label htmlFor="uploadImage" className="cursor-pointer flex flex-col items-center">
-                      <FaUpload className="w-8 h-8 text-gray-400 mb-2" />
-                      <span className="text-xs mt-1">Subir</span>
-                      <input
-                        type="file"
-                        id="uploadImage"
-                        className="hidden"
-                        onChange={handleUploadProductImage}
-                        multiple
-                        accept="image/*"
-                      />
-                    </label>
+                  <div className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-gray-400 transition-colors">
+                    <div className="text-center">
+                      <FaUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <span className="text-xs text-gray-500">Subir Imágenes</span>
+                    </div>
                   </div>
                 )}
               </div>
-              {validationErrors.productImage && <p className="text-red-600 text-sm mt-1">{validationErrors.productImage}</p>}
+
+              {/* Instrucciones cuando no hay imágenes */}
+              {data.productImage.length === 0 && (
+                <div className="text-center py-8">
+                  <FaImage className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-2">
+                    {isPasteActive ? 'Presiona Ctrl+V para pegar imágenes' : 'Haz click para activar el modo paste'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    O arrastra archivos aquí, o haz click para seleccionar
+                  </p>
+                </div>
+              )}
+
+              {/* Input oculto para selección de archivos */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+
+            {validationErrors.productImage && (
+              <p className="text-red-600 text-sm">{validationErrors.productImage}</p>
+            )}
+          </div>
+
+          {/* Resto del formulario... */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Información Básica */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">Información Básica</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Producto *
+                </label>
+                <input
+                  type="text"
+                  name="productName"
+                  value={data.productName}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: Monitor Gamer MSI"
+                />
+                {validationErrors.productName && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.productName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marca *
+                </label>
+                <input
+                  type="text"
+                  name="brandName"
+                  value={data.brandName}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: MSI"
+                />
+                {validationErrors.brandName && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.brandName}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código *
+                </label>
+                <input
+                  type="text"
+                  name="codigo"
+                  value={data.codigo || ''}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: 54460"
+                  readOnly={data.importMode}
+                />
+                {data.importMode && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Debug - Valor actual: "{data.codigo}" | Import Mode: SÍ
+                  </p>
+                )}
+                {validationErrors.codigo && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.codigo}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoría *
+                </label>
+                <select
+                  name="category"
+                  value={data.category}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Seleccionar categoría</option>
+                  {getCategoriesForSelect().map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.category && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.category}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Subcategoría *
+                </label>
+                <select
+                  name="subcategory"
+                  value={data.subcategory}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={!data.category}
+                >
+                  <option value="">Seleccionar subcategoría</option>
+                  {data.category && getSubcategoriesByCategory(data.category).map(sub => (
+                    <option key={sub.value} value={sub.value}>
+                      {sub.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.subcategory && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.subcategory}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción *
+                </label>
+                <textarea
+                  name="description"
+                  value={data.description}
+                  onChange={handleOnChange}
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Describe el producto..."
+                />
+                {validationErrors.description && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.description}</p>
+                )}
+              </div>
+
+              {/* Campo de URL del producto con botón de copiar */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL del Producto (Proveedor)
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    type="url"
+                    name="documentationLink"
+                    value={data.documentationLink}
+                    onChange={handleOnChange}
+                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://www.visaovip.com/produto/..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopyToClipboard(data.documentationLink)}
+                    className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                    title="Copiar URL"
+                  >
+                    <FaCopy />
+                  </button>
+                  {data.documentationLink && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(data.documentationLink, '_blank')}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      title="Abrir en nueva pestaña"
+                    >
+                      <FaExternalLinkAlt />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Información Financiera */}
-            <div className="bg-yellow-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaDollarSign className="w-5 h-5 text-yellow-600 mr-2" />
-                <h3 className="text-lg font-semibold text-yellow-800">Información Financiera</h3>
-              </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">Información Financiera</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio de Compra USD</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio de Compra (USD) *
+                </label>
+                <input
+                  type="number"
+                  name="purchasePriceUSD"
+                  value={data.purchasePriceUSD}
+                  onChange={handleOnChange}
+                  step="0.01"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Cambio
+                </label>
+                <div className="flex space-x-2">
                   <input
                     type="number"
-                    name="purchasePriceUSD"
-                    value={data.purchasePriceUSD}
+                    name="exchangeRate"
+                    value={data.exchangeRate}
                     onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    placeholder="0"
-                    step="0.01"
+                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="7300"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cambio USD/PYG</label>
-                  <div className="flex">
-                    <input
-                      type="number"
-                      name="exchangeRate"
-                      value={data.exchangeRate}
-                      onChange={handleOnChange}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                      placeholder="7300"
-                    />
-                    <button
-                      type="button"
-                      onClick={fetchCurrentExchangeRate}
-                      disabled={isLoadingExchangeRate}
-                      className="px-3 py-2 bg-yellow-500 text-white rounded-r-lg hover:bg-yellow-600 disabled:opacity-50"
-                    >
-                      {isLoadingExchangeRate ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      ) : (
-                        <FaSync className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio de Compra PYG</label>
-                  <input
-                    type="number"
-                    value={data.purchasePrice}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
-                    placeholder="Calculado automáticamente"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Interés sobre Préstamos (%)</label>
-                  <input
-                    type="number"
-                    name="loanInterest"
-                    value={data.loanInterest}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Costo de Envío (PYG)</label>
-                  <input
-                    type="number"
-                    name="deliveryCost"
-                    value={data.deliveryCost}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Margen de Ganancia Deseado (%)</label>
-                  <input
-                    type="number"
-                    name="profitMargin"
-                    value={data.profitMargin}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    placeholder="0"
-                    step="0.01"
-                  />
+                  <button
+                    type="button"
+                    onClick={loadExchangeRate}
+                    disabled={isLoadingExchangeRate}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {isLoadingExchangeRate ? <FaSpinner className="animate-spin" /> : <FaSync />}
+                  </button>
                 </div>
               </div>
 
-              {/* Resumen Financiero */}
-              <div className="mt-4 p-4 bg-purple-100 rounded-lg">
-                <h4 className="text-sm font-medium text-purple-800 mb-2">Resumen Financiero</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">Ganancia:</p>
-                    <p className="font-semibold text-purple-900">{Number(data.profitAmount || 0).toLocaleString()} Gs</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Margen Real:</p>
-                    <p className="font-semibold text-purple-900">{Number(data.actualProfitMargin || 0).toFixed(2)}%</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Costo Total:</p>
-                    <p className="font-semibold text-purple-900">
-                      {Number(data.totalCost || 0).toLocaleString()} Gs
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">Precio Sugerido:</p>
-                    <p className="font-semibold text-purple-900">{Number(data.suggestedSellingPrice || 0).toLocaleString()} Gs</p>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Costo de Envío (PYG)
+                </label>
+                <input
+                  type="number"
+                  name="deliveryCost"
+                  value={data.deliveryCost}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="30000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Margen de Ganancia (%)
+                </label>
+                <input
+                  type="number"
+                  name="profitMargin"
+                  value={data.profitMargin}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio de Venta (PYG) *
+                </label>
+                <input
+                  type="number"
+                  name="sellingPrice"
+                  value={data.sellingPrice}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                />
+                {validationErrors.sellingPrice && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.sellingPrice}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock *
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={data.stock}
+                  onChange={handleOnChange}
+                  min="0"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                />
+                {validationErrors.stock && (
+                  <p className="text-red-600 text-sm mt-1">{validationErrors.stock}</p>
+                )}
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isVipOffer"
+                  checked={data.isVipOffer}
+                  onChange={handleOnChange}
+                  className="mr-2"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Oferta VIP
+                </label>
               </div>
             </div>
+          </div>
 
-            {/* Precios de Venta */}
-            <div className="bg-purple-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaDollarSign className="w-5 h-5 text-purple-600 mr-2" />
-                <h3 className="text-lg font-semibold text-purple-800">Precios de Venta</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio Anterior (PYG)</label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={data.price}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
+          {/* Especificaciones Dinámicas */}
+          {data.category && data.subcategory && (
+            <DynamicProductSpecifications
+              category={data.category}
+              subcategory={data.subcategory}
+              specifications={data.specifications}
+              onSpecificationsChange={handleSpecificationChange}
+            />
+          )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio de Venta Final (PYG) *</label>
-                  <input
-                    type="number"
-                    name="sellingPrice"
-                    value={data.sellingPrice}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="0"
-                    step="0.01"
-                    required
-                  />
-                  {validationErrors.sellingPrice && <p className="text-red-600 text-sm mt-1">{validationErrors.sellingPrice}</p>}
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleUseSuggestedPrice}
-                  className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center"
-                >
-                  <FaDollarSign className="w-4 h-4 mr-2" />
-                  Usar Precio Sugerido
-                </button>
-              </div>
-            </div>
-
-            {/* Inventario */}
-            <div className="bg-orange-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaBox className="w-5 h-5 text-orange-600 mr-2" />
-                <h3 className="text-lg font-semibold text-orange-800">Inventario</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock Disponible *</label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={data.stock}
-                    onChange={handleOnChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="0"
-                    min="0"
-                  />
-                  {validationErrors.stock && <p className="text-red-600 text-sm mt-1">{validationErrors.stock}</p>}
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="isVipOffer"
-                    checked={data.isVipOffer}
-                    onChange={handleOnChange}
-                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                  />
-                  <label className="ml-2 block text-sm text-gray-700">
-                    Oferta VIP
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Especificaciones Técnicas */}
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <div className="flex items-center mb-4">
-                <FaFileAlt className="w-5 h-5 text-gray-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-800">Especificaciones Técnicas</h3>
-              </div>
-              
-              <DynamicProductSpecifications
-                category={data.category}
-                subcategory={data.subcategory}
-                specifications={data.specifications}
-                onSpecificationsChange={handleSpecificationsChange}
-              />
-            </div>
-          </form>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50 space-x-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancelar
-          </button>
-          
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
-          >
-            {isSubmitting ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            ) : (
-              <FaSave className="w-4 h-4 mr-2" />
-            )}
-            {isSubmitting ? 'Creando...' : 'Crear Producto'}
-          </button>
-        </div>
+          {/* Botones */}
+          <div className="flex justify-end space-x-4 pt-6 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || isProcessingImages}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  <span>Creando...</span>
+                </>
+              ) : (
+                <>
+                  <FaSave />
+                  <span>Crear Producto</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Modal de imagen en pantalla completa */}
       {openFullScreenImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-60">
           <div className="relative max-w-4xl max-h-full p-4">
             <button
               onClick={() => setOpenFullScreenImage(false)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+              className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 z-10"
             >
-              <FaTimes className="w-8 h-8" />
+              <FaTimes />
             </button>
             <img
               src={fullScreenImage}
-              alt="Vista previa"
-              className="max-w-full max-h-full object-contain rounded-lg"
+              alt="Imagen del producto"
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         </div>

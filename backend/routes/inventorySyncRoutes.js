@@ -89,4 +89,38 @@ router.post('/import-products', authToken, importProductsController);
  */
 router.post('/update-product-codes', authToken, updateProductCodesController);
 
+/**
+ * POST /api/admin/inventory-sync/import-image
+ * Importa una imagen desde URL del proveedor y la sube a Firebase Storage
+ * 
+ * Body:
+ * - imageUrl: URL de la imagen del proveedor
+ * - productCode: Código del producto
+ */
+router.post('/import-image', authToken, async (req, res) => {
+    try {
+        const { imageUrl, productCode } = req.body;
+        
+        console.log(`📥 Importando imagen para código ${productCode}`);
+        console.log(`🔗 URL: ${imageUrl}`);
+        
+        const path = require('path');
+        const imageImportService = require(path.join(__dirname, '../services/imageImportService'));
+        
+        // Usar imageImportService (que debe estar arreglado con el método correcto)
+        const result = await imageImportService.importImageFromUrl(imageUrl, productCode);
+        
+        res.json({
+            success: true,
+            firebaseUrl: result
+        });
+    } catch (error) {
+        console.error('❌ Error importando imagen:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

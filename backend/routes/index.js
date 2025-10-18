@@ -1523,8 +1523,37 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
     // ===== RUTAS DE ADMINISTRACIÓN DE CATEGORÍAS =====
     router.use('/admin/categories', categoryRoutes);
 
-    // ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
-    const inventorySyncRoutes = require('./inventorySyncRoutes');
-    router.use('/admin/inventory-sync', inventorySyncRoutes);
+// ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
+const inventorySyncRoutes = require('./inventorySyncRoutes');
+router.use('/admin/inventory-sync', inventorySyncRoutes);
+
+// ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
+router.get('/admin/products/:id', authToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`📥 GET /api/admin/products/${id}`);
+        
+        const productModel = require('../models/productModel');
+        const product = await productModel.findById(id).lean();
+        
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Producto no encontrado'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: product
+        });
+    } catch (error) {
+        console.error('Error obteniendo producto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener producto'
+        });
+    }
+});
 
     module.exports = router;
