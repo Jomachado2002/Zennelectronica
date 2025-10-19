@@ -163,7 +163,7 @@ const Header = () => {
     const trimmedSearch = String(search || '').trim();
     if (trimmedSearch) {
       setShowSearchPreview(false);
-      navigate(`/search?q=${encodeURIComponent(trimmedSearch)}`);
+      navigate(`/buscar?q=${encodeURIComponent(trimmedSearch)}`);
     }
   };
 

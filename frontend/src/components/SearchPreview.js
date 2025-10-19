@@ -91,9 +91,13 @@ const SearchPreview = ({
     onSearchChange('');
     onClose();
     
-    // Navegar directamente a los detalles del producto
-    navigate(`/producto/${product._id}`);
-  }, [onSearchChange, onClose, navigate]);
+    // ✅ NAVEGAR USANDO SLUG O ID COMO FALLBACK
+    const productSlug = product?.slug || product?._id;
+    console.log('Navegando a producto:', productSlug, product);
+    
+    // Forzar navegación con window.location para asegurar que funcione
+    window.location.href = `/producto/${productSlug}`;
+  }, [onSearchChange, onClose]);
 
   const handleCategoryClick = useCallback((category) => {
     // Cerrar preview
@@ -109,12 +113,14 @@ const SearchPreview = ({
     setShowPreview(false);
     onClose();
     const trimmedSearchTerm = String(searchTerm || '').trim();
-    navigate(`/search?q=${encodeURIComponent(trimmedSearchTerm)}`);
+    navigate(`/buscar?q=${encodeURIComponent(trimmedSearchTerm)}`);
   }, [onClose, searchTerm, navigate]);
 
-  const handleAddToCart = useCallback(async (product, e) => {
+  const handleAddToCart = useCallback(async (e, product) => {
     e.stopPropagation(); // Evitar que se ejecute handleProductClick
-    await addToCart(product, fetchUserAddToCart);
+    e.preventDefault();
+    addToCart(e, product);
+    fetchUserAddToCart();
   }, [fetchUserAddToCart]);
 
   // Cerrar preview al hacer click fuera
@@ -257,7 +263,7 @@ const SearchPreview = ({
                     {/* Botón de carrito y flecha */}
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={(e) => handleAddToCart(product, e)}
+                        onClick={(e) => handleAddToCart(e, product)}
                         className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
                       >
                         <FaShoppingCart className="text-sm" />
