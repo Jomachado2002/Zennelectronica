@@ -11,6 +11,13 @@ const filterProductController = async (req, res) => {
 
     let query = {};
 
+    // ✅ FILTRAR PRODUCTOS CON STOCK > 0 (IMPORTANTE PARA RENDIMIENTO)
+    query.$or = [
+        { stock: { $exists: false } },
+        { stock: null },
+        { stock: { $gt: 0 } }
+    ];
+
     // Filtros básicos
     if (category.length > 0) query.category = { $in: category };
     if (subcategory.length > 0) query.subcategory = { $in: subcategory };

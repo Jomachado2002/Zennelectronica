@@ -1,0 +1,63 @@
+{
+  "timestamp": "2025-10-19T03:45:06.167Z",
+  "totalImages": 60,
+  "jpgImages": 0,
+  "webpImages": 60,
+  "jpgStats": {
+    "count": 0,
+    "avgLoadTime": 0,
+    "minLoadTime": 0,
+    "maxLoadTime": 0
+  },
+  "webpStats": {
+    "count": 5,
+    "avgLoadTime": 756,
+    "minLoadTime": 441,
+    "maxLoadTime": 1331
+  },
+  "results": {
+    "jpg": [],
+    "webp": [
+      {
+        "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F41a0fd33-5fac-4ea9-8002-1f2e3677eaf8_hkbwtlzouzsgtxczcotr.webp?alt=media&token=1a37f159-24a4-42fa-9ab8-1f66fe9138d3",
+        "productName": "Placa Madre Gigabyte B760M Gaming Plus Wi-Fi DDR4 Socket LGA 1700 / DDR4",
+        "loadTime": 1331,
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "contentLength": "94254"
+      },
+      {
+        "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2Fc2bb0153-0acd-4d87-9f39-825af8dadd3d_j3u3inzjjqxmnvmd8lvz.webp?alt=media&token=621408dc-2c51-4c99-9543-1da1469fe46e",
+        "productName": "Placa Madre Gigabyte B760M Gaming Plus Wi-Fi DDR4 Socket LGA 1700 / DDR4",
+        "loadTime": 618,
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "contentLength": "35668"
+      },
+      {
+        "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F0f9c8f74-8d1c-4ba5-a869-cb20fd58efbb_i1fsvw5qclufxrakl2jt.webp?alt=media&token=fd112447-3890-420b-a654-6219bc9aca56",
+        "productName": "Placa Madre Gigabyte B760M Gaming Plus Wi-Fi DDR4 Socket LGA 1700 / DDR4",
+        "loadTime": 722,
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "contentLength": "261332"
+      },
+      {
+        "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F940295a2-1c10-4cff-a9a5-9776d842d30e_tdeuminj5jyddpbxdgub.webp?alt=media&token=607db3fb-1759-4282-a987-062c74022406",
+        "productName": "Placa Madre Gigabyte Z890 Eagle Wi-Fi 7 Socket LGA 1851  DDR5",
+        "loadTime": 441,
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "contentLength": "83506"
+      },
+      {
+        "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F24c3bdc7-fe31-4ccd-8a73-e9e49b8d9018_wy94hrlxc9wtvlksleq0.webp?alt=media&token=0e30deb5-16be-4198-b9f2-6d6c677b89c8",
+        "productName": "Placa Madre Gigabyte Z890 Eagle Wi-Fi 7 Socket LGA 1851  DDR5",
+        "loadTime": 669,
+        "status": 200,
+        "contentType": "application/octet-stream",
+        "contentLength": "202696"
+      }
+    ]
+  }
+}

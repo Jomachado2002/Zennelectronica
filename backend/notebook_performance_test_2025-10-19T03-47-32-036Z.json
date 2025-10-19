@@ -1,0 +1,232 @@
+{
+  "timestamp": "2025-10-19T03:47:32.036Z",
+  "generalStats": {
+    "totalNotebooks": 5,
+    "totalImages": 15,
+    "successfulImages": 15,
+    "jpgImages": 6,
+    "webpImages": 9,
+    "avgLoadTime": 498,
+    "avgJpgLoadTime": 306,
+    "avgWebpLoadTime": 626,
+    "minLoadTime": 181,
+    "maxLoadTime": 784
+  },
+  "notebookResults": [
+    {
+      "productName": "Monitor Portátil Verbatim PMT-15 15.6\" Touch Screen Full HD - Negro",
+      "productId": "67c4be5e6cf642718a0e3b4b",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2Fa8b7c8c5-9dcf-4a62-a53a-af3ecab1b814_wqteum3og4lixbojlqdj.webp?alt=media&token=d6d4830e-1b47-4dbb-a769-9bee665b8fb8",
+          "loadTime": 646,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "29988",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F1a732a53-3dbf-4eaf-89bf-bcf77179ac4a_emhpcuq1bhoqppbfxu1c.webp?alt=media&token=92af2e7e-5227-4e91-9eba-9a7e22084ff2",
+          "loadTime": 784,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "30758",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F24aeb453-6479-45e7-8c10-a3fe363b7ebb_o4i1b2srh6wlcr4vsgdc.webp?alt=media&token=74f60965-d03e-4cca-9ba6-726e54507cef",
+          "loadTime": 511,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "13308",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 647,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 647
+      }
+    },
+    {
+      "productName": "Monitor Portátil Verbatim PMT-14 14\" Touch Screen Full HD - Negro",
+      "productId": "67c4bf946cf642718a0e3b4f",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F021b9546-97d0-493f-80bf-d1e1adbcd1c0_qugjkznjzycrjf5otbia.webp?alt=media&token=4fa5c496-147d-4b05-b894-50a804efb51f",
+          "loadTime": 664,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "29988",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F9492e937-9c9f-4b05-9bdd-e2c8b365e981_l1ipktsuryxiouknczp0.webp?alt=media&token=32a9dd87-fe6b-4a3a-81e9-12f95b3b8808",
+          "loadTime": 560,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "30758",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2Fa68f950a-5e4d-4d61-98ff-d9b3a1e63e00_g0kq7h1pjemdek0j6r2r.webp?alt=media&token=03d4a2a3-03fd-4252-8cff-fa4345ddd7a8",
+          "loadTime": 723,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "13308",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 649,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 649
+      }
+    },
+    {
+      "productName": "Monitor Portátil Verbatim PMT-17 17.3\" Touch Screen Full HD - Negro",
+      "productId": "67c4c1ed6cf642718a0e3b53",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F91304a0c-8dfb-4d8d-8d83-231394e2b84e_ag1mpzggqsphb6kufpnp.webp?alt=media&token=2cc1390a-b8fd-476c-a628-8f9044f0165a",
+          "loadTime": 446,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "29988",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F44d5b23d-b617-4e30-b35b-437259d960f2_vlm0y1a9dcu85xujqtgn.webp?alt=media&token=d00efd52-f2a9-4d33-b15b-31aeb1a7d85d",
+          "loadTime": 713,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "30758",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F4e68fadb-7a81-4da4-8299-ca02f8f57ec1_mbqjeclbmgmlqojl5y9v.webp?alt=media&token=584514a7-c68b-46f8-8b9e-9199054cd724",
+          "loadTime": 590,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "13308",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 583,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 583
+      }
+    },
+    {
+      "productName": "Memoria RAM para Notebook Keepdata DDR5 32GB 5600MHz - KD56S46/32G",
+      "productId": "67c50e0d111d548b20794299",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F2a513ee2-76d2-465e-b388-d0c5edd3e16e_c1gznuut3labcjo2kcwm.jpg?alt=media&token=60644219-2a09-43da-b9f9-f6219e395cab",
+          "loadTime": 358,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "362068",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F487a37ba-aa56-41d1-91c0-be1561991c41_h5cd3rrjfqm7fzkzpsgk.jpg?alt=media&token=7406bc3f-c0d9-4b76-bf0f-ca44715295cc",
+          "loadTime": 382,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "303595",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F444e559e-3525-41de-bb62-c0ff6d3ffe14_wzuyf0yp5fawbvgvffoy.jpg?alt=media&token=eb6e0c66-c307-4d60-9a7e-43753824d926",
+          "loadTime": 336,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "214297",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 359,
+        "avgJpgLoadTime": 359,
+        "avgWebpLoadTime": 0
+      }
+    },
+    {
+      "productName": "Memoria RAM para Notebook Keepdata DDR5 16GB 5600MHz - KD56S46/16G",
+      "productId": "67c50e0d111d548b2079429a",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Ff6e8115e-d230-4e53-9707-bf4dca847b7e_qcxwit525cdcautg9pk7.jpg?alt=media&token=aaf52e93-3a37-4a41-9a39-3030e0e2730e",
+          "loadTime": 254,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "350353",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F6734afe2-63ab-4e13-859b-ee4aa3db9b2d_jnxdhphey55687hznvf4.jpg?alt=media&token=87b3ef56-800c-4eaf-9aa7-c3b6d1081ec2",
+          "loadTime": 326,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "293626",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fc809d46c-171f-4b17-abef-7661756c13ac_plfrhncgd5xokj2ja5jj.jpg?alt=media&token=7b9d7460-9b94-446f-a64c-4b1a9fe35f14",
+          "loadTime": 181,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "214297",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 254,
+        "avgJpgLoadTime": 254,
+        "avgWebpLoadTime": 0
+      }
+    }
+  ]
+}

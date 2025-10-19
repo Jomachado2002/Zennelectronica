@@ -120,14 +120,21 @@ const fetchDataFromServer = async () => {
                 });
             }
             
-            // Filtrar productos con stock
-            const filteredProducts = allProducts.filter(product =>
-                product?.stock === undefined || product?.stock === null || product?.stock > 0
+            // ✅ FILTRAR PRODUCTOS CON STOCK Y ELIMINAR DUPLICADOS
+            const filteredProducts = allProducts.filter(product => {
+                // Filtrar por stock
+                const hasStock = product?.stock === undefined || product?.stock === null || product?.stock > 0;
+                return hasStock;
+            });
+            
+            // ✅ ELIMINAR DUPLICADOS POR ID
+            const uniqueProducts = filteredProducts.filter((product, index, self) => 
+                index === self.findIndex(p => p._id === product._id)
             );
             
             // Ordenar por fecha y tomar solo los más recientes
-            filteredProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const latestProducts = filteredProducts.slice(0, 15);
+            uniqueProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const latestProducts = uniqueProducts.slice(0, 15);
             
             setData(latestProducts);
         } else {

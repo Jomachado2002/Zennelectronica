@@ -40,7 +40,7 @@ const VerticalCardProductOptimized = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // ✅ CONFIGURACIÓN DE DATOS CON LÍMITES OPTIMIZADOS
+  // ✅ CONFIGURACIÓN DE DATOS CON LÍMITES OPTIMIZADOS Y FILTRADO DE STOCK
   useEffect(() => {
     if (products && products.length > 0) {
       const limits = {
@@ -60,7 +60,13 @@ const VerticalCardProductOptimized = ({
       };
       
       const limit = limits[subcategory] || (isMobile ? 5 : 10);
-      const limitedProducts = products.slice(0, limit);
+      
+      // ✅ FILTRAR PRODUCTOS CON STOCK > 0 ANTES DE APLICAR LÍMITE
+      const productsWithStock = products.filter(product => 
+        product?.stock === undefined || product?.stock === null || product?.stock > 0
+      );
+      
+      const limitedProducts = productsWithStock.slice(0, limit);
       setData(limitedProducts);
     } else {
       setData([]);

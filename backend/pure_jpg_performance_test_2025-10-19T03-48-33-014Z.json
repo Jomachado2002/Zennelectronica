@@ -1,0 +1,232 @@
+{
+  "timestamp": "2025-10-19T03:48:33.015Z",
+  "generalStats": {
+    "totalProducts": 5,
+    "totalImages": 15,
+    "successfulImages": 15,
+    "jpgImages": 15,
+    "webpImages": 0,
+    "avgLoadTime": 252,
+    "avgJpgLoadTime": 252,
+    "avgWebpLoadTime": 0,
+    "minLoadTime": 178,
+    "maxLoadTime": 524
+  },
+  "productResults": [
+    {
+      "productName": "Memoria RAM Corsair Vengeance LPX DDR4 8GB 3600MHz - Negro (CMK8GX4M1D3600C18)",
+      "productId": "67c50e0d111d548b2079429c",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F030cd291-6246-4b55-a73f-b89724272767_ieaxq7watgbxqx7e3nxp.jpg?alt=media&token=8df0b4b8-88d9-4324-90d7-4fc7ec1c43fa",
+          "loadTime": 524,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "337292",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F433651eb-9113-49d3-b9bb-18a64d3d3ab9_tdsqtq5dorzpjzdriica.jpg?alt=media&token=9f3f12a8-4707-4298-9be3-3051a28ab23e",
+          "loadTime": 181,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "85443",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F25718739-0bd8-4383-8733-69fe144dc2ba_gyyyh74s1cwi1268xoaq.jpg?alt=media&token=12e380f3-1f06-4b9d-9de1-cdb8e1dae777",
+          "loadTime": 189,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "112972",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 298,
+        "avgJpgLoadTime": 298,
+        "avgWebpLoadTime": 0
+      }
+    },
+    {
+      "productName": "Tarjeta de Memoria Micro SD Kingston Canvas Go Plus U3 C10 V30 A2 1TB - SDCG3/1TB",
+      "productId": "67c50e0d111d548b2079429d",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F656e0e46-ce8e-4fce-b036-63192729bb7a_MEM_CARD_MICRO_SD_1TB_KINGSTON_2X1_1_.jpg?alt=media&token=c24c2eb1-9b56-47e3-a87a-0ef4a8d75029",
+          "loadTime": 196,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "506756",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F96d23223-a8f1-4b62-bfd6-f181236765c9_MEM_CARD_MICRO_SD_1TB_KINGSTON_2X1_2.jpg?alt=media&token=40b8d409-e6f5-43c6-a936-dcc177bf2ab1",
+          "loadTime": 337,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "517685",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fced669ed-3ee5-4248-8e10-5d48dcfcc674_MEM_CARD_MICRO_SD_1TB_KINGSTON_2X1_3.jpg?alt=media&token=d55b7a6a-3e16-4c1f-a377-20d1aa631290",
+          "loadTime": 219,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "739068",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 251,
+        "avgJpgLoadTime": 251,
+        "avgWebpLoadTime": 0
+      }
+    },
+    {
+      "productName": "Memoria RAM Kingston Fury Beast DDR5 32GB 6000MHz - Negro (KF560C30BBAK2-32)",
+      "productId": "67c50e0d111d548b2079429e",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fedd97934-733e-4467-93fe-10eb4ba17640_goeqx75nagxvkczqmji2.jpg?alt=media&token=13bd4e70-b1eb-414e-9219-d7c074d16ce7",
+          "loadTime": 251,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "291097",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fdf5808d4-7aad-4a07-bf13-3b348755ba11_qttsrxtvudp8r32cwbod.jpg?alt=media&token=d9b3e34e-1ae4-4930-a543-17c998ea15ce",
+          "loadTime": 199,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "239813",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Ffcb5b555-db86-4a49-a215-e8f414d9bd31_j5uymix0mcsloqgis3ag.jpg?alt=media&token=abee0810-bd10-4069-b810-b1e41526d3c2",
+          "loadTime": 315,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "284625",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 255,
+        "avgJpgLoadTime": 255,
+        "avgWebpLoadTime": 0
+      }
+    },
+    {
+      "productName": "Memoria RAM Corsair Dominator Titanium DDR5 48GB (2x24GB) 7200MHz RGB - Blanco (CMP48GX5M2X7200C36W)",
+      "productId": "67c50e0d111d548b2079429f",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F0884d8ff-cb35-4d41-bd05-fde1b650e8f5_yy0wdcitwat2apjsuugt.jpg?alt=media&token=87dced5d-21ad-482f-bc40-04e8dbcbf358",
+          "loadTime": 178,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "57501",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fa0decc0b-7257-46cc-b9ff-cdc58f505a87_qkmsapthebniwagpwqkj.jpg?alt=media&token=364d93e2-387f-45ca-b1b4-a2eeb9e20df0",
+          "loadTime": 181,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "129367",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F8e87e8f5-ac47-40b0-b09c-439ff2336bf7_ziuwg5s43aclcmbkah05.jpg?alt=media&token=93c34e71-e2ac-4157-a92b-f59e7ce495be",
+          "loadTime": 189,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "133256",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 183,
+        "avgJpgLoadTime": 183,
+        "avgWebpLoadTime": 0
+      }
+    },
+    {
+      "productName": "Memoria RAM para Notebook Lexar DDR5 16GB 5600MHz - LD5S16G56C46ST-BGS",
+      "productId": "67c50e0d111d548b207942a0",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2F2a146f3a-721f-485d-b052-4ce527f0fbab_zujrewk2mdb1cgful6r0.jpg?alt=media&token=94942ad2-4852-4908-be46-478809b0f379",
+          "loadTime": 180,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "321940",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fa247417d-9557-467f-b74b-c58fc2ed99e4_iuskw6tyedg77cwtrozk.jpg?alt=media&token=69c1ea30-3007-454d-8195-584128eb89c5",
+          "loadTime": 320,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "279180",
+          "isWebP": false,
+          "isJPG": true
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-bluetec-saopaulo/o/products%2Fe4b4d22e-6113-4a89-b6b0-48dfab6e86fc_eiibqvkbdygjdrfsj6jk.jpg?alt=media&token=2718e685-6292-42c5-a7da-9d2db70ff4d3",
+          "loadTime": 320,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "172085",
+          "isWebP": false,
+          "isJPG": true
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 3,
+        "webpImages": 0,
+        "avgLoadTime": 273,
+        "avgJpgLoadTime": 273,
+        "avgWebpLoadTime": 0
+      }
+    }
+  ]
+}

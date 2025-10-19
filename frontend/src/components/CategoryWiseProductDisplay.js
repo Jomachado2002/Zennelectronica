@@ -58,7 +58,12 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
         filteredProducts = filteredProducts.filter(product => product._id !== currentProductId);
       }
       
-      setData(filteredProducts);
+      // ✅ FILTRAR PRODUCTOS CON STOCK > 0
+      const productsWithStock = filteredProducts.filter(product => 
+        product?.stock === undefined || product?.stock === null || product?.stock > 0
+      );
+      
+      setData(productsWithStock);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -126,22 +131,32 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
   }
 
   return (
-    <div className='container mx-auto px-4 my-6 relative'>
-      <h2 className='text-2xl font-semibold py-4'>{heading}</h2>
+    <div className='w-full relative'>
+      {heading && (
+        <div className='flex justify-between items-center mb-6'>
+          <div>
+            <h2 className='text-2xl sm:text-3xl font-bold text-gray-800'>{heading}</h2>
+            <div className='h-1 w-20 bg-[#002060] mt-2 rounded-full'></div>
+          </div>
+        </div>
+      )}
 
-      <div className='relative'>
+      <div className='relative group'>
         {showLeftButton && (
           <button
-            className='bg-white shadow-lg rounded-full p-2 absolute left-0 top-1/2 transform -translate-y-1/2 z-10'
+            className='absolute left-0 top-1/2 transform -translate-y-1/2 z-10 
+                    bg-white shadow-lg rounded-full p-3 hover:bg-blue-50 
+                    transition-all duration-300 -translate-x-2
+                    opacity-0 group-hover:opacity-100 group-hover:translate-x-0'
             onClick={scrollLeft}
-            aria-label="Desplazar a la izquierda"
+            aria-label="Scroll izquierda"
           >
-            <FaAngleLeft className='text-gray-700' />
+            <FaAngleLeft className='text-[#002060]' />
           </button>
         )}
 
         <div
-          className='flex gap-4 overflow-x-scroll scrollbar-none scroll-smooth'
+          className='flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-4'
           ref={scrollElement}
           tabIndex={0}
           onKeyDown={handleKeyDown}
@@ -151,89 +166,128 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
             ? loadingList.map((_, index) => (
                 <div
                   key={index}
-                  className='w-full min-w-[280px] md:min-w-[300px] max-w-[300px] bg-white rounded-xl shadow-lg animate-pulse'
+                  className='snap-center flex-none w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px] h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg animate-pulse overflow-hidden'
+                  style={{
+                    border: '2px solid transparent',
+                    backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                    backgroundOrigin: 'border-box',
+                    backgroundClip: 'padding-box, border-box'
+                  }}
                 >
-                  <div className='bg-slate-200 h-48 rounded-t-xl'></div>
-                  <div className='p-5 space-y-3'>
-                    <div className='h-4 bg-slate-300 rounded-full'></div>
-                    <div className='h-4 bg-slate-300 rounded-full w-2/3'></div>
-                    <div className='flex gap-3'>
-                      <div className='h-4 bg-slate-300 rounded-full w-1/2'></div>
-                      <div className='h-4 bg-slate-300 rounded-full w-1/2'></div>
-                    </div>
-                    <div className='h-10 bg-slate-300 rounded-full'></div>
+                  <div className='bg-gradient-to-br from-gray-200 to-gray-300 h-32 sm:h-36 rounded-t-xl'></div>
+                  <div className='p-2.5 space-y-1.5'>
+                    <div className='h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
+                    <div className='h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-2/3'></div>
+                    <div className='h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
+                    <div className='h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
                   </div>
                 </div>
               ))
             : data.map((product) => {
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
                 const productUrl = `/producto/${product?.slug || product?._id}`;
+                const isHovered = hoveredProductId === product?._id;
+                const secondImage = product.productImage?.[1];
+                const showSecondImage = isHovered && secondImage;
                 
                 return (
                   <div
                     key={`product-${product?._id}`}
-                    className='block w-full min-w-[280px] md:min-w-[300px] max-w-[300px] bg-white rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl relative group/card cursor-pointer'
+                    className='snap-center flex-none w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px] h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden cursor-pointer'
+                    style={{
+                      border: '2px solid transparent',
+                      backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                      backgroundOrigin: 'border-box',
+                      backgroundClip: 'padding-box, border-box'
+                    }}
                     onClick={(e) => handleProductClick(e, product?.slug || product?._id)}
                     onMouseEnter={() => setHoveredProductId(product?._id)}
                     onMouseLeave={() => setHoveredProductId(null)}
                   >
-                    {/* Discount Badge */}
-                    {discount && (
-                      <div className='absolute top-4 left-4 z-10 bg-[#1565C0] text-white px-3 py-1 rounded-full text-xs font-bold'>
-                        {discount}
-                      </div>
-                    )}
-
-                    {/* Product Image */}
-                    <div className='bg-[#f4f7fb] h-48 rounded-t-xl flex items-center justify-center overflow-hidden relative'>
+                    {/* Imagen del producto */}
+                    <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                       <img
                         src={product.productImage[0]}
                         alt={product.productName}
-                        className='object-contain h-full w-full transform group-hover/card:scale-110 transition-transform duration-500'
+                        className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
+                          showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                        }`}
+                        loading="lazy"
+                        fetchpriority="low"
+                        decoding="async"
                       />
-                      <div className='absolute top-2 right-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300'>
-                        <div className='bg-white/70 p-2 rounded-full'>
-                          <FaExpand className='text-[#002060]' />
+                      
+                      {/* Imagen de hover */}
+                      {secondImage && (
+                        <img
+                          src={secondImage}
+                          alt={product.productName}
+                          className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
+                            showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                          }`}
+                          loading="lazy"
+                          fetchpriority="low"
+                          decoding="async"
+                        />
+                      )}
+
+                      {/* Badge de descuento */}
+                      {discount && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span 
+                            className='text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg'
+                            style={{
+                              background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                            }}
+                          >
+                            -{discount.replace('% OFF', '')}%
+                          </span>
                         </div>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Product Details */}
-                    <div className='p-5 space-y-3'>
-                      <h2
-                        className={`font-semibold text-base text-gray-700 ${
-                          hoveredProductId === product?._id
-                            ? 'line-clamp-none'
-                            : 'line-clamp-2'
-                        } hover:line-clamp-none transition-all duration-300`}
-                      >
-                        {product?.productName}
-                      </h2>
-
-                      <div className='flex items-center justify-between'>
-                        <span className='text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full'>
-                          {product?.subcategory}
-                        </span>
-                        <div className='flex flex-col items-end'>
-                          <p className='text-[#002060] font-bold text-base'>
-                            {displayPYGCurrency(product?.sellingPrice)}
-                          </p>
-                          {product?.price > 0 && (
-                            <p className='text-gray-400 line-through text-xs'>
-                              {displayPYGCurrency(product?.price)}
-                            </p>
-                          )}
+                    {/* Detalles del producto */}
+                    <div className='p-2.5 flex flex-col flex-grow'>
+                      <div className='flex-grow space-y-1.5'>
+                        <h3 className='font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]'>
+                          {product?.productName}
+                        </h3>
+                        
+                        {/* Código del producto */}
+                        {product?.codigo && (
+                          <div className='text-xs font-bold text-[#002060] bg-blue-50 px-2 py-1 rounded-md inline-block'>
+                            Código: {product.codigo}
+                          </div>
+                        )}
+                        
+                        <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
+                          {product?.subcategory || product?.brandName}
                         </div>
                       </div>
+                      
+                      <div className='mt-auto space-y-2'>
+                        <div className='space-y-0.5 text-center'>
+                          <div className='text-lg font-bold text-black'>
+                            {displayPYGCurrency(product?.sellingPrice)}
+                          </div>
+                          {product?.price > 0 && product?.price > product?.sellingPrice && (
+                            <div className='text-xs text-gray-400 line-through'>
+                              {displayPYGCurrency(product?.price)}
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Add to Cart Button */}
-                      <button
-                        onClick={(e) => handleAddToCart(e, product)}
-                        className='w-full flex items-center justify-center gap-2 bg-[#002060] hover:bg-[#003399] 
-                             text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors'
-                      >
-                        <FaShoppingCart /> Agregar al Carrito
-                      </button>
+                        <button
+                          onClick={(e) => handleAddToCart(e, product)}
+                          className='w-full flex items-center justify-center gap-1 text-white px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn'
+                          style={{
+                            background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                          }}
+                        >
+                          <FaShoppingCart size={11} className="group-hover/btn:scale-110 transition-transform duration-300" /> 
+                          <span className="group-hover/btn:translate-x-0.5 transition-transform duration-300">Agregar</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -242,11 +296,14 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
 
         {showRightButton && (
           <button
-            className='bg-white shadow-lg rounded-full p-2 absolute right-0 top-1/2 transform -translate-y-1/2 z-10'
+            className='absolute right-0 top-1/2 transform -translate-y-1/2 z-10 
+                    bg-white shadow-lg rounded-full p-3 hover:bg-blue-50 
+                    transition-all duration-300 translate-x-2
+                    opacity-0 group-hover:opacity-100 group-hover:translate-x-0'
             onClick={scrollRight}
-            aria-label="Desplazar a la derecha"
+            aria-label="Scroll derecha"
           >
-            <FaAngleRight className='text-gray-700' />
+            <FaAngleRight className='text-[#002060]' />
           </button>
         )}
       </div>

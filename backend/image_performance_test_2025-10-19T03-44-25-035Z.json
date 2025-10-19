@@ -1,0 +1,232 @@
+{
+  "timestamp": "2025-10-19T03:44:25.036Z",
+  "generalStats": {
+    "totalProducts": 5,
+    "totalImages": 15,
+    "successfulImages": 15,
+    "jpgImages": 0,
+    "webpImages": 15,
+    "avgLoadTime": 615,
+    "avgJpgLoadTime": 0,
+    "avgWebpLoadTime": 615,
+    "minLoadTime": 451,
+    "maxLoadTime": 783
+  },
+  "productResults": [
+    {
+      "productName": "Placa Madre Gigabyte B760M Gaming Plus Wi-Fi DDR4 Socket LGA 1700 / DDR4",
+      "productId": "67bd0828020ad790f97c7b49",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F41a0fd33-5fac-4ea9-8002-1f2e3677eaf8_hkbwtlzouzsgtxczcotr.webp?alt=media&token=1a37f159-24a4-42fa-9ab8-1f66fe9138d3",
+          "loadTime": 562,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "94254",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2Fc2bb0153-0acd-4d87-9f39-825af8dadd3d_j3u3inzjjqxmnvmd8lvz.webp?alt=media&token=621408dc-2c51-4c99-9543-1da1469fe46e",
+          "loadTime": 617,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "35668",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F0f9c8f74-8d1c-4ba5-a869-cb20fd58efbb_i1fsvw5qclufxrakl2jt.webp?alt=media&token=fd112447-3890-420b-a654-6219bc9aca56",
+          "loadTime": 451,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "261332",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 543,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 543
+      }
+    },
+    {
+      "productName": "Placa Madre Gigabyte Z890 Eagle Wi-Fi 7 Socket LGA 1851  DDR5",
+      "productId": "67bd095e020ad790f97c7b4d",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F940295a2-1c10-4cff-a9a5-9776d842d30e_tdeuminj5jyddpbxdgub.webp?alt=media&token=607db3fb-1759-4282-a987-062c74022406",
+          "loadTime": 716,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "83506",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F24c3bdc7-fe31-4ccd-8a73-e9e49b8d9018_wy94hrlxc9wtvlksleq0.webp?alt=media&token=0e30deb5-16be-4198-b9f2-6d6c677b89c8",
+          "loadTime": 653,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "202696",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F54ff3e4f-ad5f-452c-af50-d80c344f41fd_zzbndelrpjlsowgg7tze.webp?alt=media&token=bbdb4e39-70e5-4650-8db6-891faf281697",
+          "loadTime": 477,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "56264",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 615,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 615
+      }
+    },
+    {
+      "productName": "Placa Madre Gigabyte B760 DS3H AX V2 Socket LGA 1700 / DDR5",
+      "productId": "67bd0a13020ad790f97c7b51",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F51d57bde-ff9d-4d21-92c3-a91f5d8978ae_khlsoiuvctjdizph4qgy.webp?alt=media&token=9cd6d220-b476-4722-a1e5-fb1462acbb85",
+          "loadTime": 697,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "97534",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F23c627bc-73aa-481d-a64e-b8de3d9d4844_tclvkovyqdffvyhaupn9.webp?alt=media&token=2889d097-d372-48f2-a5d2-39881032febe",
+          "loadTime": 783,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "203926",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2Fd0f8ee23-675d-468b-8627-a4074a77b074_yd5g3e1g01y42hfvkhoe.webp?alt=media&token=04ed16cc-c38e-43af-9082-0ec02cf3c563",
+          "loadTime": 467,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "27084",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 649,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 649
+      }
+    },
+    {
+      "productName": "Placa Madre Gigabyte B650M D3HP AX Socket AM5 / DDR5",
+      "productId": "67bd0ad1020ad790f97c7b55",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F49d6b9d3-c5d4-457d-96cf-d8da3fb69cbb_rbe4t0lrs3bvfrjuddrn.webp?alt=media&token=76782e64-b421-47ce-ac03-458d9e4e5ac8",
+          "loadTime": 716,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "98890",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F1ca02748-8d56-42a6-af68-c8733597e5dd_a1yfbng2oh58f1ahmfri.webp?alt=media&token=31f2c92d-b6f3-49f8-a0c9-d24499c8527a",
+          "loadTime": 543,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "28062",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F1f9e0130-557c-43a6-892b-68eb1bcc501c_bfe7puphbtnmghbpef9m.webp?alt=media&token=be0cd130-7de5-4938-a477-87cf0c7d31e0",
+          "loadTime": 716,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "171092",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 658,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 658
+      }
+    },
+    {
+      "productName": "MB AM5 GIGABYTE A620I AX M.2DDR5WIFI6EBTDPHDMITYPE-CUSB3.2GLANSOMMINI-ITX",
+      "productId": "67bd0c02020ad790f97c7b59",
+      "imageCount": 3,
+      "imageTests": [
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F0a1f4020-5073-4307-af2e-a0a6620ea5de_krmkmcla8f3144f5vewf.webp?alt=media&token=4a496276-a08c-4602-8fcf-edec7adbc2df",
+          "loadTime": 587,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "99740",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F9e5e74c0-5991-49f2-8cbb-418cafa0e314_f60flet3a5gaomuhbofy.webp?alt=media&token=e26b0685-62b4-4e8f-b58f-44097dff7a88",
+          "loadTime": 724,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "133986",
+          "isWebP": true,
+          "isJPG": false
+        },
+        {
+          "url": "https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F78852cc5-69dc-4a07-ba24-84d03b178880_kppaugyzny9jpx9obfci.webp?alt=media&token=2a488229-daac-477d-8718-f28002d8b34b",
+          "loadTime": 523,
+          "status": 200,
+          "contentType": "application/octet-stream",
+          "contentLength": "26962",
+          "isWebP": true,
+          "isJPG": false
+        }
+      ],
+      "stats": {
+        "totalImages": 3,
+        "successfulImages": 3,
+        "jpgImages": 0,
+        "webpImages": 3,
+        "avgLoadTime": 611,
+        "avgJpgLoadTime": 0,
+        "avgWebpLoadTime": 611
+      }
+    }
+  ]
+}

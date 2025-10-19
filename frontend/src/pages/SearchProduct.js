@@ -18,8 +18,13 @@ const SearchProduct = () => {
             // Verificación segura de datos
             const productsData = dataResponse?.data || []
             
+            // ✅ FILTRAR PRODUCTOS CON STOCK > 0
+            const productsWithStock = productsData.filter(product => 
+                product?.stock === undefined || product?.stock === null || product?.stock > 0
+            )
+            
             // Aplicar ordenamiento si está seleccionado
-            let processedData = productsData
+            let processedData = productsWithStock
             if (sortBy === 'asc') {
                 processedData = processedData.sort((a, b) => 
                     Number(a.sellingPrice || 0) - Number(b.sellingPrice || 0)

@@ -203,7 +203,12 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
 // ✅ SINCRONIZAR CON ESTADOS LOCALES
 useEffect(() => {
   if (queryData) {
-    setRawData(queryData.data || []);
+    // ✅ FILTRAR PRODUCTOS CON STOCK > 0 ANTES DE ESTABLECER LOS DATOS
+    const productsWithStock = (queryData.data || []).filter(product => 
+      product?.stock === undefined || product?.stock === null || product?.stock > 0
+    );
+    
+    setRawData(productsWithStock);
     setAvailableFilters(queryData.filters || { brands: [], specifications: {} });
     
     // Preestablecer los acordeones de especificaciones

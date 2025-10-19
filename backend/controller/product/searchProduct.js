@@ -38,9 +38,21 @@ const searchProduct = async(req,res)=>{
             }
         })
 
-        // Buscar productos que coincidan con todos los términos
+        // ✅ FILTRAR PRODUCTOS CON STOCK > 0
+        const stockFilter = {
+            "$or": [
+                { stock: { $exists: false } },
+                { stock: null },
+                { stock: { $gt: 0 } }
+            ]
+        };
+
+        // Buscar productos que coincidan con todos los términos Y tengan stock
         const products = await productModel.find({
-            "$and": searchConditions
+            "$and": [
+                ...searchConditions,
+                stockFilter
+            ]
         })
 
         res.json({
