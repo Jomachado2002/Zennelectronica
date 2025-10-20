@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
 
-// Las especificaciones ahora se cargan dinámicamente desde la base de datos
+    // Las especificaciones ahora se cargan dinámicamente desde la base de datos
 
 
 const ProductDetails = () => {
