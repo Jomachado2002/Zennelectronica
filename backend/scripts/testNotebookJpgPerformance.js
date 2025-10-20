@@ -202,3 +202,4 @@ async function testNotebookJpgPerformance() {
 
 // Ejecutar el test
 testNotebookJpgPerformance();
+

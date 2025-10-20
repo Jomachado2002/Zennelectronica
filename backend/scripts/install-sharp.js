@@ -29,3 +29,4 @@ try {
   console.log('  npm install sharp');
   process.exit(1);
 }
+

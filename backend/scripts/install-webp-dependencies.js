@@ -44,3 +44,4 @@ try {
   console.error('❌ Error instalando dependencias:', error.message);
   process.exit(1);
 }
+

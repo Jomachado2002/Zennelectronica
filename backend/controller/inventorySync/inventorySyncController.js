@@ -100,12 +100,8 @@ async function compareByCodeController(req, res) {
             subcategory
         );
 
-        // Limpiar archivo temporal
-        try {
-            fs.unlinkSync(csvFile);
-        } catch (cleanupError) {
-            console.warn('Error limpiando archivo temporal:', cleanupError.message);
-        }
+        // No necesitamos limpiar archivo temporal ya que usamos memoryStorage
+        console.log('✅ Comparación por código completada exitosamente');
 
         res.status(200).json(comparisonResult);
 
@@ -168,12 +164,8 @@ async function compareByNameController(req, res) {
             subcategory
         );
 
-        // Limpiar archivo temporal
-        try {
-            fs.unlinkSync(csvFile);
-        } catch (cleanupError) {
-            console.warn('Error limpiando archivo temporal:', cleanupError.message);
-        }
+        // No necesitamos limpiar archivo temporal ya que usamos memoryStorage
+        console.log('✅ Comparación por código completada exitosamente');
 
         res.status(200).json(comparisonResult);
 

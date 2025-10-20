@@ -9,6 +9,8 @@
     const userSignInController = require('../controller/user/userSignin');
     const userDetailsController = require('../controller/user/userDetails');
     const authToken = require('../middleware/authToken');
+    const adminAuth = require('../middleware/adminAuth');
+    const strictAuth = require('../middleware/strictAuth');
     const userLogout = require('../controller/user/userLogout');
     const allUsers = require('../controller/user/allUser');
     const updateUser = require('../controller/user/updateUser');
@@ -217,11 +219,11 @@ const categoryRoutes = require('./categoryRoutes');
     router.post("/bancard/rollback", rollbackPaymentController);
 
     // ✅ RUTAS PARA GESTIÓN DE TRANSACCIONES BANCARD
-    router.get("/bancard/transactions", authToken, getAllBancardTransactionsController);
-    router.get("/bancard/transactions/:transactionId", authToken, getBancardTransactionByIdController);
-    router.post("/bancard/transactions/:transactionId/rollback", authToken, rollbackBancardTransactionController);
-    router.get("/bancard/transactions/:transactionId/status", authToken, checkBancardTransactionStatusController);
-    router.post("/bancard/transactions", authToken, createBancardTransactionController);
+    router.get("/bancard/transactions", strictAuth, getAllBancardTransactionsController);
+    router.get("/bancard/transactions/:transactionId", strictAuth, getBancardTransactionByIdController);
+    router.post("/bancard/transactions/:transactionId/rollback", strictAuth, rollbackBancardTransactionController);
+    router.get("/bancard/transactions/:transactionId/status", strictAuth, checkBancardTransactionStatusController);
+    router.post("/bancard/transactions", strictAuth, createBancardTransactionController);
     const { updateUserLocation, getUserLocation } = require('../controller/user/userLocationController');
 
     // ===========================================
@@ -457,7 +459,7 @@ const categoryRoutes = require('./categoryRoutes');
     router.get("/usuario/estadisticas-compras", authToken, getUserPurchaseStatsController);
 
     // Rutas para admin
-    router.get("/admin/todas-compras", authToken, getAllUserPurchasesController);
+    router.get("/admin/todas-compras", adminAuth, getAllUserPurchasesController);
 
     // Test de pago con token
     router.post("/bancard/test-pago-token", authToken, async (req, res) => {
@@ -873,7 +875,7 @@ const categoryRoutes = require('./categoryRoutes');
     // ===========================================
     router.post("/cargar-producto", authToken, UploadProductController);
     router.get("/obtener-productos-home", authToken, getHomeProductsController);
-router.get("/obtener-productos-admin", authToken, async (req, res) => {
+router.get("/obtener-productos-admin", adminAuth, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
         
@@ -1063,6 +1065,33 @@ router.post("/actualizar-producto", authToken, updateProductController);
             environment: process.env.NODE_ENV || 'development',
             version: "1.0.0"
         });
+    });
+
+    // ✅ ENDPOINT DE PRUEBA PARA ADMIN AUTH
+    router.get("/admin/test-auth", adminAuth, async (req, res) => {
+        try {
+            res.json({
+                message: "✅ Autenticación de admin funcionando correctamente",
+                success: true,
+                error: false,
+                data: {
+                    user: {
+                        id: req.userId,
+                        name: req.user?.name,
+                        email: req.user?.email,
+                        role: req.userRole,
+                        isAuthenticated: req.isAuthenticated
+                    },
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Error en test de admin auth",
+                success: false,
+                error: error.message
+            });
+        }
     });
 
     router.get("/debug/auth-status", authToken, async (req, res) => {
@@ -1528,7 +1557,7 @@ const inventorySyncRoutes = require('./inventorySyncRoutes');
 router.use('/admin/inventory-sync', inventorySyncRoutes);
 
 // ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
-router.get('/admin/products/:id', authToken, async (req, res) => {
+router.get('/admin/products/:id', adminAuth, async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`📥 GET /api/admin/products/${id}`);

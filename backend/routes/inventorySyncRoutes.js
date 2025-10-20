@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const authToken = require('../middleware/authToken');
+const adminAuth = require('../middleware/adminAuth');
 const {
     uploadCSV,
     handleUploadError
@@ -24,7 +25,7 @@ const {
  * GET /api/admin/inventory-sync/categories
  * Obtiene todas las categorías con sus subcategorías
  */
-router.get('/categories', authToken, getCategoriesController);
+router.get('/categories', adminAuth, getCategoriesController);
 
 /**
  * POST /api/admin/inventory-sync/compare-by-code
@@ -36,7 +37,7 @@ router.get('/categories', authToken, getCategoriesController);
  * - subcategory: Subcategoría a filtrar
  */
 router.post('/compare-by-code', 
-    authToken,
+    adminAuth,
     uploadCSV,
     handleUploadError,
     compareByCodeController
@@ -52,7 +53,7 @@ router.post('/compare-by-code',
  * - subcategory: Subcategoría a filtrar
  */
 router.post('/compare-by-name',
-    authToken,
+    adminAuth,
     uploadCSV,
     handleUploadError,
     compareByNameController
@@ -68,7 +69,7 @@ router.post('/compare-by-name',
  * - updateAll: Boolean (para actualización masiva)
  * - filters: Objeto con filtros (para actualización masiva)
  */
-router.post('/update-stock', authToken, updateStockController);
+router.post('/update-stock', adminAuth, updateStockController);
 
 /**
  * POST /api/admin/inventory-sync/import-products
@@ -78,7 +79,7 @@ router.post('/update-stock', authToken, updateStockController);
  * - products: Array de productos a importar
  * - config: Configuración de precios (deliveryCost, exchangeRate, profitMargin)
  */
-router.post('/import-products', authToken, importProductsController);
+router.post('/import-products', adminAuth, importProductsController);
 
 /**
  * POST /api/admin/inventory-sync/update-product-codes
@@ -87,7 +88,7 @@ router.post('/import-products', authToken, importProductsController);
  * Body:
  * - updates: Array de objetos con { productId, newCode }
  */
-router.post('/update-product-codes', authToken, updateProductCodesController);
+router.post('/update-product-codes', adminAuth, updateProductCodesController);
 
 /**
  * POST /api/admin/inventory-sync/import-image
@@ -97,7 +98,7 @@ router.post('/update-product-codes', authToken, updateProductCodesController);
  * - imageUrl: URL de la imagen del proveedor
  * - productCode: Código del producto
  */
-router.post('/import-image', authToken, async (req, res) => {
+router.post('/import-image', adminAuth, async (req, res) => {
     try {
         const { imageUrl, productCode } = req.body;
         
