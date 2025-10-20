@@ -25,7 +25,7 @@ const {
  * GET /api/admin/inventory-sync/categories
  * Obtiene todas las categorías con sus subcategorías
  */
-router.get('/categories', adminAuth, getCategoriesController);
+router.get('/categories', authToken, getCategoriesController);
 
 /**
  * POST /api/admin/inventory-sync/compare-by-code
@@ -37,7 +37,7 @@ router.get('/categories', adminAuth, getCategoriesController);
  * - subcategory: Subcategoría a filtrar
  */
 router.post('/compare-by-code', 
-    adminAuth,
+    authToken,
     uploadCSV,
     handleUploadError,
     compareByCodeController
@@ -53,7 +53,7 @@ router.post('/compare-by-code',
  * - subcategory: Subcategoría a filtrar
  */
 router.post('/compare-by-name',
-    adminAuth,
+    authToken,
     uploadCSV,
     handleUploadError,
     compareByNameController
@@ -69,7 +69,7 @@ router.post('/compare-by-name',
  * - updateAll: Boolean (para actualización masiva)
  * - filters: Objeto con filtros (para actualización masiva)
  */
-router.post('/update-stock', adminAuth, updateStockController);
+router.post('/update-stock', authToken, updateStockController);
 
 /**
  * POST /api/admin/inventory-sync/import-products
@@ -79,7 +79,7 @@ router.post('/update-stock', adminAuth, updateStockController);
  * - products: Array de productos a importar
  * - config: Configuración de precios (deliveryCost, exchangeRate, profitMargin)
  */
-router.post('/import-products', adminAuth, importProductsController);
+router.post('/import-products', authToken, importProductsController);
 
 /**
  * POST /api/admin/inventory-sync/update-product-codes
@@ -88,7 +88,7 @@ router.post('/import-products', adminAuth, importProductsController);
  * Body:
  * - updates: Array de objetos con { productId, newCode }
  */
-router.post('/update-product-codes', adminAuth, updateProductCodesController);
+router.post('/update-product-codes', authToken, updateProductCodesController);
 
 /**
  * POST /api/admin/inventory-sync/import-image
@@ -98,7 +98,7 @@ router.post('/update-product-codes', adminAuth, updateProductCodesController);
  * - imageUrl: URL de la imagen del proveedor
  * - productCode: Código del producto
  */
-router.post('/import-image', adminAuth, async (req, res) => {
+router.post('/import-image', authToken, async (req, res) => {
     try {
         const { imageUrl, productCode } = req.body;
         

@@ -28,8 +28,112 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['ADMIN', 'GENERAL'],
+        enum: ['ROOT', 'ADMIN', 'GENERAL'],
         default: 'GENERAL'
+    },
+    
+    // ✅ SISTEMA DE PERMISOS GRANULAR
+    permissions: {
+        // Panel de administración
+        adminPanel: {
+            type: Boolean,
+            default: false
+        },
+        
+        // Gestión de productos
+        products: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false },
+            upload: { type: Boolean, default: false }
+        },
+        
+        // Gestión de categorías
+        categories: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de inventario
+        inventory: {
+            view: { type: Boolean, default: false },
+            sync: { type: Boolean, default: false },
+            update: { type: Boolean, default: false },
+            import: { type: Boolean, default: false }
+        },
+        
+        // Gestión de usuarios
+        users: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión financiera
+        finances: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            reports: { type: Boolean, default: false }
+        },
+        
+        // Gestión de ventas
+        sales: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de compras
+        purchases: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de clientes
+        clients: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de proveedores
+        suppliers: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de presupuestos
+        budgets: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Gestión de transacciones Bancard
+        bancard: {
+            view: { type: Boolean, default: false },
+            create: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false },
+            delete: { type: Boolean, default: false }
+        },
+        
+        // Configuración del sistema
+        settings: {
+            view: { type: Boolean, default: false },
+            edit: { type: Boolean, default: false }
+        }
     },
     
     // ✅ CAMPOS PARA PERFIL
@@ -127,6 +231,38 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// ✅ MIDDLEWARE PARA ASIGNAR PERMISOS POR DEFECTO
+userSchema.pre('save', async function(next) {
+    // Asignar permisos por defecto según el rol si no existen
+    if (this.isNew && !this.permissions) {
+        this.permissions = this.constructor.getDefaultPermissions(this.role);
+    }
+    
+    // Si el rol cambió, actualizar permisos por defecto
+    if (this.isModified('role') && this.permissions) {
+        const defaultPermissions = this.constructor.getDefaultPermissions(this.role);
+        // Solo actualizar si el usuario no tiene permisos personalizados
+        if (this.role === 'ROOT') {
+            this.permissions = defaultPermissions; // ROOT siempre tiene todos los permisos
+        } else {
+            // Para ADMIN y GENERAL, mantener permisos existentes pero agregar nuevos si no existen
+            Object.keys(defaultPermissions).forEach(key => {
+                if (typeof defaultPermissions[key] === 'object') {
+                    if (!this.permissions[key]) {
+                        this.permissions[key] = defaultPermissions[key];
+                    }
+                } else {
+                    if (this.permissions[key] === undefined) {
+                        this.permissions[key] = defaultPermissions[key];
+                    }
+                }
+            });
+        }
+    }
+    
+    next();
+});
+
 // ✅ MIDDLEWARE MEJORADO PARA GENERAR bancardUserId
 userSchema.pre('save', async function(next) {
     // Solo generar bancardUserId si es un nuevo usuario y no tiene uno
@@ -174,6 +310,59 @@ userSchema.pre('save', async function(next) {
     }
     next();
 });
+
+// ✅ PERMISOS POR DEFECTO SEGÚN ROL
+userSchema.statics.getDefaultPermissions = function(role) {
+    const defaultPermissions = {
+        ROOT: {
+            adminPanel: true,
+            products: { view: true, create: true, edit: true, delete: true, upload: true },
+            categories: { view: true, create: true, edit: true, delete: true },
+            inventory: { view: true, sync: true, update: true, import: true },
+            users: { view: true, create: true, edit: true, delete: true },
+            finances: { view: true, create: true, edit: true, reports: true },
+            sales: { view: true, create: true, edit: true, delete: true },
+            purchases: { view: true, create: true, edit: true, delete: true },
+            clients: { view: true, create: true, edit: true, delete: true },
+            suppliers: { view: true, create: true, edit: true, delete: true },
+            budgets: { view: true, create: true, edit: true, delete: true },
+            bancard: { view: true, create: true, edit: true, delete: true },
+            settings: { view: true, edit: true }
+        },
+        ADMIN: {
+            adminPanel: true,
+            products: { view: true, create: false, edit: false, delete: false, upload: false },
+            categories: { view: true, create: false, edit: false, delete: false },
+            inventory: { view: true, sync: false, update: false, import: false },
+            users: { view: true, create: false, edit: false, delete: false },
+            finances: { view: true, create: false, edit: false, reports: false },
+            sales: { view: true, create: false, edit: false, delete: false },
+            purchases: { view: true, create: false, edit: false, delete: false },
+            clients: { view: true, create: false, edit: false, delete: false },
+            suppliers: { view: true, create: false, edit: false, delete: false },
+            budgets: { view: true, create: false, edit: false, delete: false },
+            bancard: { view: true, create: false, edit: false, delete: false },
+            settings: { view: false, edit: false }
+        },
+        GENERAL: {
+            adminPanel: false,
+            products: { view: false, create: false, edit: false, delete: false, upload: false },
+            categories: { view: false, create: false, edit: false, delete: false },
+            inventory: { view: false, sync: false, update: false, import: false },
+            users: { view: false, create: false, edit: false, delete: false },
+            finances: { view: false, create: false, edit: false, reports: false },
+            sales: { view: false, create: false, edit: false, delete: false },
+            purchases: { view: false, create: false, edit: false, delete: false },
+            clients: { view: false, create: false, edit: false, delete: false },
+            suppliers: { view: false, create: false, edit: false, delete: false },
+            budgets: { view: false, create: false, edit: false, delete: false },
+            bancard: { view: false, create: false, edit: false, delete: false },
+            settings: { view: false, edit: false }
+        }
+    };
+    
+    return defaultPermissions[role] || defaultPermissions.GENERAL;
+};
 
 // ✅ MÉTODO ESTÁTICO PARA ASIGNAR bancardUserId A USUARIOS EXISTENTES
 userSchema.statics.assignBancardUserIds = async function() {

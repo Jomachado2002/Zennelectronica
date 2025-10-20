@@ -1,63 +1,20 @@
-// backend/helpers/permission.js - VERSIÓN CORREGIDA
+// backend/helpers/permission.js - VERSIÓN CON SISTEMA GRANULAR
 const userModel = require("../models/userModel");
+const { hasAdminPanelAccess } = require('./granularPermission');
 
 const uploadProductPermission = async (userId) => {
     try {
+        console.log('🔐 Verificando permisos de administración para usuario:', userId);
         
+        // Verificar acceso al panel de administración usando el sistema granular
+        const hasAccess = await hasAdminPanelAccess(userId);
         
-        
-        // ✅ PERMITIR USUARIOS INVITADOS PARA OPERACIONES BÁSICAS
-        if (!userId) {
-            
-            return false; // ✅ CAMBIAR A false - sin userId no hay permisos admin
-        }
-
-        // ✅ RECHAZAR USUARIOS INVITADOS PARA FUNCIONES ADMIN
-        if (typeof userId === 'string' && userId.startsWith('guest-')) {
-            
-            return false; // ✅ CAMBIAR A false - guests no tienen permisos admin
-        }
-
-        // ✅ VERIFICAR USUARIOS REGISTRADOS EN BD
-        const user = await userModel.findById(userId);
-        
-        if (!user) {
-            
-            return false; // ✅ Usuario no existe = sin permisos
-        }
-        
-        console.log("👤 Usuario encontrado:", {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isActive: user.isActive
-        });
-        
-        // ✅ VERIFICAR QUE EL USUARIO ESTÉ ACTIVO
-        if (user.isActive === false) {
-            
-            return false;
-        }
-        
-        // ✅ ADMIN tiene acceso completo
-        if (user.role === 'ADMIN') {
-            
-            return true;
-        }
-        
-                    // ✅ GENERAL puede acceder a su perfil (compatibilidad con iPhone)
-            if (user.role === 'GENERAL') {
-                
-                return true; // ✅ PERMITIR acceso a perfil para GENERAL
-            }
-        
-        
-        return false; // ✅ CAMBIAR: sin rol específico = sin permisos
+        console.log('✅ Resultado verificación permisos:', hasAccess);
+        return hasAccess;
         
     } catch (error) {
         console.error("❌ Error verificando permisos:", error);
-        return false; // ✅ CAMBIAR: en caso de error = sin permisos por seguridad
+        return false;
     }
 }
 

@@ -23,7 +23,7 @@ const {
 } = require('../controller/category/categoryController');
 
 // Rutas para categorías
-router.get('/all', adminAuth, getAllCategories);
+router.get('/all', authToken, getAllCategories);
 router.get('/active', getActiveCategories);
 router.get('/:id', getCategoryById);
 
@@ -35,18 +35,18 @@ router.get('/menu/categories/:categoryValue/subcategories/:subcategoryValue/spec
 
 // ========== ENDPOINT PARA PRECARGA COMPLETA ==========
 router.get('/menu/complete-structure', getAllCategoriesStructure);
-router.post('/', adminAuth, createCategory);
-router.put('/:id', adminAuth, updateCategory);
-router.delete('/:id', adminAuth, deleteCategory);
+router.post('/', authToken, createCategory);
+router.put('/:id', authToken, updateCategory);
+router.delete('/:id', authToken, deleteCategory);
 
 // Rutas para subcategorías
-router.post('/:id/subcategories', adminAuth, addSubcategory);
-router.put('/:id/subcategories/:subcategoryId', adminAuth, updateSubcategory);
-router.delete('/:id/subcategories/:subcategoryId', adminAuth, deleteSubcategory);
+router.post('/:id/subcategories', authToken, addSubcategory);
+router.put('/:id/subcategories/:subcategoryId', authToken, updateSubcategory);
+router.delete('/:id/subcategories/:subcategoryId', authToken, deleteSubcategory);
 
 // Rutas para especificaciones
-router.post('/:id/subcategories/:subcategoryId/specifications', adminAuth, addSpecification);
-router.put('/:id/subcategories/:subcategoryId/specifications/:specificationId', adminAuth, updateSpecification);
-router.delete('/:id/subcategories/:subcategoryId/specifications/:specificationId', adminAuth, deleteSpecification);
+router.post('/:id/subcategories/:subcategoryId/specifications', authToken, addSpecification);
+router.put('/:id/subcategories/:subcategoryId/specifications/:specificationId', authToken, updateSpecification);
+router.delete('/:id/subcategories/:subcategoryId/specifications/:specificationId', authToken, deleteSpecification);
 
 module.exports = router;

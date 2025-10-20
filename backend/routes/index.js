@@ -11,6 +11,7 @@
     const authToken = require('../middleware/authToken');
     const adminAuth = require('../middleware/adminAuth');
     const strictAuth = require('../middleware/strictAuth');
+    const { requirePermission } = require('../helpers/granularPermission');
     const userLogout = require('../controller/user/userLogout');
     const allUsers = require('../controller/user/allUser');
     const updateUser = require('../controller/user/updateUser');
@@ -197,6 +198,15 @@ const categoryRoutes = require('./categoryRoutes');
         getBalanceHistoryController
     } = require('../controller/user/userProfile');
 
+    // ===== ✅ CONTROLADORES DE PERMISOS GRANULAR =====
+    const {
+        getUserPermissionsController,
+        updateUserPermissionsController,
+        checkUserPermissionController,
+        getAllUsersWithPermissionsController,
+        createUserWithPermissionsController
+    } = require('../controller/user/userPermissionsController');
+
     // ===== ✅ NUEVOS CONTROLADORES DE TARJETAS BANCARD =====
     const {
         createCardController,
@@ -219,11 +229,11 @@ const categoryRoutes = require('./categoryRoutes');
     router.post("/bancard/rollback", rollbackPaymentController);
 
     // ✅ RUTAS PARA GESTIÓN DE TRANSACCIONES BANCARD
-    router.get("/bancard/transactions", strictAuth, getAllBancardTransactionsController);
-    router.get("/bancard/transactions/:transactionId", strictAuth, getBancardTransactionByIdController);
-    router.post("/bancard/transactions/:transactionId/rollback", strictAuth, rollbackBancardTransactionController);
-    router.get("/bancard/transactions/:transactionId/status", strictAuth, checkBancardTransactionStatusController);
-    router.post("/bancard/transactions", strictAuth, createBancardTransactionController);
+    router.get("/bancard/transactions", authToken, getAllBancardTransactionsController);
+    router.get("/bancard/transactions/:transactionId", authToken, getBancardTransactionByIdController);
+    router.post("/bancard/transactions/:transactionId/rollback", authToken, rollbackBancardTransactionController);
+    router.get("/bancard/transactions/:transactionId/status", authToken, checkBancardTransactionStatusController);
+    router.post("/bancard/transactions", authToken, createBancardTransactionController);
     const { updateUserLocation, getUserLocation } = require('../controller/user/userLocationController');
 
     // ===========================================
@@ -459,7 +469,7 @@ const categoryRoutes = require('./categoryRoutes');
     router.get("/usuario/estadisticas-compras", authToken, getUserPurchaseStatsController);
 
     // Rutas para admin
-    router.get("/admin/todas-compras", adminAuth, getAllUserPurchasesController);
+    router.get("/admin/todas-compras", authToken, getAllUserPurchasesController);
 
     // Test de pago con token
     router.post("/bancard/test-pago-token", authToken, async (req, res) => {
@@ -871,11 +881,30 @@ const categoryRoutes = require('./categoryRoutes');
     router.post("/actualizar-usuario", authToken, updateUser);
 
     // ===========================================
+    // ✅ RUTAS DE PERMISOS GRANULAR
+    // ===========================================
+    
+    // Obtener permisos del usuario actual
+    router.get("/permissions/me", authToken, getUserPermissionsController);
+    
+    // Verificar un permiso específico
+    router.get("/permissions/check", authToken, checkUserPermissionController);
+    
+    // Obtener todos los usuarios con permisos (solo ROOT)
+    router.get("/admin/users-with-permissions", authToken, getAllUsersWithPermissionsController);
+    
+    // Crear usuario con permisos específicos (solo ROOT)
+    router.post("/admin/users", authToken, createUserWithPermissionsController);
+    
+    // Actualizar permisos de un usuario (solo ROOT)
+    router.put("/admin/users/:userId/permissions", authToken, updateUserPermissionsController);
+
+    // ===========================================
     // RUTAS DE PRODUCTOS
     // ===========================================
-    router.post("/cargar-producto", authToken, UploadProductController);
+    router.post("/cargar-producto", authToken, requirePermission('products', 'upload'), UploadProductController);
     router.get("/obtener-productos-home", authToken, getHomeProductsController);
-router.get("/obtener-productos-admin", adminAuth, async (req, res) => {
+router.get("/obtener-productos-admin", authToken, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
         
@@ -1557,7 +1586,7 @@ const inventorySyncRoutes = require('./inventorySyncRoutes');
 router.use('/admin/inventory-sync', inventorySyncRoutes);
 
 // ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
-router.get('/admin/products/:id', adminAuth, async (req, res) => {
+router.get('/admin/products/:id', authToken, async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`📥 GET /api/admin/products/${id}`);
