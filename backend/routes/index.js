@@ -12,6 +12,7 @@
     const adminAuth = require('../middleware/adminAuth');
     const strictAuth = require('../middleware/strictAuth');
     const { requirePermission } = require('../helpers/granularPermission');
+    const cookieDebug = require('../middleware/cookieDebug');
     const userLogout = require('../controller/user/userLogout');
     const allUsers = require('../controller/user/allUser');
     const updateUser = require('../controller/user/updateUser');
@@ -877,7 +878,7 @@ const categoryRoutes = require('./categoryRoutes');
     router.post("/iniciar-sesion", userSignInController);
     router.get("/detalles-usuario", authToken, userDetailsController);
     router.get("/cerrar-sesion", userLogout);
-    router.get("/todos-usuarios", authToken, allUsers);
+    router.get("/todos-usuarios", cookieDebug, authToken, allUsers);
     router.post("/actualizar-usuario", authToken, updateUser);
 
     // ===========================================
@@ -903,8 +904,8 @@ const categoryRoutes = require('./categoryRoutes');
     // RUTAS DE PRODUCTOS
     // ===========================================
     router.post("/cargar-producto", authToken, requirePermission('products', 'upload'), UploadProductController);
-    router.get("/obtener-productos-home", authToken, getHomeProductsController);
-router.get("/obtener-productos-admin", authToken, async (req, res) => {
+    router.get("/obtener-productos-home", cookieDebug, authToken, getHomeProductsController);
+router.get("/obtener-productos-admin", cookieDebug, authToken, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
         
@@ -1123,99 +1124,89 @@ router.post("/actualizar-producto", authToken, updateProductController);
         }
     });
 
+    // ✅ ENDPOINT DE DEBUG PARA VERIFICAR AUTENTICACIÓN GENERAL
     router.get("/debug/auth-status", authToken, async (req, res) => {
         try {
-            
-            
-            const debugInfo = {
-                timestamp: new Date().toISOString(),
-                headers: {
-                    authorization: req.headers.authorization ? "Presente" : "Ausente",
-                    cookie: req.headers.cookie ? "Presente" : "Ausente",
-                    userAgent: req.headers['user-agent']
-                },
-                cookies: {
-                    token: req.cookies?.token ? "Presente" : "Ausente",
-                    guestUserId: req.cookies?.guestUserId || "No configurado"
-                },
-                middleware_data: {
+            res.json({
+                message: "Estado de autenticación",
+                success: true,
+                auth: {
                     userId: req.userId,
                     isAuthenticated: req.isAuthenticated,
                     userRole: req.userRole,
-                    sessionId: req.sessionId,
-                    bancardUserId: req.bancardUserId
+                    userType: req.userType,
+                    bancardUserId: req.bancardUserId,
+                    user: req.user ? {
+                        id: req.user._id,
+                        name: req.user.name,
+                        email: req.user.email,
+                        role: req.user.role
+                    } : null
                 },
-                session_info: {
-                    sessionId: req.session?.id,
-                    sessionData: req.session ? Object.keys(req.session) : "Sin sesión"
+                headers: {
+                    cookies: req.headers.cookie ? 'present' : 'missing',
+                    authorization: req.headers.authorization ? 'present' : 'missing'
                 }
-            };
-
-            // ✅ VERIFICAR TOKEN SI EXISTE
-            if (req.cookies?.token) {
-                try {
-                    const jwt = require('jsonwebtoken');
-                    const decoded = jwt.verify(req.cookies.token, process.env.TOKEN_SECRET_KEY);
-                    debugInfo.token_info = {
-                        valid: true,
-                        decoded: {
-                            _id: decoded._id,
-                            email: decoded.email,
-                            role: decoded.role,
-                            exp: new Date(decoded.exp * 1000).toISOString()
-                        }
-                    };
-                } catch (tokenError) {
-                    debugInfo.token_info = {
-                        valid: false,
-                        error: tokenError.message
-                    };
-                }
-            }
-
-            // ✅ VERIFICAR USUARIO EN BD SI ESTÁ AUTENTICADO
-            if (req.isAuthenticated && req.userId) {
-                try {
-                    const userModel = require('../models/userModel');
-                    const user = await userModel.findById(req.userId).select('-password');
-                    debugInfo.database_user = user ? {
-                        found: true,
-                        id: user._id,
-                        name: user.name,
-                        email: user.email,
-                        role: user.role,
-                        isActive: user.isActive,
-                        lastLogin: user.lastLogin
-                    } : {
-                        found: false
-                    };
-                } catch (dbError) {
-                    debugInfo.database_user = {
-                        error: dbError.message
-                    };
-                }
-            }
-
-            // ✅ VERIFICAR CONFIGURACIÓN DEL ENTORNO
-            debugInfo.environment = {
-                NODE_ENV: process.env.NODE_ENV,
-                TOKEN_SECRET_KEY: process.env.TOKEN_SECRET_KEY ? "Configurado" : "Faltante",
-                FRONTEND_URL: process.env.FRONTEND_URL,
-                cookieSecure: process.env.NODE_ENV === 'production'
-            };
-
-            res.json({
-                message: "Información de debug de autenticación",
-                success: true,
-                error: false,
-                data: debugInfo
             });
-
         } catch (error) {
-            console.error("❌ Error en debug route:", error);
             res.status(500).json({
-                message: "Error en ruta de debug",
-                success: false,
+                message: "Error en debug de autenticación",
+                error: true,
+                details: error.message
+            });
+        }
+    });
+
+    // ✅ ENDPOINT SIN AUTENTICACIÓN PARA DEBUG DE COOKIES
+    router.get("/debug/cookies", async (req, res) => {
+        try {
+            res.json({
+                message: "Debug de cookies",
+                success: true,
+                cookies: req.cookies,
+                headers: {
+                    cookie: req.headers.cookie,
+                    authorization: req.headers.authorization,
+                    'user-agent': req.headers['user-agent']
+                },
+                environment: process.env.NODE_ENV
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Error en debug de cookies",
+                error: true,
+                details: error.message
+            });
+        }
+    });
+
+    // ✅ ENDPOINT PARA PROBAR AUTENTICACIÓN COMPLETA
+    router.get("/debug/auth-test", cookieDebug, authToken, async (req, res) => {
+        try {
+            res.json({
+                message: "Test de autenticación completo",
+                success: true,
+                auth: {
+                    userId: req.userId,
+                    isAuthenticated: req.isAuthenticated,
+                    userRole: req.userRole,
+                    userType: req.userType,
+                    user: req.user ? {
+                        id: req.user._id,
+                        name: req.user.name,
+                        email: req.user.email,
+                        role: req.user.role
+                    } : null
+                },
+                cookies: req.cookies,
+                headers: {
+                    cookie: req.headers.cookie,
+                    authorization: req.headers.authorization
+                }
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Error en test de autenticación",
                 error: true,
                 details: error.message
             });
@@ -1581,9 +1572,13 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
     // ===== RUTAS DE ADMINISTRACIÓN DE CATEGORÍAS =====
     router.use('/admin/categories', categoryRoutes);
 
-// ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
+    // ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
 const inventorySyncRoutes = require('./inventorySyncRoutes');
 router.use('/admin/inventory-sync', inventorySyncRoutes);
+
+    // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
+const authTestRoutes = require('./authTest');
+router.use('/test', authTestRoutes);
 
 // ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
 router.get('/admin/products/:id', authToken, async (req, res) => {

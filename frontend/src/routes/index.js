@@ -7,6 +7,7 @@ import ForgotPassword from "../pages/ForgotPassword"
 import SignUp from "../pages/SignUp"
 import AdminPanel from "../pages/AdminPanel"
 import AllUsers from "../pages/AllUsers"
+import UserManagement from "../pages/UserManagement"
 import AllProducts from "../pages/AllProducts"
 import NewProductPage from "../pages/NewProductPage"
 import CategoryProduct from "../pages/CategoryProduct"
@@ -182,6 +183,10 @@ const router = createBrowserRouter([
                     {
                         path: "todos-usuarios",
                         element: <AllUsers />
+                    },
+                    {
+                        path: "gestion-usuarios",
+                        element: <UserManagement />
                     },
                     {
                         path: "productos",

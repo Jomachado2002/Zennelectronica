@@ -38,8 +38,18 @@ function App() {
     
     const dataApi = await dataResponse.json()
     
+    console.log("🔍 App.js - Respuesta del backend:", {
+      success: dataApi.success,
+      data: dataApi.data,
+      userRole: dataApi.data?.role,
+      userEmail: dataApi.data?.email
+    });
+    
     if (dataApi.success) {
       dispatch(setUserDetails(dataApi.data))
+      console.log("✅ App.js - Usuario guardado en Redux:", dataApi.data);
+    } else {
+      console.log("❌ App.js - Error al obtener usuario:", dataApi.message);
     }
   }
   

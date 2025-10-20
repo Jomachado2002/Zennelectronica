@@ -21,14 +21,17 @@ async function authToken(req, res, next) {
             token = req.cookies.token;
             source = 'cookie';
         }
-        // 2. Parsing manual de cookies (para iOS problemático)
+        // 2. Parsing manual de cookies (para Vercel y iOS)
         else if (req.headers.cookie) {
+            console.log('🔍 Parsing manual de cookies:', req.headers.cookie);
             const cookies = req.headers.cookie.split(';');
             for (const cookie of cookies) {
-                const [key, value] = cookie.trim().split('=');
-                if (key === 'token' && value) {
+                const trimmedCookie = cookie.trim();
+                const [key, value] = trimmedCookie.split('=');
+                if (key === 'token' && value && value !== 'undefined') {
                     token = decodeURIComponent(value);
                     source = 'manual_cookie';
+                    console.log('✅ Token encontrado en parsing manual:', token.substring(0, 20) + '...');
                     break;
                 }
             }
@@ -38,17 +41,29 @@ async function authToken(req, res, next) {
             token = req.headers.authorization.substring(7);
             source = 'header';
         }
-        // 4. Headers personalizados (para iOS)
+        // 4. Headers personalizados (para iOS y Vercel)
         else if (req.headers['x-auth-token']) {
             token = req.headers['x-auth-token'];
             source = 'x-auth-token';
+        }
+        // 5. Headers adicionales para Vercel
+        else if (req.headers['authorization-token']) {
+            token = req.headers['authorization-token'];
+            source = 'auth-token-header';
+        }
+        // 6. Query parameter como fallback (para testing)
+        else if (req.query.token) {
+            token = req.query.token;
+            source = 'query-param';
         }
 
         console.log('🎫 Token Status:', {
             found: !!token,
             source,
             length: token ? token.length : 0,
-            preview: token ? token.substring(0, 20) + '...' : 'NO TOKEN'
+            preview: token ? token.substring(0, 20) + '...' : 'NO TOKEN',
+            endpoint: req.path,
+            method: req.method
         });
 
         if (token) {

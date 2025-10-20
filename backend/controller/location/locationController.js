@@ -151,6 +151,15 @@ const saveUserLocationController = async (req, res) => {
 
         locationData.googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
+        // ✅ VERIFICAR QUE EL USERID ES UN OBJECTID VÁLIDO
+        if (typeof userId === 'string' && userId.startsWith('guest-')) {
+            return res.status(400).json({
+                message: "Los usuarios invitados no pueden guardar ubicación",
+                success: false,
+                error: true
+            });
+        }
+
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
             { location: locationData },
@@ -181,6 +190,15 @@ const saveUserLocationController = async (req, res) => {
 const getUserLocationController = async (req, res) => {
     try {
         const userId = req.userId;
+        
+        // ✅ VERIFICAR QUE EL USERID ES UN OBJECTID VÁLIDO
+        if (typeof userId === 'string' && userId.startsWith('guest-')) {
+            return res.status(400).json({
+                message: "Los usuarios invitados no tienen ubicación guardada",
+                success: false,
+                error: true
+            });
+        }
         
         const user = await userModel.findById(userId).select('location');
         

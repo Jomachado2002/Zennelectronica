@@ -179,7 +179,7 @@ const Header = () => {
   const handleUserIconClick = () => {
     if (!user) {
       navigate('/iniciar-sesion');
-    } else if (user.role === ROLE.ADMIN) {
+    } else if (user.role === ROLE.ADMIN || user.role === ROLE.ROOT) {
       navigate('/panel-admin');
       scrollTop();
     } else {
@@ -345,7 +345,7 @@ const Header = () => {
 
                       {/* Opciones */}
                       <div className="py-2">
-                        {user.role === ROLE.ADMIN ? (
+                        {(user.role === ROLE.ADMIN || user.role === ROLE.ROOT) ? (
                           <Link
                             to="/panel-admin"
                             onClick={() => {

@@ -8,9 +8,18 @@ const uploadProductPermission = require('../../helpers/permission');
  */
 async function getUserProfileController(req, res) {
     try {
+        const userId = req.userId;
         
+        // ✅ VERIFICAR QUE EL USERID ES UN OBJECTID VÁLIDO
+        if (typeof userId === 'string' && userId.startsWith('guest-')) {
+            return res.status(400).json({
+                message: "Los usuarios invitados no tienen perfil. Por favor, inicia sesión.",
+                error: true,
+                success: false
+            });
+        }
         
-        const user = await userModel.findById(req.userId).select('-password');
+        const user = await userModel.findById(userId).select('-password');
         
         if (!user) {
             return res.status(404).json({
@@ -49,6 +58,15 @@ async function updateUserProfileController(req, res) {
             dateOfBirth,
             profilePic
         } = req.body;
+
+        // ✅ VERIFICAR QUE EL USERID ES UN OBJECTID VÁLIDO
+        if (typeof userId === 'string' && userId.startsWith('guest-')) {
+            return res.status(400).json({
+                message: "Los usuarios invitados no pueden actualizar su perfil. Por favor, inicia sesión.",
+                error: true,
+                success: false
+            });
+        }
 
         // Validaciones básicas
         if (!name || name.trim() === '') {
@@ -153,7 +171,17 @@ async function uploadProfileImageController(req, res) {
  */
 async function changePasswordController(req, res) {
     try {
+        const userId = req.userId;
         const { currentPassword, newPassword } = req.body;
+        
+        // ✅ VERIFICAR QUE EL USERID ES UN OBJECTID VÁLIDO
+        if (typeof userId === 'string' && userId.startsWith('guest-')) {
+            return res.status(400).json({
+                message: "Los usuarios invitados no pueden cambiar contraseña. Por favor, inicia sesión.",
+                error: true,
+                success: false
+            });
+        }
         
         if (!currentPassword || !newPassword) {
             return res.status(400).json({
@@ -163,7 +191,7 @@ async function changePasswordController(req, res) {
             });
         }
 
-        const user = await userModel.findById(req.userId);
+        const user = await userModel.findById(userId);
         if (!user) {
             return res.status(404).json({
                 message: "Usuario no encontrado",

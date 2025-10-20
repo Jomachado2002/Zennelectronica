@@ -69,13 +69,14 @@ async function userSignInController(req, res) {
 
         
 
-        // ✅ CONFIGURACIÓN DE COOKIES SIMPLIFICADA PARA VERCEL
+        // ✅ CONFIGURACIÓN DE COOKIES OPTIMIZADA PARA VERCEL
         const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // true en producción, false en desarrollo
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' en producción, 'lax' en desarrollo
+            secure: true, // Siempre true para Vercel
+            sameSite: 'none', // Siempre 'none' para Vercel (cross-site)
             maxAge: 24 * 60 * 60 * 1000, // 24 horas
             path: '/'
+            // No especificar domain para que funcione en cualquier subdominio de Vercel
         };
 
         console.log('🍪 Configurando cookie con opciones:', cookieOptions);

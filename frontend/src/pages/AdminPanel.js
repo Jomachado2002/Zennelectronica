@@ -25,7 +25,8 @@ import {
   FaCompress,
   FaDollarSign,
   FaBuilding,
-  FaSyncAlt
+  FaSyncAlt,
+  FaUserCog
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -62,9 +63,22 @@ const AdminPanel = () => {
 
   useEffect(() => {
     const userRole = user?.role;
-    if (userRole !== ROLE.ADMIN) {
+    console.log("🔍 AdminPanel - Verificación de rol:", {
+      user: user,
+      userRole: userRole,
+      ROLE_ADMIN: ROLE.ADMIN,
+      ROLE_ROOT: ROLE.ROOT,
+      isAdmin: userRole === ROLE.ADMIN,
+      isRoot: userRole === ROLE.ROOT,
+      hasAccess: userRole === ROLE.ADMIN || userRole === ROLE.ROOT
+    });
+    
+    if (userRole !== ROLE.ADMIN && userRole !== ROLE.ROOT) {
+      console.log("❌ AdminPanel - Acceso denegado para rol:", userRole);
       toast.error("Acceso denegado");
       navigate("/");
+    } else {
+      console.log("✅ AdminPanel - Acceso permitido para rol:", userRole);
     }
   }, [user, navigate]);
 
@@ -118,6 +132,25 @@ const AdminPanel = () => {
           icon: <FaSyncAlt className="w-5 h-5" />,
           description: "Sincronizar inventario con proveedores",
           color: "text-green-600 bg-green-50"
+        }
+      ]
+    },
+    {
+      category: "Gestión de Usuarios",
+      items: [
+        {
+          path: "gestion-usuarios",
+          label: "Gestión de Usuarios",
+          icon: <FaUserCog className="w-5 h-5" />,
+          description: "Administrar roles y permisos",
+          color: "text-indigo-600 bg-indigo-50"
+        },
+        {
+          path: "todos-usuarios",
+          label: "Ver Usuarios",
+          icon: <FaUsers className="w-5 h-5" />,
+          description: "Ver información de usuarios",
+          color: "text-blue-600 bg-blue-50"
         }
       ]
     },
