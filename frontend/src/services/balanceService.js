@@ -1,5 +1,7 @@
 // frontend/src/services/balanceService.js
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
+import SummaryApi from '../common';
+
+const API_BASE_URL = SummaryApi.baseURL;
 
 /**
  * ✅ SERVICIO PARA GESTIÓN DE SALDO

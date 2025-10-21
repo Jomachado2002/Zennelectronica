@@ -76,7 +76,7 @@ const Cart = () => {
        setLoadingCards(true);
        try {
            // ✅ VERIFICAR LA URL COMPLETA
-           const url = `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/api/bancard/tarjetas/${user.bancardUserId}`;
+           const url = `${SummaryApi.baseURL}/api/bancard/tarjetas/${user.bancardUserId}`;
            
            
            const response = await fetch(url, {

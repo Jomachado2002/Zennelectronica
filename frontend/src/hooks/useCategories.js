@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axiosInstance from '../config/axiosInstance';
+import SummaryApi from '../common';
 
 const useCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -14,27 +14,43 @@ const useCategories = () => {
       
       // Intentar primero con el endpoint de categorías estructuradas
       try {
-        const response = await axiosInstance.get('/api/admin/categories/all');
-        // console.log removed for production
-        setCategories(response.data.data || []);
-        return;
+        const response = await fetch(`${SummaryApi.baseURL}/api/admin/categories/all`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          setCategories(result.data || []);
+          return;
+        }
       } catch (adminError) {
         // console.log removed for production
       }
       
       // Fallback al endpoint de base de datos directa
-      const response = await axiosInstance.get('/api/categorias-bd');
-      // console.log removed for production
-      
-      // Transformar los datos de la BD al formato esperado
-      const transformedCategories = response.data.data.map(category => ({
+      const response = await fetch(`${SummaryApi.baseURL}/api/categorias-bd`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        const result = await response.json();
+        // console.log removed for production
+        
+        // Transformar los datos de la BD al formato esperado
+        const transformedCategories = result.data.map(category => ({
         value: category.value || category.name?.toLowerCase().replace(/\s+/g, '_'),
         label: category.label || category.name,
         name: category.name,
         subcategories: category.subcategories || []
-      }));
-      
-      setCategories(transformedCategories);
+        }));
+        
+        setCategories(transformedCategories);
+      } else {
+        throw new Error('Error al cargar categorías');
+      }
     } catch (err) {
       // console.error removed for production
       setError(err.message);
@@ -55,17 +71,25 @@ const useCategories = () => {
 
   // Función para obtener especificaciones de una subcategoría específica
   const getSpecificationsBySubcategory = (categoryValue, subcategoryValue) => {
-    // console.log removed for production
-    // console.log removed for production
+    console.log('🔍 getSpecificationsBySubcategory - Parámetros:', {
+      categoryValue,
+      subcategoryValue,
+      categoriesCount: categories.length
+    });
     
     const category = categories.find(cat => cat.value === categoryValue);
-    // console.log removed for production
+    console.log('🔍 getSpecificationsBySubcategory - Categoría encontrada:', {
+      category: category ? category.label : 'No encontrada',
+      subcategoriesCount: category ? category.subcategories?.length : 0
+    });
     
     if (!category) return [];
     
     const subcategory = category.subcategories.find(sub => sub.value === subcategoryValue);
-    // console.log removed for production
-    // console.log removed for production
+    console.log('🔍 getSpecificationsBySubcategory - Subcategoría encontrada:', {
+      subcategory: subcategory ? subcategory.label : 'No encontrada',
+      specificationsCount: subcategory ? subcategory.specifications?.length : 0
+    });
     
     return subcategory ? subcategory.specifications : [];
   };

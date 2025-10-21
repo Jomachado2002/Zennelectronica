@@ -442,19 +442,20 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     
     try {
       const productDataToSend = {
+        _id: productData._id, // ✅ INCLUIR ID DEL PRODUCTO
         ...data,
         ...data.specifications
       };
       
-      // console.log removed for production
-      
       console.log('🚀 Enviando datos a:', SummaryApi.updateProduct.url);
       console.log('📦 Datos del producto:', {
+        _id: productData._id,
         productName: data.productName,
         codigo: data.codigo,
         price: data.price,
         sellingPrice: data.sellingPrice,
-        hasImages: data.productImage.length > 0
+        hasImages: data.productImage.length > 0,
+        specifications: data.specifications
       });
       
       const response = await fetch(SummaryApi.updateProduct.url, {
@@ -464,13 +465,21 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         body: JSON.stringify(productDataToSend)
       });
       
+      console.log('📡 Respuesta del servidor:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
       const result = await response.json();
+      console.log('📄 Resultado completo:', result);
       
       if (result.success) {
         toast.success('Producto actualizado exitosamente');
         if (fetchdata) fetchdata();
         onClose();
       } else {
+        console.error('❌ Error del servidor:', result);
         toast.error(result.message || 'Error al actualizar producto');
       }
       
