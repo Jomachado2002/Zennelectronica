@@ -39,13 +39,23 @@ async function UploadProductController(req, res) {
             throw new Error(`El código "${productData.codigo}" ya existe. Por favor usa un código diferente.`);
         }
 
-        // ✅ MAPEAR CAMPOS DE PRECIO CORRECTAMENTE
-        // El modelo requiere 'price' pero el frontend envía 'sellingPrice'
-        if (productData.sellingPrice && !productData.price) {
-            productData.price = productData.sellingPrice;
+        // ✅ VALIDAR Y PROCESAR CAMPOS DE PRECIO
+        // Validar campo price (precio anterior)
+        if (productData.price === undefined || productData.price === null) {
+            productData.price = 0; // Default a 0 si no se proporciona
         }
-        
-        // Asegurar que ambos campos tengan el mismo valor si no se especifica price
+
+        // Validar que price no sea negativo
+        if (productData.price < 0) {
+            throw new Error("El precio anterior no puede ser negativo");
+        }
+
+        // Validar que sellingPrice sea positivo
+        if (!productData.sellingPrice || productData.sellingPrice <= 0) {
+            throw new Error("El precio de venta debe ser mayor a 0");
+        }
+
+        // Si no se especifica price pero sí sellingPrice, usar sellingPrice como price
         if (!productData.price && productData.sellingPrice) {
             productData.price = productData.sellingPrice;
         }

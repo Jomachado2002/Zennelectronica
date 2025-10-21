@@ -68,10 +68,21 @@ async function updateProductController(req, res) {
             }
         }
 
-        // ✅ MAPEAR CAMPOS DE PRECIO CORRECTAMENTE
-        // price = precio anterior (para descuentos)
-        // sellingPrice = precio actual de venta
-        // No sobrescribir price con sellingPrice
+        // ✅ VALIDAR Y PROCESAR CAMPOS DE PRECIO
+        // Validar campo price (precio anterior) si se proporciona
+        if (resBody.price !== undefined && resBody.price !== null) {
+            if (resBody.price < 0) {
+                throw new Error("El precio anterior no puede ser negativo");
+            }
+        }
+
+        // Validar que sellingPrice sea positivo si se proporciona
+        if (resBody.sellingPrice !== undefined && resBody.sellingPrice !== null) {
+            if (resBody.sellingPrice <= 0) {
+                throw new Error("El precio de venta debe ser mayor a 0");
+            }
+        }
+
         console.log('🔍 Backend - Mapeo de precios:', {
             price: resBody.price,
             sellingPrice: resBody.sellingPrice

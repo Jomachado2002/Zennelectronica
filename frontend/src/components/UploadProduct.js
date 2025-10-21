@@ -466,8 +466,17 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       
       // console.log removed for production
       
-      const response = await fetch('http://localhost:8080/api/cargar-producto', {
-        method: 'POST',
+      console.log('🚀 Enviando datos a:', SummaryApi.uploadProduct.url);
+      console.log('📦 Datos del producto:', {
+        productName: data.productName,
+        codigo: data.codigo,
+        price: data.price,
+        sellingPrice: data.sellingPrice,
+        hasImages: data.productImage.length > 0
+      });
+      
+      const response = await fetch(SummaryApi.uploadProduct.url, {
+        method: SummaryApi.uploadProduct.method.toUpperCase(),
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(productDataToSend)
@@ -658,50 +667,59 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
             </div>
           )}
 
-          {/* Área de Imágenes Simplificada */}
+          {/* Área de Imágenes Mejorada - Estilo WhatsApp */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <label className="block text-sm font-medium text-gray-700">
                 Imágenes del Producto
               </label>
-              <div className="flex items-center space-x-2">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${getImageCountStatus().bg} ${getImageCountStatus().color}`}>
-                  {data.productImage.length} / 10
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getImageCountStatus().bg} ${getImageCountStatus().color}`}>
+                {data.productImage.length} / 10
+              </div>
+            </div>
+
+            {/* Input estilo chat */}
+            <div 
+              className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+              onClick={() => {
+                setIsPasteActive(true);
+                if (imageAreaRef.current) {
+                  imageAreaRef.current.focus();
+                }
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <FaImage className="w-6 h-6 text-gray-400" />
+                </div>
+                <div 
+                  ref={imageAreaRef}
+                  tabIndex={0}
+                  className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-text"
+                  contentEditable={false}
+                >
+                  <span className="text-gray-500">
+                    {isPasteActive 
+                      ? 'Pega imágenes aquí (Ctrl+V) o arrastra archivos...' 
+                      : 'Haz clic para pegar imágenes...'}
+                  </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowInstructions(true)}
-                  className="text-blue-500 hover:text-blue-700 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                 >
-                  💡 Ayuda
+                  <FaFolderOpen />
+                  <span>Seleccionar</span>
                 </button>
               </div>
             </div>
 
-            {/* Área de Paste y Drag & Drop Simplificada */}
-            <div
-              ref={imageAreaRef}
-              tabIndex={0}
-              onClick={() => {
-                if (isPasteActive) {
-                  fileInputRef.current?.click();
-                } else {
-                  setIsPasteActive(true);
-                  if (imageAreaRef.current) {
-                    imageAreaRef.current.focus();
-                  }
-                }
-              }}
-              onFocus={() => setIsPasteActive(true)}
-              onBlur={() => setIsPasteActive(false)}
-              className={`
-                relative min-h-[150px] border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all duration-200
-                ${isPasteActive ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}
-                ${isDragOver ? 'border-blue-400 bg-blue-50' : ''}
-                ${isProcessingImages ? 'pointer-events-none opacity-75' : ''}
-              `}
-            >
-              {/* Grid de Imágenes */}
+            {/* Grid de imágenes existente */}
+            {data.productImage.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {data.productImage.map((image, index) => (
                   <div key={index} className="relative group">
@@ -746,41 +764,18 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                     </div>
                   </div>
                 ))}
-                
-                {/* Botón de subir (solo si hay espacio) */}
-                {data.productImage.length < 10 && (
-                  <div className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-gray-400 transition-colors">
-                    <div className="text-center">
-                      <FaUpload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <span className="text-xs text-gray-500">Subir Imágenes</span>
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
 
-              {/* Instrucciones cuando no hay imágenes */}
-              {data.productImage.length === 0 && (
-                <div className="text-center py-8">
-                  <FaImage className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-2">
-                    {isPasteActive ? 'Presiona Ctrl+V para pegar imágenes' : 'Haz click para activar el modo paste'}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    O arrastra archivos aquí, o haz click para seleccionar
-                  </p>
-                </div>
-              )}
-
-              {/* Input oculto para selección de archivos */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </div>
+            {/* Input oculto para selección de archivos */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
 
             {validationErrors.productImage && (
               <p className="text-red-600 text-sm">{validationErrors.productImage}</p>
@@ -1017,6 +1012,26 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="20"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio Anterior (PYG) 
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Opcional - Para mostrar descuentos)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  value={data.price || 0}
+                  onChange={handleOnChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Si es 0, no se mostrará descuento. Si es mayor al precio de venta, se mostrará el % de descuento.
+                </p>
               </div>
 
               <div>
