@@ -62,7 +62,7 @@
     "lighthouse": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html",
     "bundle-analyzer": "npx webpack-bundle-analyzer build/static/js/*.js",
     "precommit": "npm run lint && npm run test:coverage",
-    "postbuild": "npm run analyze:bundle"
+    "postbuild": "npm run bundle-analyzer"
   },
   "eslintConfig": {
     "extends": [
