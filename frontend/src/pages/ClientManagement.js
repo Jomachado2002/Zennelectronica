@@ -156,7 +156,7 @@ const ClientManagement = () => {
         toast.error(result.message || "Error al cargar los clientes");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -174,7 +174,7 @@ const ClientManagement = () => {
         setSales(result.data.sales || []);
       }
     } catch (error) {
-      console.error("Error al cargar ventas:", error);
+      // console.error removed for production
     }
   };
 
@@ -189,7 +189,7 @@ const ClientManagement = () => {
         setBudgets(result.data.budgets || []);
       }
     } catch (error) {
-      console.error("Error al cargar presupuestos:", error);
+      // console.error removed for production
     }
   };
 
@@ -440,7 +440,7 @@ const ClientManagement = () => {
         toast.error(result.message || "Error al eliminar el cliente");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -523,7 +523,7 @@ const ClientManagement = () => {
         toast.error(result.message || `Error al ${isEditMode ? 'actualizar' : 'crear'} el cliente`);
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

@@ -275,7 +275,7 @@ juegos_consola: [
     });
 
   } catch (err) {
-    console.error('Error en filterProductController:', err);
+    // console.error removed for production
     res.status(500).json({
       message: err.message || err,
       error: true,

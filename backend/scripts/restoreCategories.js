@@ -8,9 +8,9 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log('✅ Conectado a MongoDB');
+    // console.log removed for production
   } catch (error) {
-    console.error('❌ Error conectando a MongoDB:', error);
+    // console.error removed for production
     process.exit(1);
   }
 };
@@ -643,13 +643,13 @@ const migrateCategory = async (categoryData, db) => {
   try {
     const categoriesCollection = db.collection('categories');
     
-    console.log(`\n🔄 Migrando categoría: ${categoryData.label}`);
+    // console.log removed for production
     
     // Verificar si la categoría ya existe
     const existingCategory = await categoriesCollection.findOne({ value: categoryData.value });
     
     if (existingCategory) {
-      console.log(`⚠️  La categoría "${categoryData.label}" ya existe. Actualizando...`);
+      // console.log removed for production
       
       // Actualizar la categoría existente
       await categoriesCollection.updateOne(
@@ -657,29 +657,29 @@ const migrateCategory = async (categoryData, db) => {
         { $set: categoryData }
       );
       
-      console.log(`✅ Categoría "${categoryData.label}" actualizada exitosamente`);
+      // console.log removed for production
     } else {
       // Insertar nueva categoría
       await categoriesCollection.insertOne(categoryData);
-      console.log(`✅ Categoría "${categoryData.label}" creada exitosamente`);
+      // console.log removed for production
     }
     
     // Validar que la categoría se guardó correctamente
     const savedCategory = await categoriesCollection.findOne({ value: categoryData.value });
     if (savedCategory) {
-      console.log(`📊 Categoría "${categoryData.label}" guardada con ${savedCategory.subcategories?.length || 0} subcategorías`);
+      // console.log removed for production
       
       // Mostrar subcategorías
       if (savedCategory.subcategories) {
         savedCategory.subcategories.forEach(sub => {
-          console.log(`   └── ${sub.label}: ${sub.specifications?.length || 0} especificaciones`);
+          // console.log removed for production
         });
       }
     }
     
     return true;
   } catch (error) {
-    console.error(`❌ Error migrando categoría "${categoryData.label}":`, error);
+    // console.error removed for production
     return false;
   }
 };
@@ -690,8 +690,8 @@ const migrateAllCategories = async () => {
     await connectDB();
     const db = mongoose.connection.db;
     
-    console.log('🚀 Iniciando migración de categorías...');
-    console.log(`📋 Total de categorías a migrar: ${categoriesData.length}`);
+    // console.log removed for production
+    // console.log removed for production
     
     let successCount = 0;
     let errorCount = 0;
@@ -709,28 +709,28 @@ const migrateAllCategories = async () => {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    console.log('\n📊 RESUMEN DE MIGRACIÓN:');
-    console.log(`✅ Categorías migradas exitosamente: ${successCount}`);
-    console.log(`❌ Categorías con errores: ${errorCount}`);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
     
     // Validación final
-    console.log('\n🔍 VALIDACIÓN FINAL:');
+    // console.log removed for production
     const categoriesCollection = db.collection('categories');
     const totalCategories = await categoriesCollection.countDocuments();
-    console.log(`📈 Total de categorías en la base de datos: ${totalCategories}`);
+    // console.log removed for production
     
     const allCategories = await categoriesCollection.find({}).sort({ order: 1 }).toArray();
     allCategories.forEach(category => {
-      console.log(`   📁 ${category.label}: ${category.subcategories?.length || 0} subcategorías`);
+      // console.log removed for production
     });
     
-    console.log('\n🎉 ¡Migración completada!');
+    // console.log removed for production
     
   } catch (error) {
-    console.error('❌ Error en la migración:', error);
+    // console.error removed for production
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Desconectado de MongoDB');
+    // console.log removed for production
   }
 };
 

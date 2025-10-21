@@ -95,7 +95,7 @@ async function createSupplierController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createSupplierController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -198,7 +198,7 @@ async function getSupplierByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getSupplierByIdController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -350,7 +350,7 @@ async function deleteSupplierController(req, res) {
         }
 
     } catch (err) {
-        console.error("Error en deleteSupplierController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,

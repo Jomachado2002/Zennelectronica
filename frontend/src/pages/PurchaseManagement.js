@@ -150,7 +150,7 @@ const PurchaseManagement = () => {
         toast.error(result.message || "Error al cargar las compras");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -289,7 +289,7 @@ const PurchaseManagement = () => {
         setSuppliers(result.data.suppliers || []);
       }
     } catch (error) {
-      console.error("Error al cargar proveedores:", error);
+      // console.error removed for production
     }
   };
 
@@ -443,7 +443,7 @@ const PurchaseManagement = () => {
         toast.error(result.message || "Error al registrar la compra");
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

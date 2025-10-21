@@ -51,7 +51,7 @@ const BancardPayButton = ({
         ];
         
         if (!validOrigins.includes(event.origin)) {
-            console.warn('⚠️ Mensaje de origen no confiable:', event.origin);
+            // console.warn removed for production
         }
 
         let data = event.data;
@@ -79,7 +79,7 @@ const BancardPayButton = ({
               window.location.href = '/pago-exitoso?shop_process_id=' + (data.shop_process_id || Date.now());
             }, 1000);
           } else if (data.type === 'payment_error' || data.status === 'error') {
-            console.error('❌ Error en el pago desde iframe:', data);
+            // console.error removed for production
             setShowIframe(false);
             setLoading(false);
             setPaymentProcessing(false);
@@ -90,7 +90,7 @@ const BancardPayButton = ({
           }
         }
     } catch (error) {
-        console.error('❌ Error procesando mensaje del iframe:', error);
+        // console.error removed for production
     }
   };
 
@@ -121,7 +121,7 @@ const BancardPayButton = ({
     
     
     if (retryCount >= 3) {
-      console.error('❌ Máximo de intentos alcanzado para cargar script');
+      // console.error removed for production
       setShowIframe(false);
       setLoading(false);
       setPaymentProcessing(false);
@@ -153,12 +153,12 @@ const BancardPayButton = ({
         
         setTimeout(initializeBancardIframe, 200);
       } else {
-        console.warn('⚠️ window.Bancard no disponible después de cargar script');
+        // console.warn removed for production
         setTimeout(() => {
           if (window.Bancard) {
             initializeBancardIframe();
           } else {
-            console.error('❌ window.Bancard sigue no disponible, reintentando...');
+            // console.error removed for production
             loadBancardScript(retryCount + 1);
           }
         }, 500);
@@ -166,7 +166,7 @@ const BancardPayButton = ({
     };
     
     script.onerror = () => {
-      console.error('❌ Error cargando script de Bancard en intento', retryCount + 1);
+      // console.error removed for production
       setTimeout(() => {
         loadBancardScript(retryCount + 1);
       }, 1000);
@@ -181,7 +181,7 @@ const BancardPayButton = ({
       
       
       if (retryCount >= 5) {
-        console.error('❌ Máximo de intentos alcanzado para inicializar iframe');
+        // console.error removed for production
         setLoading(false);
         setPaymentProcessing(false);
         onPaymentError(new Error('No se pudo cargar el formulario después de varios intentos'));
@@ -189,7 +189,7 @@ const BancardPayButton = ({
       }
       
       if (!processId || processId.trim() === '') {
-        console.error('❌ processId está vacío:', processId);
+        // console.error removed for production
         setLoading(false);
         setPaymentProcessing(false);
         onPaymentError(new Error('Error: Process ID no válido'));
@@ -197,13 +197,13 @@ const BancardPayButton = ({
       }
       
       if (!window.Bancard) {
-        console.warn('⚠️ window.Bancard no existe, reintentando en 1 segundo...');
+        // console.warn removed for production
         setTimeout(() => initializeBancardIframe(retryCount + 1), 1000);
         return;
       }
       
       if (!window.Bancard.Checkout) {
-        console.warn('⚠️ window.Bancard.Checkout no existe, reintentando...');
+        // console.warn removed for production
         setTimeout(() => initializeBancardIframe(retryCount + 1), 500);
         return;
       }
@@ -223,7 +223,7 @@ const BancardPayButton = ({
       
       const container = document.getElementById('bancard-iframe-container');
       if (!container) {
-        console.error('❌ Contenedor bancard-iframe-container no encontrado');
+        // console.error removed for production
         setLoading(false);
         setPaymentProcessing(false);
         onPaymentError(new Error('Error: Contenedor no encontrado'));
@@ -250,7 +250,7 @@ const BancardPayButton = ({
         }, 1000);
         
       } catch (createFormError) {
-        console.error('❌ Error en createForm:', createFormError);
+        // console.error removed for production
         setLoading(false);
         setPaymentProcessing(false);
         onPaymentError(new Error(`Error al crear formulario: ${createFormError.message}`));
@@ -262,7 +262,7 @@ const BancardPayButton = ({
       }
       
     } catch (error) {
-      console.error('❌ Error general inicializando iframe:', error);
+      // console.error removed for production
       setLoading(false);
       setPaymentProcessing(false);
       onPaymentError(new Error(`Error general: ${error.message}`));
@@ -420,7 +420,7 @@ ${customerData.location.google_maps_url || 'No disponible'}
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('❌ Error response:', errorText);
+            // console.error removed for production
             
             let errorMessage = `Error HTTP ${response.status}`;
             try {
@@ -452,11 +452,11 @@ ${customerData.location.google_maps_url || 'No disponible'}
             }));
             
         } else {
-            console.error('❌ Respuesta inválida:', result);
+            // console.error removed for production
             throw new Error(result.message || 'La respuesta del servidor no contiene los datos necesarios');
         }
     } catch (error) {
-        console.error('❌ Error completo en processPaymentDirect:', error);
+        // console.error removed for production
         setLoading(false);
         setPaymentProcessing(false);
         

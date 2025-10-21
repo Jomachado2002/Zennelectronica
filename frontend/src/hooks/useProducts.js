@@ -54,7 +54,7 @@ export const useHomeProducts = () => {
             }
           }
         } else {
-          console.warn('⚠️ Datos no válidos recibidos:', result);
+          // console.warn removed for production
           return { success: false, data: {} };
         }
 
@@ -164,7 +164,7 @@ export const useHomeProducts = () => {
         };
                 
       } catch (error) {
-        console.error('❌ Error en useHomeProducts:', error);
+        // console.error removed for production
         throw error;
       }
     },

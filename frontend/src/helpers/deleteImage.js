@@ -25,7 +25,7 @@ const deleteImage = async (imageUrl) => {
         // Decodificar la URL para manejar caracteres especiales
         fullPath = decodeURIComponent(urlParts[1].split('?')[0]);
       } catch (error) {
-        console.error("Error parsing URL:", error);
+        // console.error removed for production
         throw new Error(`Invalid image URL format: ${imageUrl}`);
       }
     } else {
@@ -45,7 +45,7 @@ const deleteImage = async (imageUrl) => {
       path: fullPath
     };
   } catch (error) {
-    console.error("Error deleting image from Firebase:", error);
+    // console.error removed for production
     throw error;
   }
 };

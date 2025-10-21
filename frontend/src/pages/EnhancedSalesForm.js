@@ -126,7 +126,7 @@ const EnhancedSalesForm = () => {
           setFormData(prev => ({ ...prev, exchangeRate: result.data.exchangeRates.USD }));
         }
       } else {
-        console.error("Error loading form data:", result.message);
+        // console.error removed for production
         // Don't set invalid IDs - let user select manually
         setDropdownData({
           salesTypes: [],
@@ -144,7 +144,7 @@ const EnhancedSalesForm = () => {
         }));
       }
     } catch (error) {
-      console.error("Error loading form data:", error);
+      // console.error removed for production
       // Don't set invalid IDs - let user select manually
       setDropdownData({
         salesTypes: [],
@@ -180,7 +180,7 @@ const EnhancedSalesForm = () => {
         setSearchResults(prev => ({ ...prev, customers: result.data }));
       }
     } catch (error) {
-      console.error("Error searching customers:", error);
+      // console.error removed for production
     }
   };
 
@@ -201,7 +201,7 @@ const EnhancedSalesForm = () => {
         setSearchResults(prev => ({ ...prev, products: result.data }));
       }
     } catch (error) {
-      console.error("Error searching products:", error);
+      // console.error removed for production
     }
   };
 
@@ -229,7 +229,7 @@ const EnhancedSalesForm = () => {
     const taxRates = { exempt: 0, iva_5: 5, iva_10: 10 };
     const taxRate = taxRates[taxType] !== undefined ? taxRates[taxType] : 10;
     
-    console.log('calculateTax:', { amount, taxType, taxRate, priceIncludesTax });
+    // console.log removed for production
     
     // Si el impuesto es 0% (exento), NO hacer ningún cálculo de IVA
     // El subtotal debe ser exactamente el precio ingresado
@@ -373,7 +373,7 @@ const EnhancedSalesForm = () => {
   };
 
   const updateItem = (itemId, field, value) => {
-    console.log('updateItem called:', { itemId, field, value });
+    // console.log removed for production
     
     setFormData(prev => ({
       ...prev,
@@ -381,7 +381,7 @@ const EnhancedSalesForm = () => {
         if (item.id === itemId) {
           const updatedItem = { ...item, [field]: value };
           
-          console.log('Updated item before calculation:', updatedItem);
+          // console.log removed for production
           
           // Log específico para cambios de taxType
           if (field === 'taxType') {
@@ -406,7 +406,7 @@ const EnhancedSalesForm = () => {
           // Recalculate item totals when any relevant field changes
           const shouldRecalculate = ['unitPrice', 'quantity', 'taxType', 'priceIncludesTax'].includes(field);
           
-          console.log('Should recalculate:', shouldRecalculate, 'for field:', field);
+          // console.log removed for production
           
           if (shouldRecalculate) {
             const priceForCalculation = updatedItem.unitPricePYG || updatedItem.unitPrice;
@@ -498,7 +498,7 @@ const EnhancedSalesForm = () => {
         toast.error(result.message || "Error al subir archivos");
       }
     } catch (error) {
-      console.error("Error uploading files:", error);
+      // console.error removed for production
       toast.error("Error al subir archivos");
     } finally {
       setUploadingFiles(false);
@@ -594,7 +594,7 @@ const EnhancedSalesForm = () => {
         toast.error(result.message || "Error al crear la venta");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

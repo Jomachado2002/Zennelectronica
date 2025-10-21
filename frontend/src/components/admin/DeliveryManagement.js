@@ -78,7 +78,7 @@ const DeliveryManagement = ({ transaction, onClose, onUpdate }) => {
         toast.error(result.message || 'Error al actualizar estado');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);

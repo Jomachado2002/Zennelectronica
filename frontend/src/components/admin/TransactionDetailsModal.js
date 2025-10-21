@@ -27,7 +27,7 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
         setTransactionDetails(result.data);
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
     } finally {
       setLoading(false);
     }

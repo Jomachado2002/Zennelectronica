@@ -193,7 +193,7 @@ const getAllBancardTransactionsController = async (req, res) => {
                                     }
                                 };
                             } catch (productError) {
-                                console.error(`⚠️ Error obteniendo producto ${item.product_id}:`, productError);
+                                // console.error removed for production
                                 return {
                                     ...item,
                                     product_details: {
@@ -225,7 +225,7 @@ const getAllBancardTransactionsController = async (req, res) => {
                         }
                     };
                 } catch (enrichError) {
-                    console.error(`⚠️ Error enriqueciendo transacción ${transaction._id}:`, enrichError);
+                    // console.error removed for production
                     return {
                         ...transaction,
                         items: transaction.items || [],
@@ -276,7 +276,7 @@ const getAllBancardTransactionsController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo transacciones enriquecidas:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener transacciones",
             success: false,
@@ -367,7 +367,7 @@ const getBancardTransactionByIdController = async (req, res) => {
                         }
                     };
                 } catch (productError) {
-                    console.error(`⚠️ Error obteniendo producto ${item.product_id}:`, productError);
+                    // console.error removed for production
                     return {
                         ...item,
                         product_details: null
@@ -422,7 +422,7 @@ const getBancardTransactionByIdController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo transacción completa:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener transacción",
             success: false,
@@ -650,7 +650,7 @@ const rollbackBancardTransactionController = async (req, res) => {
             });
 
         } else {
-            console.error("❌ Error en rollback de Bancard:", response.data);
+            // console.error removed for production
             
             const isAlreadyConfirmed = response.data.messages?.some(msg => 
                 msg.key === 'TransactionAlreadyConfirmed'
@@ -675,7 +675,7 @@ const rollbackBancardTransactionController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error en rollback:", error);
+        // console.error removed for production
         
         let errorMessage = "Error al procesar rollback";
         let errorDetails = error.message;
@@ -763,7 +763,7 @@ const checkBancardTransactionStatusController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error consultando estado:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al consultar estado de la transacción",
             success: false,
@@ -842,7 +842,7 @@ const createBancardTransactionController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error creando transacción:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al crear transacción",
             success: false,

@@ -89,7 +89,7 @@ export async function optimizeImage(file, options = {}) {
         const optimizedSizeKB = Math.round(optimizedFile.size / 1024);
         const reductionPercent = Math.round(((file.size - optimizedFile.size) / file.size) * 100);
         
-        console.log(`✅ Imagen optimizada: ${file.name}`);
+        // console.log removed for production
         console.log(`📊 Tamaño: ${originalSizeKB}KB → ${optimizedSizeKB}KB (${reductionPercent}% reducción)`);
         
         return {
@@ -101,7 +101,7 @@ export async function optimizeImage(file, options = {}) {
         };
         
     } catch (error) {
-        console.error(`❌ Error optimizando ${file.name}:`, error.message);
+        // console.error removed for production
         return {
             file: file, // Usar archivo original si falla la optimización
             originalSize: file.size,
@@ -121,17 +121,17 @@ export async function optimizeImage(file, options = {}) {
  * @returns {Promise<Array>} Array de resultados de optimización
  */
 export async function optimizeMultipleImages(files, options = {}, onProgress = null) {
-    console.log(`🖼️ Optimizando ${files.length} imágenes en paralelo...`);
+    // console.log removed for production
     
     const results = [];
     const validFiles = files.filter(file => isValidImageFile(file));
     
     if (validFiles.length === 0) {
-        console.log('⚠️ No hay imágenes válidas para optimizar');
+        // console.log removed for production
         return [];
     }
     
-    console.log(`📊 Procesando ${validFiles.length} imágenes válidas de ${files.length} archivos`);
+    // console.log removed for production
     
     // Procesar en paralelo con límite de concurrencia
     const BATCH_SIZE = 3; // Procesar máximo 3 imágenes a la vez
@@ -160,7 +160,7 @@ export async function optimizeMultipleImages(files, options = {}, onProgress = n
             const batchResults = await Promise.all(batchPromises);
             results.push(...batchResults);
         } catch (error) {
-            console.error(`❌ Error en lote ${batchIndex + 1}:`, error);
+            // console.error removed for production
             // Agregar errores para este lote
             batch.forEach((file, fileIndex) => {
                 results.push({
@@ -179,7 +179,7 @@ export async function optimizeMultipleImages(files, options = {}, onProgress = n
     const failed = results.filter(r => !r.success).length;
     const totalReduction = results.reduce((sum, r) => sum + r.reductionPercent, 0) / results.length;
     
-    console.log(`✅ Optimización completada: ${successful} exitosas, ${failed} fallidas`);
+    // console.log removed for production
     console.log(`📊 Reducción promedio: ${Math.round(totalReduction)}%`);
     
     return results;
@@ -239,7 +239,7 @@ export async function extractImagesFromClipboard(clipboardData) {
         return imageFiles;
     }
     
-    console.log(`📋 Procesando ${clipboardData.items.length} items del portapapeles`);
+    // console.log removed for production
     
     for (let i = 0; i < clipboardData.items.length; i++) {
         const item = clipboardData.items[i];
@@ -250,12 +250,12 @@ export async function extractImagesFromClipboard(clipboardData) {
                 imageFiles.push(file);
                 console.log(`✅ Imagen extraída del portapapeles: ${file.name} (${file.type})`);
             } catch (error) {
-                console.warn(`⚠️ Error extrayendo imagen del portapapeles:`, error.message);
+                // console.warn removed for production
             }
         }
     }
     
-    console.log(`📊 ${imageFiles.length} imágenes extraídas del portapapeles`);
+    // console.log removed for production
     return imageFiles;
 }
 

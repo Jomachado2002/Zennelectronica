@@ -44,7 +44,7 @@ const RatingComponent = ({ transaction, onClose, onRated }) => {
         toast.error(result.message || 'Error al enviar calificación');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);

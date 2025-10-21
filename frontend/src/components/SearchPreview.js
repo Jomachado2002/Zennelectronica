@@ -93,7 +93,7 @@ const SearchPreview = ({
     
     // ✅ NAVEGAR USANDO SLUG O ID COMO FALLBACK
     const productSlug = product?.slug || product?._id;
-    console.log('Navegando a producto:', productSlug, product);
+    // console.log removed for production
     
     // Forzar navegación con window.location para asegurar que funcione
     window.location.href = `/producto/${productSlug}`;

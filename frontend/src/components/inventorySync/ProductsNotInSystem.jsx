@@ -42,9 +42,9 @@ const ProductsNotInSystem = ({
 
     // Función para manejar la apertura del modal de carga de producto
     const handleOpenUploadModal = (product) => {
-        console.log('🔍 Abriendo modal de carga');
-        console.log('📦 Producto original:', product);
-        console.log('🔢 Provider Code:', product.providerCode);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
         const preloadedData = {
             // Información básica
@@ -83,8 +83,8 @@ const ProductsNotInSystem = ({
             importMode: true
         };
         
-        console.log('📦 Datos precargados:', preloadedData);
-        console.log('🔢 Código en preloadedData:', preloadedData.codigo);
+        // console.log removed for production
+        // console.log removed for production
         
         onLoadProduct(preloadedData);
     };

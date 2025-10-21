@@ -12,5 +12,5 @@ try {
    
   }
 } catch (error) {
-  console.error('Error fixing gOPD:', error);
+  // console.error removed for production
 }

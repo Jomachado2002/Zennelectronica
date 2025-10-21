@@ -138,7 +138,7 @@ const BudgetsList = () => {
         toast.error(result.message || "Error al cargar los presupuestos");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -298,7 +298,7 @@ const BudgetsList = () => {
         setClients(result.data.clients || []);
       }
     } catch (error) {
-      console.error("Error al cargar clientes:", error);
+      // console.error removed for production
     }
   };
 
@@ -393,7 +393,7 @@ const BudgetsList = () => {
         toast.error(result.message || "Error al actualizar el estado");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -421,7 +421,7 @@ const BudgetsList = () => {
         toast.error(result.message || "Error al eliminar el presupuesto");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

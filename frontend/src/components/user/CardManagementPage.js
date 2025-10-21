@@ -52,7 +52,7 @@ const CardManagementPage = ({
       
       setCards(userCards || []);
     } catch (error) {
-      console.error('❌ Error al cargar tarjetas:', error);
+      // console.error removed for production
       setErrors({ fetch: 'Error al cargar las tarjetas. Intenta nuevamente.' });
     } finally {
       setLoading(false);
@@ -100,11 +100,11 @@ const CardManagementPage = ({
         }, 300);
         
       } else {
-        console.error('❌ Error en catastro:', result);
+        // console.error removed for production
         setErrors({ register: result.message || 'Error al iniciar registro' });
       }
     } catch (error) {
-      console.error('❌ Error al registrar tarjeta:', error);
+      // console.error removed for production
       setErrors({ register: 'Error al registrar tarjeta. Intenta nuevamente.' });
     } finally {
       setRegisteringCard(false);
@@ -116,7 +116,7 @@ const CardManagementPage = ({
     
     
     if (!processIdToUse || processIdToUse.trim() === '') {
-      console.error('❌ ProcessId inválido:', processIdToUse);
+      // console.error removed for production
       setErrors({ iframe: 'Error: Process ID inválido' });
       return;
     }
@@ -144,7 +144,7 @@ const CardManagementPage = ({
     };
     
     script.onerror = () => {
-      console.error('❌ Error cargando script de Bancard');
+      // console.error removed for production
       setShowIframe(false);
       setRegisteringCard(false);
       setErrors({ iframe: 'Error cargando el sistema de registro. Intenta nuevamente.' });
@@ -158,7 +158,7 @@ const CardManagementPage = ({
     // ✅ VERIFICAR QUE EL CONTENEDOR EXISTE ANTES DE CONTINUAR
       const container = document.getElementById('bancard-card-container');
       if (!container) {
-        console.error('❌ Contenedor bancard-card-container no encontrado');
+        // console.error removed for production
         setErrors({ iframe: 'Error: Contenedor no encontrado' });
         return;
       }
@@ -166,7 +166,7 @@ const CardManagementPage = ({
       
       
       if (!processIdToUse || processIdToUse.trim() === '') {
-        console.error('❌ ProcessId vacío en inicialización:', processIdToUse);
+        // console.error removed for production
         setErrors({ iframe: 'Error: Process ID no válido' });
         return;
       }
@@ -197,11 +197,11 @@ const CardManagementPage = ({
             window.addEventListener('message', handleIframeMessage, false);
             
           } catch (iframeError) {
-            console.error('❌ Error creando iframe específico:', iframeError);
+            // console.error removed for production
             setErrors({ iframe: `Error al cargar formulario: ${iframeError.message}` });
           }
         } else {
-          console.error('❌ Contenedor no encontrado');
+          // console.error removed for production
           setErrors({ iframe: 'Error: Contenedor no encontrado' });
         }
       } else {
@@ -212,7 +212,7 @@ const CardManagementPage = ({
         setTimeout(() => initializeBancardIframe(processIdToUse), 500);
       }
     } catch (error) {
-      console.error('❌ Error general inicializando iframe:', error);
+      // console.error removed for production
       setErrors({ iframe: `Error al inicializar: ${error.message}` });
     }
   };
@@ -234,7 +234,7 @@ const CardManagementPage = ({
         setErrors({ delete: result.message || 'Error al eliminar tarjeta' });
       }
     } catch (error) {
-      console.error('❌ Error al eliminar tarjeta:', error);
+      // console.error removed for production
       setErrors({ delete: 'Error al eliminar tarjeta. Intenta nuevamente.' });
     }
   };
@@ -259,7 +259,7 @@ const CardManagementPage = ({
         }
       }
     } catch (error) {
-      console.error('❌ Error procesando mensaje del iframe:', error);
+      // console.error removed for production
     }
   };
 
@@ -321,10 +321,10 @@ const CardManagementPage = ({
         setShowTestPayment(false);
       } else {
         toast.error(result.message || 'Error en pago de prueba');
-        console.error('Error en pago:', result);
+        // console.error removed for production
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error('Error de conexión en pago de prueba');
     }
   };

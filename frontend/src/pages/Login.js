@@ -77,7 +77,7 @@ const Login = () => {
             if (dataApi.success) {
                 // ✅ MANEJAR TOKEN COMO FALLBACK SI LAS COOKIES FALLAN
                 if (dataApi.token) {
-                    console.log('🔑 Token recibido como fallback, guardando en localStorage');
+                    // console.log removed for production
                     localStorage.setItem('authToken', dataApi.token);
                     
                     // ✅ CONFIGURAR HEADER PARA FUTURAS PETICIONES
@@ -99,7 +99,7 @@ const Login = () => {
                 toast.error(dataApi.message);
             }
         } catch (error) {
-            console.error('Error:', error);
+            // console.error removed for production
             toast.error("Error al iniciar sesión");
         } finally {
             setIsLoading(false);

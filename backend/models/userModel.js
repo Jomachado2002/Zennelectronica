@@ -297,13 +297,13 @@ userSchema.pre('save', async function(next) {
                 this.bancardUserId = newBancardUserId;
                 
             } else {
-                console.error('❌ No se pudo generar bancardUserId único después de', maxAttempts, 'intentos');
+                // console.error removed for production
                 // En caso de emergencia, usar timestamp
                 this.bancardUserId = parseInt(Date.now().toString().slice(-6));
                 
             }
         } catch (error) {
-            console.error('❌ Error generando bancardUserId:', error);
+            // console.error removed for production
             // Fallback: usar timestamp truncado
             this.bancardUserId = parseInt(Date.now().toString().slice(-6));
         }
@@ -412,7 +412,7 @@ userSchema.statics.assignBancardUserIds = async function() {
         
         return true;
     } catch (error) {
-        console.error('❌ Error asignando bancardUserIds:', error);
+        // console.error removed for production
         return false;
     }
 };

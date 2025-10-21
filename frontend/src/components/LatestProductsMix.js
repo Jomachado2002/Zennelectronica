@@ -138,11 +138,11 @@ const fetchDataFromServer = async () => {
             
             setData(latestProducts);
         } else {
-            console.error("❌ Respuesta del servidor no válida:", responseData);
+            // console.error removed for production
             setData([]);
         }
     } catch (error) {
-        console.error("Error al cargar productos destacados:", error);
+        // console.error removed for production
         setData([]);
     } finally {
         setLoading(false);

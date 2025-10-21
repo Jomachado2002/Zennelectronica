@@ -27,7 +27,7 @@ function extractCode(codeString) {
         return codeString.trim();
         
     } catch (error) {
-        console.error('Error extrayendo código:', error.message);
+        // console.error removed for production
         return '';
     }
 }
@@ -52,7 +52,7 @@ function extractPrice(priceString) {
         return isNaN(price) ? 0 : price;
         
     } catch (error) {
-        console.error('Error extrayendo precio:', error.message);
+        // console.error removed for production
         return 0;
     }
 }
@@ -115,7 +115,7 @@ function parseCSVRow(csvRow) {
         };
 
     } catch (error) {
-        console.error('Error parseando fila CSV:', error.message);
+        // console.error removed for production
         throw error;
     }
 }
@@ -146,7 +146,7 @@ async function parseCSVFile(csvBuffer) {
                     const product = parseCSVRow(data);
                     products.push(product);
                 } catch (error) {
-                    console.error(`Error en fila ${rowCount}:`, error.message);
+                    // console.error removed for production
                     errors.push({
                         row: rowCount,
                         error: error.message,
@@ -155,7 +155,7 @@ async function parseCSVFile(csvBuffer) {
                 }
             })
             .on('end', () => {
-                console.log(`CSV parseado: ${products.length} productos válidos, ${errors.length} errores`);
+                // console.log removed for production
                 resolve({
                     products,
                     errors,
@@ -165,7 +165,7 @@ async function parseCSVFile(csvBuffer) {
                 });
             })
             .on('error', (error) => {
-                console.error('Error parseando CSV:', error.message);
+                // console.error removed for production
                 reject(error);
             });
     });

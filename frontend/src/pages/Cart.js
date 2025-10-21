@@ -59,7 +59,7 @@ const Cart = () => {
             
             setData(cartItems);
         } catch (error) {
-            console.error('Error al cargar productos del carrito:', error);
+            // console.error removed for production
             toast.error('Error al cargar el carrito');
         } finally {
             setLoading(false);
@@ -104,7 +104,7 @@ const Cart = () => {
                setRegisteredCards([]);
            }
        } catch (error) {
-           console.error('❌ Error cargando tarjetas:', error);
+           // console.error removed for production
            setRegisteredCards([]);
        } finally {
            setLoadingCards(false);
@@ -186,7 +186,7 @@ const Cart = () => {
                 
             }
         } catch (error) {
-            console.warn('Error cargando ubicación del usuario:', error);
+            // console.warn removed for production
         }
     };
 
@@ -219,7 +219,7 @@ const Cart = () => {
                 toast.success('Cantidad actualizada');
             }
         } catch (error) {
-            console.error('Error al aumentar cantidad:', error);
+            // console.error removed for production
             toast.error('Error al actualizar cantidad');
         }
     };
@@ -234,7 +234,7 @@ const Cart = () => {
                 toast.success('Cantidad actualizada');
             }
         } catch (error) {
-            console.error('Error al disminuir cantidad:', error);
+            // console.error removed for production
             toast.error('Error al actualizar cantidad');
         }
     };
@@ -251,7 +251,7 @@ const Cart = () => {
             
             toast.success('Producto eliminado del carrito');
         } catch (error) {
-            console.error('Error al eliminar producto:', error);
+            // console.error removed for production
             toast.error('Error al eliminar producto');
         }
     };
@@ -268,7 +268,7 @@ const Cart = () => {
             
             toast.success('Carrito limpiado correctamente');
         } catch (error) {
-            console.error('Error al limpiar el carrito:', error);
+            // console.error removed for production
             toast.error('Error al limpiar el carrito');
         }
     };
@@ -291,7 +291,7 @@ const Cart = () => {
     };
 
     const handlePaymentError = (error) => {
-        console.error('Error en el pago:', error);
+        // console.error removed for production
         toast.error('Error al procesar el pago. Intenta nuevamente.');
     };
 
@@ -306,7 +306,7 @@ const Cart = () => {
                 setUserBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo:', error);
+            // console.error removed for production
         } finally {
             setLoadingBalance(false);
         }
@@ -364,7 +364,7 @@ const Cart = () => {
                 toast.error(result.message || 'Error al procesar el pago con saldo');
             }
         } catch (error) {
-            console.error('Error en pago con saldo:', error);
+            // console.error removed for production
             toast.error('Error al procesar el pago. Intenta nuevamente.');
         }
     };
@@ -458,7 +458,7 @@ const Cart = () => {
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Error response:', errorText);
+                // console.error removed for production
                 throw new Error(`Error HTTP ${response.status}`);
             }
 
@@ -518,11 +518,11 @@ const Cart = () => {
                 }
             }
             } else {
-                console.error('❌ Error en el pago:', result);
+                // console.error removed for production
                 toast.error(result.message || 'Error en el pago');
             }
         } catch (error) {
-            console.error('❌ Error crítico:', error);
+            // console.error removed for production
             toast.error('Error de conexión al procesar el pago');
         }
     };

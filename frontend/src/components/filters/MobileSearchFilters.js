@@ -28,7 +28,7 @@ const MobileSearchFilters = ({
         const cats = getCategories();
         setCategories(cats);
       } catch (error) {
-        console.error('Error loading categories:', error);
+        // console.error removed for production
       } finally {
         setLoadingCategories(false);
       }

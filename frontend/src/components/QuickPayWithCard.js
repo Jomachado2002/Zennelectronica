@@ -61,7 +61,7 @@ const QuickPayWithCard = ({
         
       }
     } catch (error) {
-      console.error('❌ Error cargando tarjetas:', error);
+      // console.error removed for production
       setCards([]);
     } finally {
       setLoadingCards(false);
@@ -135,7 +135,7 @@ const QuickPayWithCard = ({
         throw new Error(result.message || 'Error en el pago');
       }
     } catch (error) {
-      console.error('❌ Error en pago:', error);
+      // console.error removed for production
       toast.error(`Error: ${error.message}`);
       onPaymentError(error);
     } finally {
@@ -185,7 +185,7 @@ const QuickPayWithCard = ({
     };
     
     script.onerror = () => {
-      console.error('❌ Error cargando script 3DS');
+      // console.error removed for production
       setShow3DSIframe(false);
       toast.error('Error cargando verificación de seguridad');
     };
@@ -215,7 +215,7 @@ const QuickPayWithCard = ({
         setTimeout(initialize3DSIframe, 1000);
       }
     } catch (error) {
-      console.error('❌ Error inicializando 3DS:', error);
+      // console.error removed for production
       toast.error('Error en verificación de seguridad');
     }
   };

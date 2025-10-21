@@ -23,7 +23,7 @@ async function authToken(req, res, next) {
         }
         // 2. Parsing manual de cookies (para Vercel y iOS)
         else if (req.headers.cookie) {
-            console.log('🔍 Parsing manual de cookies:', req.headers.cookie);
+            // console.log removed for production
             const cookies = req.headers.cookie.split(';');
             for (const cookie of cookies) {
                 const trimmedCookie = cookie.trim();
@@ -125,7 +125,7 @@ async function authToken(req, res, next) {
         next();
 
     } catch (err) {
-        console.error('❌ ERROR CRÍTICO EN MIDDLEWARE:', err);
+        // console.error removed for production
         
         // Fallback seguro
         req.userId = `guest-fallback-${Date.now()}`;

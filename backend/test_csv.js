@@ -6,7 +6,7 @@ const { Readable } = require('stream');
 async function testCSV() {
     try {
         const csvContent = fs.readFileSync('/tmp/visaovip.csv', 'utf-8');
-        console.log('CSV content length:', csvContent.length);
+        // console.log removed for production
         console.log('First 200 chars:', csvContent.substring(0, 200));
         
         const stream = Readable.from(csvContent);
@@ -18,20 +18,20 @@ async function testCSV() {
                 skipLinesWithError: false
             }))
             .on('headers', (headers) => {
-                console.log('Headers found:', headers);
+                // console.log removed for production
             })
             .on('data', (data) => {
-                console.log('First row:', data);
+                // console.log removed for production
             })
             .on('end', () => {
-                console.log('CSV parsing completed');
+                // console.log removed for production
             })
             .on('error', (error) => {
-                console.error('Error:', error);
+                // console.error removed for production
             });
             
     } catch (error) {
-        console.error('Test error:', error.message);
+        // console.error removed for production
     }
 }
 

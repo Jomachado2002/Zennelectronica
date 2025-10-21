@@ -17,7 +17,7 @@ const FavoritesPage = ({ user, onNavigate }) => {
         setFavorites(JSON.parse(savedFavorites));
       }
     } catch (error) {
-      console.error('Error cargando favoritos:', error);
+      // console.error removed for production
     } finally {
       setLoading(false);
     }
@@ -29,7 +29,7 @@ const FavoritesPage = ({ user, onNavigate }) => {
       setFavorites(updatedFavorites);
       localStorage.setItem(`favorites_${user?.id || 'guest'}`, JSON.stringify(updatedFavorites));
     } catch (error) {
-      console.error('Error removiendo favorito:', error);
+      // console.error removed for production
     }
   };
 

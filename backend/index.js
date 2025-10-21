@@ -11,7 +11,7 @@ try {
 
   }
 } catch (error) {
-  console.error('Error fixing gOPD:', error);
+  // console.error removed for production
 }
 
 const express = require('express');
@@ -30,7 +30,7 @@ const requiredEnvVars = ['SESSION_SECRET', 'MONGODB_URI', 'TOKEN_SECRET_KEY', 'F
 let missingEnvVars = false;
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    console.error(`Error: ${envVar} no está definida en el archivo .env`);
+    // console.error removed for production
     missingEnvVars = true;
   }
 }
@@ -91,7 +91,7 @@ app.use("/api/exchange-rate", exchangeRateRoutes);
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  // console.error removed for production
   res.status(500).json({
     message: "Error interno del servidor",
     error: true,
@@ -104,31 +104,31 @@ const startServer = async () => {
   try {
     const PORT = process.env.PORT || 8080;
     
-    console.log('🚀 Iniciando servidor...');
-    console.log('📊 Puerto:', PORT);
-    console.log('🌍 Entorno:', process.env.NODE_ENV || 'development');
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
     
     // Conectar a la base de datos
-    console.log('🔌 Conectando a la base de datos...');
+    // console.log removed for production
     await connectDB();
-    console.log('✅ Base de datos conectada exitosamente');
+    // console.log removed for production
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {
       app.listen(PORT, () => {
-        console.log(`🎉 Servidor ejecutándose en http://localhost:${PORT}`);
-        console.log(`📡 API disponible en http://localhost:${PORT}/api`);
-        console.log(`🧪 Test endpoint: http://localhost:${PORT}/test`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
       });
     }
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
-    console.error('📋 Detalles del error:', error.message);
-    console.error('📋 Stack trace:', error.stack);
+    // console.error removed for production
+    // console.error removed for production
+    // console.error removed for production
     
     // No salir del proceso en producción
     if (process.env.NODE_ENV !== 'production') {
-      console.log('🔄 Reintentando en 5 segundos...');
+      // console.log removed for production
       setTimeout(() => {
         startServer();
       }, 5000);

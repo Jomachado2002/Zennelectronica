@@ -17,7 +17,7 @@ const path = require('path');
  */
 async function getCategoriesController(req, res) {
     try {
-        console.log('Obteniendo categorías para sincronización de inventario');
+        // console.log removed for production
 
         // Obtener categorías activas desde la tabla categories
         const categories = await categoryModel.find({ isActive: true }).sort({ order: 1 });
@@ -40,7 +40,7 @@ async function getCategoriesController(req, res) {
         });
 
     } catch (error) {
-        console.error('Error obteniendo categorías:', error.message);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -55,9 +55,9 @@ async function getCategoriesController(req, res) {
  */
 async function compareByCodeController(req, res) {
     try {
-        console.log('Iniciando comparación por código');
-        console.log('req.file:', req.file);
-        console.log('req.body:', req.body);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
 
         const csvFile = req.file;
         const { category, subcategory } = req.body;
@@ -90,7 +90,7 @@ async function compareByCodeController(req, res) {
         // Parsear CSV
         const csvResult = await parseCSVFile(csvBuffer);
         if (csvResult.errors.length > 0) {
-            console.warn(`CSV parseado con ${csvResult.errors.length} errores`);
+            // console.warn removed for production
         }
 
         // Comparar productos
@@ -101,12 +101,12 @@ async function compareByCodeController(req, res) {
         );
 
         // No necesitamos limpiar archivo temporal ya que usamos memoryStorage
-        console.log('✅ Comparación por código completada exitosamente');
+        // console.log removed for production
 
         res.status(200).json(comparisonResult);
 
     } catch (error) {
-        console.error('Error en comparación por código:', error.message);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -121,7 +121,7 @@ async function compareByCodeController(req, res) {
  */
 async function compareByNameController(req, res) {
     try {
-        console.log('Iniciando comparación por nombre');
+        // console.log removed for production
 
         const csvFile = req.file;
         const { category, subcategory } = req.body;
@@ -154,7 +154,7 @@ async function compareByNameController(req, res) {
         // Parsear CSV
         const csvResult = await parseCSVFile(csvBuffer);
         if (csvResult.errors.length > 0) {
-            console.warn(`CSV parseado con ${csvResult.errors.length} errores`);
+            // console.warn removed for production
         }
 
         // Comparar productos
@@ -165,12 +165,12 @@ async function compareByNameController(req, res) {
         );
 
         // No necesitamos limpiar archivo temporal ya que usamos memoryStorage
-        console.log('✅ Comparación por código completada exitosamente');
+        // console.log removed for production
 
         res.status(200).json(comparisonResult);
 
     } catch (error) {
-        console.error('Error en comparación por nombre:', error.message);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -185,8 +185,8 @@ async function compareByNameController(req, res) {
  */
 async function updateStockController(req, res) {
     try {
-        console.log('🔄 Iniciando actualización de stock');
-        console.log('📊 Body recibido:', req.body);
+        // console.log removed for production
+        // console.log removed for production
         
         const { action, productIds, updateAll, filters } = req.body;
 
@@ -204,13 +204,13 @@ async function updateStockController(req, res) {
             });
         }
 
-        console.log(`📊 Acción: ${action}`);
+        // console.log removed for production
 
         let idsToUpdate = [];
 
         if (updateAll && filters?.notInProviderList) {
             idsToUpdate = filters.notInProviderList;
-            console.log(`📊 Modo masivo: actualizando ${idsToUpdate.length} productos`);
+            // console.log removed for production
         } else {
             if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
                 return res.status(400).json({
@@ -219,7 +219,7 @@ async function updateStockController(req, res) {
                 });
             }
             idsToUpdate = productIds;
-            console.log(`📊 IDs recibidos: ${productIds.length} productos`);
+            // console.log removed for production
         }
 
         // Verificar estado ANTES
@@ -227,7 +227,7 @@ async function updateStockController(req, res) {
             .select('_id productCode productName stockStatus stock codigo')
             .lean();
         
-        console.log(`📊 Productos encontrados: ${productsBeforeUpdate.length}`);
+        // console.log removed for production
         console.log('📊 Ejemplos de productos antes:', productsBeforeUpdate.slice(0, 3));
 
         if (productsBeforeUpdate.length === 0) {
@@ -247,14 +247,14 @@ async function updateStockController(req, res) {
             return false;
         });
 
-        console.log(`⚠️ ${alreadyInDesiredState.length} de ${productsBeforeUpdate.length} productos YA están en el estado deseado`);
+        // console.log removed for production
 
         // Obtener solo los IDs que realmente necesitan actualización
         const idsNeedingUpdate = productsBeforeUpdate
             .filter(p => !alreadyInDesiredState.find(a => a._id.toString() === p._id.toString()))
             .map(p => p._id);
 
-        console.log(`✅ ${idsNeedingUpdate.length} productos necesitan actualización`);
+        // console.log removed for production
 
         // Si no hay nada que actualizar
         if (idsNeedingUpdate.length === 0) {
@@ -288,7 +288,7 @@ async function updateStockController(req, res) {
             .select('_id productCode productName stockStatus stock codigo')
             .lean();
 
-        console.log('📊 Productos DESPUÉS de actualizar:', productsAfterUpdate.length);
+        // console.log removed for production
         console.log('📊 Ejemplos de productos después:', productsAfterUpdate.slice(0, 3));
 
         res.json({
@@ -306,7 +306,7 @@ async function updateStockController(req, res) {
         });
 
     } catch (error) {
-        console.error('❌ Error actualizando stock:', error);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -321,7 +321,7 @@ async function updateStockController(req, res) {
  */
 async function importProductsController(req, res) {
     try {
-        console.log('Iniciando importación de productos');
+        // console.log removed for production
 
         const { products, config } = req.body;
 
@@ -359,7 +359,7 @@ async function importProductsController(req, res) {
         // Procesar productos uno por uno
         for (const productData of products) {
             try {
-                console.log(`Importando producto: ${productData.providerCode}`);
+                // console.log removed for production
 
                 // Validar datos del producto
                 if (!productData.providerCode || !productData.productName || !productData.priceUSD) {
@@ -436,7 +436,7 @@ async function importProductsController(req, res) {
                 importedCount++;
 
             } catch (error) {
-                console.error(`Error importando producto ${productData.providerCode}:`, error.message);
+                // console.error removed for production
                 
                 results.push({
                     providerCode: productData.providerCode,
@@ -448,7 +448,7 @@ async function importProductsController(req, res) {
             }
         }
 
-        console.log(`Importación completada: ${importedCount} exitosos, ${failedCount} fallidos`);
+        // console.log removed for production
 
         res.status(200).json({
             success: true,
@@ -458,7 +458,7 @@ async function importProductsController(req, res) {
         });
 
     } catch (error) {
-        console.error('Error en importación de productos:', error.message);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',
@@ -473,7 +473,7 @@ async function importProductsController(req, res) {
  */
 async function updateProductCodesController(req, res) {
     try {
-        console.log('Iniciando actualización de códigos de productos');
+        // console.log removed for production
         
         const { updates } = req.body;
 
@@ -513,7 +513,7 @@ async function updateProductCodesController(req, res) {
 
                 if (updatedProduct) {
                     results.success++;
-                    console.log(`Código actualizado para producto ${productId}: ${newCode}`);
+                    // console.log removed for production
                 } else {
                     results.failed++;
                     results.errors.push({
@@ -528,7 +528,7 @@ async function updateProductCodesController(req, res) {
                     productId: update.productId || 'unknown',
                     error: error.message
                 });
-                console.error(`Error actualizando código para producto ${update.productId}:`, error.message);
+                // console.error removed for production
             }
         }
 
@@ -539,7 +539,7 @@ async function updateProductCodesController(req, res) {
         });
 
     } catch (error) {
-        console.error('Error en updateProductCodesController:', error.message);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: 'Error interno del servidor',

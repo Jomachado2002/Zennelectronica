@@ -33,7 +33,7 @@ function generateSlug(productName, maxLength = 100) {
         return slug;
 
     } catch (error) {
-        console.error('Error generando slug:', error.message);
+        // console.error removed for production
         // Generar slug de emergencia
         return `product-${Date.now()}`;
     }
@@ -70,7 +70,7 @@ async function generateUniqueSlug(productName, checkUnique, maxLength = 100) {
         return slug;
 
     } catch (error) {
-        console.error('Error generando slug único:', error.message);
+        // console.error removed for production
         return generateSlug(productName, maxLength);
     }
 }

@@ -72,7 +72,7 @@ async function createClientController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createClientController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -173,7 +173,7 @@ async function getClientByIdController(req, res) {
             client = await ClientModel.findById(clientId)
                 .populate('budgets', 'budgetNumber totalAmount finalAmount status validUntil createdAt');
         } catch (populateError) {
-            console.warn("No se pudieron cargar los presupuestos relacionados:", populateError.message);
+            // console.warn removed for production
             // Continuamos con el cliente sin los presupuestos populados
         }
 
@@ -185,7 +185,7 @@ async function getClientByIdController(req, res) {
             // Intentar popular ventas
             client = await client.populate('sales', 'saleNumber totalAmount status createdAt');
         } catch (populateError) {
-            console.warn("No se pudieron cargar las ventas relacionadas:", populateError.message);
+            // console.warn removed for production
             // Continuamos con el cliente sin las ventas populadas
         }
         */
@@ -198,7 +198,7 @@ async function getClientByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getClientByIdController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -328,7 +328,7 @@ async function deleteClientController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteClientController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,

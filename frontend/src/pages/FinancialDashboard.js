@@ -47,7 +47,7 @@ const FinancialDashboard = () => {
         toast.error(result.message || "Error al cargar el dashboard");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -74,7 +74,7 @@ const FinancialDashboard = () => {
         toast.error(result.message || "Error al cargar el estado de cuenta");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -99,7 +99,7 @@ const FinancialDashboard = () => {
         toast.error(result.message || "Error al cargar métricas anuales");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

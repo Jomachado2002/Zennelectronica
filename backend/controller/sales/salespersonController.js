@@ -78,7 +78,7 @@ async function createSalespersonController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createSalespersonController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -120,7 +120,7 @@ async function getAllSalespersonsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getAllSalespersonsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -164,7 +164,7 @@ async function getSalespersonByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getSalespersonByIdController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -253,7 +253,7 @@ async function updateSalespersonController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateSalespersonController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -311,7 +311,7 @@ async function deleteSalespersonController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteSalespersonController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -345,7 +345,7 @@ async function searchSalespersonsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en searchSalespersonsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -369,7 +369,7 @@ async function getActiveSalespersonsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getActiveSalespersonsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -414,7 +414,7 @@ async function updateSalespersonPerformanceController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateSalespersonPerformanceController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

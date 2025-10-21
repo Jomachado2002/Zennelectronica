@@ -52,7 +52,7 @@ const FinancialCalculator = ({
         }
       }
     } catch (error) {
-      console.error('Error obteniendo tipo de cambio:', error);
+      // console.error removed for production
       toast.error('Error al obtener el tipo de cambio actual');
     } finally {
       setIsLoadingExchangeRate(false);

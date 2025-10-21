@@ -51,7 +51,7 @@ let stats = {
 function log(message, type = 'INFO') {
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] ${type}:`;
-  console.log(`${prefix} ${message}`);
+  // console.log removed for production
 }
 
 // Función para extraer path de Firebase

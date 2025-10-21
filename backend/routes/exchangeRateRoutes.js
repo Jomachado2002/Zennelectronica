@@ -24,7 +24,7 @@ const requireAdmin = async (req, res, next) => {
     
     next();
   } catch (error) {
-    console.error('Error verificando permisos de admin:', error);
+    // console.error removed for production
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor'

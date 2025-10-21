@@ -183,7 +183,7 @@ const ProductFinanceForm = ({ product, onClose, onUpdate, exchangeRate }) => {
         toast.error(result.message || "Error al actualizar la información financiera");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

@@ -68,7 +68,7 @@ const NewClient = () => {
         toast.error(result.message || "Error al crear el cliente");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

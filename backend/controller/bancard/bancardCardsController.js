@@ -251,7 +251,7 @@ const chargeWithTokenController = async (req, res) => {
            
 
         } catch (dbError) {
-            console.error("❌ Error crítico guardando transacción en BD:", dbError);
+            // console.error removed for production
             return res.status(500).json({
                 message: "Error al guardar transacción en base de datos",
                 success: false,
@@ -339,7 +339,7 @@ const chargeWithTokenController = async (req, res) => {
                                 await updatedTransaction.save();
                                 
                             } else {
-                                console.error("❌ Error enviando email al cliente:", customerEmailResult.error);
+                                // console.error removed for production
                             }
 
                             // ✅ NOTIFICACIÓN A ADMINS
@@ -431,7 +431,7 @@ const chargeWithTokenController = async (req, res) => {
                     }
                 }
             } catch (dbError) {
-                console.error("⚠️ Error actualizando transacción fallida:", dbError);
+                // console.error removed for production
             }
 
             res.status(response.status).json({
@@ -443,7 +443,7 @@ const chargeWithTokenController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error en pago con token:", error);
+        // console.error removed for production
         
         if (req.body.shop_process_id || error.shop_process_id) {
             try {
@@ -472,7 +472,7 @@ const chargeWithTokenController = async (req, res) => {
         
         if (error.response) {
             errorDetails = error.response.data;
-            console.error("📥 Error response de Bancard:", error.response.data);
+            // console.error removed for production
         }
         
         res.status(500).json({
@@ -606,7 +606,7 @@ const createCardController = async (req, res) => {
                 }
             });
         } else {
-            console.error("❌ Bancard respondió con error:", response.data);
+            // console.error removed for production
             res.status(400).json({
                 message: "Error al iniciar catastro en Bancard",
                 success: false,
@@ -616,14 +616,14 @@ const createCardController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error en catastro:", error);
+        // console.error removed for production
         
         let errorMessage = "Error al procesar catastro";
         let errorDetails = error.message;
         
         if (error.response) {
             errorDetails = error.response.data;
-            console.error("📥 Error response de Bancard:", error.response.data);
+            // console.error removed for production
         }
         
         res.status(500).json({
@@ -731,14 +731,14 @@ const getUserCardsController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error obteniendo tarjetas:", error);
+        // console.error removed for production
         
         let errorMessage = "Error al obtener tarjetas";
         let errorDetails = error.message;
         
         if (error.response) {
             errorDetails = error.response.data;
-            console.error("📥 Error response de Bancard:", error.response.data);
+            // console.error removed for production
         }
         
         res.status(500).json({
@@ -832,14 +832,14 @@ const deleteCardController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error eliminando tarjeta:", error);
+        // console.error removed for production
         
         let errorMessage = "Error al eliminar tarjeta";
         let errorDetails = error.message;
         
         if (error.response) {
             errorDetails = error.response.data;
-            console.error("📥 Error response de Bancard:", error.response.data);
+            // console.error removed for production
         }
         
         res.status(500).json({

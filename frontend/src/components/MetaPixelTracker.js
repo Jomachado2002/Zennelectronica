@@ -89,7 +89,7 @@ export const trackWhatsAppContact = (productData = null) => {
          
     
   } else {
-    console.warn('⚠️ Meta Pixel no está disponible');
+    // console.warn removed for production
   }
 };
 

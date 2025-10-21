@@ -28,7 +28,7 @@ const LoadBalanceModal = ({ isOpen, onClose, onSuccess }) => {
                 setCurrentBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo actual:', error);
+            // console.error removed for production
         }
     };
 
@@ -65,7 +65,7 @@ const LoadBalanceModal = ({ isOpen, onClose, onSuccess }) => {
                 toast.error(result.message || 'Error al iniciar carga de saldo');
             }
         } catch (error) {
-            console.error('Error cargando saldo:', error);
+            // console.error removed for production
             toast.error('Error al cargar saldo. Intenta nuevamente.');
         } finally {
             setLoading(false);
@@ -82,7 +82,7 @@ const LoadBalanceModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const handlePaymentError = (error) => {
-        console.error('Error en pago:', error);
+        // console.error removed for production
         toast.error('Error al procesar el pago. Intenta nuevamente.');
         setShowPaymentForm(false);
         setPaymentData(null);

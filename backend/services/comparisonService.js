@@ -13,8 +13,8 @@ const { normalizeProductName } = require('./csvParserService');
  */
 async function compareByCode(providerProducts, category, subcategory) {
     try {
-        console.log(`Iniciando comparación por código para ${category}/${subcategory}`);
-        console.log(`Productos del proveedor: ${providerProducts.length}`);
+        // console.log removed for production
+        // console.log removed for production
 
         // Obtener productos del sistema
         const systemProducts = await productModel.find({
@@ -22,7 +22,7 @@ async function compareByCode(providerProducts, category, subcategory) {
             subcategory: subcategory
         }).select('_id codigo productName sellingPrice purchasePriceUSD stock stockStatus');
 
-        console.log(`Productos del sistema: ${systemProducts.length}`);
+        // console.log removed for production
 
         // Crear mapas para comparación rápida
         const systemProductsByCode = new Map();
@@ -119,7 +119,7 @@ async function compareByCode(providerProducts, category, subcategory) {
             priceChanges: priceChanges.length
         };
 
-        console.log('Comparación por código completada:', summary);
+        // console.log removed for production
 
         return {
             success: true,
@@ -132,7 +132,7 @@ async function compareByCode(providerProducts, category, subcategory) {
         };
 
     } catch (error) {
-        console.error('Error en comparación por código:', error.message);
+        // console.error removed for production
         throw error;
     }
 }
@@ -146,8 +146,8 @@ async function compareByCode(providerProducts, category, subcategory) {
  */
 async function compareByName(providerProducts, category, subcategory) {
     try {
-        console.log(`Iniciando comparación por nombre para ${category}/${subcategory}`);
-        console.log(`Productos del proveedor: ${providerProducts.length}`);
+        // console.log removed for production
+        // console.log removed for production
 
         // Obtener productos del sistema
         const systemProducts = await productModel.find({
@@ -155,7 +155,7 @@ async function compareByName(providerProducts, category, subcategory) {
             subcategory: subcategory
         }).select('_id codigo productName sellingPrice purchasePriceUSD stock stockStatus');
 
-        console.log(`Productos del sistema: ${systemProducts.length}`);
+        // console.log removed for production
 
         // Crear mapas para comparación por nombre normalizado
         const systemProductsByName = new Map();
@@ -272,7 +272,7 @@ async function compareByName(providerProducts, category, subcategory) {
             codeMismatches: codeMismatches.length
         };
 
-        console.log('Comparación por nombre completada:', summary);
+        // console.log removed for production
 
         return {
             success: true,
@@ -286,7 +286,7 @@ async function compareByName(providerProducts, category, subcategory) {
         };
 
     } catch (error) {
-        console.error('Error en comparación por nombre:', error.message);
+        // console.error removed for production
         throw error;
     }
 }
@@ -313,7 +313,7 @@ async function getComparisonStats(providerProducts, category, subcategory) {
         };
 
     } catch (error) {
-        console.error('Error obteniendo estadísticas:', error.message);
+        // console.error removed for production
         throw error;
     }
 }

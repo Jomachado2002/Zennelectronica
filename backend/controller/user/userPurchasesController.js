@@ -166,7 +166,7 @@ const getUserPurchasesController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo compras del usuario:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener historial de compras",
             success: false,
@@ -301,7 +301,7 @@ const getPurchaseDetailsController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo detalles de compra:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener detalles de la compra",
             success: false,
@@ -337,7 +337,7 @@ const getUserPurchaseStatsController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo estadísticas:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener estadísticas de compras",
             success: false,
@@ -464,7 +464,7 @@ const calculateUserPurchaseStats = async (userId) => {
         return stats;
 
     } catch (error) {
-        console.error("❌ Error calculando estadísticas:", error);
+        // console.error removed for production
         return {
             summary: {
                 total_purchases: 0,
@@ -582,7 +582,7 @@ const getAllUserPurchasesController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo todas las compras:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener compras",
             success: false,

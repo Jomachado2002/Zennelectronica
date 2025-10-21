@@ -21,7 +21,7 @@ const getCurrentExchangeRate = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting current exchange rate:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error obteniendo tipo de cambio actual',
@@ -69,12 +69,12 @@ const updateExchangeRate = async (req, res) => {
     
     // Si se solicita actualizar productos
     if (updateProducts) {
-      console.log('🔄 Actualizando precios de productos...');
+      // console.log removed for production
       updateResults = await recalculateProductPrices(newRate, {
         updateProducts: true,
         dryRun: false
       });
-      console.log('✅ Precios de productos actualizados');
+      // console.log removed for production
     }
     
     // Desactivar tipo de cambio anterior
@@ -119,7 +119,7 @@ const updateExchangeRate = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error updating exchange rate:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error actualizando tipo de cambio',
@@ -156,7 +156,7 @@ const getExchangeRateHistory = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error getting exchange rate history:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error obteniendo historial de tipos de cambio',
@@ -239,7 +239,7 @@ const simulateExchangeRateUpdate = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error simulating exchange rate update:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error simulando actualización de tipo de cambio',
@@ -261,7 +261,7 @@ const getUpdateStats = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error getting update stats:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error obteniendo estadísticas de actualización',
@@ -287,7 +287,7 @@ const getExchangeRateInfo = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error getting exchange rate info:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error obteniendo información del tipo de cambio',

@@ -58,7 +58,7 @@ try {
     
     
 } catch (error) {
-    console.error('❌ Error inicializando Firebase:', error.message);
+    // console.error removed for production
     process.exit(1);
 }
 
@@ -327,7 +327,7 @@ async function migrateSingleProduct() {
         
     } catch (error) {
         log(`💥 ERROR CRÍTICO: ${error.message}`, 'ERROR');
-        console.error('Stack trace:', error.stack);
+        // console.error removed for production
         throw error;
     } finally {
         // Cerrar conexión a MongoDB
@@ -438,7 +438,7 @@ async function main() {
 // Ejecutar solo si se llama directamente
 if (require.main === module) {
     main().catch(error => {
-        console.error('💥 Error no capturado:', error);
+        // console.error removed for production
         process.exit(1);
     });
 }

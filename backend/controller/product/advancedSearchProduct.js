@@ -184,7 +184,7 @@ const advancedSearchProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in advanced search:', error);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             message: 'Error interno del servidor',
@@ -227,7 +227,7 @@ const getAvailableFilters = async (baseFilter) => {
             specifications
         };
     } catch (error) {
-        console.error('Error getting available filters:', error);
+        // console.error removed for production
         return {
             brands: [],
             specifications: {}

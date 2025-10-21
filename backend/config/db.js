@@ -15,25 +15,25 @@ async function connectDB() {
             retryReads: true,
         };
 
-        console.log('🔄 Conectando a MongoDB...');
+        // console.log removed for production
         await mongoose.connect(process.env.MONGODB_URI, options);
-        console.log('✅ MongoDB conectado exitosamente');
+        // console.log removed for production
         
         // ✅ MANEJO DE EVENTOS DE CONEXIÓN
         mongoose.connection.on('error', (err) => {
-            console.error('❌ Error de MongoDB:', err);
+            // console.error removed for production
         });
         
         mongoose.connection.on('disconnected', () => {
-            console.warn('⚠️ MongoDB desconectado');
+            // console.warn removed for production
         });
         
         mongoose.connection.on('reconnected', () => {
-            console.log('🔄 MongoDB reconectado');
+            // console.log removed for production
         });
         
     } catch (err) {
-        console.error('❌ Error crítico conectando a MongoDB:', err);
+        // console.error removed for production
         process.exit(1); // Salir si no puede conectar
     }
 }

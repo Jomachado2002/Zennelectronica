@@ -179,10 +179,10 @@ const MatchedProducts = ({ products, method, showPriceChanges, onEditProduct }) 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <button
                                         onClick={() => {
-                                            console.log('🖱️ Click en botón Editar');
-                                            console.log('📦 Producto:', product);
-                                            console.log('📦 Product ID:', product.productId);
-                                            console.log('💰 Price Changed:', product.priceChanged);
+                                            // console.log removed for production
+                                            // console.log removed for production
+                                            // console.log removed for production
+                                            // console.log removed for production
                                             handleEditProduct(product);
                                         }}
                                         className={`px-3 py-1.5 text-white text-sm rounded-lg flex items-center gap-1 ${

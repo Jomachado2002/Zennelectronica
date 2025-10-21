@@ -71,7 +71,7 @@ const PaymentSuccess = () => {
                 setPaymentData(parsedData);
                 
             } catch (e) {
-                console.error("Error parseando datos de pago:", e);
+                // console.error removed for production
             }
         }
 
@@ -119,11 +119,11 @@ const PaymentSuccess = () => {
             if (result.success) {
                 setTransactionDetails(result.data);
             } else {
-                console.warn("⚠️ No se pudieron obtener detalles:", result.message);
+                // console.warn removed for production
                 // No mostrar error, seguir con los datos de URL
             }
         } catch (error) {
-            console.error("❌ Error consultando transacción:", error);
+            // console.error removed for production
             // No mostrar error, seguir con los datos de URL
         } finally {
             setIsLoading(false);

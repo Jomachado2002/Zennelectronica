@@ -139,7 +139,7 @@ const BancardTransactions = () => {
                 toast.error(result.message || "Error al cargar las transacciones");
             }
         } catch (error) {
-            console.error("Error:", error);
+            // console.error removed for production
             toast.error("Error de conexión");
         } finally {
             setIsLoading(false);
@@ -292,7 +292,7 @@ const BancardTransactions = () => {
                 toast.error(result.message || 'Error al realizar la acción');
             }
         } catch (error) {
-            console.error('Error:', error);
+            // console.error removed for production
             toast.error('Error de conexión');
         }
     };

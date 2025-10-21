@@ -786,7 +786,7 @@ const PresentacionCorporativa = () => {
       pdf.save('Zenn-Presentacion-Corporativa.pdf');
       
     } catch (error) {
-      console.error('Error generando PDF:', error);
+      // console.error removed for production
       alert('Error al generar PDF. Instale: npm install jspdf html2canvas');
     } finally {
       setIsLoading(false);

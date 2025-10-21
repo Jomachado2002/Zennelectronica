@@ -53,7 +53,7 @@ const uploadTempFile = async (fileBuffer, fileInfo) => {
       bytes: fileInfo.size
     };
   } catch (error) {
-    console.error("Error al subir archivo temporal a Firebase Storage:", error);
+    // console.error removed for production
     throw error;
   }
 };

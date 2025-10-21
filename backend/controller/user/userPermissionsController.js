@@ -8,7 +8,7 @@ const { checkPermission, getUserPermissions, hasAdminPanelAccess } = require('..
  */
 const getUserPermissionsController = async (req, res) => {
     try {
-        console.log('🔐 Obteniendo permisos para usuario:', req.userId);
+        // console.log removed for production
         
         const permissions = await getUserPermissions(req.userId);
         
@@ -31,7 +31,7 @@ const getUserPermissionsController = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error obteniendo permisos:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error interno del servidor',
             success: false,
@@ -46,7 +46,7 @@ const getUserPermissionsController = async (req, res) => {
  */
 const updateUserPermissionsController = async (req, res) => {
     try {
-        console.log('🔐 Actualizando permisos para usuario:', req.params.userId);
+        // console.log removed for production
         
         // Verificar que el usuario actual sea ROOT
         const currentUser = await userModel.findById(req.userId);
@@ -97,7 +97,7 @@ const updateUserPermissionsController = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error actualizando permisos:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error interno del servidor',
             success: false,
@@ -137,7 +137,7 @@ const checkUserPermissionController = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error verificando permiso:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error interno del servidor',
             success: false,
@@ -188,7 +188,7 @@ const getAllUsersWithPermissionsController = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error obteniendo usuarios:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error interno del servidor',
             success: false,
@@ -258,7 +258,7 @@ const createUserWithPermissionsController = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error creando usuario:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error interno del servidor',
             success: false,

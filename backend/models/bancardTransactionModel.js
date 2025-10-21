@@ -691,7 +691,7 @@ bancardTransactionSchema.pre('save', function(next) {
         
         next();
     } catch (error) {
-        console.error('❌ Error en pre-save middleware:', error);
+        // console.error removed for production
         next(error);
     }
 });

@@ -38,7 +38,7 @@ const ExchangeRateConfig = () => {
                 setLastUpdate(new Date(data.data.effectiveDate).toLocaleString());
             }
         } catch (error) {
-            console.error('Error obteniendo tipo de cambio:', error);
+            // console.error removed for production
             toast.error('Error al obtener el tipo de cambio actual');
         } finally {
             setIsLoading(false);
@@ -54,7 +54,7 @@ const ExchangeRateConfig = () => {
                 setHistory(data.data);
             }
         } catch (error) {
-            console.error('Error obteniendo historial:', error);
+            // console.error removed for production
         }
     };
 
@@ -67,7 +67,7 @@ const ExchangeRateConfig = () => {
                 setStats(data.data);
             }
         } catch (error) {
-            console.error('Error obteniendo estadísticas:', error);
+            // console.error removed for production
         }
     };
 
@@ -99,7 +99,7 @@ const ExchangeRateConfig = () => {
                 toast.error(data.message || 'Error en la simulación');
             }
         } catch (error) {
-            console.error('Error simulando:', error);
+            // console.error removed for production
             toast.error('Error al simular la actualización');
         } finally {
             setIsSimulating(false);
@@ -147,7 +147,7 @@ const ExchangeRateConfig = () => {
                 toast.error(data.message || 'Error al actualizar el tipo de cambio');
             }
         } catch (error) {
-            console.error('Error actualizando:', error);
+            // console.error removed for production
             toast.error('Error al actualizar el tipo de cambio');
         } finally {
             setIsUpdating(false);

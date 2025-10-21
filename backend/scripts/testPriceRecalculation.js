@@ -6,13 +6,13 @@ const { recalculateProductPrices } = require('../controller/product/recalculateP
 
 async function testPriceRecalculation() {
   try {
-    console.log('🔄 Conectando a MongoDB...');
+    // console.log removed for production
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB conectado exitosamente');
+    // console.log removed for production
 
     const newExchangeRate = 7600;
     
-    console.log(`\n📊 Probando recálculo de precios con tipo de cambio: ${newExchangeRate}`);
+    // console.log removed for production
     console.log('=' .repeat(60));
 
     // Simular actualización (dry run)
@@ -22,36 +22,36 @@ async function testPriceRecalculation() {
       dryRun: true
     });
 
-    console.log('\n📈 Resultados de la simulación:');
-    console.log(`   - Productos encontrados: ${simulationResults.totalProducts}`);
-    console.log(`   - Aumentos de precio: ${simulationResults.priceIncreases}`);
-    console.log(`   - Disminuciones de precio: ${simulationResults.priceDecreases}`);
-    console.log(`   - Sin cambios: ${simulationResults.unchangedPrices}`);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
     console.log(`   - Cambio promedio: ${simulationResults.averagePriceChange.toFixed(2)} PYG`);
 
     // Mostrar algunos ejemplos
     if (simulationResults.products.length > 0) {
-      console.log('\n📋 Ejemplos de productos:');
+      // console.log removed for production
       simulationResults.products.slice(0, 3).forEach((product, index) => {
-        console.log(`   ${index + 1}. ${product.productName}`);
-        console.log(`      Código: ${product.codigo}`);
+        // console.log removed for production
+        // console.log removed for production
         console.log(`      Precio anterior: ${product.oldSellingPrice.toLocaleString()} PYG`);
         console.log(`      Precio nuevo: ${product.newSellingPrice.toLocaleString()} PYG`);
         console.log(`      Cambio: ${product.priceChange.toLocaleString()} PYG (${product.priceChangePercentage}%)`);
-        console.log(`      Tipo: ${product.changeType}`);
-        console.log('');
+        // console.log removed for production
+        // console.log removed for production
       });
     }
 
     // Preguntar si quiere aplicar la actualización
     console.log('¿Deseas aplicar la actualización real? (esto actualizará los productos en la BD)');
-    console.log('Para aplicar, ejecuta: node scripts/applyPriceUpdate.js 7600');
+    // console.log removed for production
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    // console.error removed for production
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Conexión cerrada');
+    // console.log removed for production
   }
 }
 

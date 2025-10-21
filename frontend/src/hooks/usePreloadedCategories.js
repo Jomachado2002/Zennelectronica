@@ -21,7 +21,7 @@ const usePreloadedCategories = () => {
         setLoading(false);
         return;
       } catch (err) {
-        console.error('❌ usePreloadedCategories: Error en carga en progreso:', err);
+        // console.error removed for production
         setError(err);
         setLoading(false);
         return;
@@ -59,7 +59,7 @@ const usePreloadedCategories = () => {
         throw new Error('Respuesta no exitosa del servidor');
       }
     } catch (err) {
-      console.error('❌ usePreloadedCategories: Error cargando estructura completa:', err);
+      // console.error removed for production
       setError(err);
     } finally {
       setLoading(false);

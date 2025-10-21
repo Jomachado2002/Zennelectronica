@@ -25,13 +25,13 @@ const ExchangeRate = mongoose.model('ExchangeRate', exchangeRateSchema);
 
 async function updateExchangeRate(newRate, notes = '') {
   try {
-    console.log('🔄 Conectando a MongoDB...');
+    // console.log removed for production
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB conectado exitosamente');
+    // console.log removed for production
 
     // Desactivar el tipo de cambio actual
     await ExchangeRate.updateMany({ isActive: true }, { isActive: false });
-    console.log('✅ Tipo de cambio anterior desactivado');
+    // console.log removed for production
 
     // Crear nuevo tipo de cambio
     const newExchangeRate = new ExchangeRate({
@@ -51,7 +51,7 @@ async function updateExchangeRate(newRate, notes = '') {
     });
 
     await newExchangeRate.save();
-    console.log(`✅ Nuevo tipo de cambio creado: ${newRate} PYG por USD`);
+    // console.log removed for production
 
     // Verificar que se creó correctamente
     const currentRate = await ExchangeRate.findOne({ isActive: true });
@@ -65,16 +65,16 @@ async function updateExchangeRate(newRate, notes = '') {
 
     // Mostrar historial
     const history = await ExchangeRate.find().sort({ effectiveDate: -1 }).limit(5);
-    console.log('\n📋 Últimos 5 registros:');
+    // console.log removed for production
     history.forEach((rate, index) => {
       console.log(`${index + 1}. ${rate.toPYG} PYG - ${rate.effectiveDate.toISOString()} - ${rate.isActive ? 'ACTIVO' : 'INACTIVO'}`);
     });
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    // console.error removed for production
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Conexión cerrada');
+    // console.log removed for production
   }
 }
 
@@ -83,8 +83,8 @@ const newRate = process.argv[2];
 const notes = process.argv[3] || '';
 
 if (!newRate) {
-  console.log('❌ Uso: node updateExchangeRate.js <nuevo_tipo_cambio> [notas]');
-  console.log('📝 Ejemplo: node updateExchangeRate.js 7500 "Actualización por inflación"');
+  // console.log removed for production
+  // console.log removed for production
   process.exit(1);
 }
 

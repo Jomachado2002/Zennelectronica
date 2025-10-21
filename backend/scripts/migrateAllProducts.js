@@ -63,7 +63,7 @@ try {
     
     
 } catch (error) {
-    console.error('❌ Error inicializando Firebase:', error.message);
+    // console.error removed for production
     process.exit(1);
 }
 
@@ -410,7 +410,7 @@ async function migrateAllProducts() {
         
     } catch (error) {
         log(`💥 ERROR CRÍTICO EN MIGRACIÓN MASIVA: ${error.message}`, 'ERROR');
-        console.error('Stack trace:', error.stack);
+        // console.error removed for production
         throw error;
     } finally {
         await mongoose.connection.close();
@@ -446,7 +446,7 @@ async function getStats() {
         await mongoose.connection.close();
         
     } catch (error) {
-        console.error('Error obteniendo estadísticas:', error);
+        // console.error removed for production
     }
 }
 
@@ -476,7 +476,7 @@ async function main() {
 
 if (require.main === module) {
     main().catch(error => {
-        console.error('💥 Error no capturado:', error);
+        // console.error removed for production
         process.exit(1);
     });
 }

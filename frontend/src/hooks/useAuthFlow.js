@@ -104,7 +104,7 @@ const useAuthFlow = () => {
         result
       };
     } catch (error) {
-      console.error(`❌ Error en acción ${action}:`, error);
+      // console.error removed for production
       return {
         success: false,
         error: error.message
@@ -222,7 +222,7 @@ const useAuthFlow = () => {
         }
       }
     } catch (error) {
-      console.error('Error restaurando contexto:', error);
+      // console.error removed for production
     }
   };
 

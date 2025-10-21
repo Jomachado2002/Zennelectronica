@@ -109,7 +109,7 @@ balanceSchema.statics.getOrCreateUserBalance = async function(userId) {
         
         return balance;
     } catch (error) {
-        console.error('Error obteniendo/creando balance de usuario:', error);
+        // console.error removed for production
         throw error;
     }
 };
@@ -135,7 +135,7 @@ balanceSchema.methods.addTransaction = async function(transactionData) {
         await this.save();
         return this;
     } catch (error) {
-        console.error('Error agregando transacción:', error);
+        // console.error removed for production
         throw error;
     }
 };

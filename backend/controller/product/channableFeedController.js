@@ -478,7 +478,7 @@ const channableFeedController = async (req, res) => {
         </item>\n`;
                 
             } catch (itemError) {
-                console.error('❌ Error procesando producto:', product._id, itemError.message);
+                // console.error removed for production
                 skippedCount++;
             }
         });
@@ -509,7 +509,7 @@ const channableFeedController = async (req, res) => {
         res.send(xml);
         
     } catch (error) {
-        console.error('❌ Error crítico generando feed para Meta:', error);
+        // console.error removed for production
         res.status(500).json({
             message: 'Error generando feed XML para Meta',
             error: true,

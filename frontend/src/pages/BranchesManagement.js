@@ -63,7 +63,7 @@ const BranchesManagement = () => {
         toast.error(result.message || "Error al cargar las sucursales");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -162,7 +162,7 @@ const BranchesManagement = () => {
         toast.error(result.message || "Error al guardar");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -235,7 +235,7 @@ const BranchesManagement = () => {
         toast.error(result.message || "Error al eliminar");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

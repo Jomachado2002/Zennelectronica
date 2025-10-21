@@ -47,9 +47,9 @@ function App() {
     
     if (dataApi.success) {
       dispatch(setUserDetails(dataApi.data))
-      console.log("✅ App.js - Usuario guardado en Redux:", dataApi.data);
+      // console.log removed for production
     } else {
-      console.log("❌ App.js - Error al obtener usuario:", dataApi.message);
+      // console.log removed for production
     }
   }
   

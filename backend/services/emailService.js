@@ -63,7 +63,7 @@ class EmailService {
             };
 
         } catch (error) {
-            console.error(`❌ Error enviando email de compra:`, error);
+            // console.error removed for production
             return { 
                 success: false, 
                 error: error.message 
@@ -460,7 +460,7 @@ class EmailService {
             };
 
         } catch (error) {
-            console.error(`❌ Error enviando email de delivery:`, error);
+            // console.error removed for production
             return { 
                 success: false, 
                 error: error.message 
@@ -493,7 +493,7 @@ class EmailService {
             };
 
         } catch (error) {
-            console.error(`❌ Error enviando notificación admin:`, error);
+            // console.error removed for production
             return { 
                 success: false, 
                 error: error.message 
@@ -712,7 +712,7 @@ class EmailService {
             
             return true;
         } catch (error) {
-            console.error('❌ Error en configuración de email:', error);
+            // console.error removed for production
             return false;
         }
     }

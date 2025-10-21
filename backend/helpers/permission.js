@@ -4,16 +4,16 @@ const { hasAdminPanelAccess } = require('./granularPermission');
 
 const uploadProductPermission = async (userId) => {
     try {
-        console.log('🔐 Verificando permisos de administración para usuario:', userId);
+        // console.log removed for production
         
         // Verificar acceso al panel de administración usando el sistema granular
         const hasAccess = await hasAdminPanelAccess(userId);
         
-        console.log('✅ Resultado verificación permisos:', hasAccess);
+        // console.log removed for production
         return hasAccess;
         
     } catch (error) {
-        console.error("❌ Error verificando permisos:", error);
+        // console.error removed for production
         return false;
     }
 }
@@ -55,7 +55,7 @@ const canUserMakePurchase = async (userId) => {
         return true;
         
     } catch (error) {
-        console.error("❌ Error verificando permisos de compra:", error);
+        // console.error removed for production
         return true; // ✅ En caso de error, permitir compra para no bloquear el negocio
     }
 };
@@ -73,7 +73,7 @@ const canUserViewOwnTransactions = async (userId) => {
         return false;
         
     } catch (error) {
-        console.error("❌ Error verificando permisos de visualización:", error);
+        // console.error removed for production
         return false;
     }
 };

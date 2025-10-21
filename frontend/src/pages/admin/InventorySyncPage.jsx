@@ -70,7 +70,7 @@ const InventorySyncPage = () => {
                     return;
                 }
                 setCsvData(results.data);
-                console.log('CSV parseado:', results.data.length, 'productos');
+                // console.log removed for production
             },
             error: (error) => {
                 setError('Error leyendo archivo CSV: ' + error.message);
@@ -106,13 +106,13 @@ const InventorySyncPage = () => {
 
             if (response.data.success) {
                 setComparisonResults(response.data);
-                console.log('Comparación completada:', response.data.summary);
+                // console.log removed for production
             } else {
                 setError(response.data.error || 'Error en la comparación');
             }
 
         } catch (error) {
-            console.error('Error en comparación:', error);
+            // console.error removed for production
             setError(error.response?.data?.error || 'Error interno del servidor');
         } finally {
             setIsLoading(false);
@@ -178,7 +178,7 @@ const InventorySyncPage = () => {
             }
 
         } catch (error) {
-            console.error('Error importando productos:', error);
+            // console.error removed for production
             setError(error.response?.data?.error || 'Error interno del servidor');
         } finally {
             setIsLoading(false);
@@ -223,7 +223,7 @@ const InventorySyncPage = () => {
             }
 
         } catch (error) {
-            console.error('Error actualizando stock:', error);
+            // console.error removed for production
             setError(error.response?.data?.error || 'Error interno del servidor');
         } finally {
             setIsLoading(false);
@@ -254,7 +254,7 @@ const InventorySyncPage = () => {
             }
 
         } catch (error) {
-            console.error('Error actualizando códigos:', error);
+            // console.error removed for production
             setError(error.response?.data?.error || 'Error interno del servidor');
         } finally {
             setIsLoading(false);
@@ -284,22 +284,22 @@ const InventorySyncPage = () => {
     // Función para manejar la edición de productos
     const handleEditProduct = async (product) => {
         try {
-            console.log('🔍 handleEditProduct - Iniciando');
-            console.log('📦 Product ID:', product.productId);
-            console.log('💰 Price Changed:', product.priceChanged);
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
             
             // Construir URL del endpoint
             const url = `/api/admin/products/${product.productId}`;
-            console.log('🌐 Llamando a:', url);
+            // console.log removed for production
             
             // Cargar producto completo
             const response = await axiosInstance.get(url);
             
-            console.log('📥 Response status:', response.status);
-            console.log('📦 Resultado recibido:', response.data);
+            // console.log removed for production
+            // console.log removed for production
             
             if (response.data.success) {
-                console.log('✅ Producto cargado exitosamente');
+                // console.log removed for production
                 
                 // Preparar datos extra de sincronización
                 const extraData = {
@@ -321,22 +321,22 @@ const InventorySyncPage = () => {
                     syncMode: true
                 };
                 
-                console.log('📦 Extra data preparada:', extraData);
+                // console.log removed for production
                 
                 // Actualizar estados para abrir modal
-                console.log('🔄 Actualizando estados del modal...');
+                // console.log removed for production
                 setEditProductData(response.data.data);
                 setEditExtraData(extraData);
                 setShowEditModal(true);
                 
-                console.log('✅ Modal de edición debe estar abierto ahora');
+                // console.log removed for production
             } else {
-                console.error('❌ Error en resultado:', response.data.message);
+                // console.error removed for production
                 setError(response.data.message || 'Error al cargar el producto');
             }
         } catch (error) {
-            console.error('💥 Error completo en handleEditProduct:', error);
-            console.error('💥 Error stack:', error.stack);
+            // console.error removed for production
+            // console.error removed for production
             setError(`Error al abrir modal: ${error.message}`);
         }
     };
@@ -554,12 +554,12 @@ const InventorySyncPage = () => {
                     <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                         <AdminEditProduct
                             onClose={() => {
-                                console.log('🚪 Cerrando modal de edición');
+                                // console.log removed for production
                                 handleCloseEditModal();
                             }}
                             productData={editProductData}
                             fetchdata={() => {
-                                console.log('🔄 Refrescando datos después de editar');
+                                // console.log removed for production
                                 handleEditSuccess();
                             }}
                             extraData={editExtraData}

@@ -37,7 +37,7 @@ const recalculateProductPrices = async (newExchangeRate, options = {}) => {
     const products = await ProductModel.find(query);
     results.totalProducts = products.length;
 
-    console.log(`📊 Encontrados ${results.totalProducts} productos para actualizar`);
+    // console.log removed for production
 
     if (products.length === 0) {
       return results;
@@ -108,7 +108,7 @@ const recalculateProductPrices = async (newExchangeRate, options = {}) => {
         }
 
       } catch (error) {
-        console.error(`Error procesando producto ${product._id}:`, error);
+        // console.error removed for production
         results.errors.push({
           productId: product._id,
           productName: product.productName,
@@ -122,17 +122,17 @@ const recalculateProductPrices = async (newExchangeRate, options = {}) => {
     results.totalPriceChange = totalPriceChange;
     results.updateDuration = Date.now() - startTime;
 
-    console.log(`✅ Procesamiento completado:`);
-    console.log(`   - Productos actualizados: ${results.updatedProducts}`);
-    console.log(`   - Aumentos de precio: ${results.priceIncreases}`);
-    console.log(`   - Disminuciones de precio: ${results.priceDecreases}`);
-    console.log(`   - Sin cambios: ${results.unchangedPrices}`);
-    console.log(`   - Duración: ${results.updateDuration}ms`);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
 
     return results;
 
   } catch (error) {
-    console.error('Error en recalculateProductPrices:', error);
+    // console.error removed for production
     throw error;
   }
 };
@@ -166,7 +166,7 @@ const recalculatePricesEndpoint = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en recalculatePricesEndpoint:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error recalculando precios',

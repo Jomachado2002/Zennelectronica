@@ -26,7 +26,7 @@ class BalanceService {
             const result = await response.json();
             return result;
         } catch (error) {
-            console.error('❌ Error obteniendo saldo:', error);
+            // console.error removed for production
             throw error;
         }
     }
@@ -51,14 +51,14 @@ class BalanceService {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Error response:', errorText);
+                // console.error removed for production
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const result = await response.json();
             return result;
         } catch (error) {
-            console.error('❌ Error cargando saldo:', error);
+            // console.error removed for production
             throw error;
         }
     }
@@ -79,14 +79,14 @@ class BalanceService {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Error response:', errorText);
+                // console.error removed for production
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const result = await response.json();
             return result;
         } catch (error) {
-            console.error('❌ Error pagando con saldo:', error);
+            // console.error removed for production
             throw error;
         }
     }
@@ -116,7 +116,7 @@ class BalanceService {
             const result = await response.json();
             return result;
         } catch (error) {
-            console.error('❌ Error obteniendo historial:', error);
+            // console.error removed for production
             throw error;
         }
     }
@@ -141,14 +141,14 @@ class BalanceService {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Error response:', errorText);
+                // console.error removed for production
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const result = await response.json();
             return result;
         } catch (error) {
-            console.error('❌ Error cargando saldo con Bancard:', error);
+            // console.error removed for production
             throw error;
         }
     }

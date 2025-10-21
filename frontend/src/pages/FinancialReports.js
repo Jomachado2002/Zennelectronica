@@ -77,7 +77,7 @@ const FinancialReports = () => {
         toast.error("Error al cargar los productos");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

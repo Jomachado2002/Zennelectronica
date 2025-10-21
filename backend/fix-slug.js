@@ -39,7 +39,7 @@ async function fixProductSlug() {
     
     mongoose.disconnect();
   } catch (error) {
-    console.error('Error:', error);
+    // console.error removed for production
     mongoose.disconnect();
   }
 }

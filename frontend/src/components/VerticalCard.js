@@ -26,10 +26,10 @@ const VerticalCard = ({ loading, data = [] }) => {
                        const img = new Image();
                        img.src = product.productImage[0];
                        img.onload = () => {
-                           console.log('Imagen precargada exitosamente:', product.productImage[0]);
+                           // console.log removed for production
                        };
                        img.onerror = () => {
-                           console.log('Error precargando imagen:', product.productImage[0]);
+                           // console.log removed for production
                            // Intentar con la segunda imagen si existe
                            if (product?.productImage?.[1]) {
                                const img2 = new Image();
@@ -200,7 +200,7 @@ const VerticalCard = ({ loading, data = [] }) => {
                                         }`}
                                         loading="eager"
                                         onError={(e) => {
-                                            console.log('Error cargando imagen principal:', product.productImage[0]);
+                                            // console.log removed for production
                                             e.target.style.display = 'none';
                                         }}
                                         onLoad={(e) => {
@@ -218,7 +218,7 @@ const VerticalCard = ({ loading, data = [] }) => {
                                             }`}
                                             loading="lazy"
                                             onError={(e) => {
-                                                console.log('Error cargando imagen secundaria:', product.productImage[1]);
+                                                // console.log removed for production
                                                 e.target.style.display = 'none';
                                             }}
                                         />

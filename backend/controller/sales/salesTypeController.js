@@ -56,7 +56,7 @@ async function createSalesTypeController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createSalesTypeController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -98,7 +98,7 @@ async function getAllSalesTypesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getAllSalesTypesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -142,7 +142,7 @@ async function getSalesTypeByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getSalesTypeByIdController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -214,7 +214,7 @@ async function updateSalesTypeController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateSalesTypeController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -272,7 +272,7 @@ async function deleteSalesTypeController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteSalesTypeController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -296,7 +296,7 @@ async function getActiveSalesTypesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getActiveSalesTypesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

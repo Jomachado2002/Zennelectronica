@@ -65,7 +65,7 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
       
       setData(productsWithStock);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      // console.error removed for production
     } finally {
       setLoading(false);
     }

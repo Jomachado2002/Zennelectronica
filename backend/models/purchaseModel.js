@@ -153,7 +153,7 @@ purchaseSchema.statics.generatePurchaseNumber = async function() {
         return 'CMP-00001';
         
     } catch (error) {
-        console.error('❌ Error generando purchaseNumber:', error);
+        // console.error removed for production
         const timestamp = Date.now().toString();
         const suffix = timestamp.slice(-5);
         return `CMP-${suffix}`;
@@ -196,7 +196,7 @@ purchaseSchema.pre('save', async function(next) {
         }
         next();
     } catch (error) {
-        console.error('❌ Error en pre-save hook de compra:', error);
+        // console.error removed for production
         this.purchaseNumber = `CMP-${Date.now().toString().slice(-5)}`;
         next();
     }

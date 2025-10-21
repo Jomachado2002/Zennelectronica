@@ -82,7 +82,7 @@ const AllUsers = () => {
         toast.error(dataResponse.message);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      // console.error removed for production
       toast.error('Error al cargar usuarios');
     }
   };

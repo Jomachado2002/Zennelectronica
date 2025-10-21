@@ -17,15 +17,15 @@ const getCategoriesFromDB = async (req, res) => {
       try {
         const collection = db.collection(collectionName);
         const count = await collection.countDocuments();
-        console.log(`📊 Colección "${collectionName}": ${count} documentos`);
+        // console.log removed for production
         
         if (count > 0) {
           categories = await collection.find({}).sort({ order: 1 }).toArray();
-          console.log(`✅ Encontradas ${categories.length} categorías en "${collectionName}"`);
+          // console.log removed for production
           break;
         }
       } catch (e) {
-        console.log(`❌ Error con colección "${collectionName}":`, e.message);
+        // console.log removed for production
       }
     }
     
@@ -36,7 +36,7 @@ const getCategoriesFromDB = async (req, res) => {
       error: false
     });
   } catch (err) {
-    console.error('Error al obtener categorías:', err);
+    // console.error removed for production
     res.status(500).json({
       message: err.message || "Error interno del servidor",
       error: true,

@@ -21,7 +21,7 @@ const BalanceDisplay = ({ className = '', showLoadButton = false, onLoadBalance 
                 setBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo:', error);
+            // console.error removed for production
             setError(true);
         } finally {
             setLoading(false);

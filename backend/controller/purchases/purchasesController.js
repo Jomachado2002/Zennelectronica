@@ -103,7 +103,7 @@ async function createPurchaseController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createPurchaseController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,

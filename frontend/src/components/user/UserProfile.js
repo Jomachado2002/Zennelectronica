@@ -113,7 +113,7 @@ const UserProfile = ({ user, onUpdateProfile, onUploadImage }) => {
       await onUpdateProfile(formData);
       setIsEditing(false);
     } catch (error) {
-      console.error('Error al actualizar perfil:', error);
+      // console.error removed for production
     } finally {
       setLoading(false);
     }
@@ -155,7 +155,7 @@ const UserProfile = ({ user, onUpdateProfile, onUploadImage }) => {
           profilePic: imageUrl
         }));
       } catch (error) {
-        console.error('Error al subir imagen:', error);
+        // console.error removed for production
       }
     }
   };
@@ -249,7 +249,7 @@ const UserLocationDisplay = ({ user, onLocationUpdate }) => {
         setUserLocation(result.data);
       }
     } catch (error) {
-      console.warn('Error cargando ubicación:', error);
+      // console.warn removed for production
     } finally {
       setLoading(false);
     }

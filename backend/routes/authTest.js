@@ -7,8 +7,8 @@ const authToken = require('../middleware/authToken');
 // ✅ ENDPOINT PARA PROBAR COOKIES SIN AUTENTICACIÓN
 router.get('/cookies', async (req, res) => {
     try {
-        console.log('🍪 Debug de cookies - Headers recibidos:', req.headers);
-        console.log('🍪 Debug de cookies - Cookies parseadas:', req.cookies);
+        // console.log removed for production
+        // console.log removed for production
         
         res.json({
             message: "Debug de cookies",
@@ -27,7 +27,7 @@ router.get('/cookies', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Error en debug de cookies:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en debug de cookies",
             error: true,
@@ -39,7 +39,7 @@ router.get('/cookies', async (req, res) => {
 // ✅ ENDPOINT PARA PROBAR AUTENTICACIÓN
 router.get('/auth-status', authToken, async (req, res) => {
     try {
-        console.log('🔐 Debug de autenticación - Usuario:', req.userId, 'Autenticado:', req.isAuthenticated);
+        // console.log removed for production
         
         res.json({
             message: "Estado de autenticación",
@@ -65,7 +65,7 @@ router.get('/auth-status', authToken, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Error en debug de autenticación:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en debug de autenticación",
             error: true,
@@ -100,7 +100,7 @@ router.post('/test-login', async (req, res) => {
             domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
         };
         
-        console.log('🍪 Configurando cookie de prueba:', cookieOptions);
+        // console.log removed for production
         
         res.cookie('token', mockToken, cookieOptions);
         
@@ -114,7 +114,7 @@ router.post('/test-login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('❌ Error en test login:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en test login",
             error: true,

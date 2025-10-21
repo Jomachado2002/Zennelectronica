@@ -16,7 +16,7 @@ const log = (message, type = 'INFO') => {
         'PROGRESS': '\x1b[35m' // Magenta
     };
     const reset = '\x1b[0m';
-    console.log(`${colors[type]}[${timestamp}] ${type}: ${message}${reset}`);
+    // console.log removed for production
 };
 
 /**
@@ -97,7 +97,7 @@ async function manageNotebooksProducts() {
 if (require.main === module) {
     manageNotebooksProducts().catch(error => {
         log(`❌ Error en el gestor: ${error.message}`, 'ERROR');
-        console.error(error);
+        // console.error removed for production
         process.exit(1);
     });
 }

@@ -35,7 +35,7 @@ const uploadTempFile = async (fileBuffer, fileInfo) => {
       originalFilename: fileInfo.name
     };
   } catch (error) {
-    console.error("Error al generar archivo temporal:", error);
+    // console.error removed for production
     throw error;
   }
 };

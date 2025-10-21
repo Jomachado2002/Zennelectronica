@@ -285,7 +285,7 @@ async function createEnhancedSaleController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createEnhancedSaleController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -331,7 +331,7 @@ async function searchProductsForSalesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en searchProductsForSalesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -378,7 +378,7 @@ async function searchCustomersForSalesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en searchCustomersForSalesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -416,7 +416,7 @@ async function getSalesFormDataController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getSalesFormDataController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -450,7 +450,7 @@ async function calculateItemTaxController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en calculateItemTaxController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -484,7 +484,7 @@ async function convertAmountToWordsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en convertAmountToWordsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -518,7 +518,7 @@ async function validateRUCController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en validateRUCController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -566,7 +566,7 @@ async function uploadSalesAttachmentsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en uploadSalesAttachmentsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -617,7 +617,7 @@ async function downloadAttachmentController(req, res) {
         res.download(filePath, attachment.originalName);
 
     } catch (err) {
-        console.error("Error en downloadAttachmentController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

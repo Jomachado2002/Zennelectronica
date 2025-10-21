@@ -93,7 +93,7 @@ async function userDetailsController(req, res) {
         });
 
     } catch (err) {
-        console.error("❌ Error en userDetailsController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

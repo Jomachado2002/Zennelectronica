@@ -111,7 +111,7 @@ async function updateUserProfileController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error al actualizar perfil:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || "Error al actualizar perfil",
             error: true,
@@ -157,7 +157,7 @@ async function uploadProfileImageController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error al subir imagen:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || "Error al subir imagen",
             error: true,
@@ -237,7 +237,7 @@ async function changePasswordController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error al cambiar contraseña:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || "Error al cambiar contraseña",
             error: true,
@@ -285,7 +285,7 @@ async function getUserBalanceController(req, res) {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo saldo del usuario:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener el saldo",
             success: false,
@@ -346,7 +346,7 @@ async function loadBalanceController(req, res) {
         return await bancardLoadBalance(req, res);
 
     } catch (error) {
-        console.error("❌ Error cargando saldo:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al cargar saldo",
             success: false,
@@ -432,7 +432,7 @@ async function payWithBalanceController(req, res) {
         });
 
     } catch (error) {
-        console.error("❌ Error procesando pago con saldo:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al procesar el pago",
             success: false,
@@ -494,7 +494,7 @@ async function getBalanceHistoryController(req, res) {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo historial de saldo:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener historial de saldo",
             success: false,

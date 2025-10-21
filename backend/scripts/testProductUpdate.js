@@ -9,12 +9,12 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/zenn_elec
 
 async function testProductUpdate() {
   try {
-    console.log('🔍 Probando actualización de productos...');
+    // console.log removed for production
     
     // Buscar un producto para probar
     const product = await ProductModel.findOne({});
     if (!product) {
-      console.log('❌ No se encontraron productos para probar');
+      // console.log removed for production
       return;
     }
     
@@ -41,7 +41,7 @@ async function testProductUpdate() {
       deliveryCost: product.deliveryCost || 5000
     };
     
-    console.log('📝 Datos de actualización:', updateData);
+    // console.log removed for production
     
     // Probar la actualización
     const updatedProduct = await ProductModel.findByIdAndUpdate(
@@ -58,11 +58,11 @@ async function testProductUpdate() {
         price: updatedProduct.price
       });
     } else {
-      console.log('❌ Error al actualizar el producto');
+      // console.log removed for production
     }
     
   } catch (error) {
-    console.error('❌ Error en la prueba:', error.message);
+    // console.error removed for production
   } finally {
     mongoose.connection.close();
   }

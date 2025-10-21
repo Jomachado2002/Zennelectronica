@@ -71,7 +71,7 @@ function log(message, type = 'INFO') {
   };
   const reset = '\x1b[0m';
   const color = colors[type] || colors.INFO;
-  console.log(`${color}[${timestamp}] ${type}: ${message}${reset}`);
+  // console.log removed for production
 }
 
 // Función para crear directorio temporal
@@ -382,7 +382,7 @@ async function convertImagesToWebP() {
     
   } catch (error) {
     log(`Error general: ${error.message}`, 'ERROR');
-    console.error(error);
+    // console.error removed for production
   } finally {
     // Limpiar recursos
     cleanupTempDir();

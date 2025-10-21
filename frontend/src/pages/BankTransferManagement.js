@@ -98,12 +98,12 @@ const BankTransferManagement = () => {
                 setStats(result.data);
             }
         } else {
-            console.warn('⚠️ No se pudieron obtener transferencias:', result.message);
+            // console.warn removed for production
             toast.warn(result.message || 'No se pudieron cargar las transferencias');
             setTransfers([]);
         }
     } catch (error) {
-        console.error('❌ Error obteniendo transferencias:', error);
+        // console.error removed for production
         toast.error('Error de conexión al cargar transferencias');
         setTransfers([]);
     } finally {
@@ -125,10 +125,10 @@ const BankTransferManagement = () => {
                 
                 setStats(result.data);
             } else {
-                console.warn('⚠️ Error obteniendo estadísticas:', result.message);
+                // console.warn removed for production
             }
         } catch (error) {
-            console.error('❌ Error obteniendo estadísticas:', error);
+            // console.error removed for production
         }
     };
 
@@ -160,11 +160,11 @@ const BankTransferManagement = () => {
                 await fetchStats(); // Actualizar estadísticas
                 closeApprovalModal();
             } else {
-                console.error('❌ Error del servidor:', result);
+                // console.error removed for production
                 toast.error(result.message || 'Error al aprobar transferencia');
             }
         } catch (error) {
-            console.error('❌ Error aprobando transferencia:', error);
+            // console.error removed for production
             toast.error('Error de conexión al aprobar transferencia');
         } finally {
             setActionLoading(null);
@@ -199,11 +199,11 @@ const BankTransferManagement = () => {
             await fetchStats(); // Actualizar estadísticas
             closeApprovalModal();
         } else {
-            console.error('❌ Error del servidor:', result);
+            // console.error removed for production
             toast.error(result.message || 'Error al rechazar transferencia');
         }
     } catch (error) {
-        console.error('❌ Error rechazando transferencia:', error);
+        // console.error removed for production
         toast.error('Error de conexión al rechazar transferencia');
     } finally {
         setActionLoading(null);

@@ -79,7 +79,7 @@ async function userSignInController(req, res) {
             // No especificar domain para que funcione en cualquier subdominio de Vercel
         };
 
-        console.log('🍪 Configurando cookie con opciones:', cookieOptions);
+        // console.log removed for production
             
 
         
@@ -107,7 +107,7 @@ async function userSignInController(req, res) {
                 lastLogin: new Date() 
             });
         } catch (updateError) {
-            console.error('⚠️ Error actualizando último login:', updateError);
+            // console.error removed for production
             // No es crítico
         }
 
@@ -142,7 +142,7 @@ async function userSignInController(req, res) {
         return res.status(200).json(responseData);
 
     } catch (err) {
-        console.error('❌ Error crítico en signin:', err);
+        // console.error removed for production
         return res.status(500).json({
             message: "Error en el servidor durante el inicio de sesión",
             error: true,
@@ -191,7 +191,7 @@ async function transferGuestCart(guestId, userId) {
         
         return true;
     } catch (error) {
-        console.error('❌ Error en transferGuestCart:', error);
+        // console.error removed for production
         throw error;
     }
 }

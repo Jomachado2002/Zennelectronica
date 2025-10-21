@@ -138,7 +138,7 @@ const UserManagementModal = ({ user, onClose, onUserUpdated, onUserDeleted }) =>
         toast.error(result.message || 'Error al actualizar el usuario');
       }
     } catch (error) {
-      console.error('Error updating user:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
@@ -172,7 +172,7 @@ const UserManagementModal = ({ user, onClose, onUserUpdated, onUserDeleted }) =>
         toast.error(result.message || 'Error al cambiar la contraseña');
       }
     } catch (error) {
-      console.error('Error changing password:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
@@ -197,7 +197,7 @@ const UserManagementModal = ({ user, onClose, onUserUpdated, onUserDeleted }) =>
         toast.error(result.message || 'Error al eliminar el usuario');
       }
     } catch (error) {
-      console.error('Error deleting user:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);

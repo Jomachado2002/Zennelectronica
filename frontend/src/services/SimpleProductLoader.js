@@ -53,7 +53,7 @@ class SimpleProductLoader {
       
       return [];
     } catch (error) {
-      console.error('Error loading products:', error);
+      // console.error removed for production
       return [];
     } finally {
       this.loading.delete(cacheKey);

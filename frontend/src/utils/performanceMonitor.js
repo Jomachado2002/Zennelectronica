@@ -91,17 +91,17 @@ class PerformanceMonitor {
   logPerformanceReport() {
     const metrics = this.getMetrics();
     
-    console.log('📊 REPORTE DE RENDIMIENTO:');
+    // console.log removed for production
     console.log(`⏱️  Tiempo total de carga: ${metrics.totalLoadTime.toFixed(2)}ms`);
-    console.log(`🖼️  Total de imágenes: ${metrics.totalImages}`);
+    // console.log removed for production
     console.log(`🐌 Imágenes lentas (>500ms): ${metrics.slowImages}`);
     console.log(`⚡ Tiempo promedio de imagen: ${metrics.averageImageLoadTime.toFixed(2)}ms`);
     
     if (metrics.slowImages > 0) {
-      console.warn('🚨 OPTIMIZACIONES RECOMENDADAS:');
-      console.log('- Verificar tamaño de imágenes');
-      console.log('- Implementar compresión WebP');
-      console.log('- Revisar lazy loading');
+      // console.warn removed for production
+      // console.log removed for production
+      // console.log removed for production
+      // console.log removed for production
     }
     
     return metrics;

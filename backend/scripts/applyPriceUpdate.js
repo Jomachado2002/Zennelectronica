@@ -9,48 +9,48 @@ async function applyPriceUpdate() {
     const newExchangeRate = process.argv[2];
     
     if (!newExchangeRate || isNaN(newExchangeRate) || newExchangeRate <= 0) {
-      console.log('❌ Uso: node scripts/applyPriceUpdate.js <nuevo_tipo_cambio>');
-      console.log('   Ejemplo: node scripts/applyPriceUpdate.js 7600');
+      // console.log removed for production
+      // console.log removed for production
       process.exit(1);
     }
 
-    console.log('🔄 Conectando a MongoDB...');
+    // console.log removed for production
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB conectado exitosamente');
+    // console.log removed for production
 
-    console.log(`\n💰 Aplicando actualización real de precios con tipo de cambio: ${newExchangeRate}`);
+    // console.log removed for production
     console.log('=' .repeat(60));
 
     // Aplicar actualización real
-    console.log('\n🚀 APLICANDO ACTUALIZACIÓN REAL:');
+    // console.log removed for production
     const results = await recalculateProductPrices(parseFloat(newExchangeRate), {
       updateProducts: true,
       dryRun: false
     });
 
-    console.log('\n📊 Resultados de la actualización:');
-    console.log(`   - Productos procesados: ${results.totalProducts}`);
-    console.log(`   - Productos actualizados: ${results.updatedProducts}`);
-    console.log(`   - Aumentos de precio: ${results.priceIncreases}`);
-    console.log(`   - Disminuciones de precio: ${results.priceDecreases}`);
-    console.log(`   - Sin cambios: ${results.unchangedPrices}`);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
     console.log(`   - Cambio promedio: ${results.averagePriceChange.toFixed(2)} PYG`);
-    console.log(`   - Duración: ${results.updateDuration}ms`);
+    // console.log removed for production
 
     if (results.errors.length > 0) {
-      console.log('\n⚠️  Errores encontrados:');
+      // console.log removed for production
       results.errors.forEach(error => {
-        console.log(`   - ${error.productName}: ${error.error}`);
+        // console.log removed for production
       });
     }
 
-    console.log('\n✅ Actualización completada exitosamente');
+    // console.log removed for production
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    // console.error removed for production
   } finally {
     await mongoose.connection.close();
-    console.log('\n🔌 Conexión cerrada');
+    // console.log removed for production
   }
 }
 

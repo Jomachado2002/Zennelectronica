@@ -89,7 +89,7 @@ async function analyzeStockController(req, res) {
         });
 
     } catch (err) {
-        console.error('❌ Error en análisis de stock:', err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -650,7 +650,7 @@ const updateBulkStockController = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Error en actualización masiva:', err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -725,7 +725,7 @@ const updatePricesFromMayoristasController = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Error actualizando precios:', err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

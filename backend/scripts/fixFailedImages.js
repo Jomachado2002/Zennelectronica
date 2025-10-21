@@ -40,15 +40,15 @@ function extractFirebasePath(url) {
         }
         return null;
     } catch (error) {
-        console.log(`Error extrayendo path de URL: ${error.message}`);
+        // console.log removed for production
         return null;
     }
 }
 
 async function convertSingleImage(imageUrl, productId, productName) {
     try {
-        console.log(`\n🔄 Procesando: ${productName}`);
-        console.log(`   URL: ${imageUrl}`);
+        // console.log removed for production
+        // console.log removed for production
 
         // Extraer path del archivo
         const firebasePath = extractFirebasePath(imageUrl);
@@ -56,10 +56,10 @@ async function convertSingleImage(imageUrl, productId, productName) {
             throw new Error('No se pudo extraer el path del archivo');
         }
 
-        console.log(`   Path: ${firebasePath}`);
+        // console.log removed for production
 
         // Descargar imagen
-        console.log('   📥 Descargando imagen...');
+        // console.log removed for production
         const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
         
         // Generar nombre único para el archivo temporal
@@ -67,33 +67,33 @@ async function convertSingleImage(imageUrl, productId, productName) {
         const tempFilePath = path.join(tempDir, tempFileName);
 
         // Convertir a WebP
-        console.log('   🔄 Convirtiendo a WebP...');
+        // console.log removed for production
         await sharp(response.data)
             .webp({ quality: 85 })
             .toFile(tempFilePath);
 
         // Subir a Firebase
-        console.log('   ☁️ Subiendo a Firebase...');
+        // console.log removed for production
         const fileBuffer = fs.readFileSync(tempFilePath);
         const newFileName = firebasePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
         const storageRef = ref(storage, newFileName);
         const snapshot = await uploadBytes(storageRef, fileBuffer);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
-        console.log(`   ✅ WebP subido: ${downloadURL}`);
+        // console.log removed for production
 
         // Eliminar archivo temporal
         fs.unlinkSync(tempFilePath);
 
         // Actualizar base de datos
-        console.log('   💾 Actualizando base de datos...');
+        // console.log removed for production
         await productModel.updateOne(
             { _id: productId },
             { $set: { 'productImage.$[elem]': downloadURL } },
             { arrayFilters: [{ 'elem': imageUrl }] }
         );
 
-        console.log('   ✅ Base de datos actualizada');
+        // console.log removed for production
 
         return {
             success: true,
@@ -102,7 +102,7 @@ async function convertSingleImage(imageUrl, productId, productName) {
         };
 
     } catch (error) {
-        console.log(`   ❌ Error: ${error.message}`);
+        // console.log removed for production
         return {
             success: false,
             error: error.message
@@ -112,11 +112,11 @@ async function convertSingleImage(imageUrl, productId, productName) {
 
 async function fixFailedImages() {
     try {
-        console.log('🔧 CORRIGIENDO IMÁGENES QUE FALLARON...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Lista de imágenes que fallaron (obtenida del análisis anterior)
         const failedImages = [
@@ -167,14 +167,14 @@ async function fixFailedImages() {
             }
         ];
 
-        console.log(`📊 Procesando ${failedImages.length} imágenes que fallaron...\n`);
+        // console.log removed for production
 
         let successCount = 0;
         let errorCount = 0;
 
         for (let i = 0; i < failedImages.length; i++) {
             const failedImage = failedImages[i];
-            console.log(`\n[${i + 1}/${failedImages.length}] Procesando imagen...`);
+            // console.log removed for production
             
             const result = await convertSingleImage(
                 failedImage.imageUrl,
@@ -184,10 +184,10 @@ async function fixFailedImages() {
 
             if (result.success) {
                 successCount++;
-                console.log(`✅ Imagen ${i + 1} convertida exitosamente`);
+                // console.log removed for production
             } else {
                 errorCount++;
-                console.log(`❌ Error en imagen ${i + 1}: ${result.error}`);
+                // console.log removed for production
             }
 
             // Pausa entre conversiones
@@ -196,16 +196,16 @@ async function fixFailedImages() {
             }
         }
 
-        console.log('\n🎉 CORRECCIÓN COMPLETADA!');
-        console.log(`📊 ESTADÍSTICAS:`);
-        console.log(`   ✅ Exitosas: ${successCount}`);
-        console.log(`   ❌ Errores: ${errorCount}`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
 
     } catch (error) {
-        console.error('❌ Error general:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('\n🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

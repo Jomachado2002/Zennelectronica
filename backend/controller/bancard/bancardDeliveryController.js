@@ -140,7 +140,7 @@ const updateDeliveryStatusController = async (req, res) => {
                     
                     await updatedTransaction.save();
                 } else {
-                    console.error("❌ Error enviando email al cliente:", customerEmailResult.error);
+                    // console.error removed for production
                     
                     // ✅ GUARDAR REGISTRO DE ERROR
                     updatedTransaction.notifications_sent.push({
@@ -162,15 +162,15 @@ const updateDeliveryStatusController = async (req, res) => {
                     if (adminEmailResult.success) {
                         
                     } else {
-                        console.error("❌ Error enviando notificación admin:", adminEmailResult.error);
+                        // console.error removed for production
                     }
                 } catch (adminEmailError) {
-                    console.error("❌ Error en notificación admin:", adminEmailError);
+                    // console.error removed for production
                     emailResults.admin_email = { success: false, error: adminEmailError.message };
                 }
                 
             } catch (emailError) {
-                console.error("❌ Error enviando emails de delivery:", emailError);
+                // console.error removed for production
                 emailResults.customer_email = { success: false, error: emailError.message };
             }
         } else if (!notify_customer) {
@@ -211,7 +211,7 @@ const updateDeliveryStatusController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error actualizando delivery status:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error interno del servidor",
             success: false,
@@ -344,7 +344,7 @@ const getDeliveryProgressController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo progreso:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener progreso de delivery",
             success: false,
@@ -533,7 +533,7 @@ const getDeliveryStatsController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo estadísticas:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener estadísticas de delivery",
             success: false,
@@ -608,7 +608,7 @@ const addDeliveryAttemptController = async (req, res) => {
                     await transaction.save();
                 }
             } catch (emailError) {
-                console.error("❌ Error enviando email de entregado:", emailError);
+                // console.error removed for production
             }
         }
 
@@ -624,7 +624,7 @@ const addDeliveryAttemptController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error agregando intento:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al registrar intento de entrega",
             success: false,
@@ -720,7 +720,7 @@ const rateDeliveryController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error en calificación:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al guardar calificación",
             success: false,
@@ -850,7 +850,7 @@ const sendManualNotificationController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error enviando notificación:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al enviar notificación",
             success: false,
@@ -971,7 +971,7 @@ const resendDeliveryEmailController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error reenviando email:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al reenviar email",
             success: false,
@@ -1054,7 +1054,7 @@ const getEmailHistoryController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo historial:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener historial de emails",
             success: false,

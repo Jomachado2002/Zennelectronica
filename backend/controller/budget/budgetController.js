@@ -143,7 +143,7 @@ async function createBudgetController(req, res) {
       });
 
   } catch (err) {
-      console.error("Error en createBudgetController:", err);
+      // console.error removed for production
       res.status(400).json({
           message: err.message || err,
           error: true,
@@ -166,7 +166,7 @@ async function generateNextBudgetNumber() {
           return 'PRES-00001';
       }
   } catch (error) {
-      console.error("Error al generar número de presupuesto:", error);
+      // console.error removed for production
       // En caso de error, generamos un número basado en timestamp para evitar duplicados
       return `PRES-${Date.now().toString().slice(-5)}`;
   }
@@ -249,7 +249,7 @@ async function getAllBudgetsController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getAllBudgetsController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -290,7 +290,7 @@ async function getBudgetByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getBudgetByIdController:", err);
+        // console.error removed for production
         res.status(400).json({
             message: err.message || err,
             error: true,
@@ -341,7 +341,7 @@ async function updateBudgetStatusController(req, res) {
       });
 
   } catch (err) {
-      console.error("Error en updateBudgetStatusController:", err);
+      // console.error removed for production
       res.status(400).json({
           message: err.message || err,
           error: true,
@@ -819,7 +819,7 @@ async function generateBudgetPDF(budgetId) {
         );
       }
     } catch (footerError) {
-      console.error("Error al generar pie de página:", footerError);
+      // console.error removed for production
     }
 
     // Finalizar el PDF
@@ -832,13 +832,13 @@ async function generateBudgetPDF(budgetId) {
       });
       
       doc.on('error', (error) => {
-        console.error("Error al generar el PDF:", error);
+        // console.error removed for production
         reject(error);
       });
     });
     
   } catch (error) {
-    console.error('Error generando PDF de presupuesto:', error);
+    // console.error removed for production
     throw error;
   }
 }
@@ -876,7 +876,7 @@ async function getBudgetPDFController(req, res) {
     res.send(pdfBuffer);
 
   } catch (err) {
-    console.error("Error en getBudgetPDFController:", err);
+    // console.error removed for production
     res.status(400).json({
       message: err.message || err,
       error: true,
@@ -983,7 +983,7 @@ Zenn EAS
     });
 
   } catch (err) {
-    console.error("Error en sendBudgetEmailController:", err);
+    // console.error removed for production
     res.status(400).json({
       message: err.message || err,
       error: true,

@@ -84,7 +84,7 @@ async function createBranchController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createBranchController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -126,7 +126,7 @@ async function getAllBranchesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getAllBranchesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -170,7 +170,7 @@ async function getBranchByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getBranchByIdController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -261,7 +261,7 @@ async function updateBranchController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateBranchController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -319,7 +319,7 @@ async function deleteBranchController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteBranchController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -343,7 +343,7 @@ async function getActiveBranchesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getActiveBranchesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -375,7 +375,7 @@ async function getMainBranchController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getMainBranchController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

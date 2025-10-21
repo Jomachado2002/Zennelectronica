@@ -6,11 +6,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
 
 async function findJpgProducts() {
     try {
-        console.log('🔍 BUSCANDO PRODUCTOS CON IMÁGENES JPG...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Buscar productos con imágenes JPG
         const products = await productModel.find({
@@ -22,31 +22,31 @@ async function findJpgProducts() {
         }).limit(20);
 
         if (products.length === 0) {
-            console.log('❌ No se encontraron productos con imágenes JPG');
+            // console.log removed for production
             return;
         }
 
-        console.log(`📊 Encontrados ${products.length} productos con JPG:\n`);
+        // console.log removed for production
 
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
             const jpgImages = product.productImage.filter(img => img.includes('.jpg') || img.includes('.jpeg'));
             const webpImages = product.productImage.filter(img => img.includes('.webp'));
             
-            console.log(`${i + 1}. ${product.productName}`);
-            console.log(`   📷 JPG: ${jpgImages.length} imágenes`);
-            console.log(`   ⚡ WebP: ${webpImages.length} imágenes`);
-            console.log(`   🆔 ID: ${product._id}`);
-            console.log('');
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
         }
 
-        console.log('🎯 Estos productos aún tienen imágenes JPG que pueden ser probadas!');
+        // console.log removed for production
 
     } catch (error) {
-        console.error('❌ Error:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

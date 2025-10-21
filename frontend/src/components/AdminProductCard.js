@@ -18,7 +18,7 @@ const AdminProductCard = ({
 }) => {
   // Debug: Log data when component mounts (only in development)
   if (process.env.NODE_ENV === 'development') {
-    console.log('🏷️ AdminProductCard - Datos del producto:', data);
+    // console.log removed for production
   }
   
   const [editProduct, setEditProduct] = useState(false);

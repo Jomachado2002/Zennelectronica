@@ -37,37 +37,37 @@ const CONFIG = {
 // ========== FUNCIÓN PRINCIPAL ==========
 async function exportProductsToFacebookMarketplace() {
     try {
-        console.log('🚀 Iniciando exportación para Facebook Marketplace...\n');
+        // console.log removed for production
         
         // 0. Verificar configuración
-        console.log('🔍 Verificando configuración...');
-        console.log(`   MongoDB URI: ${CONFIG.MONGODB_URI ? '✅ Configurado' : '❌ NO CONFIGURADO'}`);
-        console.log(`   Carpeta imágenes: ${CONFIG.IMAGES_BASE_PATH}`);
-        console.log(`   Archivo CSV: ${CONFIG.CSV_OUTPUT_PATH}\n`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
         if (!CONFIG.MONGODB_URI) {
             throw new Error('❌ MONGODB_URI no está configurado en .env');
         }
         
         // 1. Conectar a MongoDB
-        console.log('📦 Conectando a MongoDB...');
+        // console.log removed for production
         await mongoose.connect(CONFIG.MONGODB_URI);
-        console.log('✅ Conectado a MongoDB\n');
+        // console.log removed for production
         
         // 2. Crear carpeta de imágenes si no existe
         if (!fs.existsSync(CONFIG.IMAGES_BASE_PATH)) {
             fs.mkdirSync(CONFIG.IMAGES_BASE_PATH, { recursive: true });
-            console.log(`📁 Carpeta creada: ${CONFIG.IMAGES_BASE_PATH}\n`);
+            // console.log removed for production
         }
         
         // 3. Obtener productos de la BD
-        console.log('🔍 Obteniendo productos de la base de datos...');
-        console.log(`   Filtros aplicados:`);
-        console.log(`   - Con imágenes: ✅`);
-        console.log(`   - Con nombre: ✅`);
-        console.log(`   - Precio mínimo: ${CONFIG.MIN_PRICE} Gs`);
-        console.log(`   - Con stock: ${CONFIG.ONLY_WITH_STOCK ? '✅' : '❌'}`);
-        console.log(`   - Límite: ${CONFIG.LIMIT > 0 ? CONFIG.LIMIT + ' productos' : 'Sin límite'}\n`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
         const query = {
             productImage: { $exists: true, $ne: [], $not: { $size: 0 } },
@@ -84,84 +84,84 @@ async function exportProductsToFacebookMarketplace() {
         
         let products = await ProductModel.find(query).lean();
         
-        console.log(`   Total encontrados en BD: ${products.length} productos`);
+        // console.log removed for production
         
         if (products.length === 0) {
-            console.log('\n⚠️  NO SE ENCONTRARON PRODUCTOS que cumplan los filtros');
-            console.log('   Intenta ajustar los filtros en CONFIG\n');
+            // console.log removed for production
+            // console.log removed for production
             await mongoose.connection.close();
             return;
         }
         
         if (CONFIG.LIMIT > 0 && products.length > CONFIG.LIMIT) {
             products = products.slice(0, CONFIG.LIMIT);
-            console.log(`   Limitado a: ${CONFIG.LIMIT} productos`);
+            // console.log removed for production
         }
         
-        console.log(`\n✅ Procesaremos ${products.length} productos\n`);
+        // console.log removed for production
         
         // 4. Procesar cada producto
-        console.log('⏳ Procesando productos y descargando imágenes...\n');
+        // console.log removed for production
         const csvRows = [];
         let successCount = 0;
         let errorCount = 0;
         
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
-            console.log(`[${i + 1}/${products.length}] Procesando: ${product.productName}`);
+            // console.log removed for production
             
             try {
                 const csvRow = await processProduct(product);
                 if (csvRow) {
                     csvRows.push(csvRow);
                     successCount++;
-                    console.log(`   ✅ Éxito\n`);
+                    // console.log removed for production
                 } else {
                     errorCount++;
-                    console.log(`   ⚠️  Sin imágenes válidas\n`);
+                    // console.log removed for production
                 }
             } catch (error) {
                 errorCount++;
-                console.log(`   ❌ Error: ${error.message}\n`);
+                // console.log removed for production
             }
         }
         
         // 5. Generar archivo CSV
         if (csvRows.length === 0) {
-            console.log('⚠️  NO SE GENERARON FILAS PARA EL CSV');
-            console.log('   Todos los productos tuvieron errores o no tienen imágenes válidas\n');
+            // console.log removed for production
+            // console.log removed for production
             await mongoose.connection.close();
             return;
         }
         
-        console.log(`📝 Generando archivo CSV con ${csvRows.length} productos...`);
+        // console.log removed for production
         await generateCSV(csvRows);
         
         // Verificar que el archivo se creó
         if (fs.existsSync(CONFIG.CSV_OUTPUT_PATH)) {
             const stats = fs.statSync(CONFIG.CSV_OUTPUT_PATH);
-            console.log(`✅ CSV generado exitosamente`);
-            console.log(`   Ubicación: ${CONFIG.CSV_OUTPUT_PATH}`);
+            // console.log removed for production
+            // console.log removed for production
             console.log(`   Tamaño: ${(stats.size / 1024).toFixed(2)} KB\n`);
         } else {
-            console.log(`❌ ERROR: No se pudo crear el archivo CSV\n`);
+            // console.log removed for production
         }
         
         // 6. Resumen final
-        console.log('═══════════════════════════════════════');
-        console.log('✨ EXPORTACIÓN COMPLETADA');
-        console.log('═══════════════════════════════════════');
-        console.log(`✅ Productos procesados exitosamente: ${successCount}`);
-        console.log(`❌ Productos con errores: ${errorCount}`);
-        console.log(`📁 Imágenes guardadas en: ${CONFIG.IMAGES_BASE_PATH}`);
-        console.log(`📄 CSV guardado en: ${CONFIG.CSV_OUTPUT_PATH}`);
-        console.log('═══════════════════════════════════════\n');
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
         await mongoose.connection.close();
-        console.log('🔌 Conexión a MongoDB cerrada');
+        // console.log removed for production
         
     } catch (error) {
-        console.error('❌ Error fatal:', error);
+        // console.error removed for production
         process.exit(1);
     }
 }
@@ -196,9 +196,9 @@ async function processProduct(product) {
         try {
             await downloadImage(imageUrl, imagePath);
             downloadedImages.push(imageName);
-            console.log(`   📷 Imagen ${j + 1} descargada`);
+            // console.log removed for production
         } catch (error) {
-            console.log(`   ⚠️  Error descargando imagen ${j + 1}: ${error.message}`);
+            // console.log removed for production
         }
     }
     

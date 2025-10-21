@@ -47,7 +47,7 @@ const bancardConfirmController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ ERROR EN CONFIRMACIÓN:", error);
+        // console.error removed for production
         
         res.status(200).json({
             status: "success", 
@@ -141,7 +141,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                                 
                                 emailSent = true;
                             } else {
-                                console.error("❌ Error enviando email de compra aprobada:", emailResult.error);
+                                // console.error removed for production
                             }
 
                             // ✅ ENVIAR NOTIFICACIÓN A ADMINS
@@ -151,7 +151,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             }
 
                         } catch (emailError) {
-                            console.error("❌ Error en envío de emails:", emailError);
+                            // console.error removed for production
                         }
 
                     } else {
@@ -180,7 +180,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                                 
                                 emailSent = true;
                             } else {
-                                console.error("❌ Error enviando email de compra rechazada:", emailResult.error);
+                                // console.error removed for production
                             }
 
                             // ✅ ENVIAR NOTIFICACIÓN A ADMINS
@@ -190,7 +190,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             }
 
                         } catch (emailError) {
-                            console.error("❌ Error en envío de emails:", emailError);
+                            // console.error removed for production
                         }
                     }
 
@@ -202,14 +202,14 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                     await processBalanceLoadConfirmation(transactionData);
                 }
             } catch (dbError) {
-                console.error("⚠️ Error actualizando BD:", dbError);
+                // console.error removed for production
             }
         }
 
         
 
     } catch (error) {
-        console.error("❌ Error en procesamiento background con emails:", error);
+        // console.error removed for production
     }
 };
 
@@ -230,7 +230,7 @@ const bancardConfirmGetController = (req, res) => {
         });
         
     } catch (error) {
-        console.error("❌ Error en GET confirmación:", error);
+        // console.error removed for production
         res.status(200).json({
             status: "success",
             message: "Endpoint funcionando",
@@ -251,7 +251,7 @@ const createPaymentController = async (req, res) => {
         
         const configValidation = validateBancardConfig();
         if (!configValidation.isValid) {
-            console.error("❌ Configuración de Bancard inválida:", configValidation.errors);
+            // console.error removed for production
             return res.status(500).json({
                 message: "Error de configuración del sistema de pagos",
                 success: false,
@@ -321,7 +321,7 @@ const createPaymentController = async (req, res) => {
         const confirmationUrl = process.env.BANCARD_CONFIRMATION_URL;
         
         if (!confirmationUrl) {
-            console.error("❌ BANCARD_CONFIRMATION_URL no está configurada");
+            // console.error removed for production
             return res.status(500).json({
                 message: "Error de configuración: URL de confirmación no configurada",
                 success: false,
@@ -572,14 +572,14 @@ const createPaymentController = async (req, res) => {
                         if (adminEmailResult.success) {
                             
                         } else {
-                            console.error("❌ Error enviando notificación admin:", adminEmailResult.error);
+                            // console.error removed for production
                         }
                     } catch (emailError) {
-                        console.error("❌ Error en envío de notificación admin:", emailError);
+                        // console.error removed for production
                     }
 
                 } catch (dbError) {
-                    console.error("⚠️ Error guardando transacción en BD:", dbError);
+                    // console.error removed for production
                     
                 }
                 
@@ -633,7 +633,7 @@ const createPaymentController = async (req, res) => {
                     }
                 });
             } else {
-                console.error("❌ Bancard respondió con status no exitoso:", response.data);
+                // console.error removed for production
                 return res.status(400).json({
                     message: "Error al crear el pago en Bancard",
                     success: false,
@@ -642,7 +642,7 @@ const createPaymentController = async (req, res) => {
                 });
             }
         } else {
-            console.error("❌ Respuesta inesperada de Bancard:", response.status, response.data);
+            // console.error removed for production
             return res.status(500).json({
                 message: "Respuesta inesperada de Bancard",
                 success: false,
@@ -652,7 +652,7 @@ const createPaymentController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error general en createPaymentController:", error);
+        // console.error removed for production
         return res.status(500).json({
             message: "Error interno del servidor",
             success: false,
@@ -711,7 +711,7 @@ const getTransactionStatusController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error consultando estado:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al consultar estado de la transacción",
             success: false,
@@ -784,7 +784,7 @@ const rollbackPaymentController = async (req, res) => {
                 );
                 
             } catch (dbError) {
-                console.error("⚠️ Error actualizando rollback en BD:", dbError);
+                // console.error removed for production
             }
         }
 
@@ -805,7 +805,7 @@ const rollbackPaymentController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error en rollback:", error);
+        // console.error removed for production
         
         let errorMessage = "Error al procesar rollback";
         let errorDetails = error.message;
@@ -850,11 +850,11 @@ const bancardHealthController = (req, res) => {
  */
 const loadBalanceController = async (req, res) => {
     try {
-        console.log("💰 Iniciando carga de saldo...");
+        // console.log removed for production
         
         const configValidation = validateBancardConfig();
         if (!configValidation.isValid) {
-            console.error("❌ Configuración de Bancard inválida:", configValidation.errors);
+            // console.error removed for production
             return res.status(500).json({
                 message: "Error de configuración del sistema de pagos",
                 success: false,
@@ -1009,7 +1009,7 @@ const loadBalanceController = async (req, res) => {
                     });
 
                 } catch (dbError) {
-                    console.error("⚠️ Error guardando transacción de carga de saldo:", dbError);
+                    // console.error removed for production
                 }
                 
                 return res.json({
@@ -1055,7 +1055,7 @@ const loadBalanceController = async (req, res) => {
                     }
                 });
             } else {
-                console.error("❌ Bancard respondió con status no exitoso:", response.data);
+                // console.error removed for production
                 return res.status(400).json({
                     message: "Error al crear la carga de saldo en Bancard",
                     success: false,
@@ -1064,7 +1064,7 @@ const loadBalanceController = async (req, res) => {
                 });
             }
         } else {
-            console.error("❌ Respuesta inesperada de Bancard:", response.status, response.data);
+            // console.error removed for production
             return res.status(500).json({
                 message: "Respuesta inesperada de Bancard",
                 success: false,
@@ -1074,7 +1074,7 @@ const loadBalanceController = async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error general en loadBalanceController:", error);
+        // console.error removed for production
         return res.status(500).json({
             message: "Error interno del servidor",
             success: false,
@@ -1089,7 +1089,7 @@ const loadBalanceController = async (req, res) => {
  */
 const processBalanceLoadConfirmation = async (transactionData) => {
     try {
-        console.log("💰 Procesando confirmación de carga de saldo...");
+        // console.log removed for production
         
         const { shop_process_id, amount, response, response_code } = transactionData;
         
@@ -1100,7 +1100,7 @@ const processBalanceLoadConfirmation = async (transactionData) => {
         });
         
         if (!transaction) {
-            console.log("⚠️ Transacción de carga de saldo no encontrada:", shop_process_id);
+            // console.log removed for production
             return;
         }
 
@@ -1147,10 +1147,10 @@ const processBalanceLoadConfirmation = async (transactionData) => {
                 const user = await UserModel.findById(transaction.created_by);
                 if (user && user.email) {
                     // Aquí puedes implementar el envío de email de confirmación
-                    console.log("📧 Email de confirmación de carga de saldo enviado a:", user.email);
+                    // console.log removed for production
                 }
             } catch (emailError) {
-                console.error("❌ Error enviando email de confirmación:", emailError);
+                // console.error removed for production
             }
 
         } else {
@@ -1173,7 +1173,7 @@ const processBalanceLoadConfirmation = async (transactionData) => {
         }
 
     } catch (error) {
-        console.error("❌ Error procesando confirmación de carga de saldo:", error);
+        // console.error removed for production
     }
 };
 
@@ -1215,7 +1215,7 @@ const getUserBalanceController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error obteniendo saldo del usuario:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener el saldo",
             success: false,
@@ -1299,7 +1299,7 @@ const payWithBalanceController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error procesando pago con saldo:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al procesar el pago",
             success: false,

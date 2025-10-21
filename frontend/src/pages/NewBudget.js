@@ -65,7 +65,7 @@ const NewBudget = () => {
           toast.error(result.message || "Error al cargar los clientes");
         }
       } catch (error) {
-        console.error("Error:", error);
+        // console.error removed for production
         toast.error("Error de conexión");
       } finally {
         setIsLoadingClients(false);
@@ -92,7 +92,7 @@ const NewBudget = () => {
           toast.error(result.message || "Error al cargar los productos");
         }
       } catch (error) {
-        console.error("Error:", error);
+        // console.error removed for production
         toast.error("Error de conexión");
       } finally {
         setIsLoadingProducts(false);
@@ -302,7 +302,7 @@ const NewBudget = () => {
         toast.error(result.message || "Error al crear el presupuesto");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

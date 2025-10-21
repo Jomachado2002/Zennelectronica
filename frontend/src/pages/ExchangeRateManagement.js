@@ -37,7 +37,7 @@ const ExchangeRateManagement = () => {
         toast.error('Error al cargar el tipo de cambio actual');
       }
     } catch (error) {
-      console.error('Error fetching current rate:', error);
+      // console.error removed for production
       toast.error('Error al cargar el tipo de cambio actual');
     } finally {
       setIsLoading(false);
@@ -54,7 +54,7 @@ const ExchangeRateManagement = () => {
         setHistory(data.data);
       }
     } catch (error) {
-      console.error('Error fetching history:', error);
+      // console.error removed for production
     }
   };
 
@@ -89,7 +89,7 @@ const ExchangeRateManagement = () => {
         toast.error(data.message || 'Error en la simulación');
       }
     } catch (error) {
-      console.error('Error simulating update:', error);
+      // console.error removed for production
       toast.error('Error en la simulación');
     } finally {
       setIsUpdating(false);
@@ -146,7 +146,7 @@ const ExchangeRateManagement = () => {
         toast.error(data.message || 'Error al actualizar el tipo de cambio');
       }
     } catch (error) {
-      console.error('Error updating exchange rate:', error);
+      // console.error removed for production
       toast.error('Error al actualizar el tipo de cambio');
     } finally {
       setIsUpdating(false);

@@ -23,7 +23,7 @@ export const preloadCriticalImages = (imageUrls = []) => {
         img.fetchpriority = "high";
         img.src = url;
       } catch (error) {
-        console.warn('Error precargando imagen:', error);
+        // console.warn removed for production
       }
     });
   };

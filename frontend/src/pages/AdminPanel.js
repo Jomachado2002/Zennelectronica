@@ -74,11 +74,11 @@ const AdminPanel = () => {
     });
     
     if (userRole !== ROLE.ADMIN && userRole !== ROLE.ROOT) {
-      console.log("❌ AdminPanel - Acceso denegado para rol:", userRole);
+      // console.log removed for production
       toast.error("Acceso denegado");
       navigate("/");
     } else {
-      console.log("✅ AdminPanel - Acceso permitido para rol:", userRole);
+      // console.log removed for production
     }
   }, [user, navigate]);
 
@@ -95,7 +95,7 @@ const AdminPanel = () => {
         navigate("/");
       }
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      // console.error removed for production
       dispatch(setUserDetails(null));
       navigate("/");
     }

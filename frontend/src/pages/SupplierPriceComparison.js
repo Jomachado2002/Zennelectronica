@@ -51,7 +51,7 @@ const SupplierPriceComparison = () => {
         toast.error(result.message || "Error al cargar los productos");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsSearching(false);
@@ -135,7 +135,7 @@ const SupplierPriceComparison = () => {
         toast.error(result.message || "Error al comparar precios");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

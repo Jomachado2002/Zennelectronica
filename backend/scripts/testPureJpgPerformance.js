@@ -7,11 +7,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
 
 async function testPureJpgPerformance() {
     try {
-        console.log('🧪 INICIANDO TEST DE RENDIMIENTO - PRODUCTOS PUROS CON JPG...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Buscar productos con SOLO imágenes JPG (sin WebP)
         const products = await productModel.find({
@@ -23,17 +23,17 @@ async function testPureJpgPerformance() {
         }).limit(10);
 
         if (products.length === 0) {
-            console.log('❌ No se encontraron productos con imágenes JPG');
+            // console.log removed for production
             return;
         }
 
-        console.log(`📊 Encontrados ${products.length} productos con JPG puro para probar\n`);
+        // console.log removed for production
 
         const results = [];
 
         for (let i = 0; i < Math.min(5, products.length); i++) {
             const product = products[i];
-            console.log(`🔍 Probando producto ${i + 1}: ${product.productName}`);
+            // console.log removed for production
             
             const productResults = {
                 productName: product.productName,
@@ -88,7 +88,7 @@ async function testPureJpgPerformance() {
                     };
                     
                     productResults.imageTests.push(imageInfo);
-                    console.log(`  ❌ Imagen ${j + 1}: ERROR - ${error.message}`);
+                    // console.log removed for production
                 }
             }
 
@@ -120,9 +120,9 @@ async function testPureJpgPerformance() {
             } else if (webpImages.length > 0) {
                 console.log(`  📊 Promedio: ${productResults.stats.avgLoadTime}ms (Solo WebP: ${productResults.stats.avgWebpLoadTime}ms)`);
             } else {
-                console.log(`  📊 Promedio: ${productResults.stats.avgLoadTime}ms`);
+                // console.log removed for production
             }
-            console.log('');
+            // console.log removed for production
         }
 
         // Calcular estadísticas generales
@@ -148,32 +148,32 @@ async function testPureJpgPerformance() {
         };
 
         // Mostrar resultados
-        console.log('📊 ===== RESULTADOS DE PRODUCTOS CON JPG PURO =====');
-        console.log(`📦 Productos probados: ${generalStats.totalProducts}`);
-        console.log(`🖼️  Total de imágenes: ${generalStats.totalImages}`);
-        console.log(`✅ Imágenes exitosas: ${generalStats.successfulImages}`);
-        console.log(`📷 Imágenes JPG: ${generalStats.jpgImages}`);
-        console.log(`⚡ Imágenes WebP: ${generalStats.webpImages}`);
-        console.log('');
-        console.log('⏱️  TIEMPOS DE CARGA:');
-        console.log(`   📊 Promedio general: ${generalStats.avgLoadTime}ms`);
-        console.log(`   📷 Promedio JPG: ${generalStats.avgJpgLoadTime}ms`);
-        console.log(`   ⚡ Promedio WebP: ${generalStats.avgWebpLoadTime}ms`);
-        console.log(`   🐌 Más lenta: ${generalStats.maxLoadTime}ms`);
-        console.log(`   🚀 Más rápida: ${generalStats.minLoadTime}ms`);
-        console.log('');
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
 
         if (generalStats.avgJpgLoadTime > 0 && generalStats.avgWebpLoadTime > 0) {
             const improvement = Math.round(((generalStats.avgJpgLoadTime - generalStats.avgWebpLoadTime) / generalStats.avgJpgLoadTime) * 100);
-            console.log(`🎯 MEJORA CON WEBP: ${improvement}% más rápido`);
+            // console.log removed for production
         } else if (generalStats.avgJpgLoadTime > 0) {
-            console.log(`📷 Solo JPG encontradas - Tiempo promedio: ${generalStats.avgJpgLoadTime}ms`);
-            console.log(`💡 Este es el tiempo de carga ACTUAL con JPG que mejorará con WebP`);
+            // console.log removed for production
+            // console.log removed for production
         } else if (generalStats.avgWebpLoadTime > 0) {
-            console.log(`⚡ Solo WebP encontradas - Tiempo promedio: ${generalStats.avgWebpLoadTime}ms`);
+            // console.log removed for production
         }
 
-        console.log('\n💾 Guardando resultados detallados...');
+        // console.log removed for production
         
         // Guardar resultados en archivo
         const fs = require('fs');
@@ -187,16 +187,16 @@ async function testPureJpgPerformance() {
         };
         
         fs.writeFileSync(filename, JSON.stringify(detailedResults, null, 2));
-        console.log(`✅ Resultados guardados en: ${filename}`);
+        // console.log removed for production
 
-        console.log('\n🎯 TEST COMPLETADO!');
-        console.log('💡 Mañana podrás comparar estos tiempos JPG con los WebP convertidos!');
+        // console.log removed for production
+        // console.log removed for production
 
     } catch (error) {
-        console.error('❌ Error en el test:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

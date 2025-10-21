@@ -56,7 +56,7 @@ function calculatePrices(purchasePriceUSD, exchangeRate = 7300, deliveryCost = 3
         };
 
     } catch (error) {
-        console.error('Error calculando precios:', error.message);
+        // console.error removed for production
         throw error;
     }
 }

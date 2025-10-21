@@ -131,7 +131,7 @@ budgetSchema.pre('save', async function(next) {
         next();
     } catch (error) {
         // En caso de error, asignar un número basado en timestamp
-        console.error('Error generando budgetNumber:', error);
+        // console.error removed for production
         this.budgetNumber = `PRES-${Date.now().toString().slice(-5)}`;
         next();
     }

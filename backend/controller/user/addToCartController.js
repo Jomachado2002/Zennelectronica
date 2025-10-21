@@ -55,7 +55,7 @@ const addToCartController = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Error adding to cart:', err);
+        // console.error removed for production
         res.status(500).json({
             message: err?.message || String(err),
             error: true,

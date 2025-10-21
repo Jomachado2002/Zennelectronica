@@ -27,7 +27,7 @@ const ClientsList = () => {
         toast.error(result.message || "Error al cargar los clientes");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión al cargar clientes");
     } finally {
       setIsLoading(false);
@@ -59,7 +59,7 @@ const ClientsList = () => {
         toast.error(result.message || "Error al eliminar el cliente");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión al eliminar cliente");
     }
   };

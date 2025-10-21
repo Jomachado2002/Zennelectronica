@@ -65,7 +65,7 @@ const CategoriesManagement = () => {
       const response = await axiosInstance.get('/api/admin/categories/all');
       setCategories(response.data.data);
     } catch (error) {
-      console.error('Error cargando categorías:', error);
+      // console.error removed for production
       toast.error('Error al cargar las categorías');
     } finally {
       setLoading(false);
@@ -115,7 +115,7 @@ const CategoriesManagement = () => {
       });
       loadCategories();
     } catch (error) {
-      console.error('Error creando categoría:', error);
+      // console.error removed for production
       toast.error('Error al crear la categoría');
     }
   };
@@ -128,7 +128,7 @@ const CategoriesManagement = () => {
       setEditingCategory(null);
       loadCategories();
     } catch (error) {
-      console.error('Error actualizando categoría:', error);
+      // console.error removed for production
       toast.error('Error al actualizar la categoría');
     }
   };
@@ -144,7 +144,7 @@ const CategoriesManagement = () => {
       toast.success('Categoría eliminada exitosamente');
       loadCategories();
     } catch (error) {
-      console.error('Error eliminando categoría:', error);
+      // console.error removed for production
       toast.error('Error al eliminar la categoría');
     }
   };
@@ -165,7 +165,7 @@ const CategoriesManagement = () => {
       });
       loadCategories();
     } catch (error) {
-      console.error('Error creando subcategoría:', error);
+      // console.error removed for production
       toast.error('Error al crear la subcategoría');
     }
   };
@@ -178,7 +178,7 @@ const CategoriesManagement = () => {
       setEditingSubcategory(null);
       loadCategories();
     } catch (error) {
-      console.error('Error actualizando subcategoría:', error);
+      // console.error removed for production
       toast.error('Error al actualizar la subcategoría');
     }
   };
@@ -194,7 +194,7 @@ const CategoriesManagement = () => {
       toast.success('Subcategoría eliminada exitosamente');
       loadCategories();
     } catch (error) {
-      console.error('Error eliminando subcategoría:', error);
+      // console.error removed for production
       toast.error('Error al eliminar la subcategoría');
     }
   };
@@ -203,11 +203,11 @@ const CategoriesManagement = () => {
   const handleCreateSpecification = async (categoryId, subcategoryValue) => {
     try {
       const url = `/api/admin/categories/${categoryId}/subcategories/${subcategoryValue}/specifications`;
-      console.log('🔍 URL de especificación:', url);
-      console.log('🔍 Datos a enviar:', newSpecification);
+      // console.log removed for production
+      // console.log removed for production
       
       const response = await axiosInstance.post(url, newSpecification);
-      console.log('✅ Respuesta exitosa:', response.data);
+      // console.log removed for production
       
       toast.success('Especificación creada exitosamente');
       setShowAddSpecification(null);
@@ -222,11 +222,11 @@ const CategoriesManagement = () => {
       });
       loadCategories();
     } catch (error) {
-      console.error('❌ Error creando especificación:', error);
-      console.error('❌ URL intentada:', `/api/admin/categories/${categoryId}/subcategories/${subcategoryValue}/specifications`);
-      console.error('❌ Datos enviados:', newSpecification);
-      console.error('❌ Error response:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
+      // console.error removed for production
+      // console.error removed for production
+      // console.error removed for production
+      // console.error removed for production
+      // console.error removed for production
       toast.error('Error al crear la especificación');
     }
   };
@@ -239,7 +239,7 @@ const CategoriesManagement = () => {
       setEditingSpecification(null);
       loadCategories();
     } catch (error) {
-      console.error('Error actualizando especificación:', error);
+      // console.error removed for production
       toast.error('Error al actualizar la especificación');
     }
   };
@@ -255,7 +255,7 @@ const CategoriesManagement = () => {
       toast.success('Especificación eliminada exitosamente');
       loadCategories();
     } catch (error) {
-      console.error('Error eliminando especificación:', error);
+      // console.error removed for production
       toast.error('Error al eliminar la especificación');
     }
   };

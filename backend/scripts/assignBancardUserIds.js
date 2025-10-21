@@ -58,7 +58,7 @@ async function assignBancardUserIds() {
         }
         
     } catch (error) {
-        console.error('❌ Error en el script de migración:', error);
+        // console.error removed for production
     } finally {
         // Cerrar conexión
         await mongoose.connection.close();
@@ -88,7 +88,7 @@ async function showUsers() {
         });
         
     } catch (error) {
-        console.error('❌ Error mostrando usuarios:', error);
+        // console.error removed for production
     } finally {
         await mongoose.connection.close();
         process.exit(0);

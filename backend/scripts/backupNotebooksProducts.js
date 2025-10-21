@@ -22,7 +22,7 @@ const log = (message, type = 'INFO') => {
         'PROGRESS': '\x1b[35m' // Magenta
     };
     const reset = '\x1b[0m';
-    console.log(`${colors[type]}[${timestamp}] ${type}: ${message}${reset}`);
+    // console.log removed for production
 };
 
 /**
@@ -165,7 +165,7 @@ NOTAS:
         
     } catch (error) {
         log(`❌ Error durante el respaldo: ${error.message}`, 'ERROR');
-        console.error(error);
+        // console.error removed for production
     } finally {
         // Cerrar conexión a MongoDB
         await mongoose.disconnect();

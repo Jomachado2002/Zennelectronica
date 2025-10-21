@@ -262,7 +262,7 @@ saleSchema.statics.generateSaleNumber = async function() {
         return 'VNT-00001';
         
     } catch (error) {
-        console.error('❌ Error generando saleNumber:', error);
+        // console.error removed for production
         const timestamp = Date.now().toString();
         const suffix = timestamp.slice(-5);
         return `VNT-${suffix}`;
@@ -305,7 +305,7 @@ saleSchema.pre('save', async function(next) {
         }
         next();
     } catch (error) {
-        console.error('❌ Error en pre-save hook de venta:', error);
+        // console.error removed for production
         this.saleNumber = `VNT-${Date.now().toString().slice(-5)}`;
         next();
     }

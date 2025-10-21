@@ -25,7 +25,7 @@ const BalanceManagement = ({ user }) => {
                 setBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo:', error);
+            // console.error removed for production
             toast.error('Error al cargar saldo');
         } finally {
             setLoading(false);
@@ -40,7 +40,7 @@ const BalanceManagement = ({ user }) => {
                 setHistory(result.data.transactions);
             }
         } catch (error) {
-            console.error('Error obteniendo historial:', error);
+            // console.error removed for production
         } finally {
             setLoadingHistory(false);
         }

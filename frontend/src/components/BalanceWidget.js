@@ -22,7 +22,7 @@ const BalanceWidget = ({ className = '', showActions = true }) => {
                 setBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo:', error);
+            // console.error removed for production
             toast.error('Error al cargar saldo');
         } finally {
             setLoading(false);

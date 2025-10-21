@@ -25,14 +25,14 @@ const ExchangeRate = mongoose.model('ExchangeRate', exchangeRateSchema);
 
 async function createInitialExchangeRate() {
   try {
-    console.log('🔄 Conectando a MongoDB...');
+    // console.log removed for production
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB conectado exitosamente');
+    // console.log removed for production
 
     // Verificar si ya existe un registro activo
     const existingRate = await ExchangeRate.findOne({ isActive: true });
     if (existingRate) {
-      console.log('⚠️ Ya existe un tipo de cambio activo:', existingRate.toPYG);
+      // console.log removed for production
       return;
     }
 
@@ -54,7 +54,7 @@ async function createInitialExchangeRate() {
     });
 
     await initialRate.save();
-    console.log('✅ Tipo de cambio inicial creado:', initialRate.toPYG);
+    // console.log removed for production
 
     // Verificar que se creó correctamente
     const createdRate = await ExchangeRate.findOne({ isActive: true });
@@ -66,10 +66,10 @@ async function createInitialExchangeRate() {
     });
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    // console.error removed for production
   } finally {
     await mongoose.connection.close();
-    console.log('🔌 Conexión cerrada');
+    // console.log removed for production
   }
 }
 

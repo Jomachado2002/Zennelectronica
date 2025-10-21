@@ -102,8 +102,8 @@ router.post('/import-image', authToken, async (req, res) => {
     try {
         const { imageUrl, productCode } = req.body;
         
-        console.log(`📥 Importando imagen para código ${productCode}`);
-        console.log(`🔗 URL: ${imageUrl}`);
+        // console.log removed for production
+        // console.log removed for production
         
         const path = require('path');
         const imageImportService = require(path.join(__dirname, '../services/imageImportService'));
@@ -116,7 +116,7 @@ router.post('/import-image', authToken, async (req, res) => {
             firebaseUrl: result
         });
     } catch (error) {
-        console.error('❌ Error importando imagen:', error);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             error: error.message

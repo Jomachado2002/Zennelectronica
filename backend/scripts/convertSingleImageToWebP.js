@@ -41,7 +41,7 @@ function log(message, type = 'INFO') {
   };
   const reset = '\x1b[0m';
   const color = colors[type] || colors.INFO;
-  console.log(`${color}[${timestamp}] ${type}: ${message}${reset}`);
+  // console.log removed for production
 }
 
 // Función para convertir una imagen específica
@@ -223,10 +223,10 @@ Ejemplos:
     } else {
       const imageUrl = args[0];
       const newUrl = await convertSingleImage(imageUrl);
-      console.log(`Nueva URL: ${newUrl}`);
+      // console.log removed for production
     }
   } catch (error) {
-    console.error('Error:', error.message);
+    // console.error removed for production
     process.exit(1);
   }
 }

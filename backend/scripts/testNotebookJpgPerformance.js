@@ -7,11 +7,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
 
 async function testNotebookJpgPerformance() {
     try {
-        console.log('🧪 INICIANDO TEST DE RENDIMIENTO - NOTEBOOKS CON JPG...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Buscar notebooks con imágenes JPG
         const notebooks = await productModel.find({
@@ -25,17 +25,17 @@ async function testNotebookJpgPerformance() {
         }).limit(10);
 
         if (notebooks.length === 0) {
-            console.log('❌ No se encontraron notebooks con imágenes');
+            // console.log removed for production
             return;
         }
 
-        console.log(`📊 Encontrados ${notebooks.length} notebooks para probar\n`);
+        // console.log removed for production
 
         const results = [];
 
         for (let i = 0; i < Math.min(5, notebooks.length); i++) {
             const notebook = notebooks[i];
-            console.log(`🔍 Probando notebook ${i + 1}: ${notebook.productName}`);
+            // console.log removed for production
             
             const notebookResults = {
                 productName: notebook.productName,
@@ -90,7 +90,7 @@ async function testNotebookJpgPerformance() {
                     };
                     
                     notebookResults.imageTests.push(imageInfo);
-                    console.log(`  ❌ Imagen ${j + 1}: ERROR - ${error.message}`);
+                    // console.log removed for production
                 }
             }
 
@@ -122,9 +122,9 @@ async function testNotebookJpgPerformance() {
             } else if (webpImages.length > 0) {
                 console.log(`  📊 Promedio: ${notebookResults.stats.avgLoadTime}ms (Solo WebP: ${notebookResults.stats.avgWebpLoadTime}ms)`);
             } else {
-                console.log(`  📊 Promedio: ${notebookResults.stats.avgLoadTime}ms`);
+                // console.log removed for production
             }
-            console.log('');
+            // console.log removed for production
         }
 
         // Calcular estadísticas generales
@@ -150,31 +150,31 @@ async function testNotebookJpgPerformance() {
         };
 
         // Mostrar resultados
-        console.log('📊 ===== RESULTADOS DE NOTEBOOKS =====');
-        console.log(`💻 Notebooks probados: ${generalStats.totalNotebooks}`);
-        console.log(`🖼️  Total de imágenes: ${generalStats.totalImages}`);
-        console.log(`✅ Imágenes exitosas: ${generalStats.successfulImages}`);
-        console.log(`📷 Imágenes JPG: ${generalStats.jpgImages}`);
-        console.log(`⚡ Imágenes WebP: ${generalStats.webpImages}`);
-        console.log('');
-        console.log('⏱️  TIEMPOS DE CARGA:');
-        console.log(`   📊 Promedio general: ${generalStats.avgLoadTime}ms`);
-        console.log(`   📷 Promedio JPG: ${generalStats.avgJpgLoadTime}ms`);
-        console.log(`   ⚡ Promedio WebP: ${generalStats.avgWebpLoadTime}ms`);
-        console.log(`   🐌 Más lenta: ${generalStats.maxLoadTime}ms`);
-        console.log(`   🚀 Más rápida: ${generalStats.minLoadTime}ms`);
-        console.log('');
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
 
         if (generalStats.avgJpgLoadTime > 0 && generalStats.avgWebpLoadTime > 0) {
             const improvement = Math.round(((generalStats.avgJpgLoadTime - generalStats.avgWebpLoadTime) / generalStats.avgJpgLoadTime) * 100);
-            console.log(`🎯 MEJORA CON WEBP: ${improvement}% más rápido`);
+            // console.log removed for production
         } else if (generalStats.avgJpgLoadTime > 0) {
-            console.log(`📷 Solo JPG encontradas - Tiempo promedio: ${generalStats.avgJpgLoadTime}ms`);
+            // console.log removed for production
         } else if (generalStats.avgWebpLoadTime > 0) {
-            console.log(`⚡ Solo WebP encontradas - Tiempo promedio: ${generalStats.avgWebpLoadTime}ms`);
+            // console.log removed for production
         }
 
-        console.log('\n💾 Guardando resultados detallados...');
+        // console.log removed for production
         
         // Guardar resultados en archivo
         const fs = require('fs');
@@ -188,15 +188,15 @@ async function testNotebookJpgPerformance() {
         };
         
         fs.writeFileSync(filename, JSON.stringify(detailedResults, null, 2));
-        console.log(`✅ Resultados guardados en: ${filename}`);
+        // console.log removed for production
 
-        console.log('\n🎯 TEST COMPLETADO!');
+        // console.log removed for production
 
     } catch (error) {
-        console.error('❌ Error en el test:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

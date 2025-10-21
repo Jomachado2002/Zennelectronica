@@ -47,7 +47,7 @@ const SaleDetails = () => {
         navigate('/panel-admin/ventas');
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
       navigate('/panel-admin/ventas');
     } finally {
@@ -82,7 +82,7 @@ const SaleDetails = () => {
         toast.error(result.message || "Error al actualizar la venta");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -115,7 +115,7 @@ const SaleDetails = () => {
         toast.error(result.message || "Error al subir la factura");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

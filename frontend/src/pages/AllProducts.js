@@ -67,14 +67,14 @@ const AllProducts = () => {
 
   const fetchAllProduct = async() => {
     try {
-      console.log('🔄 Cargando productos...', SummaryApi.allProduct.url);
+      // console.log removed for production
       const response = await fetch(SummaryApi.allProduct.url, {
         method: SummaryApi.allProduct.method,
         credentials: 'include'
       })
       const dataResponse = await response.json()
       
-      console.log('📦 Respuesta de productos:', dataResponse);
+      // console.log removed for production
       
       let products = [];
       if (dataResponse?.data) {

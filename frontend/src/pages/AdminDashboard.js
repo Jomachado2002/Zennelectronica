@@ -76,7 +76,7 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      console.log('🔄 Iniciando carga de datos del dashboard...');
+      // console.log removed for production
       // Usar las URLs correctas del SummaryApi
       const [salesRes, purchasesRes, usersRes, productsRes, budgetsRes, clientsRes, suppliersRes, transactionsRes] = await Promise.all([
         fetch(SummaryApi.getAllSales.url, { method: SummaryApi.getAllSales.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { sales: [] } }) })),
@@ -164,7 +164,7 @@ const AdminDashboard = () => {
       });
 
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      // console.error removed for production
       toast.error("Error al cargar los datos del dashboard");
     } finally {
       setIsLoading(false);

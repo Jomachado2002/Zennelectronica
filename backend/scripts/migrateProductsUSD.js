@@ -9,9 +9,9 @@ const ExchangeRateModel = require('../models/exchangeRateModel');
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Conectado a MongoDB');
+    // console.log removed for production
   } catch (error) {
-    console.error('❌ Error conectando a MongoDB:', error);
+    // console.error removed for production
     process.exit(1);
   }
 };
@@ -48,12 +48,12 @@ const calculateFinancialValues = (product, newExchangeRate) => {
 // Función principal de migración
 const migrateProductsUSD = async () => {
   try {
-    console.log('🚀 Iniciando migración de productos sin purchasePriceUSD...\n');
+    // console.log removed for production
 
     // Obtener tipo de cambio actual
     const currentRate = await ExchangeRateModel.getCurrentRate('USD');
     const exchangeRate = currentRate.toPYG;
-    console.log(`📊 Tipo de cambio actual: ${exchangeRate} Gs\n`);
+    // console.log removed for production
 
     // Buscar productos sin purchasePriceUSD pero con purchasePrice y exchangeRate
     const productsToMigrate = await ProductModel.find({
@@ -66,10 +66,10 @@ const migrateProductsUSD = async () => {
       exchangeRate: { $exists: true, $gt: 0 }
     });
 
-    console.log(`📦 Productos encontrados para migración: ${productsToMigrate.length}\n`);
+    // console.log removed for production
 
     if (productsToMigrate.length === 0) {
-      console.log('✅ No hay productos que necesiten migración');
+      // console.log removed for production
       return;
     }
 
@@ -88,7 +88,7 @@ const migrateProductsUSD = async () => {
         const financialValues = calculateFinancialValues(product, exchangeRate);
         
         if (!financialValues) {
-          console.log(`⚠️  Saltando: No se puede calcular USD para ${product.productName}`);
+          // console.log removed for production
           skippedCount++;
           migrationResults.push({
             productId: product._id,
@@ -102,7 +102,7 @@ const migrateProductsUSD = async () => {
         // Actualizar producto
         await ProductModel.findByIdAndUpdate(product._id, financialValues);
         
-        console.log(`✅ Migrado: ${product.productName}`);
+        // console.log removed for production
         console.log(`   - USD estimado: $${financialValues.purchasePriceUSD.toFixed(2)}`);
         console.log(`   - Precio PYG: ${financialValues.purchasePrice.toLocaleString()} Gs`);
         console.log(`   - Precio venta: ${financialValues.sellingPrice.toLocaleString()} Gs\n`);
@@ -117,7 +117,7 @@ const migrateProductsUSD = async () => {
         });
 
       } catch (error) {
-        console.error(`❌ Error procesando ${product.productName}:`, error.message);
+        // console.error removed for production
         errorCount++;
         migrationResults.push({
           productId: product._id,
@@ -129,12 +129,12 @@ const migrateProductsUSD = async () => {
     }
 
     // Generar reporte
-    console.log('\n📊 REPORTE DE MIGRACIÓN');
-    console.log('========================');
-    console.log(`✅ Productos migrados: ${migratedCount}`);
-    console.log(`⚠️  Productos saltados: ${skippedCount}`);
-    console.log(`❌ Errores: ${errorCount}`);
-    console.log(`📦 Total procesados: ${productsToMigrate.length}`);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
 
     // Guardar reporte detallado
     const reportData = {
@@ -158,14 +158,14 @@ const migrateProductsUSD = async () => {
     }
 
     fs.writeFileSync(reportPath, JSON.stringify(reportData, null, 2));
-    console.log(`\n📄 Reporte detallado guardado en: ${reportPath}`);
+    // console.log removed for production
 
     // Mostrar productos migrados exitosamente
     const successfulMigrations = migrationResults.filter(r => r.status === 'migrated');
     if (successfulMigrations.length > 0) {
-      console.log('\n✅ PRODUCTOS MIGRADOS EXITOSAMENTE:');
+      // console.log removed for production
       successfulMigrations.forEach((result, index) => {
-        console.log(`${index + 1}. ${result.productName}`);
+        // console.log removed for production
         console.log(`   - USD estimado: $${result.estimatedUSD.toFixed(2)}`);
         console.log(`   - Nuevo precio: ${result.newSellingPrice.toLocaleString()} Gs`);
       });
@@ -174,39 +174,39 @@ const migrateProductsUSD = async () => {
     // Mostrar productos saltados
     const skippedProducts = migrationResults.filter(r => r.status === 'skipped');
     if (skippedProducts.length > 0) {
-      console.log('\n⚠️  PRODUCTOS SALTADOS:');
+      // console.log removed for production
       skippedProducts.forEach((result, index) => {
-        console.log(`${index + 1}. ${result.productName} - ${result.reason}`);
+        // console.log removed for production
       });
     }
 
     // Mostrar errores
     const errorProducts = migrationResults.filter(r => r.status === 'error');
     if (errorProducts.length > 0) {
-      console.log('\n❌ ERRORES:');
+      // console.log removed for production
       errorProducts.forEach((result, index) => {
-        console.log(`${index + 1}. ${result.productName} - ${result.error}`);
+        // console.log removed for production
       });
     }
 
-    console.log('\n🎉 Migración completada!');
+    // console.log removed for production
 
   } catch (error) {
-    console.error('❌ Error durante la migración:', error);
+    // console.error removed for production
   } finally {
     await mongoose.disconnect();
-    console.log('🔌 Desconectado de MongoDB');
+    // console.log removed for production
   }
 };
 
 // Función para verificar productos antes de migrar
 const previewMigration = async () => {
   try {
-    console.log('🔍 Vista previa de la migración...\n');
+    // console.log removed for production
 
     const currentRate = await ExchangeRateModel.getCurrentRate('USD');
     const exchangeRate = currentRate.toPYG;
-    console.log(`📊 Tipo de cambio actual: ${exchangeRate} Gs\n`);
+    // console.log removed for production
 
     const productsToMigrate = await ProductModel.find({
       $or: [
@@ -218,41 +218,41 @@ const previewMigration = async () => {
       exchangeRate: { $exists: true, $gt: 0 }
     });
 
-    console.log(`📦 Productos que serían migrados: ${productsToMigrate.length}\n`);
+    // console.log removed for production
 
     if (productsToMigrate.length === 0) {
-      console.log('✅ No hay productos que necesiten migración');
+      // console.log removed for production
       return;
     }
 
     // Mostrar primeros 10 productos como ejemplo
     const sampleProducts = productsToMigrate.slice(0, 10);
     
-    console.log('📋 MUESTRA DE PRODUCTOS A MIGRAR:');
-    console.log('==================================');
+    // console.log removed for production
+    // console.log removed for production
     
     sampleProducts.forEach((product, index) => {
       const estimatedUSD = estimateUSD(product.purchasePrice, product.exchangeRate);
       const financialValues = calculateFinancialValues(product, exchangeRate);
       
-      console.log(`${index + 1}. ${product.productName}`);
+      // console.log removed for production
       console.log(`   - Precio actual: ${product.purchasePrice?.toLocaleString()} Gs`);
-      console.log(`   - Exchange rate: ${product.exchangeRate} Gs`);
+      // console.log removed for production
       console.log(`   - USD estimado: $${estimatedUSD?.toFixed(2) || 'N/A'}`);
       if (financialValues) {
         console.log(`   - Nuevo precio venta: ${financialValues.sellingPrice.toLocaleString()} Gs`);
       }
-      console.log('');
+      // console.log removed for production
     });
 
     if (productsToMigrate.length > 10) {
-      console.log(`... y ${productsToMigrate.length - 10} productos más\n`);
+      // console.log removed for production
     }
 
-    console.log('💡 Para ejecutar la migración, ejecute: node migrateProductsUSD.js --migrate');
+    // console.log removed for production
 
   } catch (error) {
-    console.error('❌ Error en vista previa:', error);
+    // console.error removed for production
   } finally {
     await mongoose.disconnect();
   }
@@ -261,23 +261,23 @@ const previewMigration = async () => {
 // Función para restaurar backup (si existe)
 const restoreFromBackup = async (backupPath) => {
   try {
-    console.log(`🔄 Restaurando desde backup: ${backupPath}`);
+    // console.log removed for production
     
     const fs = require('fs');
     if (!fs.existsSync(backupPath)) {
-      console.log('❌ Archivo de backup no encontrado');
+      // console.log removed for production
       return;
     }
 
     const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
     console.log(`📊 Backup creado: ${new Date(backupData.timestamp).toLocaleString()}`);
-    console.log(`📦 Productos en backup: ${backupData.products.length}`);
+    // console.log removed for production
 
     // Aquí implementarías la lógica de restauración
-    console.log('⚠️  Función de restauración no implementada aún');
+    // console.log removed for production
     
   } catch (error) {
-    console.error('❌ Error restaurando backup:', error);
+    // console.error removed for production
   }
 };
 
@@ -313,7 +313,7 @@ Ejemplos:
   } else if (args.includes('--restore') || args.includes('-r')) {
     const backupPath = args[args.indexOf('--restore') + 1] || args[args.indexOf('-r') + 1];
     if (!backupPath) {
-      console.log('❌ Debe especificar la ruta del backup');
+      // console.log removed for production
       return;
     }
     await restoreFromBackup(backupPath);

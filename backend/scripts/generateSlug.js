@@ -9,7 +9,7 @@ async function connectDB() {
     await mongoose.connect(process.env.MONGODB_URI);
     
   } catch (err) {
-    console.error('Error de conexión a MongoDB:', err);
+    // console.error removed for production
     process.exit(1);
   }
 }
@@ -74,7 +74,7 @@ async function generateSlugsForProducts() {
     
 
   } catch (error) {
-    console.error('Error al generar slugs:', error);
+    // console.error removed for production
   } finally {
     mongoose.disconnect();
     

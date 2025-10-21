@@ -46,7 +46,7 @@ const UserProfilePage = () => {
 
       // ✅ VERIFICAR QUE EL USUARIO TENGA DATOS COMPLETOS
       if (!user._id) {
-        console.warn('⚠️ Usuario sin _id, recargando datos...');
+        // console.warn removed for production
         await fetchUserDetails();
       } else {
         setUserDataReady(true);
@@ -78,7 +78,7 @@ const UserProfilePage = () => {
         dispatch(setUserDetails(result.data));
         setUserDataReady(true);
       } else {
-        console.error('❌ Error obteniendo datos del usuario:', result);
+        // console.error removed for production
         if (response.status === 401) {
           toast.error('Sesión expirada, redirigiendo...');
           navigate('/iniciar-sesion');
@@ -87,7 +87,7 @@ const UserProfilePage = () => {
         }
       }
     } catch (error) {
-      console.error('❌ Error crítico al cargar usuario:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ const UserProfilePage = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Response no OK:', response.status, errorText);
+        // console.error removed for production
         
         // ✅ MANEJO ESPECÍFICO DE ERRORES DE IOS
         if (response.status === 401) {
@@ -157,13 +157,13 @@ const UserProfilePage = () => {
         toast.success('✅ Proceso de catastro iniciado');
         return result;
       } else {
-        console.error('❌ Error en catastro:', result);
+        // console.error removed for production
         toast.error(result.message || '❌ Error al iniciar catastro');
         return { success: false, message: result.message };
       }
       
     } catch (error) {
-      console.error('❌ Error crítico en handleRegisterCard:', error);
+      // console.error removed for production
       toast.error('❌ Error de conexión crítico');
       return { success: false, message: 'Error de conexión crítico' };
     }
@@ -176,7 +176,7 @@ const UserProfilePage = () => {
       
       // ✅ VALIDAR USUARIO
       if (!user?._id) {
-        console.error('❌ Usuario no válido para obtener tarjetas');
+        // console.error removed for production
         toast.error('❌ Error: Usuario no válido');
         return [];
       }
@@ -200,7 +200,7 @@ const UserProfilePage = () => {
         
         return result.data.cards || [];
       } else {
-        console.warn('⚠️ Error obteniendo tarjetas:', result.message);
+        // console.warn removed for production
         
         // ✅ MANEJO ESPECÍFICO PARA USUARIOS SIN BANCARD ID
         if (result.message?.includes('bancardUserId')) {
@@ -212,7 +212,7 @@ const UserProfilePage = () => {
         return [];
       }
     } catch (error) {
-      console.error('❌ Error obteniendo tarjetas:', error);
+      // console.error removed for production
       toast.error('❌ Error al cargar tarjetas');
       return [];
     }
@@ -247,12 +247,12 @@ const UserProfilePage = () => {
         toast.success('✅ Tarjeta eliminada exitosamente');
         return result;
       } else {
-        console.error('❌ Error eliminando tarjeta:', result);
+        // console.error removed for production
         toast.error(result.message || '❌ Error al eliminar tarjeta');
         return { success: false, message: result.message };
       }
     } catch (error) {
-      console.error('❌ Error eliminando tarjeta:', error);
+      // console.error removed for production
       toast.error('❌ Error de conexión');
       return { success: false, message: 'Error de conexión' };
     }
@@ -282,7 +282,7 @@ const UserProfilePage = () => {
         toast.error(result.message || '❌ Error al actualizar perfil');
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      // console.error removed for production
       toast.error('❌ Error de conexión');
     }
   };
@@ -312,7 +312,7 @@ const UserProfilePage = () => {
         throw new Error(result.message);
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      // console.error removed for production
       throw error;
     }
   };
@@ -338,7 +338,7 @@ const UserProfilePage = () => {
         throw new Error(result.message);
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      // console.error removed for production
       throw error;
     }
   };
@@ -349,7 +349,7 @@ const UserProfilePage = () => {
       localStorage.setItem(`user_settings_${user._id}`, JSON.stringify(settings));
       toast.success('✅ Configuración guardada');
     } catch (error) {
-      console.error('❌ Error:', error);
+      // console.error removed for production
       throw error;
     }
   };
@@ -368,7 +368,7 @@ const UserProfilePage = () => {
         navigate('/');
       }
     } catch (error) {
-      console.error('❌ Error:', error);
+      // console.error removed for production
       toast.error('❌ Error al cerrar sesión');
     }
   };

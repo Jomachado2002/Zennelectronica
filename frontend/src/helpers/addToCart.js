@@ -8,7 +8,7 @@ const localCartHelper = {
             const cartItems = localStorage.getItem('cartItems');
             return cartItems ? JSON.parse(cartItems) : [];
         } catch (error) {
-            console.error("Error al obtener carrito:", error);
+            // console.error removed for production
             return [];
         }
     },
@@ -18,7 +18,7 @@ const localCartHelper = {
         try {
             localStorage.setItem('cartItems', JSON.stringify(items));
         } catch (error) {
-            console.error("Error al guardar carrito:", error);
+            // console.error removed for production
         }
     },
     
@@ -28,7 +28,7 @@ const localCartHelper = {
             localStorage.setItem('cartItems', JSON.stringify(updatedItems));
             return true;
         } catch (error) {
-            console.error("Error al actualizar carrito:", error);
+            // console.error removed for production
             return false;
         }
     },
@@ -65,7 +65,7 @@ const localCartHelper = {
             
             return true;
         } catch (error) {
-            console.error("Error al añadir al carrito:", error);
+            // console.error removed for production
             return false;
         }
     },
@@ -90,7 +90,7 @@ const localCartHelper = {
             }
             return false;
         } catch (error) {
-            console.error("Error al actualizar cantidad:", error);
+            // console.error removed for production
             return false;
         }
     },
@@ -103,7 +103,7 @@ const localCartHelper = {
             localCartHelper.saveCart(updatedCart);
             return updatedCart.length;
         } catch (error) {
-            console.error("Error al eliminar item:", error);
+            // console.error removed for production
             return -1;
         }
     },
@@ -126,7 +126,7 @@ const addToCart = (e, product) => {
         toast.info("Agregando al carrito...");
 
         if (!product || !product._id) {
-            console.error("Producto inválido:", product);
+            // console.error removed for production
             toast.error("No se pudo agregar el producto al carrito");
             return { error: true, success: false };
         }
@@ -153,7 +153,7 @@ const addToCart = (e, product) => {
             return { error: true, success: false };
         }
     } catch (err) {
-        console.error("Error al agregar al carrito:", err);
+        // console.error removed for production
         toast.error("Error al agregar al carrito. Intenta de nuevo.");
         return { error: true, success: false };
     }

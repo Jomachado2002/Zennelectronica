@@ -118,7 +118,7 @@ const UserManagement = () => {
         toast.error(data.message || 'Error al cargar usuarios');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      // console.error removed for production
       toast.error('Error al cargar usuarios');
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ const UserManagement = () => {
         setCurrentUserPermissions(data.data.permissions);
       }
     } catch (error) {
-      console.error('Error fetching current user permissions:', error);
+      // console.error removed for production
     }
   };
 
@@ -185,7 +185,7 @@ const UserManagement = () => {
         toast.error(data.message || 'Error al actualizar rol');
       }
     } catch (error) {
-      console.error('Error updating role:', error);
+      // console.error removed for production
       toast.error('Error al actualizar rol');
     } finally {
       setLoading(false);
@@ -228,7 +228,7 @@ const UserManagement = () => {
         toast.error(data.message || 'Error al actualizar permisos');
       }
     } catch (error) {
-      console.error('Error updating permissions:', error);
+      // console.error removed for production
       toast.error('Error al actualizar permisos');
     }
   };
@@ -271,7 +271,7 @@ const UserManagement = () => {
         toast.error(data.message || 'Error al crear usuario');
       }
     } catch (error) {
-      console.error('Error creating user:', error);
+      // console.error removed for production
       toast.error('Error al crear usuario');
     } finally {
       setLoading(false);

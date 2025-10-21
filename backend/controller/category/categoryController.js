@@ -12,7 +12,7 @@ const getAllCategories = async (req, res) => {
       count: categories.length
     });
   } catch (error) {
-    console.error('Error obteniendo categorías:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -33,7 +33,7 @@ const getActiveCategories = async (req, res) => {
       count: categories.length
     });
   } catch (error) {
-    console.error('Error obteniendo categorías activas:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -61,7 +61,7 @@ const getCategoryById = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error obteniendo categoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -99,7 +99,7 @@ const createCategory = async (req, res) => {
       data: newCategory
     });
   } catch (error) {
-    console.error('Error creando categoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -152,7 +152,7 @@ const updateCategory = async (req, res) => {
       data: updatedCategory
     });
   } catch (error) {
-    console.error('Error actualizando categoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -181,7 +181,7 @@ const deleteCategory = async (req, res) => {
       message: 'Categoría eliminada exitosamente'
     });
   } catch (error) {
-    console.error('Error eliminando categoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -225,7 +225,7 @@ const addSubcategory = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error agregando subcategoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -286,7 +286,7 @@ const updateSubcategory = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error actualizando subcategoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -332,7 +332,7 @@ const deleteSubcategory = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error eliminando subcategoría:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -391,7 +391,7 @@ const addSpecification = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error agregando especificación:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -473,7 +473,7 @@ const updateSpecification = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error actualizando especificación:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -527,7 +527,7 @@ const deleteSpecification = async (req, res) => {
       data: category
     });
   } catch (error) {
-    console.error('Error eliminando especificación:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -573,7 +573,7 @@ const updateProductsWithSpecificationChanges = async (categoryValue, subcategory
     };
     
   } catch (error) {
-    console.error('❌ Error en actualización en cascada:', error);
+    // console.error removed for production
     return {
       success: false,
       error: error.message
@@ -602,7 +602,7 @@ const getCategoriesForMenu = async (req, res) => {
       data: formattedCategories
     });
   } catch (error) {
-    console.error('Error obteniendo categorías para menú:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -640,7 +640,7 @@ const getSubcategoriesForMenu = async (req, res) => {
       data: subcategories
     });
   } catch (error) {
-    console.error('Error obteniendo subcategorías para menú:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -683,7 +683,7 @@ const getSpecificationsForMenu = async (req, res) => {
       data: specifications
     });
   } catch (error) {
-    console.error('Error obteniendo especificaciones para menú:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -724,7 +724,7 @@ const getAllCategoriesStructure = async (req, res) => {
       data: structuredData
     });
   } catch (error) {
-    console.error('Error obteniendo estructura completa de categorías:', error);
+    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

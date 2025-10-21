@@ -52,7 +52,7 @@ const uploadImage = async(image) => {
       bytes: image.size
     };
   } catch (error) {
-    console.error("Error al subir la imagen a Firebase Storage:", error);
+    // console.error removed for production
     throw error;
   }
 };

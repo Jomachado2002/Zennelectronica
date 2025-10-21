@@ -5,7 +5,7 @@ const userModel = require('../models/userModel');
 
 async function adminAuth(req, res, next) {
     try {
-        console.log('🔐 ADMIN AUTH - Verificando permisos de administrador');
+        // console.log removed for production
         
         // ✅ BUSCAR TOKEN EN MÚLTIPLES LUGARES
         let token = null;
@@ -47,7 +47,7 @@ async function adminAuth(req, res, next) {
         });
 
         if (!token) {
-            console.log('❌ ADMIN AUTH FAILED - No token found');
+            // console.log removed for production
             return res.status(401).json({
                 message: "Token de autenticación requerido para acceder al panel de administración",
                 error: true,
@@ -69,7 +69,7 @@ async function adminAuth(req, res, next) {
             const user = await userModel.findById(decoded._id).select('-password');
             
             if (!user) {
-                console.log('❌ ADMIN AUTH FAILED - User not found in database');
+                // console.log removed for production
                 return res.status(401).json({
                     message: "Usuario no encontrado en la base de datos",
                     error: true,
@@ -79,7 +79,7 @@ async function adminAuth(req, res, next) {
             }
 
             if (user.isActive === false) {
-                console.log('❌ ADMIN AUTH FAILED - User inactive');
+                // console.log removed for production
                 return res.status(401).json({
                     message: "Usuario desactivado",
                     error: true,
@@ -124,7 +124,7 @@ async function adminAuth(req, res, next) {
             return next();
 
         } catch (jwtError) {
-            console.log('❌ ADMIN AUTH FAILED - Invalid token:', jwtError.message);
+            // console.log removed for production
             return res.status(401).json({
                 message: "Token de autenticación inválido",
                 error: true,
@@ -135,7 +135,7 @@ async function adminAuth(req, res, next) {
         }
 
     } catch (err) {
-        console.error('❌ ERROR CRÍTICO EN ADMIN AUTH MIDDLEWARE:', err);
+        // console.error removed for production
         
         return res.status(500).json({
             message: "Error interno del servidor en autenticación",

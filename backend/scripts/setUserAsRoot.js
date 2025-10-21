@@ -6,11 +6,11 @@ require('dotenv').config();
 
 async function setUserAsRoot() {
     try {
-        console.log('🚀 Configurando usuario como ROOT...');
+        // console.log removed for production
         
         // Conectar a la base de datos
         await mongoose.connect(process.env.MONGODB_URI);
-        console.log('✅ Conectado a la base de datos');
+        // console.log removed for production
         
         const targetEmail = 'josiasnicolas02@gmail.com';
         
@@ -18,7 +18,7 @@ async function setUserAsRoot() {
         const user = await userModel.findOne({ email: targetEmail.toLowerCase() });
         
         if (!user) {
-            console.log('❌ Usuario no encontrado:', targetEmail);
+            // console.log removed for production
             return;
         }
         
@@ -43,21 +43,21 @@ async function setUserAsRoot() {
             { new: true, runValidators: true }
         );
         
-        console.log('✅ Usuario actualizado exitosamente:');
-        console.log('   - Nuevo rol:', updatedUser.role);
-        console.log('   - Admin Panel:', updatedUser.permissions.adminPanel);
-        console.log('   - Productos:', updatedUser.permissions.products.view);
-        console.log('   - Usuarios:', updatedUser.permissions.users.create);
-        console.log('   - Configuración:', updatedUser.permissions.settings.edit);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
-        console.log('🎉 ¡Usuario configurado como ROOT exitosamente!');
+        // console.log removed for production
         
     } catch (error) {
-        console.error('❌ Error configurando usuario como ROOT:', error);
+        // console.error removed for production
     } finally {
         // Cerrar conexión
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de la base de datos');
+        // console.log removed for production
         process.exit(0);
     }
 }

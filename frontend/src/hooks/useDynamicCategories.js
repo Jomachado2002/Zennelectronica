@@ -24,7 +24,7 @@ const useDynamicCategories = () => {
         setError('Error al cargar categorías');
       }
     } catch (err) {
-      console.error('Error cargando categorías:', err);
+      // console.error removed for production
       setError('Error de conexión');
     } finally {
       setLoading(false);
@@ -58,7 +58,7 @@ const useDynamicCategories = () => {
         return subcategories;
       }
     } catch (err) {
-      console.error('Error cargando subcategorías:', err);
+      // console.error removed for production
     }
     
     return [];
@@ -68,26 +68,26 @@ const useDynamicCategories = () => {
   const loadSpecifications = useCallback(async (categoryValue, subcategoryValue) => {
     const cacheKey = `${categoryValue}-${subcategoryValue}`;
     
-    console.log(`🔍 Cargando especificaciones para: ${categoryValue}/${subcategoryValue}`);
+    // console.log removed for production
     
     // Verificar caché primero
     if (cache.specifications[cacheKey]) {
-      console.log(`✅ Especificaciones encontradas en caché para: ${cacheKey}`);
+      // console.log removed for production
       return cache.specifications[cacheKey];
     }
 
     try {
-      console.log(`📡 Haciendo petición a: /api/admin/categories/menu/categories/${categoryValue}/subcategories/${subcategoryValue}/specifications`);
+      // console.log removed for production
       
       const response = await axiosInstance.get(
         `/api/admin/categories/menu/categories/${categoryValue}/subcategories/${subcategoryValue}/specifications`
       );
       
-      console.log('📥 Respuesta del servidor:', response.data);
+      // console.log removed for production
       
       if (response.data.success) {
         const specifications = response.data.data;
-        console.log(`✅ Especificaciones cargadas:`, specifications);
+        // console.log removed for production
         
         // Guardar en caché
         setCache(prev => ({
@@ -100,11 +100,11 @@ const useDynamicCategories = () => {
         
         return specifications;
       } else {
-        console.error('❌ Respuesta no exitosa del servidor:', response.data);
+        // console.error removed for production
       }
     } catch (err) {
-      console.error('❌ Error cargando especificaciones:', err);
-      console.error('❌ Detalles del error:', err.response?.data || err.message);
+      // console.error removed for production
+      // console.error removed for production
     }
     
     return [];

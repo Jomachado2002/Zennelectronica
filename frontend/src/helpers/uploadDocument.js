@@ -192,7 +192,7 @@ const uploadDocument = async (file, options = {}) => {
             onProgress(progress);
           },
           (error) => {
-            console.error("Error durante la subida:", error);
+            // console.error removed for production
             reject(error);
           },
           async () => {
@@ -233,7 +233,7 @@ const uploadDocument = async (file, options = {}) => {
       };
     }
   } catch (error) {
-    console.error("Error al subir el documento:", error);
+    // console.error removed for production
     throw new Error(`Error al subir el archivo: ${error.message}`);
   }
 };

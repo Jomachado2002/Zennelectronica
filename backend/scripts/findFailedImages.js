@@ -6,18 +6,18 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
 
 async function findFailedImages() {
     try {
-        console.log('🔍 BUSCANDO IMÁGENES QUE FALLARON EN LA CONVERSIÓN...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Buscar productos con imágenes que NO son WebP
         const products = await productModel.find({
             productImage: { $exists: true, $ne: [] }
         });
 
-        console.log(`📊 Analizando ${products.length} productos...\n`);
+        // console.log removed for production
 
         let failedImages = [];
         let totalImages = 0;
@@ -42,30 +42,30 @@ async function findFailedImages() {
             }
         }
 
-        console.log('📈 ESTADÍSTICAS:');
-        console.log(`   Total de imágenes: ${totalImages}`);
+        // console.log removed for production
+        // console.log removed for production
         console.log(`   Imágenes WebP: ${webpImages} (${((webpImages/totalImages)*100).toFixed(2)}%)`);
         console.log(`   Imágenes fallidas: ${failedImages.length} (${((failedImages.length/totalImages)*100).toFixed(2)}%)\n`);
 
         if (failedImages.length > 0) {
-            console.log('❌ IMÁGENES QUE FALLARON EN LA CONVERSIÓN:');
+            // console.log removed for production
             console.log('=' .repeat(80));
             
             failedImages.forEach((failed, index) => {
-                console.log(`\n${index + 1}. Producto: ${failed.productName}`);
-                console.log(`   ID: ${failed.productId}`);
-                console.log(`   Formato: ${failed.format}`);
-                console.log(`   URL: ${failed.imageUrl}`);
+                // console.log removed for production
+                // console.log removed for production
+                // console.log removed for production
+                // console.log removed for production
             });
         } else {
-            console.log('🎉 ¡Todas las imágenes fueron convertidas exitosamente!');
+            // console.log removed for production
         }
 
     } catch (error) {
-        console.error('❌ Error:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('\n🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

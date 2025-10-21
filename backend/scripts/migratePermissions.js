@@ -6,15 +6,15 @@ require('dotenv').config();
 
 async function migratePermissions() {
     try {
-        console.log('🚀 Iniciando migración de permisos...');
+        // console.log removed for production
         
         // Conectar a la base de datos
         await mongoose.connect(process.env.MONGODB_URI);
-        console.log('✅ Conectado a la base de datos');
+        // console.log removed for production
         
         // Obtener todos los usuarios
         const users = await userModel.find({});
-        console.log(`📊 Encontrados ${users.length} usuarios para migrar`);
+        // console.log removed for production
         
         let migratedCount = 0;
         let rootCount = 0;
@@ -34,7 +34,7 @@ async function migratePermissions() {
                 if (user.email === 'josiasnicolas02@gmail.com') {
                     // Convertir tu usuario a ROOT
                     newRole = 'ROOT';
-                    console.log('🔑 Convirtiendo usuario a ROOT');
+                    // console.log removed for production
                 }
                 
                 // Obtener permisos por defecto según el rol
@@ -50,10 +50,10 @@ async function migratePermissions() {
                     { new: true }
                 );
                 
-                console.log(`✅ Usuario migrado exitosamente`);
-                console.log(`   - Nuevo rol: ${updatedUser.role}`);
-                console.log(`   - Admin Panel: ${updatedUser.permissions.adminPanel}`);
-                console.log(`   - Productos: ${updatedUser.permissions.products.view}`);
+                // console.log removed for production
+                // console.log removed for production
+                // console.log removed for production
+                // console.log removed for production
                 
                 migratedCount++;
                 
@@ -63,24 +63,24 @@ async function migratePermissions() {
                 else if (updatedUser.role === 'GENERAL') generalCount++;
                 
             } catch (error) {
-                console.error(`❌ Error migrando usuario ${user.email}:`, error.message);
+                // console.error removed for production
             }
         }
         
-        console.log('\n📊 RESUMEN DE MIGRACIÓN:');
-        console.log(`✅ Usuarios migrados: ${migratedCount}`);
-        console.log(`🔑 Usuarios ROOT: ${rootCount}`);
-        console.log(`👨‍💼 Usuarios ADMIN: ${adminCount}`);
-        console.log(`👤 Usuarios GENERAL: ${generalCount}`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         
-        console.log('\n🎉 Migración completada exitosamente!');
+        // console.log removed for production
         
     } catch (error) {
-        console.error('❌ Error en la migración:', error);
+        // console.error removed for production
     } finally {
         // Cerrar conexión
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de la base de datos');
+        // console.log removed for production
         process.exit(0);
     }
 }

@@ -77,7 +77,7 @@ async function descargarImagen(url, nombreArchivo) {
       escritor.on('error', reject);
     });
   } catch (error) {
-    console.error(`Error al descargar ${url}:`, error.message);
+    // console.error removed for production
     throw error;
   }
 }
@@ -103,7 +103,7 @@ async function subirAFirebase(rutaArchivo, urlOriginal) {
     
     return urlDescarga;
   } catch (error) {
-    console.error('Error al subir a Firebase:', error);
+    // console.error removed for production
     throw error;
   }
 }
@@ -188,7 +188,7 @@ async function migrarImagenes() {
           // Eliminar archivo temporal
           fs.unlinkSync(rutaArchivo);
         } catch (error) {
-          console.error(`Error procesando imagen ${j+1} para producto ${producto.productName}:`, error);
+          // console.error removed for production
           urlsImagenesActualizadas.push(urlImagen);
           errores++;
         }
@@ -209,7 +209,7 @@ async function migrarImagenes() {
     
     
   } catch (error) {
-    console.error('La migración falló:', error);
+    // console.error removed for production
   } finally {
     // Limpiar carpeta temporal
     if (fs.existsSync(carpetaTemporal)) {

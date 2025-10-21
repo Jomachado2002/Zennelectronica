@@ -31,10 +31,10 @@ async function sendTestEmail() {
         
         
     } catch (error) {
-        console.error('❌ Error al enviar el correo:');
-        console.error(error.message);
+        // console.error removed for production
+        // console.error removed for production
         if (error.response) {
-            console.error('📨 Respuesta del servidor:', error.response);
+            // console.error removed for production
         }
     }
 }

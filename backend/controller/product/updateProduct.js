@@ -17,17 +17,17 @@ async function updateProductController(req, res) {
         const { _id, ...resBody } = req.body;
 
         // Logs detallados para debugging
-        console.log('🔍 Backend - updateProductController iniciado');
-        console.log('🔍 Backend - Headers recibidos:', req.headers);
+        // console.log removed for production
+        // console.log removed for production
         console.log('🔍 Backend - Body completo recibido:', JSON.stringify(req.body, null, 2));
-        console.log('🔍 Backend - _id extraído:', _id);
+        // console.log removed for production
         console.log('🔍 Backend - resBody extraído:', JSON.stringify(resBody, null, 2));
 
         // Verificar si el producto existe
-        console.log('🔍 Backend - Buscando producto con _id:', _id);
+        // console.log removed for production
         const existingProduct = await ProductModel.findById(_id);
         if (!existingProduct) {
-            console.log('❌ Backend - Producto no encontrado con _id:', _id);
+            // console.log removed for production
             throw new Error("El producto no existe o ya ha sido eliminado");
         }
         console.log('✅ Backend - Producto encontrado:', {
@@ -95,7 +95,7 @@ async function updateProductController(req, res) {
         });
 
     } catch (err) {
-        console.error('💥 Backend - Error en updateProductController:', err);
+        // console.error removed for production
         console.error('💥 Backend - Error details:', {
             message: err.message,
             stack: err.stack,

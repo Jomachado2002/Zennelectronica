@@ -7,11 +7,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
 
 async function testJpgVsWebpPerformance() {
     try {
-        console.log('🧪 INICIANDO TEST COMPARATIVO JPG vs WebP...\n');
+        // console.log removed for production
         
         // Conectar a MongoDB
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Conectado a MongoDB');
+        // console.log removed for production
 
         // Buscar productos con imágenes
         const products = await productModel.find({
@@ -19,11 +19,11 @@ async function testJpgVsWebpPerformance() {
         }).limit(20);
 
         if (products.length === 0) {
-            console.log('❌ No se encontraron productos con imágenes');
+            // console.log removed for production
             return;
         }
 
-        console.log(`📊 Analizando ${products.length} productos...\n`);
+        // console.log removed for production
 
         let jpgImages = [];
         let webpImages = [];
@@ -50,10 +50,10 @@ async function testJpgVsWebpPerformance() {
             }
         }
 
-        console.log(`📊 ESTADÍSTICAS DE IMÁGENES:`);
-        console.log(`   🖼️  Total de imágenes: ${totalImages}`);
-        console.log(`   📷 Imágenes JPG: ${jpgImages.length}`);
-        console.log(`   ⚡ Imágenes WebP: ${webpImages.length}`);
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
+        // console.log removed for production
         console.log(`   📊 Porcentaje WebP: ${Math.round((webpImages.length / totalImages) * 100)}%\n`);
 
         const results = {
@@ -103,7 +103,7 @@ async function testJpgVsWebpPerformance() {
                         status: 'ERROR',
                         error: error.message
                     });
-                    console.log(`  ❌ JPG ${i + 1}: ERROR - ${error.message}`);
+                    // console.log removed for production
                 }
             }
         } else {
@@ -152,7 +152,7 @@ async function testJpgVsWebpPerformance() {
                         status: 'ERROR',
                         error: error.message
                     });
-                    console.log(`  ❌ WebP ${i + 1}: ERROR - ${error.message}`);
+                    // console.log removed for production
                 }
             }
         }
@@ -178,27 +178,27 @@ async function testJpgVsWebpPerformance() {
         };
 
         // Mostrar resultados
-        console.log('\n📊 ===== RESULTADOS COMPARATIVOS =====');
+        // console.log removed for production
         
         if (jpgStats.count > 0) {
             console.log(`📷 IMÁGENES JPG (${jpgStats.count} probadas):`);
-            console.log(`   📊 Promedio: ${jpgStats.avgLoadTime}ms`);
-            console.log(`   🚀 Más rápida: ${jpgStats.minLoadTime}ms`);
-            console.log(`   🐌 Más lenta: ${jpgStats.maxLoadTime}ms`);
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
         } else {
             console.log('📷 IMÁGENES JPG: ✅ No hay JPGs (conversión completada)');
         }
 
         if (webpStats.count > 0) {
             console.log(`\n⚡ IMÁGENES WEBP (${webpStats.count} probadas):`);
-            console.log(`   📊 Promedio: ${webpStats.avgLoadTime}ms`);
-            console.log(`   🚀 Más rápida: ${webpStats.minLoadTime}ms`);
-            console.log(`   🐌 Más lenta: ${webpStats.maxLoadTime}ms`);
+            // console.log removed for production
+            // console.log removed for production
+            // console.log removed for production
         }
 
         if (jpgStats.count > 0 && webpStats.count > 0) {
             const improvement = Math.round(((jpgStats.avgLoadTime - webpStats.avgLoadTime) / jpgStats.avgLoadTime) * 100);
-            console.log(`\n🎯 MEJORA CON WEBP: ${improvement}% más rápido`);
+            // console.log removed for production
         }
 
         // Guardar resultados
@@ -217,15 +217,15 @@ async function testJpgVsWebpPerformance() {
         };
         
         fs.writeFileSync(filename, JSON.stringify(detailedResults, null, 2));
-        console.log(`\n💾 Resultados guardados en: ${filename}`);
+        // console.log removed for production
 
-        console.log('\n🎯 TEST COMPLETADO!');
+        // console.log removed for production
 
     } catch (error) {
-        console.error('❌ Error en el test:', error.message);
+        // console.error removed for production
     } finally {
         await mongoose.disconnect();
-        console.log('🔌 Desconectado de MongoDB');
+        // console.log removed for production
     }
 }
 

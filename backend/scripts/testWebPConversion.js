@@ -18,7 +18,7 @@ function log(message, type = 'INFO') {
   };
   const reset = '\x1b[0m';
   const color = colors[type] || colors.INFO;
-  console.log(`${color}[${timestamp}] ${type}: ${message}${reset}`);
+  // console.log removed for production
 }
 
 // Función para probar conversión con una imagen de prueba
@@ -64,7 +64,7 @@ async function testSingleImageConversion() {
     
   } catch (error) {
     log(`Error en prueba individual: ${error.message}`, 'ERROR');
-    console.error(error);
+    // console.error removed for production
   }
 }
 
@@ -134,7 +134,7 @@ async function testConversion(imageUrl) {
     
   } catch (error) {
     log(`Error en verificación: ${error.message}`, 'ERROR');
-    console.error(error);
+    // console.error removed for production
   }
 }
 
@@ -175,7 +175,7 @@ async function main() {
     
   } catch (error) {
     log(`Error general: ${error.message}`, 'ERROR');
-    console.error(error);
+    // console.error removed for production
   } finally {
     await mongoose.disconnect();
     log('Conexión a MongoDB cerrada', 'INFO');

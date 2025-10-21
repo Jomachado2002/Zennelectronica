@@ -37,8 +37,8 @@ try {
     
     
 } catch (error) {
-    console.error("❌ Error en la verificación:", error);
-    console.error("📍 Stack trace:", error.stack);
+    // console.error removed for production
+    // console.error removed for production
 }
 
 // Verificar las rutas también
@@ -50,6 +50,6 @@ try {
     
     
 } catch (error) {
-    console.error("❌ Error importando rutas:", error);
-    console.error("📍 Stack trace:", error.stack);
+    // console.error removed for production
+    // console.error removed for production
 }

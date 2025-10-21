@@ -116,7 +116,7 @@ async function createSaleController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en createSaleController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -197,7 +197,7 @@ async function getAllSalesController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getAllSalesController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -241,7 +241,7 @@ async function getSaleByIdController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en getSaleByIdController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -295,7 +295,7 @@ async function updateSalePaymentController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateSalePaymentController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -347,7 +347,7 @@ async function deleteSaleController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteSaleController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -397,7 +397,7 @@ async function uploadSaleInvoiceController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en uploadSaleInvoiceController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -456,7 +456,7 @@ async function updateSalePaymentStatusController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en updateSalePaymentStatusController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,
@@ -506,7 +506,7 @@ async function deleteSaleController(req, res) {
         });
 
     } catch (err) {
-        console.error("Error en deleteSaleController:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

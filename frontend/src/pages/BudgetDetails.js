@@ -52,7 +52,7 @@ const BudgetDetails = () => {
         toast.error(result.message || "Error al cargar el presupuesto");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -109,7 +109,7 @@ const BudgetDetails = () => {
         toast.error(result.message || "Error al enviar el email");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsSending(false);
@@ -139,7 +139,7 @@ const BudgetDetails = () => {
         toast.error(result.message || "Error al eliminar el presupuesto");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -183,10 +183,10 @@ const BudgetDetails = () => {
           autoClose: 5000
         });
         
-        console.error("Error del servidor:", result);
+        // console.error removed for production
       }
     } catch (error) {
-      console.error("Error de conexión:", error);
+      // console.error removed for production
       toast.error("Error de conexión al actualizar estado");
     }
   };

@@ -145,7 +145,7 @@ const SimpleLocationSelector = ({
 
       setMap(mapInstance);
     } catch (error) {
-      console.error('Error inicializando mapa:', error);
+      // console.error removed for production
       toast.error('Error inicializando el mapa');
     }
   };
@@ -189,7 +189,7 @@ const SimpleLocationSelector = ({
 
       autocompleteRef.current = autocomplete;
     } catch (error) {
-      console.warn('Error configurando autocompletado:', error);
+      // console.warn removed for production
     }
   };
 
@@ -229,7 +229,7 @@ const SimpleLocationSelector = ({
         setAddress(result.data.formatted_address);
       }
     } catch (error) {
-      console.warn('Error obteniendo dirección:', error);
+      // console.warn removed for production
     }
   };
 
@@ -268,7 +268,7 @@ const SimpleLocationSelector = ({
       },
       (error) => {
         setGettingLocation(false);
-        console.error('Error de geolocalización:', error);
+        // console.error removed for production
         toast.error('No se pudo obtener la ubicación actual');
       },
       {
@@ -344,7 +344,7 @@ const SimpleLocationSelector = ({
         toast.error(result.message || 'Error al guardar ubicación');
       }
     } catch (error) {
-      console.error('Error guardando ubicación:', error);
+      // console.error removed for production
       toast.error('Error de conexión al guardar ubicación');
     } finally {
       setSaving(false);

@@ -88,10 +88,10 @@ const BancardConfirmProxy = () => {
           if (response.ok) {
             
           } else {
-            console.warn('⚠️ Backend respondió con error:', response.status);
+            // console.warn removed for production
           }
         } catch (backendError) {
-          console.error('❌ Error comunicándose con backend:', backendError);
+          // console.error removed for production
           // Continuar con el flujo aunque falle el backend
         }
 
@@ -137,7 +137,7 @@ const BancardConfirmProxy = () => {
         }
 
       } catch (error) {
-        console.error('❌ Error en proxy:', error);
+        // console.error removed for production
         setStatus('error');
         setTimeout(() => {
           navigate('/pago-cancelado?error=proxy_error');

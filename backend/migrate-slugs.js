@@ -36,13 +36,13 @@ async function migrateProductSlugs() {
         
         updated++;
       } catch (itemError) {
-        console.error(`Error en producto ${product._id}:`, itemError.message);
+        // console.error removed for production
       }
     }
     
     mongoose.disconnect();
   } catch (error) {
-    console.error('Error en la migración:', error);
+    // console.error removed for production
     mongoose.disconnect();
   }
 }

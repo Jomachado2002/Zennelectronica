@@ -11,17 +11,17 @@ const userModel = require("../models/userModel");
  */
 const checkPermission = async (userId, module, action) => {
     try {
-        console.log(`🔐 Verificando permiso: ${module}.${action} para usuario ${userId}`);
+        // console.log removed for production
         
         // Verificar que el userId existe
         if (!userId) {
-            console.log('❌ No userId provided');
+            // console.log removed for production
             return false;
         }
 
         // Rechazar usuarios invitados
         if (typeof userId === 'string' && userId.startsWith('guest-')) {
-            console.log('❌ Usuario invitado no tiene permisos');
+            // console.log removed for production
             return false;
         }
 
@@ -29,13 +29,13 @@ const checkPermission = async (userId, module, action) => {
         const user = await userModel.findById(userId).select('role permissions');
         
         if (!user) {
-            console.log('❌ Usuario no encontrado');
+            // console.log removed for production
             return false;
         }
 
         // Verificar que el usuario esté activo
         if (user.isActive === false) {
-            console.log('❌ Usuario inactivo');
+            // console.log removed for production
             return false;
         }
 
@@ -47,7 +47,7 @@ const checkPermission = async (userId, module, action) => {
 
         // ROOT tiene acceso completo a todo
         if (user.role === 'ROOT') {
-            console.log('✅ ROOT - Acceso completo');
+            // console.log removed for production
             return true;
         }
 
@@ -58,22 +58,22 @@ const checkPermission = async (userId, module, action) => {
             // Si es un objeto (como products.view), verificar la acción específica
             if (typeof modulePermissions === 'object' && action) {
                 const hasPermission = modulePermissions[action] === true;
-                console.log(`🔍 Verificando ${module}.${action}: ${hasPermission}`);
+                // console.log removed for production
                 return hasPermission;
             }
             
             // Si es un boolean (como adminPanel), devolver directamente
             if (typeof modulePermissions === 'boolean') {
-                console.log(`🔍 Verificando ${module}: ${modulePermissions}`);
+                // console.log removed for production
                 return modulePermissions;
             }
         }
 
-        console.log(`❌ Permiso denegado para ${module}.${action || 'module'}`);
+        // console.log removed for production
         return false;
         
     } catch (error) {
-        console.error('❌ Error verificando permiso:', error);
+        // console.error removed for production
         return false;
     }
 };
@@ -158,7 +158,7 @@ const getUserPermissions = async (userId) => {
         };
         
     } catch (error) {
-        console.error('❌ Error obteniendo permisos del usuario:', error);
+        // console.error removed for production
         return null;
     }
 };
@@ -175,7 +175,7 @@ const requirePermission = (module, action) => {
             const hasPermission = await checkPermission(req.userId, module, action);
             
             if (!hasPermission) {
-                console.log(`❌ Acceso denegado: ${req.userId} no tiene permiso para ${module}.${action || 'module'}`);
+                // console.log removed for production
                 return res.status(403).json({
                     message: `No tienes permisos para realizar esta acción`,
                     error: true,
@@ -184,11 +184,11 @@ const requirePermission = (module, action) => {
                 });
             }
             
-            console.log(`✅ Permiso concedido: ${req.userId} puede acceder a ${module}.${action || 'module'}`);
+            // console.log removed for production
             next();
             
         } catch (error) {
-            console.error('❌ Error en middleware de permisos:', error);
+            // console.error removed for production
             return res.status(500).json({
                 message: 'Error verificando permisos',
                 error: true,

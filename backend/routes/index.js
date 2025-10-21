@@ -323,7 +323,7 @@ const categoryRoutes = require('./categoryRoutes');
             await createCardController(req, res);
             
         } catch (error) {
-            console.error("❌ Error en test de catastro:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error en test de catastro",
                 success: false,
@@ -381,7 +381,7 @@ const categoryRoutes = require('./categoryRoutes');
                         collectionStats = await db.collection('bancard_transactions').stats();
                         
                     } catch (statsError) {
-                        console.warn("⚠️ No se pudieron obtener stats:", statsError.message);
+                        // console.warn removed for production
                     }
                 }
 
@@ -402,7 +402,7 @@ const categoryRoutes = require('./categoryRoutes');
                 
 
             } catch (queryError) {
-                console.error("❌ Error en consultas:", queryError);
+                // console.error removed for production
             }
 
             // Verificar modelo
@@ -447,7 +447,7 @@ const categoryRoutes = require('./categoryRoutes');
             });
 
         } catch (error) {
-            console.error("❌ Error en debug de BD:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error en debug de base de datos",
                 success: false,
@@ -517,7 +517,7 @@ const categoryRoutes = require('./categoryRoutes');
             await chargeWithTokenController(req, res);
             
         } catch (error) {
-            console.error("❌ Error en test de pago con token:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error en test de pago con token",
                 success: false,
@@ -551,7 +551,7 @@ const categoryRoutes = require('./categoryRoutes');
             await deleteCardController(req, res);
             
         } catch (error) {
-            console.error("❌ Error en test de eliminar:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error en test de eliminar tarjeta",
                 success: false,
@@ -823,7 +823,7 @@ const categoryRoutes = require('./categoryRoutes');
             });
 
         } catch (error) {
-            console.error("❌ Error en test de flujo completo:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error en test de flujo completo",
                 success: false,
@@ -861,7 +861,7 @@ const categoryRoutes = require('./categoryRoutes');
             });
 
         } catch (error) {
-            console.error("❌ Error obteniendo estadísticas de tarjetas:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error al obtener estadísticas de tarjetas",
                 success: false,
@@ -1303,7 +1303,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
             res.redirect(302, finalUrl);
             
         } catch (error) {
-            console.error("❌ Error en success redirect:", error);
+            // console.error removed for production
             
             // En caso de error, redirigir a página de error
             const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pago-cancelado?error=redirect_error&details=${encodeURIComponent(error.message)}`;
@@ -1334,7 +1334,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
             res.redirect(302, finalUrl);
             
         } catch (error) {
-            console.error("❌ Error en cancel redirect:", error);
+            // console.error removed for production
             
             // En caso de error, redirigir a página de error con más detalles
             const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pago-cancelado?error=redirect_error&details=${encodeURIComponent(error.message)}`;
@@ -1461,7 +1461,7 @@ router.post("/bancard/test-email", authToken, async (req, res) => {
         }
 
     } catch (error) {
-        console.error("❌ Error en test de email:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en test de email",
             success: false,
@@ -1519,7 +1519,7 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Error verificando configuración de email:", error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al verificar configuración de email",
             success: false,
@@ -1556,7 +1556,7 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
             });
 
         } catch (error) {
-            console.error("❌ Error verificando email:", error);
+            // console.error removed for production
             res.status(500).json({
                 message: "Error al verificar configuración de email",
                 success: false,
@@ -1584,7 +1584,7 @@ router.use('/test', authTestRoutes);
 router.get('/admin/products/:id', authToken, async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`📥 GET /api/admin/products/${id}`);
+        // console.log removed for production
         
         const productModel = require('../models/productModel');
         const product = await productModel.findById(id).lean();
@@ -1601,7 +1601,7 @@ router.get('/admin/products/:id', authToken, async (req, res) => {
             data: product
         });
     } catch (error) {
-        console.error('Error obteniendo producto:', error);
+        // console.error removed for production
         res.status(500).json({
             success: false,
             message: 'Error al obtener producto'

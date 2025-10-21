@@ -72,7 +72,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       mappedSpecs[fieldName] = productData[fieldName] || '';
     });
     
-    console.log('🔍 UploadProduct - Especificaciones mapeadas:', mappedSpecs);
+    // console.log removed for production
     
     return mappedSpecs;
   };
@@ -125,8 +125,8 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
   // Cargar datos precargados si existen
   useEffect(() => {
     if (preloadedData) {
-      console.log('📥 UploadProduct - Recibiendo preloadedData:', preloadedData);
-      console.log('🔢 Código recibido:', preloadedData.productCode, preloadedData.codigo);
+      // console.log removed for production
+      // console.log removed for production
       
       setData(prev => ({
         ...prev,
@@ -137,23 +137,23 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       
       // IMPORTANTE: Establecer preview de imagen si viene del CSV
       if (preloadedData.imageUrlFromProvider) {
-        console.log('🖼️ Estableciendo preview de imagen del CSV');
-        console.log('🖼️ URL:', preloadedData.imageUrlFromProvider);
+        // console.log removed for production
+        // console.log removed for production
         setImagePreview(preloadedData.imageUrlFromProvider);
         setImageSource('csv');
       }
       
-      console.log('✅ Datos establecidos en el estado');
-      console.log('🔢 Código en estado:', preloadedData.codigo || preloadedData.productCode);
+      // console.log removed for production
+      // console.log removed for production
     }
   }, [preloadedData]);
 
   // Agregar log adicional cuando el estado cambia
   useEffect(() => {
-    console.log('🔍 Estado "data" actualizado:');
-    console.log(' - productName:', data.productName);
-    console.log(' - codigo:', data.codigo);
-    console.log(' - category:', data.category);
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
+    // console.log removed for production
   }, [data]);
 
   // Event listeners para paste y drag & drop
@@ -161,7 +161,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
     const handlePaste = (e) => {
       if (!isPasteActive) return;
       
-      console.log('📋 Paste detectado en UploadProduct');
+      // console.log removed for production
       e.preventDefault();
       
       const clipboardData = e.clipboardData;
@@ -220,7 +220,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
   // Función para manejar imágenes del portapapeles
   const handleClipboardImages = async (clipboardData) => {
     try {
-      console.log('📋 Procesando imágenes del portapapeles...');
+      // console.log removed for production
       const imageFiles = await extractImagesFromClipboard(clipboardData);
       
       if (imageFiles.length === 0) {
@@ -228,11 +228,11 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         return;
       }
       
-      console.log(`📊 ${imageFiles.length} imágenes encontradas en el portapapeles`);
+      // console.log removed for production
       await handleImageFiles(imageFiles);
       
     } catch (error) {
-      console.error('❌ Error procesando portapapeles:', error);
+      // console.error removed for production
       toast.error('Error al procesar imágenes del portapapeles');
     }
   };
@@ -261,7 +261,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
     setProcessingProgress({ current: 0, total: filesToProcess.length, fileName: '' });
     
     try {
-      console.log(`🖼️ Procesando ${filesToProcess.length} imágenes...`);
+      // console.log removed for production
       
       // Optimizar imágenes
       const optimizationResults = await optimizeMultipleImages(
@@ -272,7 +272,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         }
       );
       
-      console.log('✅ Optimización completada, iniciando subida...');
+      // console.log removed for production
       
       // Subir imágenes optimizadas
       const uploadPromises = optimizationResults.map(async (result, index) => {
@@ -287,7 +287,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
           const uploadResult = await uploadImage(result.file);
           return uploadResult.url;
         } catch (error) {
-          console.error(`❌ Error subiendo ${result.file.name}:`, error);
+          // console.error removed for production
           return null;
         }
       });
@@ -322,7 +322,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       }
       
     } catch (error) {
-      console.error('❌ Error procesando imágenes:', error);
+      // console.error removed for production
       toast.error('Error al procesar las imágenes');
     } finally {
       setIsProcessingImages(false);
@@ -365,7 +365,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       await navigator.clipboard.writeText(text);
       toast.success('Copiado al portapapeles');
     } catch (error) {
-      console.error('Error copiando:', error);
+      // console.error removed for production
       toast.error('Error al copiar');
     }
   };
@@ -428,8 +428,8 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       
       // Si hay imagen del CSV y no hay imágenes manuales cargadas
       if (imageSource === 'csv' && preloadedData?.imageUrlFromProvider && finalProductImages.length === 0) {
-        console.log('📥 Descargando e importando imagen del CSV...');
-        console.log('📥 URL:', preloadedData.imageUrlFromProvider);
+        // console.log removed for production
+        // console.log removed for production
         
         try {
           // Llamar al endpoint que descarga y sube la imagen
@@ -445,14 +445,14 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
           
           const imageResult = await imageResponse.json();
           if (imageResult.success) {
-            console.log('✅ Imagen importada:', imageResult.firebaseUrl);
+            // console.log removed for production
             finalProductImages = [imageResult.firebaseUrl];
           } else {
-            console.warn('⚠️ No se pudo importar la imagen:', imageResult.error);
+            // console.warn removed for production
             toast.warning('Producto creado sin imagen (error al importarla)');
           }
         } catch (imageError) {
-          console.error('❌ Error importando imagen:', imageError);
+          // console.error removed for production
           toast.warning('Producto se creará sin imagen');
         }
       }
@@ -464,7 +464,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         ...data.specifications
       };
       
-      console.log('📤 Enviando producto:', productDataToSend);
+      // console.log removed for production
       
       const response = await fetch('http://localhost:8080/api/cargar-producto', {
         method: 'POST',
@@ -484,7 +484,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
       }
       
     } catch (error) {
-      console.error('💥 Error:', error);
+      // console.error removed for production
       toast.error('Error al crear el producto');
     } finally {
       setIsSubmitting(false);
@@ -507,7 +507,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         }));
       }
     } catch (error) {
-      console.error('Error cargando tipo de cambio:', error);
+      // console.error removed for production
     } finally {
       setIsLoadingExchangeRate(false);
     }
@@ -605,12 +605,12 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                     alt="Preview del proveedor" 
                     className="w-32 h-32 object-cover rounded-lg border-2 border-blue-300 shadow-sm"
                     onError={(e) => {
-                      console.error('❌ Error cargando preview de imagen');
-                      console.error('❌ URL que falló:', imagePreview);
+                      // console.error removed for production
+                      // console.error removed for production
                       e.target.src = 'https://via.placeholder.com/150?text=Error';
                     }}
                     onLoad={() => {
-                      console.log('✅ Preview de imagen cargado exitosamente');
+                      // console.log removed for production
                     }}
                   />
                 </div>
@@ -622,7 +622,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        console.log('🔗 Abriendo imagen original');
+                        // console.log removed for production
                         window.open(imagePreview, '_blank');
                       }}
                       className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
@@ -632,7 +632,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        console.log('❌ Cambiando a upload manual');
+                        // console.log removed for production
                         setImageSource('manual');
                         setImagePreview(null);
                       }}
@@ -644,7 +644,7 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                       <button
                         type="button"
                         onClick={() => {
-                          console.log('📄 Abriendo página del producto');
+                          // console.log removed for production
                           window.open(data.documentationLink, '_blank');
                         }}
                         className="px-3 py-1.5 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"

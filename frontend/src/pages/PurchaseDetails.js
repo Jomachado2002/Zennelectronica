@@ -50,7 +50,7 @@ const PurchaseDetails = () => {
         navigate('/panel-admin/compras');
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
       navigate('/panel-admin/compras');
     } finally {
@@ -85,7 +85,7 @@ const PurchaseDetails = () => {
         toast.error(result.message || "Error al actualizar la compra");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -119,7 +119,7 @@ const PurchaseDetails = () => {
         toast.error(result.message || "Error al subir los documentos");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

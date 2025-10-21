@@ -67,7 +67,7 @@ const updateUserLocation = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ Error actualizando ubicación:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error al actualizar ubicación",
             error: true,
@@ -99,7 +99,7 @@ const getUserLocation = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ Error obteniendo ubicación:", err);
+        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error al obtener ubicación",
             error: true,

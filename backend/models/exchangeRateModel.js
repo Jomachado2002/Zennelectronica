@@ -111,7 +111,7 @@ exchangeRateSchema.statics.getCurrentRate = async function(currency = 'USD') {
       _id: null
     };
   } catch (error) {
-    console.error('Error getting current exchange rate:', error);
+    // console.error removed for production
     throw error;
   }
 };
@@ -129,7 +129,7 @@ exchangeRateSchema.statics.getRateHistory = async function(currency = 'USD', day
     
     return history;
   } catch (error) {
-    console.error('Error getting exchange rate history:', error);
+    // console.error removed for production
     throw error;
   }
 };
@@ -171,7 +171,7 @@ exchangeRateSchema.statics.getUpdateStats = async function(currency = 'USD', day
       avgUpdateDuration: 0
     };
   } catch (error) {
-    console.error('Error getting update stats:', error);
+    // console.error removed for production
     throw error;
   }
 };

@@ -26,7 +26,7 @@ const TestBalance = () => {
                 setBalance(result.data.current_balance);
             }
         } catch (error) {
-            console.error('Error obteniendo saldo:', error);
+            // console.error removed for production
             toast.error('Error al cargar saldo');
         } finally {
             setLoading(false);
@@ -41,7 +41,7 @@ const TestBalance = () => {
                 setHistory(result.data.transactions);
             }
         } catch (error) {
-            console.error('Error obteniendo historial:', error);
+            // console.error removed for production
         } finally {
             setLoadingHistory(false);
         }
@@ -85,7 +85,7 @@ const TestBalance = () => {
                 toast.error(result.message || 'Error en pago de prueba');
             }
         } catch (error) {
-            console.error('Error en pago de prueba:', error);
+            // console.error removed for production
             toast.error('Error en pago de prueba');
         }
     };

@@ -124,7 +124,7 @@ useEffect(() => {
       alert('Error en el análisis: ' + result.message);
     }
   } catch (error) {
-    console.error('❌ Error procesando datos:', error);
+    // console.error removed for production
     alert('Error al procesar los datos: ' + error.message);
   } finally {
     setIsProcessing(false);
@@ -287,7 +287,7 @@ const markAsOutOfStock = async (productId) => {
         alert('❌ Error: ' + result.message);
       }
     } catch (error) {
-      console.error('Error en actualización masiva:', error);
+      // console.error removed for production
       alert('Error en la actualización: ' + error.message);
     }
   };

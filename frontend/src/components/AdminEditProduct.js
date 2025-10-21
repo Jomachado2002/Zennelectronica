@@ -77,7 +77,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       mappedSpecs[fieldName] = productData[fieldName] || '';
     });
     
-    console.log('🔍 AdminEditProduct - Especificaciones mapeadas:', mappedSpecs);
+    // console.log removed for production
     
     return mappedSpecs;
   };
@@ -131,7 +131,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
   // Cargar datos de sincronización si vienen del módulo de sincronización
   useEffect(() => {
     if (extraData) {
-      console.log('🔍 AdminEditProduct - Datos de sincronización:', extraData);
+      // console.log removed for production
       setSyncData(extraData);
       
       // Si viene URL del proveedor, agregarla
@@ -147,7 +147,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
   // Cargar datos del producto al montar
   useEffect(() => {
     if (productData) {
-      console.log('🔍 AdminEditProduct - Cargando datos del producto:', productData);
+      // console.log removed for production
       
       // Mapear especificaciones
       const mappedSpecs = mapProductSpecifications(productData, productData.category, productData.subcategory);
@@ -184,7 +184,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     const handlePaste = (e) => {
       if (!isPasteActive) return;
       
-      console.log('📋 Paste detectado en AdminEditProduct');
+      // console.log removed for production
       e.preventDefault();
       
       const clipboardData = e.clipboardData;
@@ -243,7 +243,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
   // Función para manejar imágenes del portapapeles
   const handleClipboardImages = async (clipboardData) => {
     try {
-      console.log('📋 Procesando imágenes del portapapeles...');
+      // console.log removed for production
       const imageFiles = await extractImagesFromClipboard(clipboardData);
       
       if (imageFiles.length === 0) {
@@ -251,11 +251,11 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         return;
       }
       
-      console.log(`📊 ${imageFiles.length} imágenes encontradas en el portapapeles`);
+      // console.log removed for production
       await handleImageFiles(imageFiles);
       
     } catch (error) {
-      console.error('❌ Error procesando portapapeles:', error);
+      // console.error removed for production
       toast.error('Error al procesar imágenes del portapapeles');
     }
   };
@@ -284,7 +284,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     setProcessingProgress({ current: 0, total: filesToProcess.length, fileName: '' });
     
     try {
-      console.log(`🖼️ Procesando ${filesToProcess.length} imágenes...`);
+      // console.log removed for production
       
       // Optimizar imágenes
       const optimizationResults = await optimizeMultipleImages(
@@ -295,7 +295,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         }
       );
       
-      console.log('✅ Optimización completada, iniciando subida...');
+      // console.log removed for production
       
       // Subir imágenes optimizadas
       const uploadPromises = optimizationResults.map(async (result, index) => {
@@ -310,7 +310,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
           const uploadResult = await uploadImage(result.file);
           return uploadResult.url;
         } catch (error) {
-          console.error(`❌ Error subiendo ${result.file.name}:`, error);
+          // console.error removed for production
           return null;
         }
       });
@@ -345,7 +345,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       }
       
     } catch (error) {
-      console.error('❌ Error procesando imágenes:', error);
+      // console.error removed for production
       toast.error('Error al procesar las imágenes');
     } finally {
       setIsProcessingImages(false);
@@ -388,7 +388,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       await navigator.clipboard.writeText(text);
       toast.success('Copiado al portapapeles');
     } catch (error) {
-      console.error('Error copiando:', error);
+      // console.error removed for production
       toast.error('Error al copiar');
     }
   };
@@ -446,7 +446,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         ...data.specifications
       };
       
-      console.log('📤 Enviando producto actualizado:', productDataToSend);
+      // console.log removed for production
       
       const response = await fetch('http://localhost:8080/api/actualizar-producto', {
         method: 'POST',
@@ -466,7 +466,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       }
       
     } catch (error) {
-      console.error('💥 Error:', error);
+      // console.error removed for production
       toast.error('Error al actualizar el producto');
     } finally {
       setIsSubmitting(false);
@@ -499,7 +499,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       }
       
     } catch (error) {
-      console.error('💥 Error:', error);
+      // console.error removed for production
       toast.error('Error al eliminar el producto');
     } finally {
       setIsDeleting(false);
@@ -522,7 +522,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         }));
       }
     } catch (error) {
-      console.error('Error cargando tipo de cambio:', error);
+      // console.error removed for production
     } finally {
       setIsLoadingExchangeRate(false);
     }

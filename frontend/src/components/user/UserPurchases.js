@@ -76,7 +76,7 @@ const UserPurchases = ({ user }) => {
         
       }
     } catch (error) {
-      console.error('Error al cargar compras:', error);
+      // console.error removed for production
       toast.error('Error al cargar tus compras');
     } finally {
       setLoading(false);

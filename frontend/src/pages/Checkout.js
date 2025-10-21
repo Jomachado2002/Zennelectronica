@@ -63,7 +63,7 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                     }
                 }
             } catch (error) {
-                console.error('Error cargando tarjetas:', error);
+                // console.error removed for production
             } finally {
                 setLoadingCards(false);
             }
@@ -176,7 +176,7 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                 toast.error(result.message || 'Error en el pago');
             }
         } catch (error) {
-            console.error('Error:', error);
+            // console.error removed for production
             toast.error('Error de conexión al procesar el pago');
         } finally {
             setProcessingPayment(false);
@@ -319,7 +319,7 @@ const Checkout = () => {
                 
                 setCartItems(validItems);
             } catch (error) {
-                console.error('Error cargando carrito:', error);
+                // console.error removed for production
                 toast.error('Error al cargar el carrito');
                 navigate('/carrito');
             } finally {
@@ -365,7 +365,7 @@ const Checkout = () => {
                 }));
             }
         } catch (error) {
-            console.warn('Error cargando ubicación:', error);
+            // console.warn removed for production
         }
     }, [isLoggedIn]);
 
@@ -613,7 +613,7 @@ const hasValidLocation = () => {
     };
 
     const handlePaymentError = (error) => {
-        console.error('Error en pago desde checkout:', error);
+        // console.error removed for production
         toast.error('Error al procesar el pago. Intenta nuevamente.');
     };
 
@@ -667,7 +667,7 @@ const hasValidLocation = () => {
                 }
             }
         } catch (error) {
-            console.error('Error al actualizar cantidad:', error);
+            // console.error removed for production
             toast.error('Error al actualizar el producto');
         }
     };

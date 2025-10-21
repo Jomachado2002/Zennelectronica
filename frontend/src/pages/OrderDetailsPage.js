@@ -77,7 +77,7 @@ const OrderDetailsPage = () => {
                 navigate('/');
             }
         } catch (error) {
-            console.error('Error:', error);
+            // console.error removed for production
             toast.error('Error al cargar información del pedido');
         } finally {
             setLoading(false);

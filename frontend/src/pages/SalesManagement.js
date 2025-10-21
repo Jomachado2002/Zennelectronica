@@ -110,7 +110,7 @@ const SalesManagement = () => {
         toast.error(result.message || "Error al cargar las ventas");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -243,7 +243,7 @@ const SalesManagement = () => {
         setClients(result.data.clients || []);
       }
     } catch (error) {
-      console.error("Error al cargar clientes:", error);
+      // console.error removed for production
     }
   };
 
@@ -410,7 +410,7 @@ const SalesManagement = () => {
         toast.error(result.message || "Error al actualizar el estado");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -434,7 +434,7 @@ const SalesManagement = () => {
         toast.error(result.message || "Error al eliminar la venta");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };

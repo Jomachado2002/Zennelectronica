@@ -1,32 +1,32 @@
 const { execSync } = require('child_process');
 const path = require('path');
 
-console.log('🔧 Instalando Sharp para conversión de imágenes...\n');
+// console.log removed for production
 
 try {
   // Instalar Sharp
-  console.log('Instalando Sharp...');
+  // console.log removed for production
   execSync('npm install sharp', { 
     cwd: path.join(__dirname, '..'),
     stdio: 'inherit'
   });
   
-  console.log('\n✅ Sharp instalado correctamente!');
-  console.log('\n📋 Dependencias necesarias:');
-  console.log('  ✅ sharp - Conversión de imágenes');
+  // console.log removed for production
+  // console.log removed for production
+  // console.log removed for production
   console.log('  ✅ axios - Descarga de imágenes (ya instalado)');
   console.log('  ✅ firebase - Firebase Storage (ya instalado)');
   console.log('  ✅ uuid - Generación de IDs únicos (ya instalado)');
   console.log('  ✅ mongoose - Base de datos (ya instalado)');
   
-  console.log('\n🚀 Ahora puedes ejecutar:');
-  console.log('  node scripts/testWebPConversion.js');
-  console.log('  node scripts/convertImagesToWebP.js --dry-run');
+  // console.log removed for production
+  // console.log removed for production
+  // console.log removed for production
   
 } catch (error) {
-  console.error('❌ Error instalando Sharp:', error.message);
-  console.log('\n💡 Intenta ejecutar manualmente:');
-  console.log('  npm install sharp');
+  // console.error removed for production
+  // console.log removed for production
+  // console.log removed for production
   process.exit(1);
 }
 

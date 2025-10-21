@@ -35,7 +35,7 @@ const RatingPage = () => {
         toast.error('Pedido no encontrado');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error('Error al cargar información del pedido');
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ const RatingPage = () => {
         toast.error(result.message || 'Error al enviar calificación');
       }
     } catch (error) {
-      console.error('Error:', error);
+      // console.error removed for production
       toast.error('Error de conexión');
     } finally {
       setSubmitting(false);

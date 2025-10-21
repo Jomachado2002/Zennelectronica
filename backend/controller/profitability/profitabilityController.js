@@ -23,7 +23,7 @@ async function generateNextAnalysisNumber() {
       return 'ANAL-00001';
     }
   } catch (error) {
-    console.error("Error al generar número de análisis:", error);
+    // console.error removed for production
     return `ANAL-${Date.now().toString().slice(-5)}`;
   }
 }

@@ -82,7 +82,7 @@ const SuppliersManagement = () => {
         toast.error(result.message || "Error al cargar los proveedores");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
@@ -194,7 +194,7 @@ const SuppliersManagement = () => {
         toast.error(result.message || "Error al eliminar el proveedor");
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     }
   };
@@ -259,7 +259,7 @@ const SuppliersManagement = () => {
         toast.error(result.message || `Error al ${isEditMode ? 'actualizar' : 'crear'} el proveedor`);
       }
     } catch (error) {
-      console.error("Error:", error);
+      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);

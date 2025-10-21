@@ -10,21 +10,21 @@ const useCategories = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 useCategories - Cargando categorías...');
+      // console.log removed for production
       
       // Intentar primero con el endpoint de categorías estructuradas
       try {
         const response = await axiosInstance.get('/api/admin/categories/all');
-        console.log('✅ useCategories - Categorías cargadas desde /api/admin/categories/all:', response.data);
+        // console.log removed for production
         setCategories(response.data.data || []);
         return;
       } catch (adminError) {
-        console.log('⚠️ useCategories - Error con /api/admin/categories/all, intentando con /api/categorias-bd');
+        // console.log removed for production
       }
       
       // Fallback al endpoint de base de datos directa
       const response = await axiosInstance.get('/api/categorias-bd');
-      console.log('✅ useCategories - Categorías cargadas desde /api/categorias-bd:', response.data);
+      // console.log removed for production
       
       // Transformar los datos de la BD al formato esperado
       const transformedCategories = response.data.data.map(category => ({
@@ -36,7 +36,7 @@ const useCategories = () => {
       
       setCategories(transformedCategories);
     } catch (err) {
-      console.error('❌ useCategories - Error fetching categories:', err);
+      // console.error removed for production
       setError(err.message);
     } finally {
       setLoading(false);
@@ -55,17 +55,17 @@ const useCategories = () => {
 
   // Función para obtener especificaciones de una subcategoría específica
   const getSpecificationsBySubcategory = (categoryValue, subcategoryValue) => {
-    console.log('🔍 getSpecificationsBySubcategory:', { categoryValue, subcategoryValue });
-    console.log('🔍 Total categories:', categories.length);
+    // console.log removed for production
+    // console.log removed for production
     
     const category = categories.find(cat => cat.value === categoryValue);
-    console.log('🔍 Found category:', category ? category.name : 'NOT FOUND');
+    // console.log removed for production
     
     if (!category) return [];
     
     const subcategory = category.subcategories.find(sub => sub.value === subcategoryValue);
-    console.log('🔍 Found subcategory:', subcategory ? subcategory.name : 'NOT FOUND');
-    console.log('🔍 Specifications count:', subcategory ? subcategory.specifications.length : 0);
+    // console.log removed for production
+    // console.log removed for production
     
     return subcategory ? subcategory.specifications : [];
   };

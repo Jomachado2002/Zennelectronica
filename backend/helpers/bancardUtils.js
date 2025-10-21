@@ -66,7 +66,7 @@ const generateShopProcessId = () => {
     
     // ✅ VERIFICAR QUE SEA UN NÚMERO VÁLIDO
     if (isNaN(shopProcessId) || shopProcessId <= 0) {
-        console.error('❌ shop_process_id inválido generado:', shopProcessId);
+        // console.error removed for production
         // Fallback a timestamp simple
         return Date.now();
     }

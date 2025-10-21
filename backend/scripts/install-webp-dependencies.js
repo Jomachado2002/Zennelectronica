@@ -2,7 +2,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('=== INSTALANDO DEPENDENCIAS PARA CONVERSIÓN WEBP ===\n');
+// console.log removed for production
 
 // Lista de dependencias necesarias
 const dependencies = [
@@ -15,33 +15,33 @@ const dependencies = [
 // Verificar si package.json existe
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
 if (!fs.existsSync(packageJsonPath)) {
-  console.error('❌ No se encontró package.json en el directorio backend');
+  // console.error removed for production
   process.exit(1);
 }
 
-console.log('📦 Instalando dependencias...\n');
+// console.log removed for production
 
 try {
   // Instalar cada dependencia
   for (const dep of dependencies) {
-    console.log(`Instalando ${dep}...`);
+    // console.log removed for production
     execSync(`npm install ${dep}`, { 
       cwd: path.join(__dirname, '..'),
       stdio: 'inherit'
     });
-    console.log(`✅ ${dep} instalado correctamente\n`);
+    // console.log removed for production
   }
   
-  console.log('🎉 ¡Todas las dependencias instaladas correctamente!');
-  console.log('\n📋 Dependencias instaladas:');
+  // console.log removed for production
+  // console.log removed for production
   dependencies.forEach(dep => console.log(`  - ${dep}`));
   
-  console.log('\n🚀 Ahora puedes ejecutar los scripts de conversión:');
-  console.log('  - Conversión masiva: node scripts/convertImagesToWebP.js --dry-run');
-  console.log('  - Conversión individual: node scripts/convertSingleImageToWebP.js <URL>');
+  // console.log removed for production
+  // console.log removed for production
+  // console.log removed for production
   
 } catch (error) {
-  console.error('❌ Error instalando dependencias:', error.message);
+  // console.error removed for production
   process.exit(1);
 }
 

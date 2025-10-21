@@ -4,7 +4,7 @@ const { generateSlug, generateUniqueSlug } = require('../../helpers/slugGenerato
 
 async function UploadProductController(req, res) {
     try {
-        console.log('📥 UploadProductController - Body recibido:', req.body);
+        // console.log removed for production
         const sessionUserId = req.userId;
 
         const hasPermission = await uploadProductPermission(sessionUserId);

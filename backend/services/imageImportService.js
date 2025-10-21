@@ -29,20 +29,20 @@ function initializeFirebase() {
             const existingApps = getApps();
             
             if (existingApps.length > 0) {
-                console.log('✅ Usando Firebase App existente');
+                // console.log removed for production
                 app = existingApps[0];
             } else {
-                console.log('🆕 Inicializando nueva Firebase App');
+                // console.log removed for production
                 app = initializeApp(firebaseConfig);
             }
             
             // Usar getStorage con la app específica y el bucket específico
             storage = getStorage(app, `gs://${firebaseConfig.storageBucket}`);
-            console.log('✅ Firebase Storage inicializado correctamente');
-            console.log('📦 Storage bucket:', firebaseConfig.storageBucket);
+            // console.log removed for production
+            // console.log removed for production
         } catch (error) {
-            console.error('❌ Error inicializando Firebase Storage:', error.message);
-            console.error('❌ Configuración:', firebaseConfig);
+            // console.error removed for production
+            // console.error removed for production
             throw error;
         }
     }
@@ -61,7 +61,7 @@ async function downloadImage(imageUrl, timeout = 30000) {
             throw new Error('URL de imagen no válida');
         }
 
-        console.log(`Descargando imagen: ${imageUrl}`);
+        // console.log removed for production
 
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
@@ -87,11 +87,11 @@ async function downloadImage(imageUrl, timeout = 30000) {
             throw new Error(`Tipo de imagen no válido: ${contentType}`);
         }
 
-        console.log(`Imagen descargada: ${response.data.length} bytes, tipo: ${contentType}`);
+        // console.log removed for production
         return Buffer.from(response.data);
 
     } catch (error) {
-        console.error(`Error descargando imagen ${imageUrl}:`, error.message);
+        // console.error removed for production
         throw error;
     }
 }
@@ -118,7 +118,7 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
         const fileName = `${uniqueId}_${providerCode}.jpg`;
         const fullPath = `products/${fileName}`;
 
-        console.log(`Subiendo imagen: ${fullPath}`);
+        // console.log removed for production
 
         // Inicializar Firebase de forma lazy
         const { storage: firebaseStorage } = initializeFirebase();
@@ -139,11 +139,11 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
         // Obtener URL pública
         const publicUrl = await getDownloadURL(snapshot.ref);
 
-        console.log(`Imagen subida exitosamente: ${publicUrl}`);
+        // console.log removed for production
         return publicUrl;
 
     } catch (error) {
-        console.error('Error subiendo imagen a Firebase:', error.message);
+        // console.error removed for production
         throw error;
     }
 }
@@ -157,7 +157,7 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
  */
 async function importImageFromUrl(imageUrl, providerCode, options = {}) {
     try {
-        console.log(`📥 Descargando imagen desde: ${imageUrl}`);
+        // console.log removed for production
         
         // 1. Descargar imagen
         const response = await axios.get(imageUrl, {
@@ -166,7 +166,7 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
         
-        console.log(`✅ Imagen descargada: ${response.data.length} bytes`);
+        // console.log removed for production
         
         // 2. Convertir arraybuffer a File/Blob simulado para uploadImage
         const buffer = Buffer.from(response.data);
@@ -181,7 +181,7 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
             name: `${providerCode}.jpg` // Agregar name para compatibilidad
         };
         
-        console.log(`📤 Subiendo imagen usando método Firebase directo...`);
+        // console.log removed for production
         
         // 3. Inicializar Firebase de forma lazy
         const { storage: firebaseStorage } = initializeFirebase();
@@ -190,7 +190,7 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
         const fileName = `${uniqueId}_${fakeFile.name.replace(/\s+/g, '_')}`;
         const fullPath = `products/${fileName}`;
         
-        console.log(`📁 Creando referencia: ${fullPath}`);
+        // console.log removed for production
         
         // Crear referencia en Firebase Storage
         const storageRef = ref(firebaseStorage, fullPath);
@@ -208,7 +208,7 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
         // Obtener URL pública
         const publicUrl = await getDownloadURL(snapshot.ref);
         
-        console.log(`✅ Imagen subida exitosamente:`, publicUrl);
+        // console.log removed for production
         
         return {
             success: true,
@@ -219,7 +219,7 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
         };
         
     } catch (error) {
-        console.error(`❌ Error en importImageFromUrl:`, error);
+        // console.error removed for production
         throw error;
     }
 }
@@ -246,11 +246,11 @@ async function importMultipleImages(imageData, options = {}) {
         batches.push(imageData.slice(i, i + maxConcurrent));
     }
 
-    console.log(`Importando ${imageData.length} imágenes en ${batches.length} lotes de máximo ${maxConcurrent}`);
+    // console.log removed for production
 
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-        console.log(`Procesando lote ${batchIndex + 1}/${batches.length}`);
+        // console.log removed for production
 
         // Procesar lote en paralelo
         const batchPromises = batch.map(item => 
@@ -267,7 +267,7 @@ async function importMultipleImages(imageData, options = {}) {
             }
 
         } catch (error) {
-            console.error(`Error en lote ${batchIndex + 1}:`, error.message);
+            // console.error removed for production
             // Agregar errores para este lote
             batch.forEach(item => {
                 results.push({
@@ -307,7 +307,7 @@ async function validateImageUrl(imageUrl) {
         return response.status === 200 && validTypes.includes(contentType);
 
     } catch (error) {
-        console.error(`Error validando URL ${imageUrl}:`, error.message);
+        // console.error removed for production
         return false;
     }
 }

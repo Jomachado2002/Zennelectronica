@@ -51,7 +51,7 @@ const reverseGeocodeController = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('❌ Error en geocodificación:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en geocodificación",
             success: false,
@@ -102,7 +102,7 @@ const geocodeAddressController = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('❌ Error en geocodificación:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error en geocodificación",
             success: false,
@@ -174,7 +174,7 @@ const saveUserLocationController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error guardando ubicación:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al guardar ubicación",
             success: false,
@@ -218,7 +218,7 @@ const getUserLocationController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error obteniendo ubicación:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al obtener ubicación",
             success: false,
@@ -262,7 +262,7 @@ const saveGuestLocationController = async (req, res) => {
                 locationData.country = results[0].country;
             }
         } catch (geocodeError) {
-            console.warn('⚠️ Error en geocodificación:', geocodeError);
+            // console.warn removed for production
         }
 
         locationData.googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
@@ -278,7 +278,7 @@ const saveGuestLocationController = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error guardando ubicación temporal:', error);
+        // console.error removed for production
         res.status(500).json({
             message: "Error al guardar ubicación temporal",
             success: false,
