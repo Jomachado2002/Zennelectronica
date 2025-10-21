@@ -403,10 +403,10 @@ const MenuCategorias = ({
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       {activeSubcategories.map((subcategory) => (
-                        <a
+                        <button
                           key={subcategory.id}
-                          href="#"
-                          className="group p-3 hover:bg-blue-50 transition-colors flex items-center"
+                          type="button"
+                          className="group p-3 hover:bg-blue-50 transition-colors flex items-center w-full text-left"
                           onClick={(e) => {
                             e.preventDefault();
                             handleNavigateWithReload(`/categoria-producto?category=${categories[activeCategoryIndex].value}&subcategory=${subcategory.value}`);
@@ -418,13 +418,13 @@ const MenuCategorias = ({
                           <span className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors text-sm">
                             {subcategory.label}
                           </span>
-                        </a>
+                        </button>
                       ))}
                     </div>
                     
                     <div className="mt-8 flex justify-end">
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                         onClick={(e) => {
                           e.preventDefault();
@@ -432,7 +432,7 @@ const MenuCategorias = ({
                         }}
                       >
                         Ver toda la colección
-                      </a>
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -537,10 +537,10 @@ const CategoryAccordion = ({
           ) : (
             <>
               {subcategories.map((subcategory) => (
-                <a
+                <button
                   key={subcategory.id}
-                  href="#"
-                  className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group"
+                  type="button"
+                  className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group w-full text-left"
                   onClick={(e) => {
                     e.preventDefault();
                     onNavigateWithReload(`/categoria-producto?category=${category.value}&subcategory=${subcategory.value}`);
@@ -562,13 +562,13 @@ const CategoryAccordion = ({
                   >
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
-                </a>
+                </button>
               ))}
               
               {/* Botón "Ver Todo" */}
-              <a
-                href="#"
-                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg"
+              <button
+                type="button"
+                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg w-full"
                 style={{
                   background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
                 }}
@@ -578,7 +578,7 @@ const CategoryAccordion = ({
                 }}
               >
                 Ver toda la colección →
-              </a>
+              </button>
             </>
           )}
         </div>

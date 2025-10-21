@@ -7,7 +7,7 @@ import displayPYGCurrency from '../helpers/displayCurrency';
 import { FaShoppingCart } from 'react-icons/fa';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
 
-const VerticalCard = ({ loading, data = [] }) => {
+const VerticalCardGrid = ({ loading, data = [] }) => {
     const loadingList = useMemo(() => new Array(12).fill(null), []);
     const { fetchUserAddToCart } = useContext(Context);
     const cardContainerRef = useRef(null);
@@ -17,30 +17,31 @@ const VerticalCard = ({ loading, data = [] }) => {
     const [viewedProducts, setViewedProducts] = useState(new Set());
     const observerRef = useRef(null);
 
-       // ✅ PRELOAD INTELIGENTE - Solo las primeras 8 imágenes con timeout
-       useEffect(() => {
-           if (data.length > 0) {
-               // Precargar solo las primeras 8 imágenes para mejor performance
-               data.slice(0, 8).forEach((product) => {
-                   if (product?.productImage?.[0]) {
-                       const img = new Image();
-                       img.src = product.productImage[0];
-                       img.onload = () => {
-                           // console.log removed for production
-                       };
-                       img.onerror = () => {
-                           // console.log removed for production
-                           // Intentar con la segunda imagen si existe
-                           if (product?.productImage?.[1]) {
-                               const img2 = new Image();
-                               img2.src = product.productImage[1];
-                           }
-                       };
-                   }
-               });
-           }
-       }, [data]);
-// ✅ INTERSECTION OBSERVER PARA TRACKEAR VIEW CONTENT
+    // ✅ PRELOAD INTELIGENTE - Solo las primeras 8 imágenes con timeout
+    useEffect(() => {
+        if (data.length > 0) {
+            // Precargar solo las primeras 8 imágenes para mejor performance
+            data.slice(0, 8).forEach((product) => {
+                if (product?.productImage?.[0]) {
+                    const img = new Image();
+                    img.src = product.productImage[0];
+                    img.onload = () => {
+                        // console.log removed for production
+                    };
+                    img.onerror = () => {
+                        // console.log removed for production
+                        // Intentar con la segunda imagen si existe
+                        if (product?.productImage?.[1]) {
+                            const img2 = new Image();
+                            img2.src = product.productImage[1];
+                        }
+                    };
+                }
+            });
+        }
+    }, [data]);
+
+    // ✅ INTERSECTION OBSERVER PARA TRACKEAR VIEW CONTENT
     useEffect(() => {
         if (!data.length) return;
         
@@ -114,9 +115,9 @@ const VerticalCard = ({ loading, data = [] }) => {
                             backgroundClip: 'padding-box, border-box'
                         }}
                     >
-                        {/* Imagen placeholder - Estilo Home */}
+                        {/* Imagen placeholder */}
                         <div className='bg-gradient-to-br from-gray-200 to-gray-300 h-32 sm:h-36 rounded-t-xl'></div>
-                        {/* Contenido placeholder - Estilo Home */}
+                        {/* Contenido placeholder */}
                         <div className='p-2.5 space-y-1.5 flex flex-col flex-grow'>
                             <div className='h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
                             <div className='h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-2/3'></div>
@@ -189,73 +190,64 @@ const VerticalCard = ({ loading, data = [] }) => {
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        {/* Imagen del producto - Estilo Home */}
+                        {/* Imagen del producto - Estilo unificado */}
                         <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
-                            {/* Siempre mostrar al menos una imagen o placeholder */}
-                            {product.productImage && product.productImage[0] ? (
+                            {!hasImageError ? (
                                 <>
                                     {/* Imagen principal */}
                                     <img
                                         src={product.productImage[0]}
                                         alt={product.productName}
-                                        className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
+                                        className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                             showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                                         }`}
                                         loading="eager"
-                                        onError={(e) => {
-                                            // console.log removed for production
-                                            e.target.style.display = 'none';
-                                        }}
-                                        onLoad={(e) => {
-                                            e.target.style.display = 'block';
-                                        }}
+                                        fetchpriority="high"
+                                        onError={() => handleImageError(product._id)}
+                                        decoding="async"
                                     />
                                     
                                     {/* Imagen de hover (segunda imagen) */}
-                                    {product.productImage[1] && (
+                                    {secondImage && (
                                         <img
-                                            src={product.productImage[1]}
-                                            alt={`${product.productName} - Vista adicional`}
+                                            src={secondImage}
+                                            alt={product.productName}
                                             className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                                             }`}
                                             loading="lazy"
-                                            onError={(e) => {
-                                                // console.log removed for production
-                                                e.target.style.display = 'none';
-                                            }}
+                                            fetchpriority="low"
+                                            decoding="async"
                                         />
                                     )}
                                 </>
                             ) : (
-                                /* Placeholder mejorado cuando no hay imagen */
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                                <div className="flex items-center justify-center h-full">
                                     <div className="text-gray-400 text-center">
-                                        <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg className="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                                         </svg>
-                                        <span className="text-xs font-medium">Sin imagen</span>
-                                        <span className="text-xs block text-gray-500 mt-1">{product.productName}</span>
+                                        <p className="text-xs">Error al cargar</p>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Badge de descuento - estilo del Header */}
+                            {/* Badge de descuento */}
                             {discount && (
-                                <div className="absolute top-2 left-2">
+                                <div className="absolute top-2 left-2 z-10">
                                     <span 
                                         className='text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg'
                                         style={{
                                             background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
                                         }}
                                     >
-                                        -{discount}% OFF
+                                        -{discount}%
                                     </span>
                                 </div>
                             )}
                         </div>
 
-                        {/* Detalles del producto - Estilo Home */}
+                        {/* Detalles del producto */}
                         <div className='p-2.5 flex flex-col flex-grow'>
                             <div className='flex-grow space-y-1.5'>
                                 <h3 className='font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]'>
@@ -305,4 +297,4 @@ const VerticalCard = ({ loading, data = [] }) => {
     );
 };
 
-export default VerticalCard;
+export default VerticalCardGrid;

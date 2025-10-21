@@ -9,8 +9,6 @@ import {
   FaBuilding,
   FaMapMarkerAlt,
   FaPhone,
-  FaEnvelope,
-  FaUser,
   FaCheck,
   FaExclamationTriangle,
   FaStar
@@ -72,7 +70,7 @@ const BranchesManagement = () => {
 
   useEffect(() => {
     fetchBranches();
-  }, [showInactive]);
+  }, [showInactive, fetchBranches]);
 
   useEffect(() => {
     let filtered = branches;

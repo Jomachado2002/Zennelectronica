@@ -1,7 +1,7 @@
 // frontend/src/pages/BudgetDetails.js
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaFileDownload, FaEnvelope, FaEdit, FaTrashAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaFileDownload, FaEnvelope, FaTrashAlt, FaArrowLeft } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 import displayPYGCurrency from '../helpers/displayCurrency';
@@ -22,7 +22,7 @@ const BudgetDetails = () => {
   
   useEffect(() => {
     fetchBudgetDetails();
-  }, [budgetId]);
+  }, [budgetId, fetchBudgetDetails]);
   
   const fetchBudgetDetails = async () => {
     try {

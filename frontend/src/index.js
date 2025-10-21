@@ -2,7 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+// import App from './App'; // Removed unused import
 import reportWebVitals from './reportWebVitals';
 import { RouterProvider } from 'react-router-dom';
 import router from './routes';
@@ -12,7 +12,7 @@ import { initPerformanceOptimizations } from './utils/performanceOptimizations';
 
 // ✅ NUEVAS IMPORTACIONES PARA REACT QUERY
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools'; // Removed unused import
 
 // ✅ CONFIGURACIÓN DEL QUERY CLIENT OPTIMIZADA
 const queryClient = new QueryClient({

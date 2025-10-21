@@ -10,7 +10,7 @@ import SideDrawerFilters from '../components/filters/SideDrawerFilters';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
-import VerticalCard from '../components/VerticalCard';
+import VerticalCardGrid from '../components/VerticalCardGrid';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -414,7 +414,9 @@ const CategoryProductContent = () => {
     setGridView,
     clearAllFilters,
     filterCount,
-    setMobileFilterOpen
+    setMobileFilterOpen,
+    filterCategoryList,
+    filterSubcategoryList
   } = useFilters();
   
   const location = useLocation();
@@ -543,7 +545,10 @@ const CategoryProductContent = () => {
               </div>
             ) : data.length > 0 ? (
               <div className="transition-opacity duration-300" style={{ opacity: loading ? 0.5 : 1 }}>
-                <VerticalCard data={data} loading={loading} />
+                <VerticalCardGrid 
+                  data={data} 
+                  loading={loading} 
+                />
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-100">

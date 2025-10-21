@@ -34,8 +34,7 @@ import {
     FaPrint,
     FaExpand,
     FaCompress,
-    FaArrowUp,
-    FaArrowDown
+    FaArrowUp
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -73,7 +72,7 @@ const BancardTransactions = () => {
     const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
     const [selectedTransactions, setSelectedTransactions] = useState([]);
     
-    const [showProductModal, setShowProductModal] = useState(false);
+    // Removed unused state
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 25,

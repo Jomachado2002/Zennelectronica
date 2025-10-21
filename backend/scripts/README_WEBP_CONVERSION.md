@@ -218,3 +218,4 @@ Si encuentras problemas:
 **¡Importante!** Siempre ejecuta primero en modo `--dry-run` para verificar que todo funciona correctamente antes de hacer cambios reales en tu base de datos.
 
 
+

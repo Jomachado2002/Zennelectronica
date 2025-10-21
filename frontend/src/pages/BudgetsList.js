@@ -1,11 +1,9 @@
 // frontend/src/pages/BudgetsList.js - MEJORADO CON SOPORTE MULTIMONEDA Y DISEÑO OPTIMIZADO
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import SummaryApi from '../common';
 import { toast } from 'react-toastify';
 import { 
-  FaFilePdf, 
-  FaEdit, 
   FaTrashAlt, 
   FaEye, 
   FaFileDownload,
@@ -15,7 +13,6 @@ import {
   FaSearch, 
   FaDollarSign, 
   FaEuroSign, 
-  FaExchangeAlt,
   FaCalendarAlt,
   FaBuilding,
   FaUser,

@@ -198,7 +198,7 @@ const Header = () => {
         }`}
       >
         {/* ============ VERSIÓN DESKTOP ============ */}
-        <div className="container mx-auto px-6 lg:px-8 h-20 hidden lg:flex items-center justify-between">
+        <div className="container mx-auto px-6 lg:px-8 h-16 hidden lg:flex items-center justify-between">
           
           {/* LOGO SVG */}
           <Link 
@@ -210,7 +210,7 @@ const Header = () => {
             <img 
               src="/logozenn.svg" 
               alt="Zenn Electrónicos" 
-              className="h-12 w-auto"
+              className="h-10 w-auto"
               style={{
                 filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
               }}
@@ -233,7 +233,7 @@ const Header = () => {
                 <input
                   type="text"
                   placeholder="Busca tus productos..."
-                  className="w-full outline-none py-3.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
+                  className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
                   onChange={handleSearch}
                   value={search}
                   style={{
@@ -271,7 +271,7 @@ const Header = () => {
               {!user ? (
                 <button
                   onClick={handleUserIconClick}
-                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-full transition-all duration-300 text-gray-700 hover:text-white group relative overflow-hidden"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 text-gray-700 hover:text-white group relative overflow-hidden"
                   style={{
                     border: '2px solid transparent',
                     backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
@@ -289,7 +289,7 @@ const Header = () => {
                 <>
                   <button
                     onClick={toggleUserDropdown}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-full transition-all duration-300 text-gray-700 hover:shadow-lg"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 text-gray-700 hover:shadow-lg"
                     style={{
                       border: '2px solid #f3f4f6',
                       background: 'white'
@@ -437,7 +437,7 @@ const Header = () => {
             {/* BOTÓN MENÚ CATEGORÍAS */}
             <button 
               onClick={toggleDesktopMenu}
-              className="flex items-center gap-2.5 px-5 py-2.5 rounded-full transition-all duration-300 text-gray-700 hover:shadow-lg"
+              className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 text-gray-700 hover:shadow-lg"
               style={{
                 border: '2px solid #f3f4f6',
                 background: 'white'
@@ -476,13 +476,13 @@ const Header = () => {
 
         {/* ============ VERSIÓN MÓVIL ============ */}
         <div className="lg:hidden flex flex-col">
-          <div className="flex items-center justify-between px-4 h-16 bg-white border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-gray-100">
             {/* Logo SVG móvil */}
             <Link to="/" className="flex items-center" onClick={scrollTop}>
               <img 
                 src="/logozenn.svg" 
                 alt="Zenn Electrónicos" 
-                className="h-9 w-auto"
+                className="h-8 w-auto"
                 style={{
                   filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
                 }}
@@ -522,12 +522,12 @@ const Header = () => {
           <div 
             className="lg:hidden fixed inset-0 z-[80] bg-black bg-opacity-20"
             onClick={toggleMobileSearch}
-            style={{ top: '64px' }}
+            style={{ top: '56px' }}
           />
           
           {/* Barra de búsqueda móvil */}
           <div 
-            className="lg:hidden fixed top-16 left-0 right-0 z-[90] px-4 py-3 bg-white shadow-lg border-b border-gray-200"
+            className="lg:hidden fixed top-14 left-0 right-0 z-[90] px-4 py-3 bg-white shadow-lg border-b border-gray-200"
             style={{
               animation: 'slideDown 0.3s ease-out'
             }}

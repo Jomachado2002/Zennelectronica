@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FilterProvider, useFilters } from '../context/FilterContext';
 import SummaryApi from '../common';
-import VerticalCard from '../components/VerticalCard';
+import VerticalCardGrid from '../components/VerticalCardGrid';
 import DesktopFilters from '../components/filters/DesktopFilters';
 import SideDrawerFilters from '../components/filters/SideDrawerFilters';
 import ActiveFiltersBar from '../components/filters/ActiveFiltersBar';
@@ -265,7 +265,10 @@ const SearchResultsContent = () => {
               <span className="ml-3 text-gray-600 text-sm lg:text-base">Buscando productos...</span>
             </div>
           ) : searchResults.length > 0 ? (
-            <VerticalCard loading={false} data={searchResults} />
+            <VerticalCardGrid 
+                data={searchResults} 
+                loading={false} 
+            />
           ) : (
             <div className="text-center py-8 lg:py-16">
               <div className="w-16 h-16 lg:w-24 lg:h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 lg:mb-6">

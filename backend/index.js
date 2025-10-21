@@ -56,6 +56,9 @@ app.use((req, res, next) => {
   // Set cache headers for static assets
   if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+  } else if (req.path.match(/^\/banners\//)) {
+    // Banner images - long cache
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
   } else if (req.path.startsWith('/api/')) {
     // API responses - shorter cache
     res.setHeader('Cache-Control', 'private, max-age=300'); // 5 minutes

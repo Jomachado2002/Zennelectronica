@@ -1,11 +1,11 @@
-import logo from './logo.svg';
+// import logo from './logo.svg'; // Removed unused import
 import './App.css';
 import { Outlet } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import SummaryApi from './common';
 import Context from './context';
 import { useDispatch } from 'react-redux';
@@ -18,7 +18,7 @@ function App() {
   const dispatch = useDispatch()
   const [cartProductCount, setCartProductCount] = useState(0)
   
-  const fetchUserDetails = async() => {
+  const fetchUserDetails = useCallback(async() => {
     // ✅ PREPARAR HEADERS CON TOKEN COMO FALLBACK
     const headers = {
       'Content-Type': 'application/json'
@@ -51,24 +51,24 @@ function App() {
     } else {
       // console.log removed for production
     }
-  }
+  }, [dispatch])
   
   // Función modificada para usar localStorage en lugar del backend
-  const fetchUserAddToCart = () => {
+  const fetchUserAddToCart = useCallback(() => {
     // Obtener el contador desde localStorage
     const count = localCartHelper.getItemCount();
     setCartProductCount(count);
     
     // Hacer disponible esta función globalmente
     window.fetchUserAddToCart = fetchUserAddToCart;
-  }
+  }, [])
   
   useEffect(() => {
     /**user Details */
     fetchUserDetails()
     /**user Details cart product */
     fetchUserAddToCart()
-  }, [])
+  }, [fetchUserDetails, fetchUserAddToCart])
 
   return (
     <>

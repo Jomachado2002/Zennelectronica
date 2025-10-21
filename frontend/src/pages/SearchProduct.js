@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import SummaryApi from '../common'
-import VerticalCard from '../components/VerticalCard'
+import VerticalCardGrid from '../components/VerticalCardGrid'
 
 const SearchProduct = () => {
     const query = useLocation()
@@ -85,7 +85,10 @@ const SearchProduct = () => {
             )}
 
             {data.length !== 0 && !loading && (
-                <VerticalCard loading={loading} data={data} />
+                <VerticalCardGrid 
+                    data={data} 
+                    loading={loading} 
+                />
             )}
         </div>
     )
