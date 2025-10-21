@@ -203,3 +203,4 @@ async function testPureJpgPerformance() {
 // Ejecutar el test
 testPureJpgPerformance();
 
+

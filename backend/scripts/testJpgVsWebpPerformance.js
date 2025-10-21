@@ -232,3 +232,4 @@ async function testJpgVsWebpPerformance() {
 // Ejecutar el test
 testJpgVsWebpPerformance();
 
+

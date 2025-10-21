@@ -1,0 +1,135 @@
+/* Optimized Image Styles */
+.optimized-image-container {
+  position: relative;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  display: inline-block;
+}
+
+.optimized-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+.optimized-image.loaded {
+  opacity: 1;
+}
+
+.optimized-image.loading {
+  opacity: 0;
+}
+
+.image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+.loading-skeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Aspect ratio containers */
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect-4-3 {
+  aspect-ratio: 4 / 3;
+}
+
+/* Responsive image variants */
+.responsive-sm {
+  width: 100%;
+  max-width: 300px;
+}
+
+.responsive-md {
+  width: 100%;
+  max-width: 500px;
+}
+
+.responsive-lg {
+  width: 100%;
+  max-width: 800px;
+}
+
+/* Blur effect for loading state */
+.optimized-image-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  filter: blur(5px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.optimized-image-container.loading::before {
+  opacity: 0.3;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .optimized-image-container {
+    background-color: #374151;
+  }
+  
+  .image-placeholder,
+  .loading-skeleton {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+    background-size: 200% 100%;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .optimized-image {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .optimized-image {
+    transition: none;
+  }
+  
+  .image-placeholder,
+  .loading-skeleton {
+    animation: none;
+    background: #f0f0f0;
+  }
+}

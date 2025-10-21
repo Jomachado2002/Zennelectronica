@@ -106,19 +106,22 @@ const VerticalCard = ({ loading, data = [] }) => {
                 {loadingList.map((_, index) => (
                     <div
                         key={index}
-                        className='w-full h-[280px] sm:h-[320px] bg-white rounded-lg shadow-sm border animate-pulse flex flex-col'
+                        className='w-full h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg animate-pulse overflow-hidden flex flex-col'
+                        style={{
+                            border: '2px solid transparent',
+                            backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
+                            backgroundOrigin: 'border-box',
+                            backgroundClip: 'padding-box, border-box'
+                        }}
                     >
-                        {/* Imagen placeholder - 60% */}
-                        <div className='bg-gray-200 h-[168px] sm:h-[192px] rounded-t-lg'></div>
-                        {/* Contenido placeholder - 40% */}
-                        <div className='h-[112px] sm:h-[128px] p-3 flex flex-col flex-grow space-y-2'>
-                            <div className='h-4 bg-gray-200 rounded'></div>
-                            <div className='h-3 bg-gray-200 rounded w-2/3'></div>
-                            <div className='h-3 bg-gray-200 rounded w-1/2'></div>
-                            <div className='mt-auto space-y-2'>
-                                <div className='h-5 bg-gray-200 rounded w-3/4 mx-auto'></div>
-                                <div className='h-8 bg-gray-200 rounded'></div>
-                            </div>
+                        {/* Imagen placeholder - Estilo Home */}
+                        <div className='bg-gradient-to-br from-gray-200 to-gray-300 h-32 sm:h-36 rounded-t-xl'></div>
+                        {/* Contenido placeholder - Estilo Home */}
+                        <div className='p-2.5 space-y-1.5 flex flex-col flex-grow'>
+                            <div className='h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
+                            <div className='h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-2/3'></div>
+                            <div className='h-6 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
+                            <div className='mt-auto h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded'></div>
                         </div>
                     </div>
                 ))}
@@ -175,7 +178,7 @@ const VerticalCard = ({ loading, data = [] }) => {
                         to={`/producto/${product?.slug || product?._id}`} 
                         key={product._id}
                         data-product-id={product._id}
-                        className='w-full h-[280px] sm:h-[320px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
+                        className='w-full h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
                         style={{
                             border: '2px solid transparent',
                             backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
@@ -186,8 +189,8 @@ const VerticalCard = ({ loading, data = [] }) => {
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                     >
-                        {/* Imagen del producto - 60% del espacio */}
-                        <div className='h-[168px] sm:h-[192px] rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
+                        {/* Imagen del producto - Estilo Home */}
+                        <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                             {/* Siempre mostrar al menos una imagen o placeholder */}
                             {product.productImage && product.productImage[0] ? (
                                 <>
@@ -252,12 +255,10 @@ const VerticalCard = ({ loading, data = [] }) => {
                             )}
                         </div>
 
-                        {/* Detalles del producto - 40% del espacio */}
-                        <div className='h-[112px] sm:h-[128px] p-3 flex flex-col justify-between'>
-                            {/* Información del producto */}
-                            <div className='space-y-2 flex-grow'>
-                                {/* Nombre del producto */}
-                                <h3 className='font-semibold text-sm text-gray-800 leading-tight line-clamp-2 min-h-[2.2rem]'>
+                        {/* Detalles del producto - Estilo Home */}
+                        <div className='p-2.5 flex flex-col flex-grow'>
+                            <div className='flex-grow space-y-1.5'>
+                                <h3 className='font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]'>
                                     {product?.productName}
                                 </h3>
                                 
@@ -268,16 +269,13 @@ const VerticalCard = ({ loading, data = [] }) => {
                                     </div>
                                 )}
                                 
-                                {/* Categoría/Marca */}
                                 <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
                                     {product?.subcategory || product?.brandName}
                                 </div>
                             </div>
                             
-                            {/* Precio y botón */}
-                            <div className='space-y-2'>
-                                {/* Precio */}
-                                <div className='text-center'>
+                            <div className='mt-auto space-y-2'>
+                                <div className='space-y-0.5 text-center'>
                                     <div className='text-lg font-bold text-black'>
                                         {displayPYGCurrency(product?.sellingPrice)}
                                     </div>
@@ -288,7 +286,6 @@ const VerticalCard = ({ loading, data = [] }) => {
                                     )}
                                 </div>
 
-                                {/* Botón agregar al carrito */}
                                 <button
                                     onClick={(e) => handleAddToCart(e, product)}
                                     className='w-full flex items-center justify-center gap-1 text-white px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn'

@@ -53,3 +53,4 @@ async function findJpgProducts() {
 // Ejecutar la búsqueda
 findJpgProducts();
 
+

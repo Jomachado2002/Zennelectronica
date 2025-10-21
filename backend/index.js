@@ -18,6 +18,8 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const compression = require('compression');
+const helmet = require('helmet');
 require('dotenv').config();
 const connectDB = require('./config/db');
 const router = require('./routes');
@@ -39,6 +41,27 @@ for (const envVar of requiredEnvVars) {
 if (missingEnvVars && process.env.NODE_ENV !== 'production') {
   process.exit(1);
 }
+
+// Security and performance middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for development
+  crossOriginEmbedderPolicy: false
+}));
+
+// Compression middleware for better performance
+app.use(compression());
+
+// Cache middleware for static resources
+app.use((req, res, next) => {
+  // Set cache headers for static assets
+  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+  } else if (req.path.startsWith('/api/')) {
+    // API responses - shorter cache
+    res.setHeader('Cache-Control', 'private, max-age=300'); // 5 minutes
+  }
+  next();
+});
 
 // Ruta de prueba para verificar que el servidor responde
 app.get('/test', (req, res) => {
