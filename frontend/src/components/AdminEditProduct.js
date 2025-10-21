@@ -52,7 +52,14 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
 
   // Función para mapear especificaciones del producto a las especificaciones de la categoría
   const mapProductSpecifications = (productData, category, subcategory) => {
-    if (!productData || !category || !subcategory) return {};
+    if (!productData || !category || !subcategory) {
+      console.log('⚠️ AdminEditProduct - Datos insuficientes para mapear especificaciones:', {
+        hasProductData: !!productData,
+        category,
+        subcategory
+      });
+      return {};
+    }
     
     const availableSpecs = getSpecificationsBySubcategory(category, subcategory);
     const mappedSpecs = {};
@@ -74,10 +81,15 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     availableSpecs.forEach(spec => {
       const fieldName = spec.name;
       // Buscar el valor en los datos del producto
-      mappedSpecs[fieldName] = productData[fieldName] || '';
+      const value = productData[fieldName] || '';
+      mappedSpecs[fieldName] = value;
+      
+      if (value) {
+        console.log(`✅ Mapeado ${fieldName}: "${value}"`);
+      }
     });
     
-    // console.log removed for production
+    console.log('🔍 AdminEditProduct - Especificaciones mapeadas:', mappedSpecs);
     
     return mappedSpecs;
   };
@@ -149,9 +161,6 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     if (productData) {
       // console.log removed for production
       
-      // Mapear especificaciones
-      const mappedSpecs = mapProductSpecifications(productData, productData.category, productData.subcategory);
-      
       setData({
         productName: productData.productName || '',
         brandName: productData.brandName || '',
@@ -163,7 +172,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
         sellingPrice: productData.sellingPrice || 0,
         stock: productData.stock || 0,
         isVipOffer: productData.isVipOffer || false,
-        specifications: mappedSpecs,
+        specifications: {}, // Inicializar vacío, se llenará después
         codigo: productData.codigo || '',
         documentationLink: productData.documentationLink || '',
         imageUrlFromProvider: productData.imageUrlFromProvider || '',
@@ -178,6 +187,19 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
       });
     }
   }, [productData]);
+
+  // Mapear especificaciones cuando las categorías estén cargadas
+  useEffect(() => {
+    if (productData && !categoriesLoading && categories.length > 0 && data.category && data.subcategory) {
+      console.log('🔍 AdminEditProduct - Mapeando especificaciones después de cargar categorías');
+      const mappedSpecs = mapProductSpecifications(productData, data.category, data.subcategory);
+      
+      setData(prevData => ({
+        ...prevData,
+        specifications: mappedSpecs
+      }));
+    }
+  }, [productData, categories, categoriesLoading, data.category, data.subcategory]);
 
   // Event listeners para paste y drag & drop
   useEffect(() => {
