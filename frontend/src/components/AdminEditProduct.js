@@ -182,7 +182,21 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
   // Event listeners para paste y drag & drop
   useEffect(() => {
     const handlePaste = (e) => {
+      // ✅ SOLO PROCESAR PASTE SI ESTÁ ACTIVO Y NO ES EN UN INPUT DE TEXTO
       if (!isPasteActive) return;
+      
+      // ✅ VERIFICAR SI EL TARGET ES UN INPUT DE TEXTO O TEXTAREA
+      const target = e.target;
+      const isTextInput = target && (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.contentEditable === 'true'
+      );
+      
+      if (isTextInput) {
+        // console.log removed for production
+        return; // No procesar paste de imágenes en inputs de texto
+      }
       
       // console.log removed for production
       e.preventDefault();
@@ -713,10 +727,20 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
             {/* Input estilo chat */}
             <div 
               className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
-              onClick={() => {
-                setIsPasteActive(true);
-                if (imageAreaRef.current) {
-                  imageAreaRef.current.focus();
+              onClick={(e) => {
+                // ✅ SOLO ACTIVAR PASTE SI NO SE HIZO CLIC EN UN INPUT DE TEXTO
+                const target = e.target;
+                const isTextInput = target && (
+                  target.tagName === 'INPUT' || 
+                  target.tagName === 'TEXTAREA' || 
+                  target.contentEditable === 'true'
+                );
+                
+                if (!isTextInput) {
+                  setIsPasteActive(true);
+                  if (imageAreaRef.current) {
+                    imageAreaRef.current.focus();
+                  }
                 }
               }}
             >
@@ -729,6 +753,13 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
                   tabIndex={0}
                   className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-text"
                   contentEditable={false}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsPasteActive(true);
+                    if (imageAreaRef.current) {
+                      imageAreaRef.current.focus();
+                    }
+                  }}
                 >
                   <span className="text-gray-500">
                     {isPasteActive 

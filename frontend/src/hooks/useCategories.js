@@ -14,7 +14,7 @@ const useCategories = () => {
       
       // Intentar primero con el endpoint de categorías estructuradas
       try {
-        const response = await fetch(`${SummaryApi.baseURL}/api/admin/categories/all`, {
+        const response = await fetch(`${SummaryApi.baseURL}/api/categories/menu/complete-structure`, {
           method: 'GET',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
@@ -22,11 +22,12 @@ const useCategories = () => {
         
         if (response.ok) {
           const result = await response.json();
+          console.log('🔍 Categorías cargadas desde API estructurada:', result);
           setCategories(result.data || []);
           return;
         }
       } catch (adminError) {
-        // console.log removed for production
+        console.log('⚠️ Error cargando categorías estructuradas:', adminError);
       }
       
       // Fallback al endpoint de base de datos directa
