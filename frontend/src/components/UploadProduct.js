@@ -488,6 +488,10 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         codigo: data.codigo,
         price: data.price,
         sellingPrice: data.sellingPrice,
+        purchasePriceUSD: data.purchasePriceUSD,
+        exchangeRate: data.exchangeRate,
+        deliveryCost: data.deliveryCost,
+        profitMargin: data.profitMargin,
         hasImages: data.productImage.length > 0
       });
       
@@ -556,15 +560,14 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         sellingPrice: sellingPrice,
         profitAmount: sellingPrice - totalCost
       }));
+      
+      toast.success(`Precio calculado: G$ ${sellingPrice.toLocaleString('es-PY')}`);
+    } else {
+      toast.error('Por favor ingresa un precio USD válido');
     }
   };
 
-  // Calcular precio cuando cambien los valores (pero no cuando se está cargando preloadedData)
-  useEffect(() => {
-    if (!preloadedData) {
-      calculatePrice();
-    }
-  }, [data.purchasePriceUSD, data.exchangeRate, data.deliveryCost, data.profitMargin, preloadedData]);
+  // Removido: cálculo automático de precios - ahora es manual con botón
 
   // Cargar tipo de cambio al montar
   useEffect(() => {
@@ -986,15 +989,29 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Precio de Compra (USD) *
                 </label>
-                <input
-                  type="number"
-                  name="purchasePriceUSD"
-                  value={data.purchasePriceUSD}
-                  onChange={handleOnChange}
-                  step="0.01"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    name="purchasePriceUSD"
+                    value={data.purchasePriceUSD}
+                    onChange={handleOnChange}
+                    step="0.01"
+                    className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                  <button
+                    type="button"
+                    onClick={calculatePrice}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+                    title="Calcular precio de venta automáticamente"
+                  >
+                    <FaSync className="w-4 h-4" />
+                    Calcular
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Ingresa el precio en USD y haz clic en "Calcular" para obtener el precio de venta automáticamente
+                </p>
               </div>
 
               <div>
@@ -1014,11 +1031,22 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
                     type="button"
                     onClick={loadExchangeRate}
                     disabled={isLoadingExchangeRate}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                    title="Cargar tipo de cambio actual"
                   >
-                    {isLoadingExchangeRate ? <FaSpinner className="animate-spin" /> : <FaSync />}
+                    {isLoadingExchangeRate ? (
+                      <FaSpinner className="animate-spin w-4 h-4" />
+                    ) : (
+                      <>
+                        <FaSync className="w-4 h-4" />
+                        Actualizar
+                      </>
+                    )}
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Haz clic en "Actualizar" para obtener el tipo de cambio actual
+                </p>
               </div>
 
               <div>

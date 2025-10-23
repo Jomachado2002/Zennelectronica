@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { IoIosClose } from "react-icons/io";
-import { FaCalculator, FaDollarSign, FaExchangeAlt } from "react-icons/fa";
+import { FaCalculator, FaDollarSign, FaExchangeAlt, FaSync } from "react-icons/fa";
 import displayPYGCurrency from '../../helpers/displayCurrency';
 import SummaryApi from '../../common';
 
@@ -34,6 +34,29 @@ const ProductFinanceForm = ({ product, onClose, onUpdate, exchangeRate }) => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Función para calcular precio manualmente
+  const calculatePriceManually = () => {
+    if (data.purchasePriceUSD && data.purchasePriceUSD > 0) {
+      // Recalcular el resumen financiero
+      const purchasePricePYG = Number(data.purchasePriceUSD) * Number(data.exchangeRate);
+      const loanAmount = purchasePricePYG * (Number(data.loanInterest) / 100);
+      const totalCosts = purchasePricePYG + loanAmount + Number(data.deliveryCost);
+      const profitAmount = totalCosts * (Number(data.profitMargin) / 100);
+      const sellingPrice = totalCosts + profitAmount;
+      const profitMarginCalculated = (profitAmount / sellingPrice) * 100;
+
+      setData(prev => ({
+        ...prev,
+        sellingPrice: Math.round(sellingPrice),
+        userModifiedSellingPrice: false
+      }));
+
+      toast.success(`Precio calculado: ${displayPYGCurrency(Math.round(sellingPrice))}`);
+    } else {
+      toast.error('Por favor ingresa un precio USD válido');
+    }
+  };
   
   // Aplicar valores predeterminados cuando los valores son 0 o no están definidos
   useEffect(() => {
@@ -225,22 +248,33 @@ const ProductFinanceForm = ({ product, onClose, onUpdate, exchangeRate }) => {
             <label htmlFor="purchasePriceUSD" className="block text-sm font-medium text-gray-700 mb-1">
               Precio de Compra (USD)
             </label>
-            <div className="flex">
-              <span className="inline-flex items-center px-3 text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md">
-                <FaDollarSign />
-              </span>
-              <input
-                type="number"
-                id="purchasePriceUSD"
-                name="purchasePriceUSD"
-                value={data.purchasePriceUSD}
-                onChange={handleChange}
-                className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                placeholder="Precio en dólares"
-                required
-                min="0"
-                step="0.01"
-              />
+            <div className="flex space-x-2">
+              <div className="flex flex-1">
+                <span className="inline-flex items-center px-3 text-gray-500 bg-gray-100 border border-r-0 border-gray-300 rounded-l-md">
+                  <FaDollarSign />
+                </span>
+                <input
+                  type="number"
+                  id="purchasePriceUSD"
+                  name="purchasePriceUSD"
+                  value={data.purchasePriceUSD}
+                  onChange={handleChange}
+                  className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="Precio en dólares"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={calculatePriceManually}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+                title="Calcular precio de venta automáticamente"
+              >
+                <FaSync className="w-4 h-4" />
+                Calcular
+              </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Equivale a: {displayPYGCurrency(summary.purchasePricePYG)}
