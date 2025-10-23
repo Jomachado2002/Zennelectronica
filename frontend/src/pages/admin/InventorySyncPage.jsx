@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import axiosInstance from '../../config/axiosInstance';
 import Papa from 'papaparse';
-import useCategories from '../../hooks/useCategories';
+// import useCategories from '../../hooks/useCategories'; // No usar este hook aquí
 import { toast } from 'react-toastify';
 
 // Componentes
@@ -21,8 +21,9 @@ import AdminEditProduct from '../../components/AdminEditProduct';
 import CodeMismatches from '../../components/inventorySync/CodeMismatches';
 
 const InventorySyncPage = () => {
-    // Hook para categorías
-    const { categories, loading: categoriesLoading } = useCategories();
+    // Estados para categorías
+    const [categories, setCategories] = useState([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
     
     // Estados principales
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -46,6 +47,27 @@ const InventorySyncPage = () => {
         notInSystem: [],
         notInProvider: []
     });
+
+    // Cargar categorías desde el endpoint de sincronización
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+                const response = await axiosInstance.get('/api/admin/inventory-sync/categories');
+                if (response.data.success) {
+                    setCategories(response.data.categories);
+                } else {
+                    console.error('Error cargando categorías:', response.data.error);
+                }
+            } catch (error) {
+                console.error('Error cargando categorías:', error);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     // Resetear subcategoría cuando cambie la categoría
     useEffect(() => {
@@ -416,6 +438,7 @@ const InventorySyncPage = () => {
                         {/* Selector de Categoría */}
                         <CategorySelector
                             categories={categories}
+                            loading={categoriesLoading}
                             selectedCategory={selectedCategory}
                             selectedSubcategory={selectedSubcategory}
                             onCategoryChange={setSelectedCategory}

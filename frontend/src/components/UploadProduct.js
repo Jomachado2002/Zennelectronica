@@ -132,7 +132,9 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
         ...prev,
         ...preloadedData,
         // MAPEO EXPLÍCITO del código
-        codigo: preloadedData.codigo || preloadedData.productCode || ''
+        codigo: preloadedData.codigo || preloadedData.productCode || '',
+        // ASEGURAR que price siempre sea 0 para productos nuevos
+        price: 0
       }));
       
       // IMPORTANTE: Establecer preview de imagen si viene del CSV
@@ -557,10 +559,12 @@ const UploadProduct = ({ onClose, fetchData, preloadedData }) => {
     }
   };
 
-  // Calcular precio cuando cambien los valores
+  // Calcular precio cuando cambien los valores (pero no cuando se está cargando preloadedData)
   useEffect(() => {
-    calculatePrice();
-  }, [data.purchasePriceUSD, data.exchangeRate, data.deliveryCost, data.profitMargin]);
+    if (!preloadedData) {
+      calculatePrice();
+    }
+  }, [data.purchasePriceUSD, data.exchangeRate, data.deliveryCost, data.profitMargin, preloadedData]);
 
   // Cargar tipo de cambio al montar
   useEffect(() => {

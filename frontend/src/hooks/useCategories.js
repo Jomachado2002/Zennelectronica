@@ -10,65 +10,29 @@ const useCategories = () => {
     try {
       setLoading(true);
       setError(null);
-      // console.log removed for production
       
-      // Intentar primero con el endpoint temporal de categorías con especificaciones
-      try {
-        console.log('🔍 Intentando cargar categorías desde:', `${SummaryApi.baseURL}/api/categorias-con-especificaciones`);
-        const response = await fetch(`${SummaryApi.baseURL}/api/categorias-con-especificaciones`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        console.log('📡 Respuesta del servidor de categorías:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('🔍 Categorías cargadas desde API temporal:', result);
-          setCategories(result.data || []);
-          return;
-        } else {
-          console.log('⚠️ Error en respuesta del servidor:', response.status, response.statusText);
-        }
-      } catch (adminError) {
-        console.log('⚠️ Error cargando categorías temporales:', adminError);
-      }
-      
-      // Fallback al endpoint de base de datos directa
-      const response = await fetch(`${SummaryApi.baseURL}/api/categorias-bd`, {
+      console.log('🔍 Intentando cargar categorías desde:', `${SummaryApi.baseURL}/api/categorias-con-especificaciones`);
+      const response = await fetch(`${SummaryApi.baseURL}/api/categorias-con-especificaciones`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      console.log('📡 Respuesta del servidor de categorías:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
       if (response.ok) {
         const result = await response.json();
-        console.log('🔍 Categorías cargadas desde fallback:', result);
-        
-        // Transformar los datos de la BD al formato esperado
-        const transformedCategories = result.data.map(category => ({
-          value: category.value || category.name?.toLowerCase().replace(/\s+/g, '_'),
-          label: category.label || category.name,
-          name: category.name,
-          subcategories: (category.subcategories || []).map(subcategory => ({
-            value: subcategory.value || subcategory.name?.toLowerCase().replace(/\s+/g, '_'),
-            label: subcategory.label || subcategory.name,
-            name: subcategory.name,
-            specifications: subcategory.specifications || []
-          }))
-        }));
-        
-        console.log('🔍 Categorías transformadas:', transformedCategories);
-        setCategories(transformedCategories);
+        console.log('🔍 Categorías cargadas desde API:', result);
+        setCategories(result.data || []);
       } else {
-        throw new Error('Error al cargar categorías');
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
       }
     } catch (err) {
-      // console.error removed for production
+      console.error('Error cargando categorías:', err);
       setError(err.message);
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import React from 'react';
 
 const CategorySelector = ({
     categories,
+    loading,
     selectedCategory,
     selectedSubcategory,
     onCategoryChange,
@@ -29,9 +30,10 @@ const CategorySelector = ({
                         onCategoryChange(e.target.value);
                         onSubcategoryChange(''); // Reset subcategory when category changes
                     }}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                    disabled={loading}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                    <option value="">Seleccionar categoría</option>
+                    <option value="">{loading ? 'Cargando categorías...' : 'Seleccionar categoría'}</option>
                     {categories.map(category => (
                         <option key={category.value} value={category.value}>
                             {category.label}
