@@ -26,7 +26,9 @@ import {
   FaDollarSign,
   FaBuilding,
   FaSyncAlt,
-  FaUserCog
+  FaUserCog,
+  FaDownload,
+  FaFilePdf
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -132,6 +134,20 @@ const AdminPanel = () => {
           icon: <FaSyncAlt className="w-5 h-5" />,
           description: "Sincronizar inventario con proveedores",
           color: "text-green-600 bg-green-50"
+        },
+        {
+          path: "exportar-productos",
+          label: "Exportar Productos",
+          icon: <FaDownload className="w-5 h-5" />,
+          description: "Exportar productos con Excel e imágenes",
+          color: "text-purple-600 bg-purple-50"
+        },
+        {
+          path: "catalogo-pdf",
+          label: "Catálogo de Productos (PDF)",
+          icon: <FaFilePdf className="w-5 h-5" />,
+          description: "Generar catálogo PDF profesional por categorías",
+          color: "text-red-600 bg-red-50"
         }
       ]
     },

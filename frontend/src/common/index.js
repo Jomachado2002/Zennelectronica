@@ -540,6 +540,24 @@
                 url: `${backendDomain}/api/exchange-rate/update`,
                 method: 'post'
             }
+        },
+
+        // ===========================================
+        // CATÁLOGO PDF
+        // ===========================================
+        catalog: {
+            getCategories: {
+                url: `${backendDomain}/api/catalog-categories`,
+                method: 'get'
+            },
+            getProducts: {
+                url: `${backendDomain}/api/catalog-products`,
+                method: 'get'
+            },
+            generatePDF: {
+                url: `${backendDomain}/api/generate-catalog-pdf`,
+                method: 'post'
+            }
         }
     };
 

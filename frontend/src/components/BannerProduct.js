@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 const BannerProduct = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   // ✅ SOLO IMÁGENES - Sin texto ni botones
   const banners = React.useMemo(() => [
@@ -49,28 +51,38 @@ const BannerProduct = () => {
     setTimeout(() => setIsAnimating(false), 500);
   }, [isAnimating, banners.length]);
 
-  // ✅ PRECARGAR IMÁGENES CRÍTICAS DEL BANNER
+  // ✅ GESTOS TÁCTILES PARA MÓVILES
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
+  };
+
+  // ✅ PRECARGAR TODAS LAS IMÁGENES DEL BANNER INMEDIATAMENTE
   useEffect(() => {
     const preloadBannerImages = () => {
       banners.forEach((banner, index) => {
-        if (index === 0) {
-          // Primera imagen con prioridad alta
-          const img = new Image();
-          img.fetchPriority = 'high';
-          img.src = banner.image;
-        } else if (index === 1) {
-          // Segunda imagen con prioridad media
-          const img = new Image();
-          img.fetchPriority = 'high';
-          img.src = banner.image;
-        } else {
-          // Resto con prioridad baja
-          setTimeout(() => {
-            const img = new Image();
-            img.fetchPriority = 'low';
-            img.src = banner.image;
-          }, index * 200);
-        }
+        const img = new Image();
+        img.fetchPriority = 'high';
+        img.crossOrigin = 'anonymous';
+        img.src = banner.image;
       });
     };
 
@@ -88,69 +100,86 @@ const BannerProduct = () => {
   return (
     <div className="w-full px-0 mt-0">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="relative h-48 sm:h-56 md:h-64 lg:h-72 w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg">
-        
-        {/* Imágenes del carrusel */}
-        <div className="relative w-full h-full">
-          {banners.map((banner, index) => (
-            <div
-              key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-              }`}
-            >
-              <img
-                src={banner.image}
-                alt={banner.alt}
-                className="w-full h-full object-cover"
-                loading={index === activeSlide ? "eager" : "lazy"}
-                fetchpriority={index === activeSlide ? "high" : "low"}
-                onError={(e) => {
-                  // Imagen por defecto si no existe
-                  if (e && e.target) {
-                    e.target.src = '/banners/default.jpg';
-                  }
-                }}
+        {/* Contenedor principal con aspect-ratio optimizado para imágenes 3000x1000 (3:1) */}
+        <div 
+          className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg h-48 sm:h-56 md:h-64 lg:h-72 xl:h-80"
+          style={{
+            aspectRatio: '3/1'
+          }}
+        >
+          {/* Imágenes del carrusel - Con soporte táctil */}
+          <div 
+            className="relative w-full h-full touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {banners.map((banner, index) => (
+              <div
+                key={banner.id}
+                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                  index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
+              >
+                <img
+                  src={banner.image}
+                  alt={banner.alt}
+                  className="w-full h-full object-cover object-center"
+                  style={{
+                    objectPosition: 'center center', // Centrar la imagen horizontalmente
+                    minHeight: '200px' // Asegurar altura mínima en móviles
+                  }}
+                  loading={index === activeSlide ? "eager" : "lazy"}
+                  fetchpriority={index === activeSlide ? "high" : "low"}
+                  onError={(e) => {
+                    // Imagen por defecto si no existe
+                    if (e && e.target) {
+                      e.target.src = '/banners/default.jpg';
+                    }
+                  }}
+                />
+                {/* Overlay sutil para mejor contraste con los controles */}
+                <div className="absolute inset-0 bg-black/5"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Botones de navegación - Optimizados para táctil */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg touch-manipulation"
+            style={{ minWidth: '44px', minHeight: '44px' }} // Tamaño mínimo táctil
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
+          </button>
+          
+          <button
+            onClick={nextSlide}
+            className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg touch-manipulation"
+            style={{ minWidth: '44px', minHeight: '44px' }} // Tamaño mínimo táctil
+            aria-label="Siguiente"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
+          </button>
+
+          {/* Indicadores (dots) - Optimizados para táctil */}
+          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-2.5 z-20">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveSlide(index)}
+                className={`transition-all duration-300 rounded-full touch-manipulation ${
+                  index === activeSlide 
+                    ? 'w-8 sm:w-10 h-2 sm:h-2.5 bg-white shadow-lg' 
+                    : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-white/60 hover:bg-white/80'
+                }`}
+                style={{ minWidth: '32px', minHeight: '32px' }} // Área táctil mínima
+                aria-label={`Ir a slide ${index + 1}`}
               />
-              {/* Overlay sutil para mejor contraste con los controles */}
-              <div className="absolute inset-0 bg-black/5"></div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-
-        {/* Botones de navegación */}
-        <button
-          onClick={prevSlide}
-          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg"
-          aria-label="Anterior"
-        >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
-        </button>
-        
-        <button
-          onClick={nextSlide}
-          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg"
-          aria-label="Siguiente"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
-        </button>
-
-        {/* Indicadores (dots) */}
-        <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2 z-20">
-          {banners.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveSlide(index)}
-              className={`transition-all duration-300 rounded-full ${
-                index === activeSlide 
-                  ? 'w-6 sm:w-8 h-1.5 sm:h-2 bg-white' 
-                  : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white/70'
-              }`}
-              aria-label={`Ir a slide ${index + 1}`}
-            />
-          ))}
-        </div>
-      </div>
       </div>
     </div>
   );

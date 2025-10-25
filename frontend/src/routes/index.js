@@ -69,6 +69,12 @@ import EnhancedSalesForm from "../pages/EnhancedSalesForm"
 // Importar página de sincronización de inventario
 import InventorySyncPage from "../pages/admin/InventorySyncPage"
 
+// Importar página de exportación de productos
+import ExportProductsPage from "../pages/admin/ExportProductsPage"
+
+// Importar página de catálogo PDF
+import AdminCatalogoPDF from "../pages/admin/AdminCatalogoPDF"
+
 const router = createBrowserRouter([
     {
         path: "/",
@@ -298,6 +304,18 @@ const router = createBrowserRouter([
                     {
                         path: "sincronizacion-inventario",
                         element: <InventorySyncPage />
+                    },
+                    
+                    // Exportar Productos
+                    {
+                        path: "exportar-productos",
+                        element: <ExportProductsPage />
+                    },
+                    
+                    // Catálogo PDF
+                    {
+                        path: "catalogo-pdf",
+                        element: <AdminCatalogoPDF />
                     },
                 
                 ]

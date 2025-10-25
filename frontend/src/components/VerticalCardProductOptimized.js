@@ -73,25 +73,7 @@ const VerticalCardProductOptimized = ({
     }
   }, [products, subcategory, isMobile]);
 
-  // ✅ PRECARGA INTELIGENTE SOLO EN DESKTOP
-  useEffect(() => {
-    if (isMobile || data.length === 0) return;
-    
-    data.forEach((product, index) => {
-      setTimeout(() => {
-        if (product?.productImage?.[0]) {
-          const img1 = new Image();
-          img1.fetchPriority = index < 3 ? 'high' : 'low';
-          img1.src = product.productImage[0];
-        }
-        if (product?.productImage?.[1]) {
-          const img2 = new Image();
-          img2.fetchPriority = 'low';
-          img2.src = product.productImage[1];
-        }
-      }, index * 50);
-    });
-  }, [data, isMobile]);
+  // ✅ PRECARGA ELIMINADA - SE HACE GLOBALMENTE EN HOME
 
   const handleImageError = (productId) => {
     setImageErrors(prev => new Set([...prev, productId]));
@@ -215,7 +197,7 @@ const VerticalCardProductOptimized = ({
                   </div>
                 </div>
               ))
-            : data.map((product) => {
+            : data.map((product, index) => {
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
                 const hasImageError = imageErrors.has(product._id);
                 const isHovered = hoveredProductId === product?._id;
@@ -258,24 +240,24 @@ const VerticalCardProductOptimized = ({
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {/* ✅ IMAGEN DEL PRODUCTO - EXACTAMENTE COMO ANTES */}
+                    {/* ✅ IMAGEN DEL PRODUCTO - CARGA INMEDIATA */}
                     <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                       {!hasImageError ? (
                         <>
-                          {/* ✅ IMAGEN PRINCIPAL - COMPLETA EN EL CONTENEDOR */}
+                          {/* ✅ IMAGEN PRINCIPAL - CARGA INMEDIATA */}
                           <img
                             src={product.productImage[0]}
                             alt={product.productName}
                             className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
                               showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                             }`}
-                            loading={isMobile ? "lazy" : "eager"}
-                            fetchpriority={isMobile ? "low" : "high"}
+                            loading="eager"
+                            fetchpriority="high"
                             onError={() => handleImageError(product._id)}
                             decoding="async"
                           />
                           
-                          {/* ✅ IMAGEN DE HOVER - SE PONE ENCIMA EXACTAMENTE COMO ANTES */}
+                          {/* ✅ IMAGEN DE HOVER - CARGA INMEDIATA */}
                           {secondImage && (
                             <img
                               src={secondImage}
@@ -283,8 +265,8 @@ const VerticalCardProductOptimized = ({
                               className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                               }`}
-                              loading="lazy"
-                              fetchpriority="low"
+                              loading="eager"
+                              fetchpriority="high"
                               decoding="async"
                             />
                           )}

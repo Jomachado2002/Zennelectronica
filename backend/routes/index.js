@@ -1578,6 +1578,22 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
 const inventorySyncRoutes = require('./inventorySyncRoutes');
 router.use('/admin/inventory-sync', inventorySyncRoutes);
 
+// ===== CONTROLADORES DE EXPORTACIÓN DE PRODUCTOS =====
+const {
+    getExportProductsController,
+    downloadProductImagesController
+} = require('../controller/product/exportProductsController');
+
+// ===== CONTROLADORES DE CATÁLOGO PDF =====
+const {
+    getCatalogProducts,
+    getCatalogCategories
+} = require('../controller/product/catalogController');
+
+const {
+    generateCatalogPDF
+} = require('../controller/product/catalogPDFController');
+
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
 router.use('/test', authTestRoutes);
@@ -1610,5 +1626,40 @@ router.get('/admin/products/:id', authToken, async (req, res) => {
         });
     }
 });
+
+// ===== RUTAS DE EXPORTACIÓN DE PRODUCTOS =====
+
+/**
+ * GET /api/export-products
+ * Obtiene productos filtrados por categoría y subcategoría para exportación
+ */
+router.get('/export-products', authToken, getExportProductsController);
+
+/**
+ * POST /api/download-product-images
+ * Genera un archivo ZIP con Excel y carpetas de imágenes organizadas
+ */
+router.post('/download-product-images', authToken, downloadProductImagesController);
+
+// ===== RUTAS DE CATÁLOGO PDF =====
+
+/**
+ * GET /api/catalog-products
+ * Obtiene productos agrupados por categoría y subcategoría para catálogo PDF
+ * Query params: category, subcategory (opcionales)
+ */
+router.get('/catalog-products', authToken, getCatalogProducts);
+
+/**
+ * GET /api/catalog-categories
+ * Obtiene categorías y subcategorías para filtros del catálogo
+ */
+router.get('/catalog-categories', authToken, getCatalogCategories);
+
+/**
+ * POST /api/generate-catalog-pdf
+ * Genera un catálogo PDF con los productos seleccionados
+ */
+router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 
     module.exports = router;

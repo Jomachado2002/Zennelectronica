@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
 import CategoryShowcase from '../components/CategoryShowcase';
+import GlobalImagePreloader from '../components/GlobalImagePreloader';
 
 import VerticalCardProductOptimized from '../components/VerticalCardProductOptimized';
 import { useHomeProducts } from '../hooks/useProducts';
@@ -26,6 +27,7 @@ const fadeIn = {
 const Home = () => {
   // ✅ ÚNICA FUENTE DE DATOS - UNA SOLA LLAMADA HTTP
   const { data: homeData, isLoading: homeLoading } = useHomeProducts();
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
   // ✅ EXTRAER DATOS POR CATEGORÍA PARA PASAR COMO PROPS
   const getProductsForCategory = (category, subcategory) => {
@@ -94,6 +96,12 @@ const Home = () => {
           `}
         </script>
       </Helmet>
+      
+      {/* ✅ PRECARGADOR GLOBAL DE IMÁGENES - MÁXIMA VELOCIDAD */}
+      <GlobalImagePreloader 
+        homeData={homeData} 
+        onPreloadComplete={() => setImagesPreloaded(true)} 
+      />
       
       {/* ✅ FONDO CON GRADIENTE SUTIL - ESTILO HEADER */}
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white font-inter text-gray-800">
