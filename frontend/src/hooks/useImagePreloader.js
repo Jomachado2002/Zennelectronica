@@ -29,12 +29,12 @@ const useImagePreloader = (products) => {
       let loadedImages = 0;
       const loadedSet = new Set();
 
-      // Función para cargar una imagen
+      // Función para cargar una imagen (sin CORS)
       const loadImage = (url) => {
         return new Promise((resolve) => {
           const img = new Image();
           img.fetchPriority = 'high';
-          img.crossOrigin = 'anonymous';
+          // Removido crossOrigin para evitar errores CORS con Firebase Storage
           
           img.onload = () => {
             loadedImages++;

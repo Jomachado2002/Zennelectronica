@@ -81,7 +81,7 @@ const BannerProduct = () => {
       banners.forEach((banner, index) => {
         const img = new Image();
         img.fetchPriority = 'high';
-        img.crossOrigin = 'anonymous';
+        // Removido crossOrigin para evitar errores CORS con Firebase Storage
         img.src = banner.image;
       });
     };

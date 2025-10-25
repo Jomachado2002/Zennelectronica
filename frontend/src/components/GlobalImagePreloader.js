@@ -50,12 +50,12 @@ const GlobalImagePreloader = ({ homeData, onPreloadComplete }) => {
         return;
       }
 
-      // Función para cargar una imagen con máxima prioridad
+      // Función para cargar una imagen con máxima prioridad (sin CORS)
       const loadImage = (url) => {
         return new Promise((resolve) => {
           const img = new Image();
           img.fetchPriority = 'high';
-          img.crossOrigin = 'anonymous';
+          // Removido crossOrigin para evitar errores CORS con Firebase Storage
           
           img.onload = () => {
             setPreloadStatus(prev => {
