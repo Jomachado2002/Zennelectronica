@@ -11,6 +11,7 @@ import {
   FaInfoCircle
 } from 'react-icons/fa';
 import SummaryApi from '../../common';
+import CatalogPDF from '../../components/CatalogPDF';
 
 const AdminCatalogoPDF = () => {
   const [categories, setCategories] = useState([]);
@@ -19,7 +20,6 @@ const AdminCatalogoPDF = () => {
   const [subcategories, setSubcategories] = useState([]);
   const [catalogData, setCatalogData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [stats, setStats] = useState({
     totalCategories: 0,
@@ -114,68 +114,8 @@ const AdminCatalogoPDF = () => {
     }
   };
 
-  const generatePDF = async () => {
-    try {
-      setGenerating(true);
-      
-      // Obtener token de las cookies
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-      };
-      
-      const token = getCookie('token');
-      
-      const response = await fetch(SummaryApi.catalog.generatePDF.url, {
-        method: SummaryApi.catalog.generatePDF.method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          catalogData: catalogData,
-          companyName: 'Zenn Electrónica'
-        })
-      });
-      
-      if (response.ok) {
-        // Verificar que la respuesta es un PDF
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/pdf')) {
-          // Crear blob y descargar
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `catalogo-productos-${new Date().toISOString().split('T')[0]}.pdf`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-          
-          toast.success('Catálogo PDF generado exitosamente');
-        } else {
-          // Si no es PDF, mostrar el contenido como texto para debug
-          const text = await response.text();
-          console.error('Respuesta no es PDF:', text);
-          toast.error('Error: La respuesta no es un PDF válido');
-        }
-      } else {
-        const error = await response.json();
-        console.error('Error del servidor:', error);
-        toast.error(error.message || 'Error generando PDF');
-      }
-    } catch (error) {
-      console.error('Error generando PDF:', error);
-      toast.error('Error de conexión');
-    } finally {
-      setGenerating(false);
-    }
-  };
+  // La generación del PDF ahora se maneja directamente en el cliente
+  // No necesitamos la función generatePDF ya que React PDF lo maneja
 
   const getFilterDescription = () => {
     if (selectedCategory === 'all') {
@@ -296,21 +236,21 @@ const AdminCatalogoPDF = () => {
                 </div>
               </div>
 
-              {/* Botón Generar PDF */}
-              <button
-                onClick={generatePDF}
-                disabled={generating || loading || catalogData.length === 0}
-                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors"
-              >
-                {generating ? (
-                  <FaSpinner className="w-4 h-4 animate-spin" />
-                ) : (
+              {/* Botón Generar PDF con React PDF */}
+              {catalogData.length > 0 ? (
+                <CatalogPDF 
+                  catalogData={catalogData} 
+                  companyName="Zenn Electrónica"
+                />
+              ) : (
+                <button
+                  disabled={true}
+                  className="w-full bg-gray-400 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors cursor-not-allowed"
+                >
                   <FaDownload className="w-4 h-4" />
-                )}
-                <span>
-                  {generating ? 'Generando PDF...' : 'Generar Catálogo PDF'}
-                </span>
-              </button>
+                  <span>No hay productos para generar PDF</span>
+                </button>
+              )}
 
               {/* Información del filtro actual */}
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">

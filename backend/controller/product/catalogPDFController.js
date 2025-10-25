@@ -1,16 +1,10 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-const svgToPdfkit = require('svg-to-pdfkit');
 
-// Generar catálogo PDF
+// Generar catálogo PDF - Versión simplificada y elegante
 const generateCatalogPDF = async (req, res) => {
   try {
-    console.log('🚀 Iniciando generación de PDF...');
-    console.log('📊 Datos recibidos:', {
-      catalogDataLength: req.body.catalogData?.length || 0,
-      companyName: req.body.companyName
-    });
+    console.log('🚀 Iniciando generación de PDF simplificado...');
+    
     const { catalogData, companyName = 'Zenn Electrónica' } = req.body;
     
     if (!catalogData || !Array.isArray(catalogData)) {
@@ -19,22 +13,31 @@ const generateCatalogPDF = async (req, res) => {
         message: 'Datos del catálogo requeridos'
       });
     }
+
+    if (catalogData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay productos para generar el catálogo'
+      });
+    }
+
+    console.log('✅ Validaciones pasadas, creando PDF elegante...');
     
-    // Crear documento PDF
+    // Crear documento PDF con configuración optimizada
     const doc = new PDFDocument({
       size: 'A4',
-      margin: 50,
+      margin: 40,
       info: {
-        Title: 'Catálogo de Productos',
+        Title: `Catálogo de Productos - ${companyName}`,
         Author: companyName,
         Subject: 'Catálogo de productos electrónicos',
         Creator: 'Zenn Electrónica - Sistema de Gestión'
       }
     });
     
-    // Configurar headers para descarga
+    // Configurar headers para descarga directa
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="catalogo-productos-${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="catalogo-${companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf"`);
     
     // Pipe del documento a la respuesta
     doc.pipe(res);
@@ -43,289 +46,276 @@ const generateCatalogPDF = async (req, res) => {
     let currentPage = 1;
     const pageNumbers = new Map(); // Para el índice
     
-    // Función para agregar marca de agua
-    const addWatermark = () => {
-      doc.save();
-      doc.rotate(-45, { origin: [doc.page.width / 2, doc.page.height / 2] });
-      doc.opacity(0.08);
-      doc.fontSize(80)
-         .fillColor('#e5e7eb')
-         .text('ZENN', doc.page.width / 2 - 120, doc.page.height / 2 - 40);
-      
-      // Agregar texto adicional de marca de agua
-      doc.fontSize(24)
-         .fillColor('#f3f4f6')
-         .text('ELECTRÓNICA', doc.page.width / 2 - 80, doc.page.height / 2 + 20);
-      
-      doc.restore();
-    };
-    
-    // Función para agregar header de página
-    const addPageHeader = (title) => {
-      doc.fontSize(8)
-         .fillColor('#666666')
-         .text(companyName, 50, 20)
-         .text(title, doc.page.width / 2 - 50, 20, { align: 'center' })
-         .text(`Página ${currentPage}`, doc.page.width - 100, 20, { align: 'right' });
-      
-      // Línea separadora
-      doc.moveTo(50, 35)
-         .lineTo(doc.page.width - 50, 35)
-         .stroke('#cccccc');
-    };
-    
-    // Función para agregar footer
-    const addPageFooter = () => {
-      const footerY = doc.page.height - 30;
-      doc.fontSize(8)
-         .fillColor('#666666')
-         .text(`© ${new Date().getFullYear()} ${companyName}`, 50, footerY)
-         .text(`Generado el ${new Date().toLocaleDateString('es-PY')}`, doc.page.width / 2 - 50, footerY, { align: 'center' })
-         .text(`Página ${currentPage}`, doc.page.width - 100, footerY, { align: 'right' });
-    };
-    
-    // ===== PORTADA =====
-    doc.addPage();
-    addWatermark();
-    
-    // Logo PNG (más confiable que SVG)
-    const logoPath = path.join(__dirname, '../../../frontend/public/logozenn.png');
-    let logoAdded = false;
-    
-    console.log('🎨 Agregando logo...');
-    
-    if (fs.existsSync(logoPath)) {
-      try {
-        // Agregar imagen PNG como logo
-        doc.image(logoPath, doc.page.width / 2 - 100, 80, {
-          width: 200,
-          height: 100,
-          align: 'center'
-        });
-        logoAdded = true;
-        console.log('✅ Logo PNG cargado exitosamente');
-      } catch (imageError) {
-        console.log('⚠️ Error cargando PNG, usando texto como fallback:', imageError.message);
-      }
-    } else {
-      console.log('⚠️ Archivo PNG no encontrado en:', logoPath);
-    }
-    
-    if (!logoAdded) {
-      // Fallback: Logo en texto estilizado
-      doc.fontSize(48)
-         .fillColor('#2563eb')
-         .text('ZENN', doc.page.width / 2 - 80, 150, { align: 'center' });
-
-      // Agregar un rectángulo decorativo debajo del texto
-      doc.rect(doc.page.width / 2 - 100, 200, 200, 4)
+    // Función para agregar header elegante
+    const addPageHeader = (title = '') => {
+      // Header con fondo elegante
+      doc.rect(0, 0, doc.page.width, 50)
          .fill('#2563eb');
       
-      console.log('✅ Logo de texto agregado como fallback');
-    }
+      // Título de la empresa
+      doc.fontSize(16)
+         .fillColor('#ffffff')
+         .text(companyName, 40, 15);
+      
+      // Título de la página
+      if (title) {
+        doc.fontSize(14)
+           .fillColor('#ffffff')
+           .text(title, doc.page.width / 2 - 100, 15, { align: 'center' });
+      }
+      
+      // Número de página
+      doc.fontSize(12)
+         .fillColor('#ffffff')
+         .text(`Página ${currentPage}`, doc.page.width - 80, 15, { align: 'right' });
+    };
     
-    // Título principal con mejor diseño
-    doc.fontSize(42)
+    // Función para agregar footer elegante
+    const addPageFooter = () => {
+      const footerY = doc.page.height - 30;
+      
+      // Línea separadora
+      doc.moveTo(40, footerY - 10)
+         .lineTo(doc.page.width - 40, footerY - 10)
+         .stroke('#e5e7eb');
+      
+      doc.fontSize(10)
+         .fillColor('#6b7280')
+         .text(`© ${new Date().getFullYear()} ${companyName}`, 40, footerY)
+         .text(`Generado el ${new Date().toLocaleDateString('es-PY')}`, doc.page.width / 2 - 50, footerY, { align: 'center' })
+         .text(`Página ${currentPage}`, doc.page.width - 80, footerY, { align: 'right' });
+    };
+    
+    // ===== PORTADA ELEGANTE =====
+    console.log('📄 Creando portada elegante...');
+    doc.addPage();
+    addPageHeader('Catálogo de Productos');
+    
+    // Título principal elegante
+    doc.fontSize(36)
        .fillColor('#1f2937')
-       .text('Catálogo de Productos', doc.page.width / 2 - 180, 200, { align: 'center' });
+       .text('Catálogo de Productos', doc.page.width / 2 - 150, 100, { align: 'center' });
     
     // Subtítulo
-    doc.fontSize(24)
+    doc.fontSize(20)
        .fillColor('#6b7280')
-       .text('Electrónica y Tecnología', doc.page.width / 2 - 120, 250, { align: 'center' });
+       .text('Electrónica y Tecnología', doc.page.width / 2 - 100, 140, { align: 'center' });
     
-    // Línea decorativa más elegante
-    doc.moveTo(doc.page.width / 2 - 200, 280)
-       .lineTo(doc.page.width / 2 + 200, 280)
+    // Línea decorativa
+    doc.moveTo(doc.page.width / 2 - 150, 170)
+       .lineTo(doc.page.width / 2 + 150, 170)
        .stroke('#2563eb', 3);
     
-    // Fecha de generación con mejor formato
-    doc.fontSize(18)
-       .fillColor('#9ca3af')
-       .text(`Generado el ${new Date().toLocaleDateString('es-PY', { 
-         year: 'numeric', 
-         month: 'long', 
-         day: 'numeric',
-         hour: '2-digit',
-         minute: '2-digit'
-       })}`, doc.page.width / 2 - 120, 320, { align: 'center' });
-    
-    // Información de contacto con mejor diseño
+    // Fecha de generación
     doc.fontSize(16)
+       .fillColor('#9ca3af')
+       .text(`Generado el ${new Date().toLocaleDateString('es-PY')}`, doc.page.width / 2 - 80, 200, { align: 'center' });
+    
+    // Información de contacto
+    doc.fontSize(14)
        .fillColor('#374151')
-       .text('📧 info@zenn.com.py', doc.page.width / 2 - 80, 400, { align: 'center' })
-       .text('📞 +595 21 123-4567', doc.page.width / 2 - 80, 425, { align: 'center' })
-       .text('📍 Asunción, Paraguay', doc.page.width / 2 - 80, 450, { align: 'center' });
+       .text('📧 info@zenn.com.py', doc.page.width / 2 - 60, 250, { align: 'center' })
+       .text('📞 +595 21 123-4567', doc.page.width / 2 - 60, 270, { align: 'center' })
+       .text('📍 Asunción, Paraguay', doc.page.width / 2 - 60, 290, { align: 'center' });
     
-    // Borde decorativo más elegante
-    doc.rect(40, 40, doc.page.width - 80, doc.page.height - 80)
-       .stroke('#e5e7eb', 2);
-    
-    // Esquinas decorativas
-    const cornerSize = 20;
-    doc.rect(40, 40, cornerSize, cornerSize).fill('#2563eb');
-    doc.rect(doc.page.width - 60, 40, cornerSize, cornerSize).fill('#2563eb');
-    doc.rect(40, doc.page.height - 60, cornerSize, cornerSize).fill('#2563eb');
-    doc.rect(doc.page.width - 60, doc.page.height - 60, cornerSize, cornerSize).fill('#2563eb');
-    
+    addPageFooter();
     currentPage++;
     
-    // ===== ÍNDICE =====
+    // ===== ÍNDICE ELEGANTE =====
+    console.log('📚 Creando índice elegante...');
     doc.addPage();
-    addWatermark();
     addPageHeader('Índice');
     
     doc.fontSize(24)
        .fillColor('#1f2937')
-       .text('Índice', 50, 80);
-    
-    doc.fontSize(12)
-       .fillColor('#374151');
+       .text('Índice de Categorías', 50, 80);
     
     let indexY = 120;
-    const lineHeight = 20;
+    const lineHeight = 25;
     
-    // Generar índice
+    // Generar índice elegante
     for (const category of catalogData) {
       // Guardar número de página para esta categoría
       pageNumbers.set(category.categoria, currentPage);
       
-      // Categoría principal
-      doc.fontSize(14)
+      // Categoría principal con estilo elegante
+      doc.fontSize(16)
          .fillColor('#1f2937')
          .text(category.categoria, 50, indexY);
       
       // Número de página
-      doc.text(`pág. ${currentPage}`, doc.page.width - 100, indexY, { align: 'right' });
+      doc.fontSize(12)
+         .fillColor('#2563eb')
+         .text(`Página ${currentPage}`, doc.page.width - 100, indexY, { align: 'right' });
       
       indexY += lineHeight;
       
-      // Subcategorías
-      for (const subcategory of category.subcategorias) {
-        doc.fontSize(12)
+      // Subcategorías con indentación
+      for (const subcategory of category.subcategorias || []) {
+        doc.fontSize(14)
            .fillColor('#6b7280')
-           .text(`  - ${subcategory.name}`, 70, indexY);
-        
-        // Número de página para subcategoría (misma página que la categoría)
-        doc.text(`pág. ${currentPage}`, doc.page.width - 100, indexY, { align: 'right' });
+           .text(`• ${subcategory.name}`, 70, indexY);
         
         indexY += lineHeight - 5;
         
         // Verificar si necesitamos nueva página
         if (indexY > doc.page.height - 100) {
           doc.addPage();
-          addWatermark();
           addPageHeader('Índice (continuación)');
           indexY = 80;
         }
       }
       
-      indexY += 10; // Espacio entre categorías
+      indexY += 15; // Espacio entre categorías
     }
     
     addPageFooter();
     currentPage++;
     
-    // ===== CONTENIDO POR CATEGORÍAS =====
+    // ===== CONTENIDO CON TABLAS ELEGANTES =====
+    console.log('📚 Creando contenido con tablas elegantes...');
+    
     for (const category of catalogData) {
+      console.log(`📁 Procesando categoría: ${category.categoria}`);
+      
       // Página de categoría
       doc.addPage();
-      addWatermark();
       addPageHeader(category.categoria);
       
-      // Título de categoría
-      doc.fontSize(28)
+      // Título de categoría elegante
+      doc.fontSize(24)
          .fillColor('#1f2937')
          .text(category.categoria, 50, 80);
       
       // Línea decorativa
-      doc.moveTo(50, 120)
-         .lineTo(200, 120)
+      doc.moveTo(50, 110)
+         .lineTo(200, 110)
          .stroke('#2563eb', 3);
       
-      let contentY = 140;
+      let contentY = 130;
       
-      // Procesar subcategorías
-      for (const subcategory of category.subcategorias) {
+      // Procesar subcategorías con tablas elegantes
+      for (const subcategory of category.subcategorias || []) {
+        console.log(`📂 Procesando subcategoría: ${subcategory.name}`);
+        
+        // Verificar si necesitamos nueva página
+        if (contentY > doc.page.height - 200) {
+          doc.addPage();
+          addPageHeader(category.categoria);
+          contentY = 80;
+        }
+        
         // Título de subcategoría
-        doc.fontSize(20)
+        doc.fontSize(18)
            .fillColor('#374151')
            .text(subcategory.name, 50, contentY);
         
         contentY += 30;
         
-        // Procesar productos
-        for (let i = 0; i < subcategory.productos.length; i++) {
-          const product = subcategory.productos[i];
+        // Crear tabla elegante para productos
+        const products = subcategory.productos || [];
+        if (products.length > 0) {
+          // Header de la tabla
+          const tableY = contentY;
+          const colWidths = [60, 200, 100, 80]; // Número, Producto, Código, Precio
+          const rowHeight = 25;
           
-          // Verificar si necesitamos nueva página
-          if (contentY > doc.page.height - 200) {
-            doc.addPage();
-            addWatermark();
-            addPageHeader(category.categoria);
-            contentY = 80;
-          }
+          // Fondo del header
+          doc.rect(50, tableY, doc.page.width - 100, rowHeight)
+             .fill('#f8fafc');
           
-          // Número de producto
-          doc.fontSize(14)
-             .fillColor('#2563eb')
-             .text(`${i + 1}.`, 50, contentY);
+          // Bordes del header
+          doc.rect(50, tableY, doc.page.width - 100, rowHeight)
+             .stroke('#e5e7eb');
           
-          // Nombre del producto
-          doc.fontSize(16)
-             .fillColor('#1f2937')
-             .text(product.titulo, 80, contentY);
+          // Texto del header
+          doc.fontSize(12)
+             .fillColor('#374151');
           
-          contentY += 25;
+          let x = 55;
+          doc.text('N°', x, tableY + 8);
+          x += colWidths[0];
+          doc.text('Producto', x, tableY + 8);
+          x += colWidths[1];
+          doc.text('Código', x, tableY + 8);
+          x += colWidths[2];
+          doc.text('Precio', x, tableY + 8);
           
-          // Código del producto
-          if (product.codigo) {
-            doc.fontSize(10)
-               .fillColor('#6b7280')
-               .text(`Código: ${product.codigo}`, 80, contentY);
-            contentY += 15;
-          }
+          contentY += rowHeight;
           
-          // Descripción
-          if (product.descripcion) {
-            doc.fontSize(12)
-               .fillColor('#374151')
-               .text(product.descripcion, 80, contentY, {
-                 width: doc.page.width - 150,
-                 align: 'left'
-               });
-            contentY += 20;
-          }
-          
-          // Precio destacado
-          doc.fontSize(18)
-             .fillColor('#059669')
-             .text(`Gs. ${product.precio.toLocaleString('es-PY')}`, 80, contentY);
-          
-          contentY += 30;
-          
-          // Línea separadora entre productos
-          if (i < subcategory.productos.length - 1) {
-            doc.moveTo(50, contentY)
-               .lineTo(doc.page.width - 50, contentY)
+          // Filas de productos
+          for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+            
+            // Verificar si necesitamos nueva página
+            if (contentY > doc.page.height - 100) {
+              doc.addPage();
+              addPageHeader(category.categoria);
+              contentY = 80;
+              
+              // Recrear header de tabla en nueva página
+              doc.rect(50, contentY, doc.page.width - 100, rowHeight)
+                 .fill('#f8fafc');
+              doc.rect(50, contentY, doc.page.width - 100, rowHeight)
+                 .stroke('#e5e7eb');
+              
+              doc.fontSize(12)
+                 .fillColor('#374151');
+              
+              let x = 55;
+              doc.text('N°', x, contentY + 8);
+              x += colWidths[0];
+              doc.text('Producto', x, contentY + 8);
+              x += colWidths[1];
+              doc.text('Código', x, contentY + 8);
+              x += colWidths[2];
+              doc.text('Precio', x, contentY + 8);
+              
+              contentY += rowHeight;
+            }
+            
+            // Fondo alternado para filas
+            if (i % 2 === 0) {
+              doc.rect(50, contentY, doc.page.width - 100, rowHeight)
+                 .fill('#f9fafb');
+            }
+            
+            // Bordes de la fila
+            doc.rect(50, contentY, doc.page.width - 100, rowHeight)
                .stroke('#e5e7eb');
-            contentY += 20;
+            
+            // Contenido de la fila
+            doc.fontSize(10)
+               .fillColor('#1f2937');
+            
+            let x = 55;
+            doc.text(`${i + 1}`, x, contentY + 8);
+            x += colWidths[0];
+            doc.text(product.titulo || 'Sin título', x, contentY + 8, { width: colWidths[1] - 10 });
+            x += colWidths[1];
+            doc.text(product.codigo || '-', x, contentY + 8, { width: colWidths[2] - 10 });
+            x += colWidths[2];
+            doc.text(`Gs. ${(product.precio || 0).toLocaleString('es-PY')}`, x, contentY + 8, { width: colWidths[3] - 10 });
+            
+            contentY += rowHeight;
           }
+          
+          contentY += 20; // Espacio después de la tabla
         }
-        
-        contentY += 20; // Espacio entre subcategorías
       }
       
       addPageFooter();
       currentPage++;
+      console.log(`✅ Categoría ${category.categoria} procesada exitosamente`);
     }
     
     // Finalizar documento
+    console.log('🏁 Finalizando documento PDF...');
     doc.end();
+    console.log('✅ Documento PDF finalizado exitosamente');
     
   } catch (error) {
     console.error('❌ Error generando catálogo PDF:', error);
-    console.error('❌ Stack trace:', error.stack);
     
     // Si la respuesta ya fue enviada, no intentar enviar otra
     if (res.headersSent) {
@@ -335,7 +325,7 @@ const generateCatalogPDF = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
+      message: 'Error generando el catálogo PDF',
       error: true,
       details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
     });
