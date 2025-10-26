@@ -124,7 +124,7 @@ const UserPurchases = ({ user }) => {
 
   // ✅ FUNCIÓN MEJORADA PARA WHATSAPP CON DATOS DEL PEDIDO
   const handleWhatsAppContact = (purchase) => {
-    const phoneNumber = "595984133733"; // ← TU NÚMERO DE WHATSAPP SIN + NI ESPACIOS
+    const phoneNumber = "595981150393"; // ← TU NÚMERO DE WHATSAPP SIN + NI ESPACIOS
     
     const message = `Hola! Necesito ayuda con mi pedido:
 

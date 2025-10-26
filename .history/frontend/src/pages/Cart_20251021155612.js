@@ -826,7 +826,7 @@ const Cart = () => {
             sellingPrice: totalPrice
         });
         
-        window.open(`https://wa.me/+595984133733?text=${encodedMessage}`, '_blank');
+        window.open(`https://wa.me/+595981150393?text=${encodedMessage}`, '_blank');
         toast.success("Redirigiendo a WhatsApp...");
     };
 

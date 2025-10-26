@@ -210,7 +210,7 @@ ${productUrl}
       });
     }
     
-    const whatsappUrl = `https://wa.me/+595984133733?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/+595981150393?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 

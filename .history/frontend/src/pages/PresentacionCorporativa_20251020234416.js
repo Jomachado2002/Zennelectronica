@@ -632,7 +632,7 @@ const PresentacionCorporativa = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-base md:text-lg">Teléfono</p>
-                        <p className="opacity-90 text-cyan-300 text-sm md:text-base">+595 984 133733</p>
+                        <p className="opacity-90 text-cyan-300 text-sm md:text-base">+595 981 150393</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -982,7 +982,7 @@ const PresentacionCorporativa = () => {
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3">
                 <div className="flex items-center justify-center space-x-2 mb-1">
                   <span>📱</span>
-                  <span className="font-semibold">+595 984 133733</span>
+                  <span className="font-semibold">+595 981 150393</span>
                 </div>
                 <p className="text-xs opacity-80">Contacto Directo</p>
               </div>
