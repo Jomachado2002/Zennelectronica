@@ -1,4 +1,5 @@
 const productModel = require("../../models/productModel");
+const Category = require("../../models/categoryModel");
 
 const filterProductController = async (req, res) => {
   try {
@@ -23,13 +24,41 @@ const filterProductController = async (req, res) => {
     if (subcategory.length > 0) query.subcategory = { $in: subcategory };
     if (brandName.length > 0) query.brandName = { $in: brandName };
 
-    // Mapeo de especificaciones por subcategoría
-    const specificationMappings = {
-      // Informática
-      notebooks: [
-        'processor', 'memory', 'storage', 'disk', 
-        'graphicsCard', 'notebookScreen', 'notebookBattery'
-      ],
+    // ✅ OBTENER ESPECIFICACIONES DINÁMICAS DESDE LA BASE DE DATOS
+    let dynamicSpecificationMappings = {};
+    
+    if (subcategory.length > 0) {
+      try {
+        const categories = await Category.find({
+          'subcategories.value': { $in: subcategory }
+        }).lean();
+
+        categories.forEach(category => {
+          category.subcategories.forEach(sub => {
+            if (subcategory.includes(sub.value)) {
+              const specNames = sub.specifications.map(spec => spec.name);
+              dynamicSpecificationMappings[sub.value] = specNames;
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error obteniendo especificaciones dinámicas:', error);
+        // Fallback a especificaciones hardcodeadas si hay error
+        dynamicSpecificationMappings = getHardcodedSpecificationMappings();
+      }
+    } else {
+      // Si no hay subcategorías, usar mapeo hardcodeado como fallback
+      dynamicSpecificationMappings = getHardcodedSpecificationMappings();
+    }
+
+    // Función para obtener especificaciones hardcodeadas como fallback
+    function getHardcodedSpecificationMappings() {
+      return {
+        // Informática
+        notebooks: [
+          'processor', 'memory', 'storage', 'disk', 
+          'graphicsCard', 'notebookScreen', 'notebookBattery'
+        ],
       computadoras_ensambladas: [
         'processor', 'memory', 'storage', 'graphicsCard',
         'pcCase', 'pcPowerSupply', 'pcCooling'
@@ -220,11 +249,12 @@ controles_consola: [
   'controllerCompatibility', 'controllerConnectionType', 'controllerBatteryLife', 
   'controllerSpecialFeatures', 'controllerVibration', 'controllerWireless'
 ],
-juegos_consola: [
-  'gameGenre', 'gamePlatform', 'gameAgeRating', 'gameMultiplayer', 
-  'gameLanguage', 'gameReleaseYear', 'gamePhysicalDigital'
-],
-  };
+        juegos_consola: [
+          'gameGenre', 'gamePlatform', 'gameAgeRating', 'gameMultiplayer', 
+          'gameLanguage', 'gameReleaseYear', 'gamePhysicalDigital'
+        ]
+      };
+    }
 
     // Filtros por especificaciones
     if (Object.keys(specifications).length > 0) {
@@ -250,9 +280,9 @@ juegos_consola: [
       // Obtener marcas disponibles
       filters.brands = await productModel.distinct("brandName", subcategoryQuery);
 
-      // Obtener especificaciones para la subcategoría
+      // ✅ USAR ESPECIFICACIONES DINÁMICAS EN LUGAR DE HARDCODEADAS
       const currentSubcategory = subcategory[0];
-      const relevantSpecs = specificationMappings[currentSubcategory] || [];
+      const relevantSpecs = dynamicSpecificationMappings[currentSubcategory] || [];
 
       // Recolectar valores únicos para cada especificación
       relevantSpecs.forEach(specKey => {

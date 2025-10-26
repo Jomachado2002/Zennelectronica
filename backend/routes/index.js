@@ -42,6 +42,7 @@ const getProductBySlug = require('../controller/product/getProductBySlug');
 // ===== CONTROLADORES DE CATEGORÍAS =====
 const categoryRoutes = require('./categoryRoutes');
 const { getTempCategoriesWithSpecs } = require('../controller/category/tempCategoriesController');
+const { getCategoriesWithSpecifications } = require('../controller/category/categoryController');
 
 // ===== CONTROLADORES DE FINANZAS =====
     const { updateProductFinanceController, getProductFinanceController } = require('../controller/product/updateProductFinance');
@@ -1569,7 +1570,7 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
 
     // ✅ NUEVA RUTA PARA OBTENER CATEGORÍAS DE LA BD
     router.get("/categorias-bd", getCategoriesFromDB);
-    router.get("/categorias-con-especificaciones", getTempCategoriesWithSpecs);
+    router.get("/categorias-con-especificaciones", getCategoriesWithSpecifications);
 
     // ===== RUTAS DE ADMINISTRACIÓN DE CATEGORÍAS =====
     router.use('/admin/categories', categoryRoutes);

@@ -19,7 +19,8 @@ const {
   getCategoriesForMenu,
   getSubcategoriesForMenu,
   getSpecificationsForMenu,
-  getAllCategoriesStructure
+  getAllCategoriesStructure,
+  getCategoriesWithSpecifications
 } = require('../controller/category/categoryController');
 
 // Rutas para categorías
@@ -35,6 +36,9 @@ router.get('/menu/categories/:categoryValue/subcategories/:subcategoryValue/spec
 
 // ========== ENDPOINT PARA PRECARGA COMPLETA ==========
 router.get('/menu/complete-structure', getAllCategoriesStructure);
+
+// ========== ENDPOINT PARA FRONTEND (ESPECIFICACIONES DINÁMICAS) ==========
+router.get('/categorias-con-especificaciones', getCategoriesWithSpecifications);
 router.post('/', authToken, createCategory);
 router.put('/:id', authToken, updateCategory);
 router.delete('/:id', authToken, deleteCategory);

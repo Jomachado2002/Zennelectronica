@@ -733,6 +733,57 @@ const getAllCategoriesStructure = async (req, res) => {
   }
 };
 
+// ✅ NUEVO ENDPOINT: Obtener categorías con especificaciones (para el frontend)
+const getCategoriesWithSpecifications = async (req, res) => {
+  try {
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean();
+
+    const formattedCategories = categories.map(category => ({
+      value: category.value,
+      label: category.label,
+      name: category.name,
+      color: category.color,
+      icon: category.icon,
+      order: category.order,
+      subcategories: category.subcategories
+        .filter(sub => sub.isActive)
+        .sort((a, b) => a.order - b.order)
+        .map(subcategory => ({
+          value: subcategory.value,
+          label: subcategory.label,
+          name: subcategory.name,
+          order: subcategory.order,
+          specifications: subcategory.specifications
+            .sort((a, b) => a.order - b.order)
+            .map(spec => ({
+              name: spec.name,
+              label: spec.label,
+              type: spec.type,
+              placeholder: spec.placeholder,
+              required: spec.required,
+              order: spec.order,
+              options: spec.options || []
+            }))
+        }))
+    }));
+
+    res.status(200).json({
+      success: true,
+      message: 'Categorías con especificaciones obtenidas exitosamente',
+      data: formattedCategories
+    });
+  } catch (error) {
+    console.error('Error obteniendo categorías con especificaciones:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllCategories,
   getActiveCategories,
@@ -750,5 +801,6 @@ module.exports = {
   getCategoriesForMenu,
   getSubcategoriesForMenu,
   getSpecificationsForMenu,
-  getAllCategoriesStructure
+  getAllCategoriesStructure,
+  getCategoriesWithSpecifications
 };
