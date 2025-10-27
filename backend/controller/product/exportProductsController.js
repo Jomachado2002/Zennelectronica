@@ -24,10 +24,11 @@ async function getExportProductsController(req, res) {
             });
         }
 
-        // Buscar productos por categoría y subcategoría
+        // Buscar productos por categoría y subcategoría con stock > 0
         const products = await productModel.find({
             category: category_id,
-            subcategory: subcategory_id
+            subcategory: subcategory_id,
+            stock: { $gt: 0 } // Solo productos con stock mayor a 0
         }).select({
             _id: 1,
             productName: 1,
@@ -36,7 +37,8 @@ async function getExportProductsController(req, res) {
             sellingPrice: 1,
             productImage: 1,
             codigo: 1,
-            brandName: 1
+            brandName: 1,
+            stock: 1
         }).lean();
 
         // Formatear datos para la respuesta
@@ -54,15 +56,26 @@ async function getExportProductsController(req, res) {
                 }
             }
 
+            // Generar descripción con mensaje de contacto
+            let descripcionCompleta = '';
+            const mensajeContacto = 'Para más información podrías escribirnos al 0984/133/733 contamos con productos al por mayor para reventa';
+            
+            if (product.description && product.description.trim() !== '') {
+                descripcionCompleta = `${product.description} ${mensajeContacto}`;
+            } else {
+                descripcionCompleta = mensajeContacto;
+            }
+
             return {
                 id: product._id,
                 titulo: product.productName,
-                descripcion: product.description || '',
+                descripcion: descripcionCompleta,
                 especificaciones: especificaciones,
                 precio_venta: product.sellingPrice,
                 image_url: product.productImage && product.productImage.length > 0 ? product.productImage[0] : null,
                 codigo: product.codigo,
-                marca: product.brandName
+                marca: product.brandName,
+                stock: product.stock
             };
         });
 
@@ -108,9 +121,10 @@ async function downloadProductImagesController(req, res) {
             });
         }
 
-        // Obtener productos seleccionados
+        // Obtener productos seleccionados con stock > 0
         const products = await productModel.find({
-            _id: { $in: product_ids }
+            _id: { $in: product_ids },
+            stock: { $gt: 0 } // Solo productos con stock mayor a 0
         }).select({
             _id: 1,
             productName: 1,
@@ -119,7 +133,8 @@ async function downloadProductImagesController(req, res) {
             sellingPrice: 1,
             productImage: 1,
             codigo: 1,
-            brandName: 1
+            brandName: 1,
+            stock: 1
         }).lean();
 
         if (products.length === 0) {
@@ -144,11 +159,22 @@ async function downloadProductImagesController(req, res) {
 
         // Generar Excel
         const excelData = products.map((product, index) => {
+            // Generar descripción con mensaje de contacto
+            let descripcionCompleta = '';
+            const mensajeContacto = 'Para más información podrías escribirnos al 0984/133/733 contamos con productos al por mayor para reventa';
+            
+            if (product.description && product.description.trim() !== '') {
+                descripcionCompleta = `${product.description} ${mensajeContacto}`;
+            } else {
+                descripcionCompleta = mensajeContacto;
+            }
+
             return {
                 'N°': index + 1,
                 'Título del producto': product.productName,
-                'Descripción': product.description || 'Sin descripción',
-                'Precio de venta': product.sellingPrice
+                'Descripción': descripcionCompleta,
+                'Precio de venta': product.sellingPrice,
+                'Stock': product.stock
             };
         });
 

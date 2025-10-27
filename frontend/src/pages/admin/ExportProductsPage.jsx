@@ -194,7 +194,7 @@ const ExportProductsPage = () => {
                         Exportar Productos
                     </h1>
                     <p className="mt-2 text-gray-600">
-                        Exporta información detallada de productos en Excel junto con sus imágenes organizadas
+                        Exporta información detallada de productos con stock > 0 en Excel junto con sus imágenes organizadas. Las descripciones incluyen automáticamente el mensaje de contacto para reventa.
                     </p>
                 </div>
 
@@ -319,6 +319,9 @@ const ExportProductsPage = () => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Precio
                                         </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Stock
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -364,6 +367,15 @@ const ExportProductsPage = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 {formatPrice(product.precio_venta)}
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                    product.stock > 10 ? 'bg-green-100 text-green-800' :
+                                                    product.stock > 5 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {product.stock || 0}
+                                                </span>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -396,10 +408,11 @@ const ExportProductsPage = () => {
                         </h3>
                         <ol className="list-decimal list-inside text-blue-800 space-y-2">
                             <li>Selecciona una categoría y subcategoría para filtrar los productos</li>
-                            <li>Revisa la lista de productos encontrados</li>
+                            <li>Revisa la lista de productos encontrados (solo productos con stock > 0)</li>
                             <li>Selecciona los productos que deseas exportar (o selecciona todos)</li>
                             <li>Haz clic en "Exportar" para descargar el archivo ZIP</li>
                             <li>El archivo incluirá un Excel con los datos y carpetas organizadas con las imágenes</li>
+                            <li>Las descripciones incluyen automáticamente el mensaje de contacto para reventa</li>
                         </ol>
                     </div>
                 )}
