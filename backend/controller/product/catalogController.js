@@ -211,7 +211,7 @@ const generateCatalogPDF = async (req, res) => {
               ? product.productImage[0] 
               : null,
             slug: product.slug,
-            url: product.slug ? `https://zenn.com.py/product/${product.slug}` : '#'
+            url: product.slug ? `https://zenn.com.py/producto/${product.slug}` : '#'
           });
         }
       }

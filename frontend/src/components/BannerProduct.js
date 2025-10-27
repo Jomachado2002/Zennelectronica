@@ -100,11 +100,12 @@ const BannerProduct = () => {
   return (
     <div className="w-full px-0 mt-0">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Contenedor principal con aspect-ratio optimizado para imágenes 3000x1000 (3:1) */}
+        {/* Contenedor principal con aspect-ratio optimizado para imágenes 1374x438 */}
         <div 
-          className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg h-48 sm:h-56 md:h-64 lg:h-72 xl:h-80"
+          className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
           style={{
-            aspectRatio: '3/1'
+            aspectRatio: '1374/438',
+            minHeight: '200px'
           }}
         >
           {/* Imágenes del carrusel - Con soporte táctil */}
@@ -124,10 +125,11 @@ const BannerProduct = () => {
                 <img
                   src={banner.image}
                   alt={banner.alt}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover"
                   style={{
-                    objectPosition: 'center center', // Centrar la imagen horizontalmente
-                    minHeight: '200px' // Asegurar altura mínima en móviles
+                    objectPosition: 'center center',
+                    width: '100%',
+                    height: '100%'
                   }}
                   loading={index === activeSlide ? "eager" : "lazy"}
                   fetchpriority={index === activeSlide ? "high" : "low"}
@@ -163,22 +165,7 @@ const BannerProduct = () => {
             <ChevronRight className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
           </button>
 
-          {/* Indicadores (dots) - Optimizados para táctil */}
-          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex gap-2 sm:gap-2.5 z-20">
-            {banners.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveSlide(index)}
-                className={`transition-all duration-300 rounded-full touch-manipulation ${
-                  index === activeSlide 
-                    ? 'w-8 sm:w-10 h-2 sm:h-2.5 bg-white shadow-lg' 
-                    : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-white/60 hover:bg-white/80'
-                }`}
-                style={{ minWidth: '32px', minHeight: '32px' }} // Área táctil mínima
-                aria-label={`Ir a slide ${index + 1}`}
-              />
-            ))}
-          </div>
+
         </div>
       </div>
     </div>
