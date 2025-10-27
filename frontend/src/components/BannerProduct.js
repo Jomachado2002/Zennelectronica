@@ -98,16 +98,16 @@ const BannerProduct = () => {
   }, [activeSlide, nextSlide]);
 
   return (
-    <div className="w-full mt-0">
-      <div className="w-full max-w-7xl mx-auto px-0 sm:px-4">
-        {/* Contenedor principal con aspect-ratio optimizado para imágenes 1374x438 */}
-        <div 
-          className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
-          style={{
-            aspectRatio: '1374/438',
-            minHeight: '200px'
-          }}
-        >
+    <div className="w-full -mx-4 mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
+      {/* Contenedor principal con aspect-ratio optimizado para imágenes 1374x438 */}
+      <div 
+        className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
+        style={{
+          aspectRatio: '1374/438',
+          minHeight: '180px',
+          maxHeight: '60vh'
+        }}
+      >
           {/* Imágenes del carrusel - Con soporte táctil */}
           <div 
             className="relative w-full h-full touch-pan-y"
@@ -165,9 +165,7 @@ const BannerProduct = () => {
             <ChevronRight className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
           </button>
 
-
         </div>
-      </div>
     </div>
   );
 };
