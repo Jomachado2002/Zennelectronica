@@ -98,8 +98,8 @@ const BannerProduct = () => {
   }, [activeSlide, nextSlide]);
 
   return (
-    <div className="w-full px-0 mt-0">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="w-full mt-0">
+      <div className="w-full max-w-7xl mx-auto px-0 sm:px-4">
         {/* Contenedor principal con aspect-ratio optimizado para imágenes 1374x438 */}
         <div 
           className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
