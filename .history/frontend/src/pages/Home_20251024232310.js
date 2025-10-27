@@ -65,7 +65,7 @@ const Home = () => {
   const openWhatsApp = () => {
     const message = "Hola, necesito asesoramiento sobre productos de informática. ¿Podrían ayudarme?";
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/595981150393?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/595984133733?text=${encodedMessage}`, '_blank');
   };
 
   return (

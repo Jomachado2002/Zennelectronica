@@ -626,7 +626,7 @@ const Header = () => {
         </Link>
         
         <a 
-          href="https://wa.me/595981150393?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
+          href="https://wa.me/595984133733?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex flex-col items-center text-gray-600 hover:text-green-600 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-green-50 group"

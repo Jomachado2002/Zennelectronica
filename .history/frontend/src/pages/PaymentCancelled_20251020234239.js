@@ -47,7 +47,7 @@ const PaymentCancelled = () => {
 
   const contactWhatsApp = () => {
     const message = `Hola! Tuve un problema al procesar mi pago en Zenn.%0A%0AID de transacción: ${paymentInfo.shop_process_id}%0AMonto: ${displayPYGCurrency(paymentInfo.amount)}%0AMotivo: Pago cancelado%0A%0A¿Pueden ayudarme a completar mi compra? Gracias!`;
-    window.open(`https://wa.me/595981150393?text=${message}`, '_blank');
+    window.open(`https://wa.me/595984133733?text=${message}`, '_blank');
   };
 
   const sendEmail = () => {

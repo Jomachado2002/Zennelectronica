@@ -56,7 +56,7 @@ const Footer = () => {
                 <FontAwesomeIcon icon={faInstagram} size="2x" />
               </a>
               <a
-                href="https://wa.me/+595981150393"
+                href="https://wa.me/+595984133733"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"

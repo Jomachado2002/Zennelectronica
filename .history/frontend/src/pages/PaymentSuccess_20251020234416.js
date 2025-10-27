@@ -361,7 +361,7 @@ const PaymentSuccess = () => {
                     <p className="text-gray-600 mb-2">¿Necesitas ayuda?</p>
                     <div className="flex justify-center gap-4">
                         <a
-                            href="https://wa.me/+595981150393"
+                            href="https://wa.me/+595984133733"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-green-600 hover:text-green-700 font-medium"

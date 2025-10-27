@@ -834,16 +834,6 @@ const Home = () => {
                       </svg>
                       Contactar Asesor
                     </button>
-                    <Link to="/nosotros" onClick={() => scrollTop()}>
-                      <button 
-                        className="px-6 py-3 text-white rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/30 group/btn"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)'
-                        }}
-                      >
-                        NOSOTROS
-                      </button>
-                    </Link>
                   </div>
                 </div>
               </div>

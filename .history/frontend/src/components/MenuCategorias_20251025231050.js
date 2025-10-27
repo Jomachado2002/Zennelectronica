@@ -249,7 +249,7 @@ const MenuCategorias = ({
                 </div>
                 <div>
                   <span className="font-bold text-gray-800 block">Llamar</span>
-                  <span className="text-xs text-gray-600">+595 981150393</span>
+                  <span className="text-xs text-gray-600">+595 984133733</span>
                 </div>
               </a>
             </div>
@@ -380,7 +380,7 @@ const MenuCategorias = ({
                   <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500/10 mr-3 flex-shrink-0">
                     <FaPhone className="text-blue-500 text-sm" />
                   </div>
-                  <span className="font-medium">+595 981150393</span>
+                  <span className="font-medium">+595 984133733</span>
                 </a>
               </div>
             </nav>
