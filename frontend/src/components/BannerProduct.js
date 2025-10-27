@@ -7,6 +7,19 @@ const BannerProduct = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Hook para detectar si es móvil
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   // ✅ SOLO IMÁGENES - Sin texto ni botones
   const banners = React.useMemo(() => [
@@ -99,13 +112,14 @@ const BannerProduct = () => {
 
   return (
     <div className="w-full -mx-4 mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
-      {/* Contenedor principal con aspect-ratio optimizado para imágenes 1374x438 */}
+      {/* Contenedor principal con aspect-ratio responsivo */}
       <div 
         className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
         style={{
-          aspectRatio: '1374/438',
-          minHeight: '180px',
-          maxHeight: '60vh'
+          // Aspect-ratio responsivo: más cuadrado en móvil para evitar espacios en blanco
+          aspectRatio: isMobile ? '16/10' : '1374/438',
+          minHeight: isMobile ? '200px' : '180px',
+          maxHeight: isMobile ? '50vh' : '60vh'
         }}
       >
           {/* Imágenes del carrusel - Con soporte táctil */}
@@ -127,9 +141,13 @@ const BannerProduct = () => {
                   alt={banner.alt}
                   className="w-full h-full object-cover"
                   style={{
-                    objectPosition: 'center center',
+                    // Posicionamiento optimizado para móvil y desktop
+                    objectPosition: isMobile ? 'center center' : 'center center',
                     width: '100%',
-                    height: '100%'
+                    height: '100%',
+                    // Asegurar que la imagen llene completamente el contenedor
+                    minWidth: '100%',
+                    minHeight: '100%'
                   }}
                   loading={index === activeSlide ? "eager" : "lazy"}
                   fetchpriority={index === activeSlide ? "high" : "low"}
