@@ -189,6 +189,19 @@ useEffect(() => {
     navigate("/carrito");
   };
 
+  // Función para asegurar que la URL de la imagen sea absoluta
+  const getAbsoluteImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    
+    // Si ya es una URL absoluta, devolverla tal como está
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    
+    // Si es una URL relativa, convertirla a absoluta
+    return `${window.location.origin}${imageUrl}`;
+  };
+
   // Función principal para WhatsApp con tracking
   const handleWhatsAppClick = () => {
     const price = displayINRCurrency(data.sellingPrice);
@@ -247,11 +260,34 @@ ${productUrl}
       <Helmet>
         <title>{data.productName ? `${data.productName} | Zenn` : 'Producto | Zenn'}</title>
         <meta name="description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        
+        {/* Open Graph Meta Tags - Para WhatsApp y redes sociales */}
         <meta property="og:title" content={data.productName || 'Producto'} />
         <meta property="og:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        <meta property="og:type" content="product" />
+        <meta property="og:url" content={`https://zenn.com.py/producto/${data.slug || params.id}`} />
+        <meta property="og:site_name" content="Zenn" />
         {data.productImage && data.productImage[0] && (
-          <meta property="og:image" content={data.productImage[0]} />
+          <meta property="og:image" content={getAbsoluteImageUrl(data.productImage[0])} />
         )}
+        {data.productImage && data.productImage[0] && (
+          <meta property="og:image:width" content="1200" />
+        )}
+        {data.productImage && data.productImage[0] && (
+          <meta property="og:image:height" content="630" />
+        )}
+        {data.productImage && data.productImage[0] && (
+          <meta property="og:image:alt" content={data.productName || 'Imagen del producto'} />
+        )}
+        
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={data.productName || 'Producto'} />
+        <meta name="twitter:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        {data.productImage && data.productImage[0] && (
+          <meta name="twitter:image" content={getAbsoluteImageUrl(data.productImage[0])} />
+        )}
+        
         <link rel="canonical" href={`https://zenn.com.py/producto/${data.slug || params.id}`} />
         
         {/* BreadcrumbList Schema.org para navegación */}
