@@ -21,34 +21,65 @@ const BannerProduct = () => {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // ✅ SOLO IMÁGENES - Sin texto ni botones
-  const banners = React.useMemo(() => [
+  // ✅ IMÁGENES ESPECÍFICAS PARA MÓVIL Y DESKTOP
+  const bannersDesktop = React.useMemo(() => [
     {
       id: 1,
-      image: '/banners/banner1.webp', // Coloca tus imágenes en public/banners/
-      alt: 'Banner 1'
+      image: '/banners/banner1.webp',
+      alt: 'Banner 1 Desktop'
     },
     {
       id: 2,
       image: '/banners/banner2.webp',
-      alt: 'Banner 2'
+      alt: 'Banner 2 Desktop'
     },
     {
       id: 3,
       image: '/banners/banner3.webp',
-      alt: 'Banner 3'
+      alt: 'Banner 3 Desktop'
     },
     {
       id: 4,
       image: '/banners/banner4.webp',
-      alt: 'Banner 4'
+      alt: 'Banner 4 Desktop'
     },
     {
       id: 5,
-      image: '/banners/banner5.jpg',
-      alt: 'Banner 5'
+      image: '/banners/banner5.webp',
+      alt: 'Banner 5 Desktop'
     }
   ], []);
+
+  const bannersMobile = React.useMemo(() => [
+    {
+      id: 1,
+      image: '/banners/banner1mob.webp', // Dimensiones 466x700
+      alt: 'Banner 1 Mobile'
+    },
+    {
+      id: 2,
+      image: '/banners/banner2mob.webp',
+      alt: 'Banner 2 Mobile'
+    },
+    {
+      id: 3,
+      image: '/banners/banner3mob.webp',
+      alt: 'Banner 3 Mobile'
+    },
+    {
+      id: 4,
+      image: '/banners/banner4mob.webp',
+      alt: 'Banner 4 Mobile'
+    },
+    {
+      id: 5,
+      image: '/banners/banner5mob.webp',
+      alt: 'Banner 5 Mobile'
+    }
+  ], []);
+
+  // Seleccionar banners según el dispositivo
+  const banners = isMobile ? bannersMobile : bannersDesktop;
 
   const nextSlide = React.useCallback(() => {
     if (isAnimating) return;
@@ -91,16 +122,29 @@ const BannerProduct = () => {
   // ✅ PRECARGAR TODAS LAS IMÁGENES DEL BANNER INMEDIATAMENTE
   useEffect(() => {
     const preloadBannerImages = () => {
+      // Precargar imágenes del dispositivo actual
       banners.forEach((banner, index) => {
         const img = new Image();
         img.fetchPriority = 'high';
-        // Removido crossOrigin para evitar errores CORS con Firebase Storage
+        img.src = banner.image;
+      });
+      
+      // También precargar las imágenes del otro dispositivo para cambio rápido
+      const otherBanners = isMobile ? bannersDesktop : bannersMobile;
+      otherBanners.forEach((banner) => {
+        const img = new Image();
+        img.fetchPriority = 'low';
         img.src = banner.image;
       });
     };
 
     preloadBannerImages();
-  }, [banners]);
+  }, [banners, bannersDesktop, bannersMobile, isMobile]);
+
+  // Resetear slide cuando cambie el dispositivo
+  useEffect(() => {
+    setActiveSlide(0);
+  }, [isMobile]);
 
   // Auto-play cada 5 segundos
   useEffect(() => {
@@ -111,15 +155,19 @@ const BannerProduct = () => {
   }, [activeSlide, nextSlide]);
 
   return (
-    <div className="w-full -mx-4 mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
+    <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
       {/* Contenedor principal con aspect-ratio responsivo */}
       <div 
         className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
         style={{
-          // Aspect-ratio responsivo: más cuadrado en móvil para evitar espacios en blanco
-          aspectRatio: isMobile ? '16/10' : '1374/438',
+          // Aspect-ratio optimizado para evitar espacios en blanco
+          // Móvil: usar proporción más ancha para llenar mejor la pantalla
+          // Desktop: mantener proporción original
+          aspectRatio: isMobile ? '4/5' : '1374/438',
           minHeight: isMobile ? '200px' : '180px',
-          maxHeight: isMobile ? '50vh' : '60vh'
+          maxHeight: isMobile ? '50vh' : '60vh',
+          // Asegurar que en móviles no haya espacios en blanco
+          width: '100%'
         }}
       >
           {/* Imágenes del carrusel - Con soporte táctil */}
