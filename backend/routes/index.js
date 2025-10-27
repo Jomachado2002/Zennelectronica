@@ -1587,13 +1587,10 @@ const {
 
 // ===== CONTROLADORES DE CATÁLOGO PDF =====
 const {
+    generateCatalogPDF,
     getCatalogProducts,
     getCatalogCategories
 } = require('../controller/product/catalogController');
-
-const {
-    generateCatalogPDF
-} = require('../controller/product/catalogPDFController');
 
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
@@ -1645,17 +1642,17 @@ router.post('/download-product-images', authToken, downloadProductImagesControll
 // ===== RUTAS DE CATÁLOGO PDF =====
 
 /**
+ * GET /api/catalog-categories
+ * Obtiene categorías y subcategorías para filtros del catálogo
+ */
+router.get('/catalog-categories', authToken, getCatalogCategories);
+
+/**
  * GET /api/catalog-products
  * Obtiene productos agrupados por categoría y subcategoría para catálogo PDF
  * Query params: category, subcategory (opcionales)
  */
 router.get('/catalog-products', authToken, getCatalogProducts);
-
-/**
- * GET /api/catalog-categories
- * Obtiene categorías y subcategorías para filtros del catálogo
- */
-router.get('/catalog-categories', authToken, getCatalogCategories);
 
 /**
  * POST /api/generate-catalog-pdf

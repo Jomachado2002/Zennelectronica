@@ -12,22 +12,22 @@ const BannerProduct = () => {
   const banners = React.useMemo(() => [
     {
       id: 1,
-      image: '/banners/banner1.jpg', // Coloca tus imágenes en public/banners/
+      image: '/banners/banner1.webp', // Coloca tus imágenes en public/banners/
       alt: 'Banner 1'
     },
     {
       id: 2,
-      image: '/banners/banner2.jpg',
+      image: '/banners/banner2.webp',
       alt: 'Banner 2'
     },
     {
       id: 3,
-      image: '/banners/banner3.jpg',
+      image: '/banners/banner3.webp',
       alt: 'Banner 3'
     },
     {
       id: 4,
-      image: '/banners/banner4.jpg',
+      image: '/banners/banner4.webp',
       alt: 'Banner 4'
     },
     {

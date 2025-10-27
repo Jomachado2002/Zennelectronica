@@ -236,11 +236,13 @@ const AdminCatalogoPDF = () => {
                 </div>
               </div>
 
-              {/* Botón Generar PDF con React PDF */}
+              {/* Botón Generar PDF con Puppeteer del Backend */}
               {catalogData.length > 0 ? (
                 <CatalogPDF 
                   catalogData={catalogData} 
                   companyName="Zenn Electrónica"
+                  selectedCategory={selectedCategory}
+                  selectedSubcategory={selectedSubcategory}
                 />
               ) : (
                 <button
