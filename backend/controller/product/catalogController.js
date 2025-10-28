@@ -236,9 +236,10 @@ const generateCatalogPDF = async (req, res) => {
     console.log('Generando HTML con', catalogData.length, 'categorías');
     const htmlContent = generateHTMLContent(catalogData, title);
     
-    // Iniciar Puppeteer
+    // Iniciar Puppeteer - Configuración para Vercel
     console.log('Iniciando Puppeteer...');
-    browser = await puppeteer.launch({
+    
+    const launchOptions = {
       headless: 'new',
       args: [
         '--no-sandbox',
@@ -246,9 +247,20 @@ const generateCatalogPDF = async (req, res) => {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-software-rasterizer',
-        '--disable-extensions'
+        '--disable-extensions',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--single-process'
       ]
-    });
+    };
+
+    // En producción (Vercel), usar Chrome del sistema
+    if (process.env.NODE_ENV === 'production') {
+      launchOptions.executablePath = '/usr/bin/google-chrome-stable';
+    }
+
+    browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     

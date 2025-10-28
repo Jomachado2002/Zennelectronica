@@ -144,8 +144,8 @@ async function downloadProductImagesController(req, res) {
             });
         }
 
-        // Crear directorio temporal
-        const tempDir = path.join(__dirname, '../../temp');
+        // Crear directorio temporal - Compatible con Vercel
+        const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(__dirname, '../../temp');
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
