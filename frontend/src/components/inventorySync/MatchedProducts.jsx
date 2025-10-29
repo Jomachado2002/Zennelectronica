@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { FaEdit, FaExternalLinkAlt } from 'react-icons/fa';
 
-const MatchedProducts = ({ products, method, showPriceChanges, onEditProduct }) => {
+const MatchedProducts = ({ products, method, showPriceChanges, onEditProduct, onBulkEditPrices }) => {
     const [filterByPriceChanges, setFilterByPriceChanges] = useState(false);
 
     const filteredProducts = filterByPriceChanges 
@@ -72,6 +72,17 @@ const MatchedProducts = ({ products, method, showPriceChanges, onEditProduct }) 
                                     Solo cambios de precio
                                 </span>
                             </label>
+                        )}
+
+                        {/* Botón de edición masiva de precios */}
+                        {showPriceChanges && filteredProducts.length > 0 && (
+                            <button
+                                onClick={() => onBulkEditPrices(filteredProducts)}
+                                className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 flex items-center gap-2"
+                            >
+                                <FaEdit className="w-4 h-4" />
+                                Editar Precios Masivamente
+                            </button>
                         )}
 
                         {/* Información del método */}

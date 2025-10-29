@@ -548,11 +548,267 @@ async function updateProductCodesController(req, res) {
     }
 }
 
+/**
+ * POST /api/admin/inventory-sync/restock-products
+ * Actualiza el stock de productos que reaparecen en el CSV
+ */
+async function restockProductsController(req, res) {
+    try {
+        const { productIds, updateAll, filters } = req.body;
+
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'IDs de productos requeridos'
+            });
+        }
+
+        // Verificar estado ANTES
+        const productsBeforeUpdate = await productModel.find({ _id: { $in: productIds } })
+            .select('_id productCode productName stockStatus stock codigo')
+            .lean();
+
+        if (productsBeforeUpdate.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'No se encontraron productos para actualizar'
+            });
+        }
+
+        // Actualizar productos a stock disponible
+        const updateData = { 
+            stockStatus: 'in_stock', 
+            stock: 1, 
+            updatedAt: new Date() 
+        };
+
+        const result = await productModel.updateMany(
+            { _id: { $in: productIds } },
+            { $set: updateData }
+        );
+
+        console.log(`✅ Restock completado:`, {
+            matchedCount: result.matchedCount,
+            modifiedCount: result.modifiedCount,
+            acknowledged: result.acknowledged
+        });
+
+        // Verificar DESPUÉS
+        const productsAfterUpdate = await productModel.find({ _id: { $in: productIds } })
+            .select('_id productCode productName stockStatus stock codigo')
+            .lean();
+
+        res.json({
+            success: true,
+            updated: result.modifiedCount,
+            message: `${result.modifiedCount} productos restockeados exitosamente`,
+            updatedProducts: productsAfterUpdate.map(p => ({
+                productId: p._id.toString(),
+                productCode: p.codigo || p.productCode,
+                productName: p.productName,
+                newStatus: p.stockStatus,
+                newStock: p.stock
+            }))
+        });
+
+    } catch (error) {
+        console.error('Error en restockProductsController:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+}
+
+/**
+ * POST /api/admin/inventory-sync/bulk-update-prices
+ * Actualiza precios de múltiples productos
+ */
+async function bulkUpdatePricesController(req, res) {
+    try {
+        const { updates } = req.body;
+
+        if (!updates || !Array.isArray(updates) || updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Se requiere un array de actualizaciones de precios'
+            });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        // Procesar cada actualización
+        for (const update of updates) {
+            try {
+                const { productId, newPrice } = update;
+
+                if (!productId || newPrice === undefined || newPrice < 0) {
+                    results.failed++;
+                    results.errors.push({
+                        productId: productId || 'unknown',
+                        error: 'ProductId y precio válido son requeridos'
+                    });
+                    continue;
+                }
+
+                // Actualizar el producto en la base de datos
+                const updatedProduct = await productModel.findByIdAndUpdate(
+                    productId,
+                    { 
+                        purchasePriceUSD: newPrice,
+                        updatedAt: new Date()
+                    },
+                    { new: true, runValidators: true }
+                );
+
+                if (updatedProduct) {
+                    results.success++;
+                } else {
+                    results.failed++;
+                    results.errors.push({
+                        productId,
+                        error: 'Producto no encontrado'
+                    });
+                }
+
+            } catch (error) {
+                results.failed++;
+                results.errors.push({
+                    productId: update.productId || 'unknown',
+                    error: error.message
+                });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Actualización de precios completada: ${results.success} exitosos, ${results.failed} fallidos`,
+            results
+        });
+
+    } catch (error) {
+        console.error('Error en bulkUpdatePricesController:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+}
+
+/**
+ * POST /api/admin/inventory-sync/toggle-product-visibility
+ * Cambia la visibilidad de un producto
+ */
+async function toggleProductVisibilityController(req, res) {
+    try {
+        const { productId, isVisible } = req.body;
+
+        if (!productId || isVisible === undefined) {
+            return res.status(400).json({
+                success: false,
+                error: 'ProductId e isVisible son requeridos'
+            });
+        }
+
+        const updatedProduct = await productModel.findByIdAndUpdate(
+            productId,
+            { 
+                isVisible: isVisible,
+                updatedAt: new Date()
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedProduct) {
+            return res.status(404).json({
+                success: false,
+                error: 'Producto no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Producto ${isVisible ? 'mostrado' : 'oculto'} exitosamente`,
+            product: {
+                productId: updatedProduct._id,
+                productCode: updatedProduct.codigo,
+                productName: updatedProduct.productName,
+                isVisible: updatedProduct.isVisible
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en toggleProductVisibilityController:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+}
+
+/**
+ * POST /api/admin/inventory-sync/bulk-toggle-visibility
+ * Cambia la visibilidad de múltiples productos
+ */
+async function bulkToggleVisibilityController(req, res) {
+    try {
+        const { productIds, isVisible } = req.body;
+
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Se requiere un array de IDs de productos'
+            });
+        }
+
+        if (isVisible === undefined) {
+            return res.status(400).json({
+                success: false,
+                error: 'isVisible es requerido'
+            });
+        }
+
+        const result = await productModel.updateMany(
+            { _id: { $in: productIds } },
+            { 
+                isVisible: isVisible,
+                updatedAt: new Date()
+            }
+        );
+
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} productos ${isVisible ? 'mostrados' : 'ocultos'} exitosamente`,
+            updated: result.modifiedCount,
+            matched: result.matchedCount
+        });
+
+    } catch (error) {
+        console.error('Error en bulkToggleVisibilityController:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+}
+
 module.exports = {
     getCategoriesController,
     compareByCodeController,
     compareByNameController,
     updateStockController,
     importProductsController,
-    updateProductCodesController
+    updateProductCodesController,
+    restockProductsController,
+    bulkUpdatePricesController,
+    toggleProductVisibilityController,
+    bulkToggleVisibilityController
 };

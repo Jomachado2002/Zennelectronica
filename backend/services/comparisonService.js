@@ -44,6 +44,7 @@ async function compareByCode(providerProducts, category, subcategory) {
         const notInSystem = [];
         const notInProvider = [];
         const priceChanges = [];
+        const restockedProducts = []; // Productos que reaparecen con stock 0
 
         // Productos que están en el proveedor pero no en el sistema
         providerProducts.forEach(providerProduct => {
@@ -67,6 +68,25 @@ async function compareByCode(providerProducts, category, subcategory) {
                 const providerPriceUSD = providerProduct.priceUSD;
                 const priceChanged = Math.abs(currentPriceUSD - providerPriceUSD) > 0.01;
 
+                // Verificar si el producto reaparece (estaba con stock 0 y ahora está en el CSV)
+                const isRestocked = (systemProduct.stock === 0 || systemProduct.stockStatus === 'out_of_stock') && 
+                                   providerProduct.priceUSD > 0;
+
+                if (isRestocked) {
+                    restockedProducts.push({
+                        productId: systemProduct._id,
+                        productCode: systemProduct.codigo,
+                        productName: systemProduct.productName,
+                        currentStock: systemProduct.stock || 0,
+                        currentStatus: systemProduct.stockStatus || 'out_of_stock',
+                        providerPrice: providerPriceUSD,
+                        currentPrice: currentPriceUSD,
+                        priceChanged: priceChanged,
+                        priceDifference: providerPriceUSD - currentPriceUSD,
+                        selected: false
+                    });
+                }
+
                 if (priceChanged) {
                     priceChanges.push({
                         productId: systemProduct._id,
@@ -85,7 +105,8 @@ async function compareByCode(providerProducts, category, subcategory) {
                     currentPrice: currentPriceUSD,
                     providerPrice: providerPriceUSD,
                     priceChanged: priceChanged,
-                    priceDifference: providerPriceUSD - currentPriceUSD
+                    priceDifference: providerPriceUSD - currentPriceUSD,
+                    isRestocked: isRestocked
                 });
             }
         });
@@ -116,7 +137,8 @@ async function compareByCode(providerProducts, category, subcategory) {
             matchedProducts: matched.length,
             notInSystem: notInSystem.length,
             notInProvider: notInProvider.length,
-            priceChanges: priceChanges.length
+            priceChanges: priceChanges.length,
+            restockedProducts: restockedProducts.length
         };
 
         // console.log removed for production
@@ -128,7 +150,8 @@ async function compareByCode(providerProducts, category, subcategory) {
             matched,
             notInSystem,
             notInProvider,
-            priceChanges
+            priceChanges,
+            restockedProducts
         };
 
     } catch (error) {
@@ -181,6 +204,7 @@ async function compareByName(providerProducts, category, subcategory) {
         const notInProvider = [];
         const priceChanges = [];
         const codeMismatches = [];
+        const restockedProducts = []; // Productos que reaparecen con stock 0
 
         // Productos que están en el proveedor pero no en el sistema
         providerProducts.forEach(providerProduct => {
@@ -206,6 +230,27 @@ async function compareByName(providerProducts, category, subcategory) {
                 const systemCode = systemProduct.codigo ? systemProduct.codigo.toUpperCase() : '';
                 const providerCode = providerProduct.providerCode ? providerProduct.providerCode.toUpperCase() : '';
                 const codeMatch = systemCode === providerCode;
+
+                // Verificar si el producto reaparece (estaba con stock 0 y ahora está en el CSV)
+                const isRestocked = (systemProduct.stock === 0 || systemProduct.stockStatus === 'out_of_stock') && 
+                                   providerProduct.priceUSD > 0;
+
+                if (isRestocked) {
+                    restockedProducts.push({
+                        productId: systemProduct._id,
+                        productCode: systemProduct.codigo,
+                        providerCode: providerProduct.providerCode,
+                        productName: systemProduct.productName,
+                        currentStock: systemProduct.stock || 0,
+                        currentStatus: systemProduct.stockStatus || 'out_of_stock',
+                        providerPrice: providerPriceUSD,
+                        currentPrice: currentPriceUSD,
+                        priceChanged: priceChanged,
+                        priceDifference: providerPriceUSD - currentPriceUSD,
+                        codeMatch: codeMatch,
+                        selected: false
+                    });
+                }
 
                 if (!codeMatch) {
                     codeMismatches.push({
@@ -239,7 +284,8 @@ async function compareByName(providerProducts, category, subcategory) {
                     priceChanged: priceChanged,
                     priceDifference: providerPriceUSD - currentPriceUSD,
                     codeMatch: codeMatch,
-                    warning: codeMatch ? null : '⚠️ Los códigos no coinciden'
+                    warning: codeMatch ? null : '⚠️ Los códigos no coinciden',
+                    isRestocked: isRestocked
                 });
             }
         });
@@ -269,7 +315,8 @@ async function compareByName(providerProducts, category, subcategory) {
             notInSystem: notInSystem.length,
             notInProvider: notInProvider.length,
             priceChanges: priceChanges.length,
-            codeMismatches: codeMismatches.length
+            codeMismatches: codeMismatches.length,
+            restockedProducts: restockedProducts.length
         };
 
         // console.log removed for production
@@ -282,7 +329,8 @@ async function compareByName(providerProducts, category, subcategory) {
             notInSystem,
             notInProvider,
             priceChanges,
-            codeMismatches
+            codeMismatches,
+            restockedProducts
         };
 
     } catch (error) {

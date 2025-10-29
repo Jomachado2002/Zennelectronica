@@ -16,7 +16,11 @@ const {
     compareByNameController,
     updateStockController,
     importProductsController,
-    updateProductCodesController
+    updateProductCodesController,
+    restockProductsController,
+    bulkUpdatePricesController,
+    toggleProductVisibilityController,
+    bulkToggleVisibilityController
 } = require('../controller/inventorySync/inventorySyncController');
 
 // ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
@@ -89,6 +93,44 @@ router.post('/import-products', authToken, importProductsController);
  * - updates: Array de objetos con { productId, newCode }
  */
 router.post('/update-product-codes', authToken, updateProductCodesController);
+
+/**
+ * POST /api/admin/inventory-sync/restock-products
+ * Actualiza el stock de productos que reaparecen en el CSV (estaban con stock 0)
+ * 
+ * Body:
+ * - productIds: Array de IDs de productos a restockear
+ */
+router.post('/restock-products', authToken, restockProductsController);
+
+/**
+ * POST /api/admin/inventory-sync/bulk-update-prices
+ * Actualiza precios de múltiples productos
+ * 
+ * Body:
+ * - updates: Array de objetos con { productId, newPrice }
+ */
+router.post('/bulk-update-prices', authToken, bulkUpdatePricesController);
+
+/**
+ * POST /api/admin/inventory-sync/toggle-product-visibility
+ * Cambia la visibilidad de un producto
+ * 
+ * Body:
+ * - productId: ID del producto
+ * - isVisible: boolean
+ */
+router.post('/toggle-product-visibility', authToken, toggleProductVisibilityController);
+
+/**
+ * POST /api/admin/inventory-sync/bulk-toggle-visibility
+ * Cambia la visibilidad de múltiples productos
+ * 
+ * Body:
+ * - productIds: Array de IDs de productos
+ * - isVisible: boolean
+ */
+router.post('/bulk-toggle-visibility', authToken, bulkToggleVisibilityController);
 
 /**
  * POST /api/admin/inventory-sync/import-image

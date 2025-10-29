@@ -16,6 +16,8 @@ import ResultsSummary from '../../components/inventorySync/ResultsSummary';
 import ProductsNotInSystem from '../../components/inventorySync/ProductsNotInSystem';
 import ProductsNotInProvider from '../../components/inventorySync/ProductsNotInProvider';
 import MatchedProducts from '../../components/inventorySync/MatchedProducts';
+import RestockedProducts from '../../components/inventorySync/RestockedProducts';
+import BulkPriceEditor from '../../components/inventorySync/BulkPriceEditor';
 import UploadProduct from '../../components/UploadProduct';
 import AdminEditProduct from '../../components/AdminEditProduct';
 import CodeMismatches from '../../components/inventorySync/CodeMismatches';
@@ -40,12 +42,15 @@ const InventorySyncPage = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editProductData, setEditProductData] = useState(null);
     const [editExtraData, setEditExtraData] = useState(null);
+    const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
+    const [bulkPriceProducts, setBulkPriceProducts] = useState([]);
 
     // Estados de resultados
     const [comparisonResults, setComparisonResults] = useState(null);
     const [selectedProducts, setSelectedProducts] = useState({
         notInSystem: [],
-        notInProvider: []
+        notInProvider: [],
+        restocked: []
     });
 
     // Cargar categorías desde el endpoint de sincronización
@@ -252,6 +257,38 @@ const InventorySyncPage = () => {
         }
     };
 
+    // Restockear productos que reaparecen
+    const handleRestockProducts = async () => {
+        if (!comparisonResults || selectedProducts.restocked.length === 0) {
+            setError('No hay productos seleccionados para restockear');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const response = await axiosInstance.post('/api/admin/inventory-sync/restock-products', {
+                productIds: selectedProducts.restocked
+            });
+
+            if (response.data.success) {
+                toast.success(`${response.data.updated} productos restockeados exitosamente`);
+                
+                // Recargar comparación para actualizar resultados
+                handleCompare();
+            } else {
+                setError(response.data.error || 'Error restockeando productos');
+            }
+
+        } catch (error) {
+            // console.error removed for production
+            setError(error.response?.data?.error || 'Error interno del servidor');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Actualizar códigos de productos
     const handleUpdateCodes = async (updates) => {
         if (updates.length === 0) {
@@ -379,11 +416,52 @@ const InventorySyncPage = () => {
         handleCompare();
     };
 
+    // Función para manejar la edición masiva de precios
+    const handleBulkEditPrices = (products) => {
+        setBulkPriceProducts(products);
+        setShowBulkPriceModal(true);
+    };
+
+    // Función para cerrar el modal de edición masiva de precios
+    const handleCloseBulkPriceModal = () => {
+        setShowBulkPriceModal(false);
+        setBulkPriceProducts([]);
+    };
+
+    // Función para guardar precios masivamente
+    const handleSaveBulkPrices = async (updates) => {
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const response = await axiosInstance.post('/api/admin/inventory-sync/bulk-update-prices', {
+                updates
+            });
+
+            if (response.data.success) {
+                toast.success(`Precios actualizados: ${response.data.results.success} exitosos, ${response.data.results.failed} fallidos`);
+                
+                // Cerrar modal y recargar comparación
+                handleCloseBulkPriceModal();
+                handleCompare();
+            } else {
+                setError(response.data.error || 'Error actualizando precios');
+            }
+
+        } catch (error) {
+            console.error('Error actualizando precios:', error);
+            setError(error.response?.data?.error || 'Error interno del servidor');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Limpiar selecciones
     const clearSelections = () => {
         setSelectedProducts({
             notInSystem: [],
-            notInProvider: []
+            notInProvider: [],
+            restocked: []
         });
     };
 
@@ -515,6 +593,26 @@ const InventorySyncPage = () => {
                             />
                         )}
 
+                        {/* Productos que Reaparecen */}
+                        {comparisonResults.restockedProducts && comparisonResults.restockedProducts.length > 0 && (
+                            <RestockedProducts
+                                products={comparisonResults.restockedProducts}
+                                selectedProducts={selectedProducts}
+                                onProductSelect={handleProductSelection}
+                                onSelectAll={handleSelectAll}
+                                onRestockSelected={handleRestockProducts}
+                                onRestockAll={() => {
+                                    setSelectedProducts(prev => ({
+                                        ...prev,
+                                        restocked: comparisonResults.restockedProducts.map(p => p.productId)
+                                    }));
+                                    handleRestockProducts();
+                                }}
+                                onEditProduct={handleEditProduct}
+                                isLoading={isLoading}
+                            />
+                        )}
+
                         {/* Productos Coincidentes */}
                         {comparisonResults.matched.length > 0 && (
                             <MatchedProducts
@@ -522,6 +620,7 @@ const InventorySyncPage = () => {
                                 method={comparisonMethod}
                                 showPriceChanges={comparisonResults.summary.priceChanges > 0}
                                 onEditProduct={handleEditProduct}
+                                onBulkEditPrices={handleBulkEditPrices}
                             />
                         )}
 
@@ -589,6 +688,16 @@ const InventorySyncPage = () => {
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Modal de BulkPriceEditor */}
+            {showBulkPriceModal && bulkPriceProducts.length > 0 && (
+                <BulkPriceEditor
+                    products={bulkPriceProducts}
+                    onSavePrices={handleSaveBulkPrices}
+                    isLoading={isLoading}
+                    onClose={handleCloseBulkPriceModal}
+                />
             )}
         </div>
     );
