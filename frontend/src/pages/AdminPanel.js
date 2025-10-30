@@ -112,142 +112,51 @@ const AdminPanel = () => {
       color: "text-blue-600 bg-blue-50"
     },
     {
-      category: "Gestión de Productos",
+      category: "Operaciones",
       items: [
-        {
-          path: "productos",
-          label: "Productos",
-          icon: <FaBoxOpen className="w-5 h-5" />,
-          description: "Gestionar productos",
-          color: "text-teal-600 bg-teal-50"
-        },
-        {
-          path: "categorias",
-          label: "Categorías",
-          icon: <FaFolder className="w-5 h-5" />,
-          description: "Gestionar categorías y especificaciones",
-          color: "text-indigo-600 bg-indigo-50"
-        },
-        {
-          path: "sincronizacion-inventario",
-          label: "Sincronización Inventario",
-          icon: <FaSyncAlt className="w-5 h-5" />,
-          description: "Sincronizar inventario con proveedores",
-          color: "text-green-600 bg-green-50"
-        },
-        {
-          path: "exportar-productos",
-          label: "Exportar Productos",
-          icon: <FaDownload className="w-5 h-5" />,
-          description: "Exportar productos con Excel e imágenes",
-          color: "text-purple-600 bg-purple-50"
-        },
-        {
-          path: "catalogo-pdf",
-          label: "Catálogo de Productos (PDF)",
-          icon: <FaFilePdf className="w-5 h-5" />,
-          description: "Generar catálogo PDF profesional por categorías",
-          color: "text-red-600 bg-red-50"
-        }
-      ]
-    },
-    {
-      category: "Gestión de Usuarios",
-      items: [
-        {
-          path: "gestion-usuarios",
-          label: "Gestión de Usuarios",
-          icon: <FaUserCog className="w-5 h-5" />,
-          description: "Administrar roles y permisos",
-          color: "text-indigo-600 bg-indigo-50"
-        },
-        {
-          path: "todos-usuarios",
-          label: "Ver Usuarios",
-          icon: <FaUsers className="w-5 h-5" />,
-          description: "Ver información de usuarios",
-          color: "text-blue-600 bg-blue-50"
-        }
-      ]
-    },
-    {
-      category: "Gestión Financiera",
-      items: [
-        {
-          path: "clientes",
-          label: "Clientes",
-          icon: <FaUserFriends className="w-5 h-5" />,
-          description: "Gestionar clientes",
-          color: "text-purple-600 bg-purple-50"
-        },
-        {
-          path: "proveedores",
-          label: "Proveedores",
-          icon: <FaTruck className="w-5 h-5" />,
-          description: "Gestionar proveedores",
-          color: "text-orange-600 bg-orange-50"
-        },
-        {
-          path: "presupuestos",
-          label: "Presupuestos",
-          icon: <FaFileInvoiceDollar className="w-5 h-5" />,
-          description: "Crear y gestionar presupuestos",
-          color: "text-indigo-600 bg-indigo-50"
-        },
-        {
-          path: "tipo-cambio",
-          label: "Tipo de Cambio",
-          icon: <FaDollarSign className="w-5 h-5" />,
-          description: "Gestionar tipo de cambio USD/PYG",
-          color: "text-green-600 bg-green-50"
-        },
         {
           path: "ventas",
           label: "Ventas",
           icon: <FaMoneyBillWave className="w-5 h-5" />,
-          description: "Registrar y gestionar ventas",
+          description: "Listado y gestión de ventas",
           color: "text-green-600 bg-green-50"
         },
         {
           path: "nueva-venta",
           label: "Nueva Venta",
           icon: <FaFileInvoiceDollar className="w-5 h-5" />,
-          description: "Crear nueva venta con sistema completo",
+          description: "Registrar nueva venta",
           color: "text-emerald-600 bg-emerald-50"
         },
         {
           path: "compras",
           label: "Compras",
           icon: <FaShoppingCart className="w-5 h-5" />,
-          description: "Registrar y gestionar compras",
+          description: "Listado y gestión de compras",
           color: "text-red-600 bg-red-50"
         }
       ]
     },
     {
-      category: "Configuración de Ventas",
+      category: "Productos",
       items: [
-        {
-          path: "tipos-venta",
-          label: "Tipos de Venta",
-          icon: <FaFileInvoiceDollar className="w-5 h-5" />,
-          description: "Gestionar tipos de venta configurables",
-          color: "text-blue-600 bg-blue-50"
-        },
-        {
-          path: "sucursales",
-          label: "Sucursales",
-          icon: <FaBuilding className="w-5 h-5" />,
-          description: "Gestionar sucursales y centros de costo",
-          color: "text-indigo-600 bg-indigo-50"
-        },
-        {
-          path: "vendedores",
-          label: "Vendedores",
-          icon: <FaUserFriends className="w-5 h-5" />,
-          description: "Gestionar vendedores y comisiones",
-          color: "text-purple-600 bg-purple-50"
-        }
+        { path: "productos", label: "Productos", icon: <FaBoxOpen className="w-5 h-5" />, description: "Gestionar productos", color: "text-teal-600 bg-teal-50" },
+        { path: "categorias", label: "Categorías", icon: <FaFolder className="w-5 h-5" />, description: "Gestionar categorías", color: "text-indigo-600 bg-indigo-50" },
+        { path: "sincronizacion-inventario", label: "Sincronización Inventario", icon: <FaSyncAlt className="w-5 h-5" />, description: "Sincronizar inventario", color: "text-green-600 bg-green-50" },
+        { path: "exportar-productos", label: "Exportar Productos", icon: <FaDownload className="w-5 h-5" />, description: "Exportar productos", color: "text-purple-600 bg-purple-50" },
+        { path: "catalogo-pdf", label: "Catálogo PDF", icon: <FaFilePdf className="w-5 h-5" />, description: "Generar catálogo PDF", color: "text-red-600 bg-red-50" }
+      ]
+    },
+    {
+      category: "Configuración",
+      items: [
+        { path: "configuracion", label: "Panel de Configuración", icon: <FaUserCog className="w-5 h-5" />, description: "Centralizar ajustes", color: "text-gray-700 bg-gray-100" },
+        { path: "sucursales", label: "Sucursales", icon: <FaBuilding className="w-5 h-5" />, description: "Gestionar sucursales", color: "text-indigo-600 bg-indigo-50" },
+        { path: "tipos-venta", label: "Tipos de Venta", icon: <FaFileInvoiceDollar className="w-5 h-5" />, description: "Configurar tipos de venta", color: "text-blue-600 bg-blue-50" },
+        { path: "vendedores", label: "Vendedores", icon: <FaUserFriends className="w-5 h-5" />, description: "Gestionar vendedores", color: "text-purple-600 bg-purple-50" },
+        { path: "gestion-usuarios", label: "Usuarios", icon: <FaUsers className="w-5 h-5" />, description: "Gestionar usuarios", color: "text-gray-600 bg-gray-50" },
+        { path: "proveedores", label: "Proveedores", icon: <FaTruck className="w-5 h-5" />, description: "Gestionar proveedores", color: "text-orange-600 bg-orange-50" },
+        { path: "tipo-cambio", label: "Tipo de Cambio", icon: <FaDollarSign className="w-5 h-5" />, description: "Actualizar TC", color: "text-green-600 bg-green-50" }
       ]
     },
     {
@@ -265,21 +174,8 @@ const AdminPanel = () => {
     {
       category: "Reportes y Análisis",
       items: [
-        {
-          path: "reportes",
-          label: "Reportes Financieros",
-          icon: <FaChartPie className="w-5 h-5" />,
-          description: "Reportes detallados y métricas",
-          color: "text-pink-600 bg-pink-50"
-        }
+        { path: "reportes", label: "Reportes Financieros", icon: <FaChartPie className="w-5 h-5" />, description: "Reportes y métricas", color: "text-pink-600 bg-pink-50" }
       ]
-    },
-    {
-      path: "todos-usuarios",
-      label: "Usuarios",
-      icon: <FaUsers className="w-5 h-5" />,
-      description: "Gestionar usuarios del sistema",
-      color: "text-gray-600 bg-gray-50"
     }
   ];
 

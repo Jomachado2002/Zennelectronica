@@ -36,6 +36,9 @@ import BancardTransactions from "../pages/BancardTransactions"
 
 // Importar el nuevo componente de dashboard
 import AdminDashboard from "../pages/AdminDashboard"
+import AdminSettings from "../pages/AdminSettings"
+import ErrorPage from "../pages/ErrorPage"
+import PurchaseTypesManagement from "../pages/PurchaseTypesManagement"
 
 // Importar componente de gestión de categorías
 import CategoriesManagement from "../components/admin/CategoriesManagement"
@@ -56,6 +59,7 @@ import SalesManagement from "../pages/SalesManagement"
 import PurchaseManagement from "../pages/PurchaseManagement"
 import SaleDetails from "../pages/SaleDetails"
 import PurchaseDetails from "../pages/PurchaseDetails"
+import NewPurchase from "../pages/NewPurchase"
 import FinancialDashboard from "../pages/FinancialDashboard"
 import CatastroResult from "../pages/CatastroResult"
 import TestBalance from "../pages/TestBalance"
@@ -79,6 +83,7 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <App />,
+        errorElement: <ErrorPage />,
         children: [
             {
                 path: "",
@@ -224,6 +229,14 @@ const router = createBrowserRouter([
                         element: <FinancialDashboard />
                     },
                     {
+                        path: "configuracion",
+                        element: <AdminSettings />
+                    },
+                    {
+                        path: "tipos-compra",
+                        element: <PurchaseTypesManagement />
+                    },
+                    {
                         path: "ventas",
                         element: <SalesManagement />
                     },
@@ -238,6 +251,10 @@ const router = createBrowserRouter([
                     {
                         path: "compras",
                         element: <PurchaseManagement />
+                    },
+                    {
+                        path: "nueva-compra",
+                        element: <NewPurchase />
                     },
                     {
                         path: "compras/:purchaseId",

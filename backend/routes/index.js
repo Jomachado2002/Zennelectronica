@@ -179,8 +179,17 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
         updatePurchasePaymentController,
         uploadPurchaseDocumentsController,
         getPurchasesSummaryController,
-        deletePurchaseController
+        deletePurchaseController,
+        getPurchasesFormDataController
     } = require('../controller/purchases/purchasesController');
+
+    const {
+        createPurchaseTypeController,
+        getAllPurchaseTypesController,
+        getActivePurchaseTypesController,
+        updatePurchaseTypeController,
+        deletePurchaseTypeController
+    } = require('../controller/purchases/purchaseTypesController');
 
     // ===== CONTROLADORES DE DASHBOARD =====
     const {
@@ -1068,6 +1077,16 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.post("/finanzas/compras/:purchaseId/documentos", authToken, uploadPurchaseDocumentsController);
     router.get("/finanzas/compras/resumen", authToken, getPurchasesSummaryController);
     router.delete("/finanzas/compras/:purchaseId", authToken, deletePurchaseController);
+    router.get("/finanzas/compras/formulario-datos", authToken, getPurchasesFormDataController);
+
+    // ===========================================
+    // RUTAS DE TIPOS DE COMPRAS
+    // ===========================================
+    router.post('/finanzas/tipos-compra', authToken, createPurchaseTypeController);
+    router.get('/finanzas/tipos-compra', authToken, getAllPurchaseTypesController);
+    router.get('/finanzas/tipos-compra/activos', authToken, getActivePurchaseTypesController);
+    router.put('/finanzas/tipos-compra/:typeId', authToken, updatePurchaseTypeController);
+    router.delete('/finanzas/tipos-compra/:typeId', authToken, deletePurchaseTypeController);
 
     // ===========================================
     // RUTAS DE DASHBOARD

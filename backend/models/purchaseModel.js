@@ -10,7 +10,6 @@ const purchaseSchema = new mongoose.Schema({
     },
     purchaseType: {
         type: String,
-        enum: ['inventario', 'equipos', 'servicios', 'gastos_operativos', 'marketing', 'otros'],
         required: true
     },
     supplier: {
@@ -21,13 +20,24 @@ const purchaseSchema = new mongoose.Schema({
         name: String,
         company: String,
         email: String,
-        phone: String
+        phone: String,
+        ruc: String,
+        address: String
     },
     supplierInfo: {
         name: String,
-        company: String,
+        contact: String,
         ruc: String,
-        contact: String
+        address: String
+    },
+    branch: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Branch'
+    },
+    branchSnapshot: {
+        name: String,
+        code: String,
+        address: String
     },
     items: [{
         description: {
@@ -49,19 +59,37 @@ const purchaseSchema = new mongoose.Schema({
             required: true,
             min: 0
         },
-        // ✅ NUEVOS CAMPOS PARA SOPORTE MULTI-MONEDA
+        // ✅ SOPORTE MULTI-MONEDA
         currency: {
             type: String,
             enum: ['PYG', 'USD', 'EUR'],
-            default: 'USD' // Para compras, por defecto USD
+            default: 'PYG'
         },
         exchangeRate: {
             type: Number,
-            default: 7300 // Tipo de cambio por defecto USD->PYG
+            default: 1
         },
-        unitPricePYG: {
+        taxType: {
+            type: String,
+            enum: ['iva_10', 'iva_5', 'exento'],
+            required: true
+        },
+        taxRate: {
             type: Number,
-            required: false // Se calcula automáticamente
+            enum: [0, 5, 10],
+            required: true
+        },
+        priceIncludesTax: {
+            type: Boolean,
+            default: true
+        },
+        baseAmount: {
+            type: Number,
+            required: true
+        },
+        taxAmount: {
+            type: Number,
+            required: true
         },
         subtotal: {
             type: Number,
@@ -72,13 +100,7 @@ const purchaseSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    // ✅ IVA VARIABLE
-    tax: {
-        type: Number,
-        enum: [0, 5, 10],
-        default: 10
-    },
-    taxAmount: {
+    totalTaxAmount: {
         type: Number,
         required: true
     },
@@ -111,8 +133,9 @@ const purchaseSchema = new mongoose.Schema({
     },
     notes: String,
     createdBy: {
-        type: mongoose.Schema.Types.Mixed,
-        required: false
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
     },
     createdByGuest: {
         type: String,

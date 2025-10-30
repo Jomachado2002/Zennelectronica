@@ -286,6 +286,15 @@ const PurchaseDetails = () => {
                   {getStatusLabel(purchase.paymentStatus)}
                 </span>
               </div>
+              {purchase.branchSnapshot && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">Sucursal Destino</label>
+                  <p className="text-gray-900">{purchase.branchSnapshot.name} ({purchase.branchSnapshot.code})</p>
+                  {purchase.branchSnapshot.address && (
+                    <p className="text-gray-500 text-sm">{purchase.branchSnapshot.address}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {purchase.notes && (
@@ -296,7 +305,7 @@ const PurchaseDetails = () => {
             )}
           </div>
 
-          {/* Items de la Compra */}
+          {/* Items de la Compra con IVA desglosado */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Items de la Compra</h2>
             
@@ -307,8 +316,10 @@ const PurchaseDetails = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Categoría</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Moneda</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Unit. (con IVA)</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">IVA</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Base (PYG)</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">IVA (PYG)</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal (PYG)</th>
                   </tr>
                 </thead>
@@ -320,20 +331,15 @@ const PurchaseDetails = () => {
                         {getCategoryLabel(item.category)}
                       </td>
                       <td className="px-4 py-3 text-center text-sm text-gray-600">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-600">
-                        {formatCurrency(item.unitPrice, item.currency)}
+                      <td className="px-4 py-3 text-right text-sm text-gray-600">{formatCurrency(item.unitPrice, item.currency)}</td>
+                      <td className="px-4 py-3 text-center text-xs">
+                        <span className={`px-2 py-1 rounded-full ${item.taxType==='iva_10'?'bg-red-100 text-red-800':item.taxType==='iva_5'?'bg-yellow-100 text-yellow-800':'bg-gray-100 text-gray-800'}`}>
+                          {item.taxType==='iva_10'?'IVA 10%':item.taxType==='iva_5'?'IVA 5%':'Exento'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">
-                        {item.currency}
-                        {item.currency !== 'PYG' && item.exchangeRate && (
-                          <div className="text-xs text-gray-400">
-                            TC: {item.exchangeRate}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                        {displayPYGCurrency(item.subtotal)}
-                      </td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{displayPYGCurrency(item.subtotal)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-900">{displayPYGCurrency(item.taxAmount * item.quantity)}</td>
+                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">{displayPYGCurrency(item.subtotal + (item.taxAmount * item.quantity))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -344,6 +350,21 @@ const PurchaseDetails = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Sucursal */}
+          {purchase.branchSnapshot && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center">
+                <FaBuilding className="mr-2 text-blue-600" />
+                Sucursal Destino
+              </h2>
+              <div className="text-sm">
+                <div className="font-medium">{purchase.branchSnapshot.name} ({purchase.branchSnapshot.code})</div>
+                {purchase.branchSnapshot.address && (
+                  <div className="text-gray-600">{purchase.branchSnapshot.address}</div>
+                )}
+              </div>
+            </div>
+          )}
           {/* Información del Proveedor */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center">
@@ -395,7 +416,7 @@ const PurchaseDetails = () => {
             </div>
           </div>
 
-          {/* Resumen de Totales */}
+          {/* Resumen de Totales con desglose IVA */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center">
               <FaMoneyBillWave className="mr-2 text-red-600" />
@@ -403,24 +424,45 @@ const PurchaseDetails = () => {
             </h2>
             
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">{displayPYGCurrency(purchase.subtotal)}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">IVA ({purchase.tax}%):</span>
-                <span className="font-medium">{displayPYGCurrency(purchase.taxAmount)}</span>
-              </div>
-              
-              <div className="border-t pt-3">
-                <div className="flex justify-between">
-                  <span className="text-lg font-semibold">Total:</span>
-                  <span className="text-lg font-bold text-red-600">
-                    {displayPYGCurrency(purchase.totalAmount)}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                const iva10 = purchase.items.reduce((s,i)=> s + (i.taxType==='iva_10' ? i.taxAmount * i.quantity : 0), 0);
+                const iva5 = purchase.items.reduce((s,i)=> s + (i.taxType==='iva_5' ? i.taxAmount * i.quantity : 0), 0);
+                const exentas = purchase.items.reduce((s,i)=> s + (i.taxType==='exento' ? i.subtotal : 0), 0);
+                const subtotal = purchase.subtotal || purchase.items.reduce((s,i)=> s + i.subtotal, 0);
+                const totalTax = purchase.totalTaxAmount || (iva10 + iva5);
+                const total = purchase.totalAmount || (subtotal + totalTax);
+                return (
+                  <div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotal (base imponible):</span>
+                      <span className="font-medium">{displayPYGCurrency(subtotal)}</span>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-700">Desglose de IVA:</div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IVA 10%:</span>
+                      <span className="font-medium">{displayPYGCurrency(iva10)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">IVA 5%:</span>
+                      <span className="font-medium">{displayPYGCurrency(iva5)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Exentas:</span>
+                      <span className="font-medium">{displayPYGCurrency(exentas)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 mt-2">
+                      <span className="text-gray-700">Total IVA:</span>
+                      <span className="font-medium">{displayPYGCurrency(totalTax)}</span>
+                    </div>
+                    <div className="border-t pt-3 mt-3">
+                      <div className="flex justify-between">
+                        <span className="text-lg font-semibold">TOTAL:</span>
+                        <span className="text-lg font-bold text-red-600">{displayPYGCurrency(total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

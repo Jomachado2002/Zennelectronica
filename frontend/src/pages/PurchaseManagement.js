@@ -1,6 +1,6 @@
 // frontend/src/pages/PurchaseManagement.js - MEJORADO CON INTERFAZ OPTIMIZADA PARA PARAGUAY
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaPlus, 
   FaEdit, 
@@ -41,6 +41,7 @@ import moment from 'moment';
 
 const PurchaseManagement = () => {
   const [purchases, setPurchases] = useState([]);
+  const navigate = useNavigate();
   const [filteredPurchases, setFilteredPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,9 +109,9 @@ const PurchaseManagement = () => {
   // Estadísticas
   const [stats, setStats] = useState({
     total: 0,
-    totalAmount: 0,
-    totalAmountWithIVA: 0,
+    subtotal: 0,
     totalIVA: 0,
+    totalConIVA: 0,
     pending: 0,
     paid: 0,
     thisMonth: 0,
@@ -162,9 +163,9 @@ const PurchaseManagement = () => {
     const startOfMonth = moment().startOf('month');
     
     const total = purchasesData.length;
-    const totalAmount = purchasesData.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
-    const totalIVA = purchasesData.reduce((sum, p) => sum + (p.ivaAmount || 0), 0);
-    const totalAmountWithIVA = totalAmount + totalIVA;
+    const subtotal = purchasesData.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+    const totalIVA = purchasesData.reduce((sum, p) => sum + (p.totalTaxAmount || 0), 0);
+    const totalConIVA = purchasesData.reduce((sum, p) => sum + (p.totalAmount || (p.subtotal || 0) + (p.totalTaxAmount || 0)), 0);
     
     const pending = purchasesData.filter(p => p.paymentStatus === 'pendiente').length;
     const paid = purchasesData.filter(p => p.paymentStatus === 'pagado').length;
@@ -173,13 +174,13 @@ const PurchaseManagement = () => {
       moment(p.purchaseDate).isSameOrAfter(startOfMonth)
     );
     const thisMonth = thisMonthPurchases.length;
-    const thisMonthAmount = thisMonthPurchases.reduce((sum, p) => sum + (p.totalAmount || 0), 0);
+    const thisMonthAmount = thisMonthPurchases.reduce((sum, p) => sum + (p.totalAmount || (p.subtotal || 0) + (p.totalTaxAmount || 0)), 0);
 
     setStats({
       total,
-      totalAmount,
-      totalAmountWithIVA,
+      subtotal,
       totalIVA,
+      totalConIVA,
       pending,
       paid,
       thisMonth,
@@ -323,17 +324,15 @@ const PurchaseManagement = () => {
 
   const exportToExcel = () => {
     const excelData = filteredPurchases.map(purchase => ({
-      'Número de Factura': purchase.invoiceNumber || '',
+      'Número de Compra': purchase.purchaseNumber || '',
       'Fecha': purchase.purchaseDate ? moment(purchase.purchaseDate).format('DD/MM/YYYY') : '',
-      'Proveedor': purchase.supplierInfo?.name || purchase.supplierInfo?.company || '',
-      'RUC': purchase.supplierInfo?.ruc || '',
+      'Proveedor': purchase.supplierSnapshot?.name || purchase.supplier?.name || purchase.supplierInfo?.name || '',
+      'RUC': purchase.supplierSnapshot?.ruc || purchase.supplierInfo?.ruc || '',
+      'Sucursal': purchase.branchSnapshot ? `${purchase.branchSnapshot.name} (${purchase.branchSnapshot.code})` : '',
       'Tipo de Compra': purchase.purchaseType || '',
-      'Subtotal': purchase.totalAmount || 0,
-      'IVA (%)': purchase.tax || 0,
-      'IVA (₲)': purchase.ivaAmount || 0,
-      'Total con IVA': (purchase.totalAmount || 0) + (purchase.ivaAmount || 0),
-      'Moneda': purchase.currency || 'PYG',
-      'Tipo de Cambio': purchase.exchangeRate || 1,
+      'Subtotal (sin IVA)': purchase.subtotal || 0,
+      'IVA Total (₲)': purchase.totalTaxAmount || 0,
+      'Total con IVA (₲)': purchase.totalAmount || ((purchase.subtotal || 0) + (purchase.totalTaxAmount || 0)),
       'Método de Pago': purchase.paymentMethod || '',
       'Estado': purchase.paymentStatus || '',
       'Fecha de Vencimiento': purchase.dueDate ? moment(purchase.dueDate).format('DD/MM/YYYY') : '',
@@ -345,17 +344,15 @@ const PurchaseManagement = () => {
 
     // Ajustar anchos de columna
     ws['!cols'] = [
-      { wch: 20 }, // Número de Factura
+      { wch: 20 }, // Número de Compra
       { wch: 12 }, // Fecha
       { wch: 25 }, // Proveedor
       { wch: 15 }, // RUC
+      { wch: 20 }, // Sucursal
       { wch: 15 }, // Tipo de Compra
-      { wch: 15 }, // Subtotal
-      { wch: 10 }, // IVA (%)
-      { wch: 15 }, // IVA (₲)
-      { wch: 15 }, // Total con IVA
-      { wch: 10 }, // Moneda
-      { wch: 12 }, // Tipo de Cambio
+      { wch: 15 }, // Subtotal (sin IVA)
+      { wch: 15 }, // IVA Total (₲)
+      { wch: 15 }, // Total con IVA (₲)
       { wch: 15 }, // Método de Pago
       { wch: 12 }, // Estado
       { wch: 15 }, // Fecha de Vencimiento
@@ -575,7 +572,7 @@ const PurchaseManagement = () => {
             </button>
         
         <button
-          onClick={() => setShowNewPurchaseModal(true)}
+          onClick={() => navigate('/panel-admin/nueva-compra')}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
               <FaPlus className="w-4 h-4 mr-2" />
@@ -961,10 +958,10 @@ const PurchaseManagement = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            #{purchase.invoiceNumber || 'N/A'}
+                            {purchase.purchaseNumber || 'N/A'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {purchase.supplierInfo?.name || purchase.supplierInfo?.company || 'Proveedor no disponible'}
+                            {purchase.supplierSnapshot?.name || purchase.supplier?.name || purchase.supplierInfo?.name || 'Proveedor no disponible'}
                           </div>
                         </div>
                       </div>
@@ -979,19 +976,17 @@ const PurchaseManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="font-medium">
-                        {displayPYGCurrency(purchase.totalAmount || 0)}
+                        {displayPYGCurrency(purchase.subtotal || 0)}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {purchase.currency || 'PYG'}
-                      </div>
+                      {purchase.branchSnapshot && (
+                        <div className="text-xs text-gray-500">{purchase.branchSnapshot.name}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="font-medium">
-                        {displayPYGCurrency(purchase.ivaAmount || 0)}
-                        </div>
-                      <div className="text-xs text-gray-500">
-                        {purchase.tax || 0}%
+                        {displayPYGCurrency(purchase.totalTaxAmount || 0)}
                       </div>
+                      <div className="text-xs text-gray-500">IVA</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -1006,9 +1001,20 @@ const PurchaseManagement = () => {
                           <button
                           className="text-blue-600 hover:text-blue-900"
                           title="Ver detalles"
+                          onClick={() => window.location.assign(`/panel-admin/compras/${purchase._id}`)}
                         >
                           <FaEye className="w-4 h-4" />
                           </button>
+                        {purchase.invoiceFile && (
+                          <a href={purchase.invoiceFile} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900" title="Factura">
+                            <FaFileInvoice className="w-4 h-4" />
+                          </a>
+                        )}
+                        {purchase.receiptFile && (
+                          <a href={purchase.receiptFile} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-gray-900" title="Recibo">
+                            <FaReceipt className="w-4 h-4" />
+                          </a>
+                        )}
                         <button
                           className="text-green-600 hover:text-green-900"
                           title="Editar"

@@ -1,8 +1,13 @@
 // backend/controller/purchases/purchasesController.js - VERSIÓN CORREGIDA
 const PurchaseModel = require('../../models/purchaseModel');
 const SupplierModel = require('../../models/supplierModel');
+const BranchModel = require('../../models/branchModel');
+const ExchangeRateModel = require('../../models/exchangeRateModel');
+let PurchaseTypeModel;
+try { PurchaseTypeModel = require('../../models/purchaseTypeModel'); } catch (_) { PurchaseTypeModel = null; }
 const uploadProductPermission = require('../../helpers/permission');
 const { uploadTempFile } = require('../../helpers/uploadTempFile');
+const { uploadBufferToFirebase } = require('../../services/firebase');
 
 /**
  * Crear una nueva compra
@@ -17,12 +22,10 @@ async function createPurchaseController(req, res) {
 
         const {
             purchaseType,
+            branchId,
             supplierId,
             supplierInfo,
             items,
-            subtotal,
-            tax,
-            totalAmount,
             paymentMethod,
             paymentStatus,
             dueDate,
@@ -31,9 +34,20 @@ async function createPurchaseController(req, res) {
         } = req.body;
 
         // Validaciones básicas
-        if (!purchaseType || !items || items.length === 0) {
+        if (!purchaseType || !branchId || !items || !Array.isArray(items) || items.length === 0) {
             throw new Error("Datos de compra incompletos");
         }
+
+        // Validar sucursal
+        const branch = await BranchModel.findById(branchId);
+        if (!branch) {
+            throw new Error("Sucursal no encontrada");
+        }
+        const branchSnapshot = {
+            name: branch.name,
+            code: branch.code,
+            address: branch.getFullAddress ? branch.getFullAddress() : `${branch.address?.street}, ${branch.address?.city}`
+        };
 
         let supplierSnapshot = null;
         
@@ -43,47 +57,92 @@ async function createPurchaseController(req, res) {
             if (!supplier) {
                 throw new Error("Proveedor no encontrado");
             }
+            if (supplier.isActive === false) {
+                throw new Error("Proveedor inactivo");
+            }
             supplierSnapshot = {
                 name: supplier.name,
                 company: supplier.company,
                 email: supplier.email,
-                phone: supplier.phone
+                phone: supplier.phone,
+                ruc: supplier.ruc,
+                address: supplier.address?.street || supplier.address
             };
         }
 
-        // Calcular totales
-        let calculatedSubtotal = 0;
+        // Calcular totales con IVA por ítem
+        let calculatedSubtotal = 0; // suma de base imponible
+        let totalTaxAmount = 0;
         const processedItems = items.map(item => {
-            // Convertir a guaraníes si es necesario
-            let unitPriceInPYG = item.unitPrice;
-            if (item.currency === 'USD') {
-                unitPriceInPYG = item.unitPrice * (item.exchangeRate || 7300);
-            } else if (item.currency === 'EUR') {
-                unitPriceInPYG = item.unitPrice * 1.1 * (item.exchangeRate || 7300);
+            const quantity = Number(item.quantity || 0);
+            const unitPrice = Number(item.unitPrice || 0);
+            if (quantity <= 0 || unitPrice < 0) {
+                throw new Error("Cada item debe tener cantidad > 0 y precio >= 0");
             }
 
-            const itemSubtotal = item.quantity * unitPriceInPYG;
+            // Conversión de moneda a PYG
+            let unitPriceInPYG = unitPrice;
+            if (item.currency === 'USD') {
+                unitPriceInPYG = unitPrice * Number(item.exchangeRate || 0);
+            } else if (item.currency === 'EUR') {
+                unitPriceInPYG = unitPrice * Number(item.exchangeRate || 0);
+            }
+            if (isNaN(unitPriceInPYG) || unitPriceInPYG <= 0) {
+                throw new Error("Tipo de cambio requerido para moneda extranjera");
+            }
+
+            const taxType = item.taxType;
+            if (!['iva_10', 'iva_5', 'exento'].includes(taxType)) {
+                throw new Error("Tipo de IVA inválido en item");
+            }
+
+            let baseAmount, taxAmount;
+            if (taxType === 'iva_10') {
+                baseAmount = unitPriceInPYG / 1.10;
+                taxAmount = unitPriceInPYG - baseAmount;
+            } else if (taxType === 'iva_5') {
+                baseAmount = unitPriceInPYG / 1.05;
+                taxAmount = unitPriceInPYG - baseAmount;
+            } else {
+                baseAmount = unitPriceInPYG;
+                taxAmount = 0;
+            }
+
+            const itemSubtotal = quantity * baseAmount;
+            const itemTotalTax = quantity * taxAmount;
+
             calculatedSubtotal += itemSubtotal;
-            
+            totalTaxAmount += itemTotalTax;
+
             return {
-                ...item,
+                description: item.description,
+                category: item.category,
+                quantity,
+                unitPrice: unitPrice,
+                currency: item.currency || 'PYG',
+                exchangeRate: item.currency === 'PYG' ? 1 : Number(item.exchangeRate),
+                taxType,
+                taxRate: taxType === 'iva_10' ? 10 : taxType === 'iva_5' ? 5 : 0,
+                priceIncludesTax: true,
+                baseAmount,
+                taxAmount,
                 subtotal: itemSubtotal
             };
         });
 
-        const taxAmount = calculatedSubtotal * ((tax || 10) / 100);
-        const calculatedTotal = calculatedSubtotal + taxAmount;
+        const calculatedTotal = calculatedSubtotal + totalTaxAmount;
 
         // Crear nueva compra (el número se genera automáticamente en el modelo)
         const newPurchase = new PurchaseModel({
             purchaseType,
+            branch: branch._id,
+            branchSnapshot,
             supplier: supplierId || null,
             supplierSnapshot,
             supplierInfo: !supplierId ? supplierInfo : null,
             items: processedItems,
             subtotal: calculatedSubtotal,
-            tax: tax || 10,
-            taxAmount,
+            totalTaxAmount,
             totalAmount: calculatedTotal,
             paymentMethod: paymentMethod || 'efectivo',
             paymentStatus: paymentStatus || 'pendiente',
@@ -302,10 +361,16 @@ async function uploadPurchaseDocumentsController(req, res) {
                 throw new Error("Tipo de archivo no permitido para factura. Solo se permiten PDF e imágenes.");
             }
 
-            const uploadResult = await uploadTempFile(invoiceFile.data, {
-                name: `factura_${purchase.purchaseNumber}_${invoiceFile.name}`,
-                size: invoiceFile.size
-            });
+            let uploadResult;
+            try {
+                uploadResult = await uploadBufferToFirebase('purchases/invoices', `factura_${purchase.purchaseNumber}_${invoiceFile.name}`, invoiceFile.data, invoiceFile.mimetype);
+            } catch (e) {
+                // Fallback a upload temporal si Firebase no está configurado
+                uploadResult = await uploadTempFile(invoiceFile.data, {
+                    name: `factura_${purchase.purchaseNumber}_${invoiceFile.name}`,
+                    size: invoiceFile.size
+                });
+            }
 
             updateData.invoiceFile = uploadResult.url;
             uploadResults.invoice = uploadResult.url;
@@ -318,10 +383,15 @@ async function uploadPurchaseDocumentsController(req, res) {
                 throw new Error("Tipo de archivo no permitido para recibo. Solo se permiten PDF e imágenes.");
             }
 
-            const uploadResult = await uploadTempFile(receiptFile.data, {
-                name: `recibo_${purchase.purchaseNumber}_${receiptFile.name}`,
-                size: receiptFile.size
-            });
+            let uploadResult;
+            try {
+                uploadResult = await uploadBufferToFirebase('purchases/receipts', `recibo_${purchase.purchaseNumber}_${receiptFile.name}`, receiptFile.data, receiptFile.mimetype);
+            } catch (e) {
+                uploadResult = await uploadTempFile(receiptFile.data, {
+                    name: `recibo_${purchase.purchaseNumber}_${receiptFile.name}`,
+                    size: receiptFile.size
+                });
+            }
 
             updateData.receiptFile = uploadResult.url;
             uploadResults.receipt = uploadResult.url;
@@ -369,7 +439,7 @@ async function getPurchasesSummaryController(req, res) {
         const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const end = endDate ? new Date(endDate) : new Date();
 
-        // Agregación para resumen
+        // Agregación para resumen general
         const summary = await PurchaseModel.aggregate([
             {
                 $match: {
@@ -385,6 +455,8 @@ async function getPurchasesSummaryController(req, res) {
                     },
                     totalPurchases: { $sum: 1 },
                     totalAmount: { $sum: "$totalAmount" },
+                    subtotal: { $sum: "$subtotal" },
+                    totalTaxAmount: { $sum: "$totalTaxAmount" },
                     avgAmount: { $avg: "$totalAmount" }
                 }
             },
@@ -428,11 +500,25 @@ async function getPurchasesSummaryController(req, res) {
             {
                 $group: {
                     _id: "$items.category",
-                    totalAmount: { $sum: "$items.subtotal" },
+                    subtotal: { $sum: "$items.subtotal" },
+                    totalTaxAmount: { $sum: { $multiply: ["$items.taxAmount", "$items.quantity"] } },
+                    totalAmount: { $sum: { $add: ["$items.subtotal", { $multiply: ["$items.taxAmount", "$items.quantity"] }] } },
                     count: { $sum: 1 }
                 }
             },
             { $sort: { totalAmount: -1 } }
+        ]);
+
+        // Desglose de IVA por tipo
+        const ivaBreakdown = await PurchaseModel.aggregate([
+            { $match: { purchaseDate: { $gte: start, $lte: end }, isActive: true } },
+            { $unwind: "$items" },
+            { $group: {
+                _id: "$items.taxType",
+                subtotal: { $sum: "$items.subtotal" },
+                totalTaxAmount: { $sum: { $multiply: ["$items.taxAmount", "$items.quantity"] } },
+                total: { $sum: { $add: ["$items.subtotal", { $multiply: ["$items.taxAmount", "$items.quantity"] }] } }
+            } }
         ]);
 
         res.json({
@@ -442,7 +528,8 @@ async function getPurchasesSummaryController(req, res) {
                 summary,
                 purchasesByType,
                 pendingPayments,
-                expensesByCategory
+                expensesByCategory,
+                ivaBreakdown
             },
             success: true,
             error: false
@@ -501,3 +588,49 @@ module.exports = {
     getPurchasesSummaryController,
     deletePurchaseController
 };
+
+/**
+ * Datos para formulario de Nueva Compra (tipos, sucursales, proveedores, TC)
+ */
+async function getPurchasesFormDataController(req, res) {
+    try {
+        // Form-data es de solo lectura; permitimos acceso a usuarios autenticados
+
+        // Tipos de compra desde BD si existe modelo; fallback a ENV
+        let purchaseTypes = [];
+        if (PurchaseTypeModel) {
+            const types = await PurchaseTypeModel.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
+            purchaseTypes = types.map(t => ({ code: t.code, name: t.name }));
+        } else {
+            const purchaseTypesEnv = process.env.PURCHASE_TYPES || 'inventario,equipos,servicios,gastos_operativos,marketing,otros';
+            purchaseTypes = purchaseTypesEnv.split(',').map(s => ({ code: s.trim().toUpperCase(), name: s.trim().replace('_',' ') })).filter(t => t.code);
+        }
+
+        let branches = [];
+        let suppliers = [];
+        let usdRate = null;
+        let eurRate = null;
+        try { branches = await BranchModel.getActiveBranches(); } catch (_) { branches = []; }
+        try { suppliers = await SupplierModel.find({ isActive: true }).select('name company ruc email phone address').limit(500); } catch (_) { suppliers = []; }
+        try { usdRate = await ExchangeRateModel.getCurrentRate('USD'); } catch (_) { usdRate = { toPYG: 0 }; }
+        try { eurRate = await ExchangeRateModel.getCurrentRate('EUR'); } catch (_) { eurRate = { toPYG: 0 }; }
+
+        res.json({
+            success: true,
+            error: false,
+            data: {
+                purchaseTypes,
+                branches: branches.map(b => ({ _id: b._id, name: b.name, code: b.code, address: b.getFullAddress ? b.getFullAddress() : '' })),
+                suppliers: (suppliers || []).map(s => ({ _id: s._id, name: s.name, company: s.company, ruc: s.ruc, email: s.email, phone: s.phone })),
+                exchangeRates: {
+                    USD: usdRate?.toPYG || 0,
+                    EUR: eurRate?.toPYG || 0
+                }
+            }
+        });
+    } catch (err) {
+        res.json({ success: false, error: true, message: err?.message || 'Error obteniendo datos del formulario', data: { purchaseTypes: [], branches: [], suppliers: [], exchangeRates: { USD: 0, EUR: 0 } } });
+    }
+}
+
+module.exports.getPurchasesFormDataController = getPurchasesFormDataController;
