@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import productCategory from '../helpers/productCategory';
 
 const scrollTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -11,77 +12,17 @@ const CategoryShowcase = () => {
   const navigate = useNavigate();
   const scrollElement = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState('informatica');
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(false);
-  const [categoryData, setCategoryData] = useState({}); // Cache de datos por categoría
 
-  // Cargar categorías desde la base de datos una sola vez
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}/api/admin/categories/menu/categories`, {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+  // ✅ Usar categorías hardcodeadas (sin consultas a la BD)
+  const categories = productCategory;
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            setCategories(result.data);
-          }
-        }
-      } catch (error) {
-        console.error('Error cargando categorías:', error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  // Cargar subcategorías optimizado con cache
-  useEffect(() => {
-    const fetchData = async () => {
-      // Si ya tenemos los datos en caché, usarlos
-      if (categoryData[selectedCategory]) {
-        setSubcategories(categoryData[selectedCategory]);
-        return;
-      }
-
-      if (!selectedCategory) return;
-
-      try {
-        // Obtener subcategorías
-        const subcategoriesResponse = await fetch(
-          `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}/api/admin/categories/menu/categories/${selectedCategory}/subcategories`,
-          {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-
-        if (!subcategoriesResponse.ok) return;
-
-        const subcategoriesResult = await subcategoriesResponse.json();
-        if (!subcategoriesResult.success || !subcategoriesResult.data) return;
-
-        const subcategoriesData = subcategoriesResult.data;
-
-        // Guardar en caché
-        setCategoryData(prev => ({
-          ...prev,
-          [selectedCategory]: subcategoriesData
-        }));
-
-        setSubcategories(subcategoriesData);
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-      }
-    };
-
-    fetchData();
-  }, [selectedCategory, categoryData]);
+  // ✅ Obtener subcategorías de la categoría seleccionada (hardcodeado)
+  const subcategories = useMemo(() => {
+    const category = categories.find(cat => cat.value === selectedCategory);
+    return category ? category.subcategories : [];
+  }, [selectedCategory, categories]);
 
   // Funciones de scroll
   const scrollRight = () => {

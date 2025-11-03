@@ -1,0 +1,1597 @@
+// Categorías hardcodeadas - Generado automáticamente desde la base de datos
+// Fecha de generación: 2025-11-03T21:45:23.397Z
+// Total de categorías: 9
+
+const categoriesData = [
+  {
+    name: "informatica",
+    label: "Informática",
+    value: "informatica",
+    order: 1,
+    isActive: true,
+    color: "#3B82F6",
+    icon: "FaLaptop",
+    subcategories: [
+      {
+        name: "notebooks",
+        label: "Notebooks",
+        value: "notebooks",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "processor",
+            label: "Procesador",
+            type: "text",
+            placeholder: "Ej: Intel Core i5-11400H",
+            required: true,
+            order: 1
+          },
+          {
+            name: "memory",
+            label: "Memoria RAM",
+            type: "text",
+            placeholder: "Ej: 8GB DDR4",
+            required: true,
+            order: 2
+          },
+          {
+            name: "storage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ej: 512GB SSD",
+            required: true,
+            order: 3
+          },
+          {
+            name: "disk",
+            label: "Disco",
+            type: "text",
+            placeholder: "Ej: SSD NVMe",
+            required: false,
+            order: 4
+          },
+          {
+            name: "graphicsCard",
+            label: "Tarjeta Gráfica",
+            type: "text",
+            placeholder: "Ej: NVIDIA GTX 1650",
+            required: false,
+            order: 5
+          },
+          {
+            name: "notebookScreen",
+            label: "Pantalla",
+            type: "text",
+            placeholder: "Ej: 15.6\" Full HD",
+            required: true,
+            order: 6
+          },
+          {
+            name: "notebookBattery",
+            label: "Batería",
+            type: "text",
+            placeholder: "Ej: 56Wh",
+            required: false,
+            order: 7
+          }
+        ]
+      },
+      {
+        name: "computadoras_ensambladas",
+        label: "Computadoras Ensambladas",
+        value: "computadoras_ensambladas",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "processor",
+            label: "Procesador",
+            type: "text",
+            placeholder: "Ej: AMD Ryzen 5 5600X",
+            required: true,
+            order: 1
+          },
+          {
+            name: "memory",
+            label: "Memoria RAM",
+            type: "text",
+            placeholder: "Ej: 16GB DDR4",
+            required: true,
+            order: 2
+          },
+          {
+            name: "storage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ej: 1TB SSD",
+            required: true,
+            order: 3
+          },
+          {
+            name: "graphicsCard",
+            label: "Tarjeta Gráfica",
+            type: "text",
+            placeholder: "Ej: NVIDIA RTX 3060",
+            required: false,
+            order: 4
+          },
+          {
+            name: "pcCase",
+            label: "Gabinete",
+            type: "text",
+            placeholder: "Ej: NZXT H510",
+            required: true,
+            order: 5
+          },
+          {
+            name: "pcPowerSupply",
+            label: "Fuente de Poder",
+            type: "text",
+            placeholder: "Ej: 650W 80+ Bronze",
+            required: true,
+            order: 6
+          },
+          {
+            name: "pcCooling",
+            label: "Refrigeración",
+            type: "text",
+            placeholder: "Ej: Cooler Master Hyper 212",
+            required: false,
+            order: 7
+          }
+        ]
+      },
+      {
+        name: "placas_madre",
+        label: "Placas Madre",
+        value: "placas_madre",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "motherboardSocket",
+            label: "Socket",
+            type: "text",
+            placeholder: "Ej: AM4",
+            required: true,
+            order: 1
+          },
+          {
+            name: "motherboardChipset",
+            label: "Chipset",
+            type: "text",
+            placeholder: "Ej: B550",
+            required: true,
+            order: 2
+          },
+          {
+            name: "motherboardFormFactor",
+            label: "Factor de Forma",
+            type: "text",
+            placeholder: "Ej: ATX",
+            required: true,
+            order: 3
+          },
+          {
+            name: "expansionSlots",
+            label: "Slots de Expansión",
+            type: "text",
+            placeholder: "Ej: 2x PCIe x16",
+            required: false,
+            order: 4
+          },
+          {
+            name: "ramType",
+            label: "Tipo de RAM",
+            type: "text",
+            placeholder: "Ej: DDR4",
+            required: false,
+            order: 5
+          }
+        ]
+      },
+      {
+        name: "memorias_ram",
+        label: "Memorias RAM",
+        value: "memorias_ram",
+        order: 6,
+        isActive: true,
+        specifications: [
+          {
+            name: "ramText",
+            label: "Descripción",
+            type: "text",
+            placeholder: "Descripción adicional",
+            required: false,
+            order: 1
+          },
+          {
+            name: "ramType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ej: DDR4",
+            required: true,
+            order: 2
+          },
+          {
+            name: "ramSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ej: 3200 MHz",
+            required: true,
+            order: 3
+          },
+          {
+            name: "ramCapacity",
+            label: "Capacidad",
+            type: "text",
+            placeholder: "Ej: 16GB (2x8GB)",
+            required: true,
+            order: 4
+          },
+          {
+            name: "ramLatency",
+            label: "Latencia",
+            type: "text",
+            placeholder: "Ej: CL16",
+            required: false,
+            order: 5
+          }
+        ]
+      },
+      {
+        name: "discos_duros",
+        label: "Discos Duros",
+        value: "discos_duros",
+        order: 7,
+        isActive: true,
+        specifications: [
+          {
+            name: "hddCapacity",
+            label: "Capacidad",
+            type: "text",
+            placeholder: "Ej: 1TB",
+            required: true,
+            order: 1
+          },
+          {
+            name: "diskType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ej: SSD / HDD",
+            required: true,
+            order: 2
+          },
+          {
+            name: "hddInterface",
+            label: "Interfaz",
+            type: "text",
+            placeholder: "Ej: SATA III / NVMe",
+            required: true,
+            order: 3
+          },
+          {
+            name: "hddRPM",
+            label: "RPM",
+            type: "text",
+            placeholder: "Ej: 7200 RPM",
+            required: false,
+            order: 4
+          },
+          {
+            name: "diskReadSpeed",
+            label: "Velocidad de Lectura",
+            type: "text",
+            placeholder: "Ej: 3500 MB/s",
+            required: false,
+            order: 5
+          },
+          {
+            name: "diskWriteSpeed",
+            label: "Velocidad de Escritura",
+            type: "text",
+            placeholder: "Ej: 3000 MB/s",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "procesador",
+        label: "Procesadores",
+        value: "procesador",
+        order: 8,
+        isActive: true,
+        specifications: [
+          {
+            name: "model",
+            label: "Modelo",
+            type: "text",
+            placeholder: "Ej: Ryzen 7 5800X",
+            required: true,
+            order: 1
+          },
+          {
+            name: "processorSocket",
+            label: "Socket",
+            type: "text",
+            placeholder: "Ej: AM4",
+            required: true,
+            order: 2
+          },
+          {
+            name: "processorCores",
+            label: "Núcleos",
+            type: "number",
+            placeholder: "Ej: 8",
+            required: true,
+            order: 3
+          },
+          {
+            name: "processorThreads",
+            label: "Hilos",
+            type: "number",
+            placeholder: "Ej: 16",
+            required: true,
+            order: 4
+          },
+          {
+            name: "processorBaseFreq",
+            label: "Frecuencia Base",
+            type: "text",
+            placeholder: "Ej: 3.8 GHz",
+            required: true,
+            order: 5
+          },
+          {
+            name: "processorTurboFreq",
+            label: "Frecuencia Turbo",
+            type: "text",
+            placeholder: "Ej: 4.7 GHz",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "tarjeta_grafica",
+        label: "Tarjetas Gráficas",
+        value: "tarjeta_grafica",
+        order: 4,
+        isActive: true,
+        specifications: [
+          {
+            name: "graphicCardModel",
+            label: "Modelo",
+            type: "text",
+            placeholder: "Ej: RTX 3070",
+            required: true,
+            order: 1
+          },
+          {
+            name: "graphicCardMemory",
+            label: "Memoria",
+            type: "text",
+            placeholder: "Ej: 8GB GDDR6",
+            required: true,
+            order: 2
+          },
+          {
+            name: "graphicCardMemoryType",
+            label: "Tipo de Memoria",
+            type: "text",
+            placeholder: "Ej: GDDR6",
+            required: false,
+            order: 3
+          },
+          {
+            name: "graphicCardBaseFrequency",
+            label: "Frecuencia Base",
+            type: "text",
+            placeholder: "Ej: 1500 MHz",
+            required: false,
+            order: 4
+          },
+          {
+            name: "graphicfabricate",
+            label: "Fabricante",
+            type: "text",
+            placeholder: "Ej: ASUS",
+            required: false,
+            order: 5
+          },
+          {
+            name: "graphicCardTDP",
+            label: "TDP",
+            type: "text",
+            placeholder: "Ej: 220W",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "gabinetes",
+        label: "Gabinetes",
+        value: "gabinetes",
+        order: 5,
+        isActive: true,
+        specifications: [
+          {
+            name: "caseFormFactor",
+            label: "Factor de Forma",
+            type: "text",
+            placeholder: "Ej: ATX",
+            required: true,
+            order: 1
+          },
+          {
+            name: "caseMaterial",
+            label: "Material",
+            type: "text",
+            placeholder: "Ej: Acero templado",
+            required: false,
+            order: 2
+          },
+          {
+            name: "caseExpansionBays",
+            label: "Bahías de Expansión",
+            type: "text",
+            placeholder: "Ej: 2x 3.5\", 2x 2.5\"",
+            required: false,
+            order: 3
+          },
+          {
+            name: "caseIncludedFans",
+            label: "Ventiladores Incluidos",
+            type: "text",
+            placeholder: "Ej: 2x 120mm",
+            required: false,
+            order: 4
+          },
+          {
+            name: "caseCoolingSupport",
+            label: "Soporte de Refrigeración",
+            type: "text",
+            placeholder: "Ej: 280mm radiador",
+            required: false,
+            order: 5
+          },
+          {
+            name: "caseBacklight",
+            label: "Iluminación",
+            type: "boolean",
+            placeholder: "",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "impresoras",
+        label: "Impresoras",
+        value: "impresoras",
+        order: 9,
+        isActive: true,
+        specifications: [
+          {
+            name: "printerType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de impresora",
+            required: false,
+            order: 1
+          },
+          {
+            name: "printerResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución de impresión",
+            required: false,
+            order: 2
+          },
+          {
+            name: "printerSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ingresa la velocidad de impresión",
+            required: false,
+            order: 3
+          },
+          {
+            name: "printerConnectivity",
+            label: "Conectividad",
+            type: "text",
+            placeholder: "Ingresa el tipo de conectividad",
+            required: false,
+            order: 4
+          },
+          {
+            name: "printerDuplex",
+            label: "Dúplex",
+            type: "text",
+            placeholder: "Ingresa si tiene impresión a doble cara",
+            required: false,
+            order: 5
+          },
+          {
+            name: "printerTrayCapacity",
+            label: "Capacidad de Bandeja",
+            type: "text",
+            placeholder: "Ingresa la capacidad de la bandeja",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "cartuchos_toners",
+        label: "Cartuchos y Toners",
+        value: "cartuchos_toners",
+        order: 10,
+        isActive: true,
+        specifications: [
+          {
+            name: "tonerPrinterType",
+            label: "Tipo de Impresora",
+            type: "text",
+            placeholder: "Ingresa el tipo de impresora compatible",
+            required: false,
+            order: 1
+          },
+          {
+            name: "tonerColor",
+            label: "Color",
+            type: "text",
+            placeholder: "Ingresa el color del cartucho",
+            required: false,
+            order: 2
+          },
+          {
+            name: "tonerYield",
+            label: "Rendimiento",
+            type: "text",
+            placeholder: "Ingresa el rendimiento del cartucho",
+            required: false,
+            order: 3
+          },
+          {
+            name: "tonerCartridgeType",
+            label: "Tipo de Cartucho",
+            type: "text",
+            placeholder: "Ingresa el tipo de cartucho",
+            required: false,
+            order: 4
+          },
+          {
+            name: "tonerCompatibleModel",
+            label: "Modelo Compatible",
+            type: "text",
+            placeholder: "Ingresa los modelos compatibles",
+            required: false,
+            order: 5
+          }
+        ]
+      },
+      {
+        name: "escaneres",
+        label: "Escáneres",
+        value: "escaneres",
+        order: 11,
+        isActive: true,
+        specifications: [
+          {
+            name: "scannerResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución del escáner",
+            required: false,
+            order: 1
+          },
+          {
+            name: "scannerType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de escáner",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "perifericos",
+    label: "Periféricos",
+    value: "perifericos",
+    order: 2,
+    isActive: true,
+    color: "#10B981",
+    icon: "FaMouse",
+    subcategories: [
+      {
+        name: "monitores",
+        label: "Monitores",
+        value: "monitores",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "monitorSize",
+            label: "Tamaño",
+            type: "text",
+            placeholder: "Ingresa el tamaño del monitor",
+            required: false,
+            order: 1
+          },
+          {
+            name: "monitorResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución del monitor",
+            required: false,
+            order: 2
+          },
+          {
+            name: "monitorRefreshRate",
+            label: "Frecuencia de Actualización",
+            type: "text",
+            placeholder: "Ingresa la frecuencia de actualización",
+            required: false,
+            order: 3
+          },
+          {
+            name: "monitorPanelType",
+            label: "Tipo de Panel",
+            type: "text",
+            placeholder: "Ingresa el tipo de panel",
+            required: false,
+            order: 4
+          },
+          {
+            name: "test",
+            label: "test",
+            type: "text",
+            placeholder: "test",
+            required: false,
+            order: 1
+          }
+        ]
+      },
+      {
+        name: "teclados",
+        label: "Teclados",
+        value: "teclados",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "keyboardType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de teclado",
+            required: false,
+            order: 1
+          },
+          {
+            name: "keyboardConnection",
+            label: "Conexión",
+            type: "text",
+            placeholder: "Ingresa el tipo de conexión",
+            required: false,
+            order: 2
+          },
+          {
+            name: "keyboardLayout",
+            label: "Distribución",
+            type: "text",
+            placeholder: "Ingresa la distribución del teclado",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "mouses",
+        label: "Mouses",
+        value: "mouses",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "mouseDpi",
+            label: "DPI",
+            type: "text",
+            placeholder: "Ingresa el DPI del mouse",
+            required: false,
+            order: 1
+          },
+          {
+            name: "mouseConnection",
+            label: "Conexión",
+            type: "text",
+            placeholder: "Ingresa el tipo de conexión",
+            required: false,
+            order: 2
+          },
+          {
+            name: "mouseButtons",
+            label: "Botones",
+            type: "text",
+            placeholder: "Ingresa el número de botones",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "adaptadores",
+        label: "Adaptadores",
+        value: "adaptadores",
+        order: 4,
+        isActive: true,
+        specifications: [
+          {
+            name: "adapterType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de adaptador",
+            required: false,
+            order: 1
+          },
+          {
+            name: "adapterCompatibility",
+            label: "Compatibilidad",
+            type: "text",
+            placeholder: "Ingresa la compatibilidad",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "auriculares",
+        label: "Auriculares",
+        value: "auriculares",
+        order: 5,
+        isActive: true,
+        specifications: [
+          {
+            name: "headphoneType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de auricular",
+            required: false,
+            order: 1
+          },
+          {
+            name: "headphoneConnection",
+            label: "Conexión",
+            type: "text",
+            placeholder: "Ingresa el tipo de conexión",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "microfonos",
+        label: "Microfonos",
+        value: "microfonos",
+        order: 6,
+        isActive: true,
+        specifications: [
+          {
+            name: "microphoneType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de micrófono",
+            required: false,
+            order: 1
+          },
+          {
+            name: "microphoneConnection",
+            label: "Conexión",
+            type: "text",
+            placeholder: "Ingresa el tipo de conexión",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "cctv",
+    label: "CCTV",
+    value: "cctv",
+    order: 3,
+    isActive: true,
+    color: "#EF4444",
+    icon: "FaVideo",
+    subcategories: [
+      {
+        name: "camaras_seguridad",
+        label: "Cámaras de Seguridad",
+        value: "camaras_seguridad",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "cameraResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución de la cámara",
+            required: false,
+            order: 1
+          },
+          {
+            name: "cameraType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de cámara",
+            required: false,
+            order: 2
+          },
+          {
+            name: "cameraNightVision",
+            label: "Visión Nocturna",
+            type: "text",
+            placeholder: "Ingresa si tiene visión nocturna",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "dvr",
+        label: "Grabadores DVR",
+        value: "dvr",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "dvrChannels",
+            label: "Canales",
+            type: "text",
+            placeholder: "Ingresa el número de canales",
+            required: false,
+            order: 1
+          },
+          {
+            name: "dvrStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "nas",
+        label: "NAS",
+        value: "nas",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "nasStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 1
+          },
+          {
+            name: "nasBays",
+            label: "Bahías",
+            type: "text",
+            placeholder: "Ingresa el número de bahías",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "energia",
+    label: "Energia",
+    value: "energia",
+    order: 5,
+    isActive: true,
+    color: "#F59E0B",
+    icon: "FaBolt",
+    subcategories: [
+      {
+        name: "fuentes_alimentacion",
+        label: "Fuentes de Alimentación",
+        value: "fuentes_alimentacion",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "psuWattage",
+            label: "Potencia",
+            type: "text",
+            placeholder: "Ingresa la potencia en Watts",
+            required: false,
+            order: 1
+          },
+          {
+            name: "psuEfficiency",
+            label: "Eficiencia",
+            type: "text",
+            placeholder: "Ingresa la eficiencia",
+            required: false,
+            order: 2
+          },
+          {
+            name: "psuModular",
+            label: "Modular",
+            type: "text",
+            placeholder: "Ingresa si es modular",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "ups",
+        label: "UPS",
+        value: "ups",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "upsCapacity",
+            label: "Capacidad",
+            type: "text",
+            placeholder: "Ingresa la capacidad del UPS",
+            required: false,
+            order: 1
+          },
+          {
+            name: "upsAutonomy",
+            label: "Autonomía",
+            type: "text",
+            placeholder: "Ingresa la autonomía en minutos",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "software_licencias",
+    label: "Software y Licencias",
+    value: "software_licencias",
+    order: 6,
+    isActive: true,
+    color: "#3B82F6",
+    icon: "FaCode",
+    subcategories: [
+      {
+        name: "licencias",
+        label: "Licencias de Software",
+        value: "licencias",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "licenseType",
+            label: "Tipo de Licencia",
+            type: "text",
+            placeholder: "Ingresa el tipo de licencia",
+            required: false,
+            order: 1
+          },
+          {
+            name: "licenseDuration",
+            label: "Duración",
+            type: "text",
+            placeholder: "Ingresa la duración de la licencia",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "telefonia",
+    label: "Telefonía",
+    value: "telefonia",
+    order: 7,
+    isActive: true,
+    color: "#EC4899",
+    icon: "FaMobile",
+    subcategories: [
+      {
+        name: "telefonos_moviles",
+        label: "Teléfonos Móviles",
+        value: "telefonos_moviles",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "phoneScreenSize",
+            label: "Tamaño de Pantalla",
+            type: "text",
+            placeholder: "Ingresa el tamaño de pantalla",
+            required: false,
+            order: 1
+          },
+          {
+            name: "phoneCamera",
+            label: "Cámara",
+            type: "text",
+            placeholder: "Ingresa las especificaciones de la cámara",
+            required: false,
+            order: 2
+          },
+          {
+            name: "phoneBattery",
+            label: "Batería",
+            type: "text",
+            placeholder: "Ingresa la capacidad de la batería",
+            required: false,
+            order: 3
+          },
+          {
+            name: "phoneStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 4
+          },
+          {
+            name: "phoneRam",
+            label: "RAM",
+            type: "text",
+            placeholder: "Ingresa la cantidad de RAM",
+            required: false,
+            order: 5
+          },
+          {
+            name: "phoneProcessor",
+            label: "Procesador",
+            type: "text",
+            placeholder: "Ingresa el procesador",
+            required: false,
+            order: 6
+          }
+        ]
+      },
+      {
+        name: "telefonos_fijos",
+        label: "Teléfonos Fijos",
+        value: "telefonos_fijos",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "landlineType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de teléfono fijo",
+            required: false,
+            order: 1
+          },
+          {
+            name: "landlineFeatures",
+            label: "Características",
+            type: "text",
+            placeholder: "Ingresa las características",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "tablets",
+        label: "Tablets",
+        value: "tablets",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "tabletScreenSize",
+            label: "Tamaño de Pantalla",
+            type: "text",
+            placeholder: "Ingresa el tamaño de pantalla",
+            required: false,
+            order: 1
+          },
+          {
+            name: "tabletStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 2
+          },
+          {
+            name: "tabletConnectivity",
+            label: "Conectividad",
+            type: "text",
+            placeholder: "Ingresa el tipo de conectividad",
+            required: false,
+            order: 3
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "redes",
+    label: "Redes",
+    value: "redes",
+    order: 8,
+    isActive: true,
+    color: "#6366F1",
+    icon: "FaNetworkWired",
+    subcategories: [
+      {
+        name: "switch",
+        label: "Switch",
+        value: "switch",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "switchPorts",
+            label: "Puertos",
+            type: "text",
+            placeholder: "Ingresa el número de puertos",
+            required: false,
+            order: 1
+          },
+          {
+            name: "switchSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ingresa la velocidad por puerto",
+            required: false,
+            order: 2
+          },
+          {
+            name: "switchManaged",
+            label: "Administrado",
+            type: "text",
+            placeholder: "Ingresa si es managed o unmanaged",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "servidores",
+        label: "Servidores",
+        value: "servidores",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "serverProcessor",
+            label: "Procesador",
+            type: "text",
+            placeholder: "Ingresa el procesador",
+            required: false,
+            order: 1
+          },
+          {
+            name: "serverRam",
+            label: "RAM",
+            type: "text",
+            placeholder: "Ingresa la cantidad de RAM",
+            required: false,
+            order: 2
+          },
+          {
+            name: "serverStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 3
+          }
+        ]
+      },
+      {
+        name: "cablesred",
+        label: "Cables de Red y conectores",
+        value: "cablesred",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "cableType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de cable",
+            required: false,
+            order: 1
+          },
+          {
+            name: "cableLength",
+            label: "Longitud",
+            type: "text",
+            placeholder: "Ingresa la longitud del cable",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "racks",
+        label: "Racks",
+        value: "racks",
+        order: 4,
+        isActive: true,
+        specifications: [
+          {
+            name: "rackUnits",
+            label: "Unidades",
+            type: "text",
+            placeholder: "Ingresa el número de unidades",
+            required: false,
+            order: 1
+          },
+          {
+            name: "rackHeight",
+            label: "Altura",
+            type: "text",
+            placeholder: "Ingresa la altura del rack",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "ap",
+        label: "Access Point",
+        value: "ap",
+        order: 5,
+        isActive: true,
+        specifications: [
+          {
+            name: "apSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ingresa la velocidad del access point",
+            required: false,
+            order: 1
+          },
+          {
+            name: "apFrequency",
+            label: "Frecuencia",
+            type: "text",
+            placeholder: "Ingresa la frecuencia",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "electronicos",
+    label: "Electrónicos",
+    value: "electronicos",
+    order: 9,
+    isActive: true,
+    color: "#06B6D4",
+    icon: "FaGamepad",
+    subcategories: [
+      {
+        name: "camaras_fotografia",
+        label: "Cámaras de Fotografía",
+        value: "camaras_fotografia",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "cameraType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de cámara",
+            required: false,
+            order: 1
+          },
+          {
+            name: "cameraResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución",
+            required: false,
+            order: 2
+          },
+          {
+            name: "cameraSensor",
+            label: "Sensor",
+            type: "text",
+            placeholder: "Ingresa el tipo de sensor",
+            required: false,
+            order: 3
+          },
+          {
+            name: "cameraConnectivity",
+            label: "Conectividad",
+            type: "text",
+            placeholder: "Ingresa el tipo de conectividad",
+            required: false,
+            order: 4
+          }
+        ]
+      },
+      {
+        name: "drones",
+        label: "Drones",
+        value: "drones",
+        order: 2,
+        isActive: true,
+        specifications: [
+          {
+            name: "droneFlightTime",
+            label: "Tiempo de Vuelo",
+            type: "text",
+            placeholder: "Ingresa el tiempo de vuelo",
+            required: false,
+            order: 1
+          },
+          {
+            name: "droneRange",
+            label: "Alcance",
+            type: "text",
+            placeholder: "Ingresa el alcance",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "televisores",
+        label: "Televisores",
+        value: "televisores",
+        order: 3,
+        isActive: true,
+        specifications: [
+          {
+            name: "tvSize",
+            label: "Tamaño",
+            type: "text",
+            placeholder: "Ingresa el tamaño del televisor",
+            required: false,
+            order: 1
+          },
+          {
+            name: "tvResolution",
+            label: "Resolución",
+            type: "text",
+            placeholder: "Ingresa la resolución",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "parlantes",
+        label: "Parlantes",
+        value: "parlantes",
+        order: 4,
+        isActive: true,
+        specifications: [
+          {
+            name: "speakerPower",
+            label: "Potencia",
+            type: "text",
+            placeholder: "Ingresa la potencia",
+            required: false,
+            order: 1
+          },
+          {
+            name: "speakerConnectivity",
+            label: "Conectividad",
+            type: "text",
+            placeholder: "Ingresa el tipo de conectividad",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "relojes_inteligentes",
+        label: "Relojes Inteligentes",
+        value: "relojes_inteligentes",
+        order: 5,
+        isActive: true,
+        specifications: [
+          {
+            name: "watchBattery",
+            label: "Batería",
+            type: "text",
+            placeholder: "Ingresa la duración de la batería",
+            required: false,
+            order: 1
+          },
+          {
+            name: "watchFeatures",
+            label: "Características",
+            type: "text",
+            placeholder: "Ingresa las características",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "scooters",
+        label: "Scooters Eléctricos",
+        value: "scooters",
+        order: 6,
+        isActive: true,
+        specifications: [
+          {
+            name: "scooterSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ingresa la velocidad máxima",
+            required: false,
+            order: 1
+          },
+          {
+            name: "scooterRange",
+            label: "Autonomía",
+            type: "text",
+            placeholder: "Ingresa la autonomía",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "consolas",
+        label: "Consolas",
+        value: "consolas",
+        order: 7,
+        isActive: true,
+        specifications: [
+          {
+            name: "consoleGeneration",
+            label: "Generación",
+            type: "text",
+            placeholder: "Ingresa la generación de consola",
+            required: false,
+            order: 1
+          },
+          {
+            name: "consoleStorage",
+            label: "Almacenamiento",
+            type: "text",
+            placeholder: "Ingresa la capacidad de almacenamiento",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "monopatines",
+        label: "Monopatines Eléctricos",
+        value: "monopatines",
+        order: 8,
+        isActive: true,
+        specifications: [
+          {
+            name: "skateboardSpeed",
+            label: "Velocidad",
+            type: "text",
+            placeholder: "Ingresa la velocidad máxima",
+            required: false,
+            order: 1
+          },
+          {
+            name: "skateboardRange",
+            label: "Autonomía",
+            type: "text",
+            placeholder: "Ingresa la autonomía",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "controles_consola",
+        label: "Controles de Consola",
+        value: "controles_consola",
+        order: 9,
+        isActive: true,
+        specifications: [
+          {
+            name: "controllerType",
+            label: "Tipo",
+            type: "text",
+            placeholder: "Ingresa el tipo de control",
+            required: false,
+            order: 1
+          },
+          {
+            name: "controllerCompatibility",
+            label: "Compatibilidad",
+            type: "text",
+            placeholder: "Ingresa la compatibilidad",
+            required: false,
+            order: 2
+          }
+        ]
+      },
+      {
+        name: "juegos_consola",
+        label: "Juegos de Consola",
+        value: "juegos_consola",
+        order: 10,
+        isActive: true,
+        specifications: [
+          {
+            name: "gamePlatform",
+            label: "Plataforma",
+            type: "text",
+            placeholder: "Ingresa la plataforma",
+            required: false,
+            order: 1
+          },
+          {
+            name: "gameGenre",
+            label: "Género",
+            type: "text",
+            placeholder: "Ingresa el género del juego",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  },
+  {
+    name: "electrodomesticos",
+    label: "Electrodomésticos",
+    value: "electrodomesticos",
+    order: 10,
+    isActive: true,
+    color: "#FF6B6B",
+    icon: "FaHome",
+    subcategories: [
+      {
+        name: "microondas",
+        label: "Microondas",
+        value: "microondas",
+        order: 1,
+        isActive: true,
+        specifications: [
+          {
+            name: "capacidad",
+            label: "Capacidad",
+            type: "text",
+            placeholder: "Ej: 25 litros",
+            required: false,
+            order: 1
+          },
+          {
+            name: "potencia",
+            label: "Potencia",
+            type: "text",
+            placeholder: "Ej: 800W",
+            required: false,
+            order: 2
+          }
+        ]
+      }
+    ]
+  }
+];
+
+module.exports = categoriesData;

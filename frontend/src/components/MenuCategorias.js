@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BiCategoryAlt } from "react-icons/bi";
-import { FaInfoCircle, FaWhatsapp, FaPhone } from "react-icons/fa";
+import { FaWhatsapp, FaPhone } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
-import useDynamicCategories from '../hooks/useDynamicCategories';
+import productCategory from '../helpers/productCategory';
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -50,26 +50,27 @@ const MenuCategorias = ({
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(null);
   const [activeSubcategories, setActiveSubcategories] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState([]); // Para móvil
-  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
   const menuRef = useRef(null);
   const overlayRef = useRef(null);
 
-  // Hook para categorías dinámicas
-  const {
-    categories,
-    loading: categoriesLoading,
-    error: categoriesError,
-    loadSubcategories,
-  } = useDynamicCategories();
+  // ✅ Usar categorías hardcodeadas (sin consultas a la BD)
+  const categories = productCategory;
+  const categoriesLoading = false;
+  const categoriesError = null;
+  const loadingSubcategories = false; // Ya no necesitamos cargar, están hardcodeadas
+
+  // Función para obtener subcategorías de una categoría (hardcodeado)
+  const loadSubcategories = useCallback((categoryValue) => {
+    const category = categories.find(cat => cat.value === categoryValue);
+    return Promise.resolve(category ? category.subcategories : []);
+  }, [categories]);
 
   // Efecto para actualizar subcategorías cuando cambia la categoría activa (DESKTOP)
   useEffect(() => {
     const loadSubcategoriesForActiveCategory = async () => {
       if (!isMobile && activeCategoryIndex !== null && categories[activeCategoryIndex]) {
-        setLoadingSubcategories(true);
         const subcategories = await loadSubcategories(categories[activeCategoryIndex].value);
         setActiveSubcategories(subcategories);
-        setLoadingSubcategories(false);
       } else if (!isMobile) {
         setActiveSubcategories([]);
       }
