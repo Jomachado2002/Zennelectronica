@@ -1056,7 +1056,7 @@ const Nosotros = () => {
                       </div>
                       <div>
                         <h4 className="text-lg font-medium text-gray-800">Teléfono</h4>
-                        <p className="text-gray-600">+595 984 133733</p>
+                        <p className="text-gray-600">+595 973 345284</p>
                       </div>
                     </div>
                     
@@ -1080,7 +1080,7 @@ const Nosotros = () => {
                       </div>
                       <div>
                         <h4 className="text-lg font-medium text-gray-800">WhatsApp</h4>
-                        <p className="text-gray-600">+595 984 133733</p>
+                        <p className="text-gray-600">+595 973 345284</p>
                       </div>
                     </div>
                   </div>

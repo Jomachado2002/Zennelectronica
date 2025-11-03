@@ -226,7 +226,7 @@ const MenuCategorias = ({
             {/* Enlaces de Contacto */}
             <div className="space-y-2">
               <a 
-                href="https://wa.me/595984133733?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
+                href="https://wa.me/595973345284?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center p-4 rounded-xl bg-green-50 border-2 border-green-200 transition-all duration-200 hover:bg-green-100 group"
@@ -241,7 +241,7 @@ const MenuCategorias = ({
               </a>
 
               <a 
-                href="tel:+595984133733" 
+                href="tel:+595973345284" 
                 className="flex items-center p-4 rounded-xl bg-blue-50 border-2 border-blue-200 transition-all duration-200 hover:bg-blue-100 group"
               >
                 <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
@@ -249,7 +249,7 @@ const MenuCategorias = ({
                 </div>
                 <div>
                   <span className="font-bold text-gray-800 block">Llamar</span>
-                  <span className="text-xs text-gray-600">+595 984133733</span>
+                  <span className="text-xs text-gray-600">+595 973345284</span>
                 </div>
               </a>
             </div>
@@ -363,7 +363,7 @@ const MenuCategorias = ({
               {/* Contacto */}
               <div className="pt-3 mt-4 border-t border-gray-200">
                 <a 
-                  href="https://wa.me/595984133733?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
+                  href="https://wa.me/595973345284?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
@@ -374,13 +374,13 @@ const MenuCategorias = ({
                   <span className="font-medium">Contactar</span>
                 </a>
                 <a 
-                  href="tel:+595984133733" 
+                  href="tel:+595973345284" 
                   className="flex items-center px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500/10 mr-3 flex-shrink-0">
                     <FaPhone className="text-blue-500 text-sm" />
                   </div>
-                  <span className="font-medium">+595 984133733</span>
+                  <span className="font-medium">+595 973345284</span>
                 </a>
               </div>
             </nav>

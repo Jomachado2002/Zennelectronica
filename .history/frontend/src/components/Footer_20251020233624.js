@@ -19,7 +19,7 @@ const Footer = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-center md:justify-start space-x-3">
                 <FontAwesomeIcon icon={faPhone} className="text-white/80" />
-                <span>+595 984 133733</span>
+                <span>+595 973 345284</span>
               </div>
               <div className="flex items-center justify-center md:justify-start space-x-3">
                 <FontAwesomeIcon icon={faEnvelope} className="text-white/80" />
@@ -56,7 +56,7 @@ const Footer = () => {
                 <FontAwesomeIcon icon={faInstagram} size="2x" />
               </a>
               <a
-                href="https://wa.me/+595984133733"
+                href="https://wa.me/+595973345284"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"

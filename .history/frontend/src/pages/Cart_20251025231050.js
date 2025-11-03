@@ -619,7 +619,7 @@ const Cart = () => {
         doc.setFont("helvetica", "normal");
         doc.text([
             "Zenn",
-            "Tel: +595 984 133733",
+            "Tel: +595 973 345284",
             "Email: ventas@zenn.com.py",
             "Web: www.zenn.com.py"
         ], pageWidth - 10, 40, { align: "right" });
@@ -765,7 +765,7 @@ const Cart = () => {
         // Pie de página
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
-        doc.text("Este presupuesto no constituye una factura. Para realizar el pedido, contáctenos al WhatsApp +595 984 133733.", pageWidth/2, pageHeight - 15, { align: "center" });
+        doc.text("Este presupuesto no constituye una factura. Para realizar el pedido, contáctenos al WhatsApp +595 973 345284.", pageWidth/2, pageHeight - 15, { align: "center" });
         doc.text("Zenn - Tecnología Profesional", pageWidth/2, pageHeight - 10, { align: "center" });
         
         // Numeración de páginas
@@ -826,7 +826,7 @@ const Cart = () => {
             sellingPrice: totalPrice
         });
         
-        window.open(`https://wa.me/+595984133733?text=${encodedMessage}`, '_blank');
+        window.open(`https://wa.me/+595973345284?text=${encodedMessage}`, '_blank');
         toast.success("Redirigiendo a WhatsApp...");
     };
 

@@ -33,7 +33,7 @@ async function testExportProducts() {
                 console.log(`   Descripción original: ${product.description || 'Sin descripción'}`);
                 
                 // Simular la nueva lógica de descripción
-                const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
+                const mensajeContacto = 'Para más información podrías escribirnos al 0984/133/733 contamos con productos al por mayor para reventa';
                 let descripcionCompleta = '';
                 
                 if (product.description && product.description.trim() !== '') {

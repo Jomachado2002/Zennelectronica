@@ -494,7 +494,7 @@ const OrderDetailsPage = () => {
                                 {/* Contactar soporte */}
                                 <button
                                     onClick={() => {
-                                        const phoneNumber = "595984133733"; // ← TU NÚMERO DE WHATSAPP
+                                        const phoneNumber = "595973345284"; // ← TU NÚMERO DE WHATSAPP
                                         const message = `Hola! Necesito ayuda con mi pedido:
 
                                     📦 *Pedido #${order.shop_process_id}*

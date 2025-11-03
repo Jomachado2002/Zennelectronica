@@ -47,7 +47,7 @@ const PaymentCancelled = () => {
 
   const contactWhatsApp = () => {
     const message = `Hola! Tuve un problema al procesar mi pago en Zenn.%0A%0AID de transacción: ${paymentInfo.shop_process_id}%0AMonto: ${displayPYGCurrency(paymentInfo.amount)}%0AMotivo: Pago cancelado%0A%0A¿Pueden ayudarme a completar mi compra? Gracias!`;
-    window.open(`https://wa.me/595984133733?text=${message}`, '_blank');
+    window.open(`https://wa.me/595973345284?text=${message}`, '_blank');
   };
 
   const sendEmail = () => {
@@ -190,7 +190,7 @@ const PaymentCancelled = () => {
           <div className="mt-4 text-center text-sm text-gray-600">
             <p className="flex items-center justify-center gap-2 mb-1">
               <FaPhone className="text-[#2A3190]" />
-              También puedes llamarnos al: +595 984 133733
+              También puedes llamarnos al: +595 973 345284
             </p>
             <p>Horario de atención: Lunes a Viernes de 8:00 a 18:00</p>
           </div>

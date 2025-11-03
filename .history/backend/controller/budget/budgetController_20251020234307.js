@@ -446,7 +446,7 @@ async function generateBudgetPDF(budgetId) {
     doc.fontSize(9).fillColor(secondaryColor);
     doc.text('Zenn EAS', 50, 160);
     doc.text('Avda Mariscal Lopez casi Libertad Paseo Dylan 2do Piso', 50, 175, { width: 200 });
-    doc.text('Teléfono: +595 973 345 284', 50, 200);
+    doc.text('Teléfono: +595 984 133 733', 50, 200);
     doc.text('Email: ventas@zenn.com.py', 50, 215);
     doc.text('RUC: 80136342-0', 50, 230);
     

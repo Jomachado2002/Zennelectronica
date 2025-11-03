@@ -58,7 +58,7 @@ async function getExportProductsController(req, res) {
 
             // Generar descripción con mensaje de contacto
             let descripcionCompleta = '';
-            const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
+            const mensajeContacto = 'Para más información podrías escribirnos al 0984/133/733 contamos con productos al por mayor para reventa';
             
             if (product.description && product.description.trim() !== '') {
                 descripcionCompleta = `${product.description} ${mensajeContacto}`;
@@ -161,7 +161,7 @@ async function downloadProductImagesController(req, res) {
         const excelData = products.map((product, index) => {
             // Generar descripción con mensaje de contacto
             let descripcionCompleta = '';
-            const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
+            const mensajeContacto = 'Para más información podrías escribirnos al 0984/133/733 contamos con productos al por mayor para reventa';
             
             if (product.description && product.description.trim() !== '') {
                 descripcionCompleta = `${product.description} ${mensajeContacto}`;
