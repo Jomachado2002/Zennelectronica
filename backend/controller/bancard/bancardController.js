@@ -6,7 +6,9 @@ const BancardTransactionModel = require('../../models/bancardTransactionModel');
 const SaleModel = require('../../models/saleModel');
 const BalanceModel = require('../../models/balanceModel');
 const UserModel = require('../../models/userModel');
+const ClientModel = require('../../models/clientModel');
 const emailService = require('../../services/emailService');
+const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 const { 
     verifyConfirmationToken, 
     validateBancardConfig,
@@ -139,7 +141,102 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                         
                         shouldSendEmail = true;
 
-                        // ✅ ENVIAR EMAIL DE COMPRA APROBADA
+                        // ✅ CREAR VENTA AUTOMÁTICAMENTE
+                        try {
+                            const updatedTransaction = await BancardTransactionModel.findById(transaction._id);
+                            
+                            // Buscar o crear cliente
+                            let client;
+                            if (updatedTransaction.customer_email) {
+                                client = await ClientModel.findOne({ email: updatedTransaction.customer_email });
+                                
+                                if (!client) {
+                                    // Crear nuevo cliente
+                                    client = new ClientModel({
+                                        name: updatedTransaction.customer_name || 'Cliente Web',
+                                        email: updatedTransaction.customer_email,
+                                        phone: updatedTransaction.customer_phone || '',
+                                        createdBy: updatedTransaction.created_by || 'bancard_payment'
+                                    });
+                                    await client.save();
+                                    console.log('✅ Cliente creado automáticamente:', client._id);
+                                }
+                            }
+
+                            // Preparar items para la venta
+                            const saleItems = updatedTransaction.items.map(item => ({
+                                description: item.description || item.name,
+                                quantity: item.quantity || 1,
+                                unitPrice: item.unit_price || 0,
+                                currency: 'PYG',
+                                exchangeRate: 1,
+                                unitPricePYG: item.unit_price || 0,
+                                taxType: 'iva_10',
+                                taxRate: 10,
+                                subtotal: (item.quantity || 1) * (item.unit_price || 0),
+                                subtotalWithTax: (item.quantity || 1) * (item.unit_price || 0) * 1.1
+                            }));
+
+                            // Calcular totales
+                            const subtotal = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+                            const taxAmount = subtotal * 0.10; // IVA 10%
+                            const totalAmount = subtotal + taxAmount;
+
+                            // Crear la venta
+                            const newSale = new SaleModel({
+                                saleType: null, // Puedes agregar un tipo de venta para "Venta Web" si lo tienes
+                                client: client ? client._id : null,
+                                clientSnapshot: {
+                                    name: updatedTransaction.customer_name || 'Cliente Web',
+                                    email: updatedTransaction.customer_email || '',
+                                    phone: updatedTransaction.customer_phone || ''
+                                },
+                                items: saleItems,
+                                subtotal: subtotal,
+                                tax: 10,
+                                taxAmount: taxAmount,
+                                totalAmount: totalAmount,
+                                totalAmountPYG: totalAmount,
+                                paymentMethod: 'tarjeta', // Bancard
+                                paymentStatus: 'pagado', // Ya está pagado
+                                saleDate: new Date(),
+                                notes: `Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}`,
+                                createdBy: updatedTransaction.created_by || 'bancard_payment',
+                                isActive: true
+                            });
+
+                            const savedSale = await newSale.save();
+                            console.log('✅ Venta creada automáticamente:', savedSale._id, savedSale.saleNumber);
+
+                            // Actualizar cliente con la venta
+                            if (client) {
+                                await ClientModel.findByIdAndUpdate(
+                                    client._id,
+                                    { $push: { sales: savedSale._id } }
+                                );
+                            }
+
+                            // ✅ ENVIAR EMAIL DE CONFIRMACIÓN CON BREVO
+                            if (client && client.email) {
+                                sendPurchaseConfirmationEmail(savedSale, client)
+                                    .then(result => {
+                                        if (result.success) {
+                                            console.log('✅ Email Brevo enviado:', result.messageId);
+                                        } else {
+                                            console.warn('⚠️ No se pudo enviar email Brevo:', result.error);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('❌ Error al enviar email Brevo:', error);
+                                    });
+                            }
+
+                        } catch (saleError) {
+                            console.error('❌ Error al crear venta automática:', saleError);
+                            // No bloqueamos el flujo si falla la creación de venta
+                        }
+
+                        // ✅ ENVIAR EMAIL DE COMPRA APROBADA (sistema antiguo)
                         try {
                             const updatedTransaction = await BancardTransactionModel.findById(transaction._id);
                             
