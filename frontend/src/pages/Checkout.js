@@ -25,7 +25,8 @@ import {
     FaInfoCircle,
     FaSpinner,
     FaMapMarkerAlt,
-    FaExternalLinkAlt
+    FaExternalLinkAlt,
+    FaExclamationTriangle
 } from 'react-icons/fa';
 import { localCartHelper } from '../helpers/addToCart';
 import { formatIVABreakdown } from '../helpers/taxCalculator';
@@ -274,7 +275,7 @@ const Checkout = () => {
     
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [currentStep, setCurrentStep] = useState(1);
+    const [currentStep, setCurrentStep] = useState(1); // Mantenemos para compatibilidad pero siempre será 1
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [showLocationSelector, setShowLocationSelector] = useState(false);
     const [couponCode, setCouponCode] = useState('');
@@ -715,49 +716,40 @@ const hasValidLocation = () => {
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Columna izquierda - Formulario */}
                     <div className="flex-1">
-                        {/* Progress Steps mejorado */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                            <div className="flex items-center justify-between mb-6">
-                                <h1 className="text-3xl font-bold text-gray-900">Finalizar compra</h1>
-                                <div className="hidden md:flex items-center gap-4">
-                                    <div className={`flex items-center gap-3 transition-all ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all
-                                                      ${currentStep >= 1 ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'}`}>
-                                            {currentStep > 1 ? <FaCheckCircle /> : '1'}
-                                        </div>
-                                        <span className="font-medium">Datos y envío</span>
+                        {/* Header Simplificado - Sin pasos */}
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                                        <FaCheckCircle className="text-3xl" />
                                     </div>
-                                    
-                                    <div className="w-20 h-1 bg-gray-300 rounded-full">
-                                        <div className={`h-1 bg-blue-600 rounded-full transition-all duration-500 
-                                                      ${currentStep >= 2 ? 'w-full' : 'w-0'}`}></div>
+                                    <div>
+                                        <h1 className="text-4xl font-bold">Finalizar Compra</h1>
+                                        <p className="text-blue-100 mt-1">Completa tus datos y realiza el pago de forma segura</p>
                                     </div>
-                                    
-                                    <div className={`flex items-center gap-3 transition-all ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all
-                                                      ${currentStep >= 2 ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'}`}>
-                                            2
-                                        </div>
-                                        <span className="font-medium">Pago</span>
+                                </div>
+                                <div className="hidden md:flex items-center gap-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
+                                    <FaShieldAlt className="text-2xl" />
+                                    <div className="text-left">
+                                        <p className="font-semibold">100% Seguro</p>
+                                        <p className="text-xs text-blue-100">Certificado PCI DSS</p>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Mobile progress */}
-                            <div className="md:hidden">
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className={`text-sm font-medium ${currentStep === 1 ? 'text-blue-600' : 'text-gray-500'}`}>
-                                        Paso 1: Datos y envío
-                                    </span>
-                                    <span className={`text-sm font-medium ${currentStep === 2 ? 'text-blue-600' : 'text-gray-500'}`}>
-                                        Paso 2: Pago
-                                    </span>
+                            
+                            {/* Info rápida */}
+                            <div className="grid grid-cols-3 gap-4 mt-6">
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <FaCheckCircle className="text-xl mx-auto mb-1" />
+                                    <p className="text-xs">Pago Seguro</p>
                                 </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" 
-                                        style={{ width: currentStep === 1 ? '50%' : '100%' }}
-                                    ></div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <FaTruck className="text-xl mx-auto mb-1" />
+                                    <p className="text-xs">Envío Rápido</p>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-center">
+                                    <FaShieldAlt className="text-xl mx-auto mb-1" />
+                                    <p className="text-xs">Compra Protegida</p>
                                 </div>
                             </div>
                         </div>
@@ -1147,141 +1139,75 @@ const hasValidLocation = () => {
                                     )}
                                 </div>
 
-                                {/* Botón continuar */}
-                                <div className="flex justify-end">
-                                    <button
-                                        onClick={() => {
-                                            if (validateAndShowErrors() && hasValidLocation()) {
-                                                setCurrentStep(2);
-                                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                                            } else {
-                                                if (!hasValidLocation()) {
-                                                    toast.error('Por favor marca tu ubicación en el mapa');
-                                                } else {
-                                                    toast.error('Completa todos los campos obligatorios');
-                                                }
-                                            }
-                                        }}
-                                        disabled={!isFormValid()}
-                                        className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-4 rounded-xl 
-                                                hover:from-blue-700 hover:to-blue-800 font-semibold text-lg transition-all 
-                                                transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-3
-                                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                                    >
-                                        Continuar al pago
-                                        <FaArrowLeft className="rotate-180" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* PASO 2: Método de pago */}
-                        {currentStep === 2 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                                        <div className="p-2 bg-green-100 rounded-lg">
-                                            <FaCreditCard className="text-green-600" />
-                                        </div>
-                                        Método de pago
-                                    </h2>
-                                    <button
-                                        onClick={() => setCurrentStep(1)}
-                                        className="text-gray-600 hover:text-blue-600 font-medium flex items-center gap-2 transition-colors"
-                                    >
-                                        <FaArrowLeft />
-                                        Volver a datos
-                                    </button>
-                                </div>
-                                
-                                {/* Información de seguridad */}
-                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 mb-6">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-2 bg-green-100 rounded-full">
-                                            <FaShieldAlt className="text-green-600 text-lg" />
-                                        </div>
-                                        <h3 className="font-semibold text-green-900">Pago 100% seguro con Bancard</h3>
-                                    </div>
-                                    <p className="text-green-800 text-sm">
-                                        Tus datos están protegidos con cifrado SSL y certificación PCI DSS
-                                    </p>
-                                </div>
-
-                                {/* Tarjetas guardadas para usuarios logueados */}
-                                {isLoggedIn && (
-                                    <SavedCardsSection 
-                                        user={user}
-                                        totalAmount={totalPrice}
-                                        customerData={prepareBancardData()}
-                                        cartItems={cartItems}
-                                        onPaymentSuccess={handlePaymentSuccess}
-                                        onPaymentError={handlePaymentError}
-                                    />
-                                )}
-                                
-                                {/* Separador si hay tarjetas guardadas */}
-                                {isLoggedIn && (
-                                    <div className="flex items-center gap-4 my-6">
-                                        <hr className="flex-1 border-gray-300" />
-                                        <span className="text-gray-500 text-sm font-medium bg-gray-50 px-4 py-2 rounded-full">
-                                            o pagar con nueva tarjeta
-                                        </span>
-                                        <hr className="flex-1 border-gray-300" />
-                                    </div>
-                                )}
-                                
-                                {/* Métodos de pago disponibles */}
-                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
-                                    <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                                        <FaCreditCard className="text-blue-600" />
-                                        💳 Métodos de pago disponibles
-                                    </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {[
-                                            { name: "Tarjeta de crédito", color: "text-blue-600" },
-                                            { name: "Tarjeta de débito", color: "text-green-600" },
-                                            { name: "Billeteras digitales", color: "text-purple-600" },
-                                            { name: "Código QR", color: "text-orange-600" }
-                                        ].map((method, index) => (
-                                            <div key={index} className="bg-white rounded-xl p-4 border border-gray-200 hover:border-gray-300 
-                                                                       transition-all hover:shadow-sm">
-                                                <div className="flex flex-col items-center justify-center text-center">
-                                                    <FaCreditCard className={`${method.color} text-2xl mb-2`} />
-                                                    <span className="text-xs font-medium text-gray-700">{method.name}</span>
-                                                </div>
+                                {/* Sección de Pago - TODO EN UNO */}
+                                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mt-8">
+                                    <div className="mb-8">
+                                        <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                                            <div className="p-3 bg-gradient-to-r from-green-400 to-green-600 rounded-xl shadow-lg">
+                                                <FaCreditCard className="text-white text-2xl" />
                                             </div>
-                                        ))}
+                                            Método de Pago
+                                        </h2>
+                                        <p className="text-gray-600 ml-14">Selecciona cómo deseas pagar tu pedido</p>
                                     </div>
-                                </div>
 
-                                {/* Botón de pago Bancard MEJORADO - DIRECTO */}
-                                <div className="space-y-4">
-                                    <BancardPayButton
-                                        cartItems={cartItems}
-                                        totalAmount={totalPrice}
-                                        customerData={prepareBancardData()}
-                                        onPaymentStart={() => {
+                                    {/* Tarjetas guardadas si el usuario está logueado */}
+                                    {isLoggedIn && (
+                                        <>
+                                            <SavedCardsSection 
+                                                user={user}
+                                                totalAmount={totalPrice}
+                                                customerData={prepareBancardData()}
+                                                cartItems={cartItems}
+                                                onPaymentSuccess={handlePaymentSuccess}
+                                                onPaymentError={handlePaymentError}
+                                            />
                                             
-                                            toast.info('Procesando pago...');
-                                        }}
-                                        onPaymentSuccess={handlePaymentSuccess}
-                                        onPaymentError={handlePaymentError}
-                                        disabled={!isFormValid()}
-                                    />
-                                    
-                                    {/* Información adicional de seguridad */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                                        {[
-                                            { icon: FaLock, text: "Conexión SSL segura", color: "text-green-600" },
-                                            { icon: FaShieldAlt, text: "Certificado PCI DSS", color: "text-blue-600" },
-                                            { icon: FaCheckCircle, text: "Datos encriptados", color: "text-purple-600" }
-                                        ].map((item, index) => (
-                                            <div key={index} className="flex items-center justify-center gap-2 text-sm">
-                                                <item.icon className={`${item.color}`} />
-                                                <span className="text-gray-600 font-medium">{item.text}</span>
+                                            <div className="flex items-center gap-4 my-8">
+                                                <hr className="flex-1 border-gray-300" />
+                                                <span className="text-gray-500 font-medium bg-gradient-to-r from-gray-50 to-slate-50 px-6 py-2 rounded-full border border-gray-200">
+                                                    o pagar con nueva tarjeta
+                                                </span>
+                                                <hr className="flex-1 border-gray-300" />
                                             </div>
-                                        ))}
-                                    </div>
+                                        </>
+                                    )}
+
+                                    {/* Componente de Pago con Modal Mejorado */}
+                                    {!isFormValid() ? (
+                                        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-2xl p-8 text-center">
+                                            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <FaExclamationTriangle className="text-3xl text-yellow-600" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                                Completa tus datos para continuar
+                                            </h3>
+                                            <p className="text-gray-600 mb-4">
+                                                Necesitamos tu información de contacto y ubicación para procesar el pedido
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    validateAndShowErrors();
+                                                }}
+                                                className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-amber-600 transition-all transform hover:scale-105"
+                                            >
+                                                Completar datos arriba ☝️
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <BancardPayButton
+                                            cartItems={cartItems}
+                                            totalAmount={totalPrice}
+                                            customerData={prepareBancardData()}
+                                            onPaymentStart={() => {
+                                                toast.info('🔒 Iniciando proceso de pago seguro...');
+                                            }}
+                                            onPaymentSuccess={handlePaymentSuccess}
+                                            onPaymentError={handlePaymentError}
+                                            disabled={!isFormValid()}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         )}

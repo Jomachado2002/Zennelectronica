@@ -955,6 +955,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
     router.get("/channable/feed.xml", channableFeedController);
+    
 
 
     // ===========================================

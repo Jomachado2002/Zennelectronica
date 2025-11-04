@@ -10,7 +10,8 @@
     "populate-categories": "node scripts/populate-categories.js",
     "clear-categories": "node scripts/clear-categories.js",
     "export-categories": "node scripts/export-categories-to-code.js",
-    "export-to-frontend": "node scripts/export-categories-to-frontend.js"
+    "export-to-frontend": "node scripts/export-categories-to-frontend.js",
+    "sync-categories": "node scripts/sync-categories.js"
   },
   "author": "",
   "license": "ISC",
