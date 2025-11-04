@@ -116,10 +116,11 @@ const BancardTransactions = () => {
             queryParams.append('sortBy', filters.sortBy);
             queryParams.append('sortOrder', filters.sortOrder);
 
-            const response = await fetch(`${SummaryApi.baseURL}/api/bancard/transactions?${queryParams.toString()}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            // ✅ USAR authGet PARA INCLUIR TOKEN
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(
+                `${SummaryApi.baseURL}/api/bancard/transactions?${queryParams.toString()}`
+            );
 
             const result = await response.json();
             if (result.success) {
@@ -255,27 +256,37 @@ const BancardTransactions = () => {
         try {
             let endpoint = '';
             let method = 'POST';
-            let body = { transactionId, ...additionalData };
+            let body = {};
+
+            // ✅ BUSCAR LA TRANSACCIÓN PARA OBTENER shop_process_id
+            const transaction = transactions.find(t => t.id === transactionId);
+            
+            if (!transaction) {
+                toast.error('Transacción no encontrada');
+                return;
+            }
 
             switch (action) {
                 case 'rollback':
                     endpoint = `${SummaryApi.baseURL}/api/bancard/rollback`;
+                    // ✅ ENVIAR shop_process_id QUE ES LO QUE ESPERA EL BACKEND
+                    body = {
+                        shop_process_id: transaction.shop_process_id,
+                        ...additionalData
+                    };
+                    console.log('🔄 Enviando rollback:', body);
                     break;
                 case 'update_delivery':
                     endpoint = `${SummaryApi.baseURL}/api/bancard/update-delivery`;
+                    body = { transactionId, ...additionalData };
                     break;
                 default:
                     throw new Error('Acción no válida');
             }
 
-            const response = await fetch(endpoint, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify(body)
-            });
+            // ✅ USAR authPost PARA INCLUIR TOKEN
+            const { authPost } = await import('../helpers/authFetch');
+            const response = await authPost(endpoint, body);
 
             const result = await response.json();
             
@@ -291,7 +302,7 @@ const BancardTransactions = () => {
                 toast.error(result.message || 'Error al realizar la acción');
             }
         } catch (error) {
-            // console.error removed for production
+            console.error('❌ Error en handleTransactionAction:', error);
             toast.error('Error de conexión');
         }
     };
