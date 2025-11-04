@@ -39,8 +39,11 @@ const UserProfilePage = () => {
   useEffect(() => {
     const initializeUserData = async () => {
       if (!user) {
-        toast.info('Debes iniciar sesión para acceder a tu perfil');
-        navigate('/iniciar-sesion');
+        // ✅ SOLO MOSTRAR TOAST SI NO HAY USUARIO Y NO SE HA MOSTRADO ANTES
+        if (!userDataReady) {
+          toast.info('Debes iniciar sesión para acceder a tu perfil');
+          navigate('/iniciar-sesion');
+        }
         return;
       }
 
@@ -54,7 +57,7 @@ const UserProfilePage = () => {
     };
 
     initializeUserData();
-  }, [user, navigate]);
+  }, [user, navigate, userDataReady]);
 
   // ✅ FUNCIÓN PARA RECARGAR DATOS DEL USUARIO (COMO ADMIN PANEL)
   const fetchUserDetails = async () => {
@@ -185,14 +188,11 @@ const UserProfilePage = () => {
       const targetUserId = user.bancardUserId || user._id;
       
       
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache' // ✅ IMPORTANTE PARA iOS
-        }
-      });
+      // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const { authGet } = await import('../helpers/authFetch');
+      const response = await authGet(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`
+      );
 
       const result = await response.json();
       
@@ -231,15 +231,15 @@ const UserProfilePage = () => {
 
       const targetUserId = user.bancardUserId || user._id;
       
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache' // ✅ IMPORTANTE PARA iOS
-        },
-        credentials: 'include',
-        body: JSON.stringify({ alias_token: aliasToken })
-      });
+      // ✅ USAR authDelete QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const { authDelete } = await import('../helpers/authFetch');
+      const response = await authDelete(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`,
+        { 
+          body: JSON.stringify({ alias_token: aliasToken }),
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
 
       const result = await response.json();
       

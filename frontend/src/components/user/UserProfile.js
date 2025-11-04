@@ -30,9 +30,9 @@ const UserProfile = ({ user, onUpdateProfile, onUploadImage }) => {
   const [loading, setLoading] = useState(false);
   
   const handleLocationSave = (locationData) => {
-    
-    toast.success('Ubicación actualizada en tu perfil');
+    // ✅ NO MOSTRAR TOAST AQUÍ PORQUE SimpleLocationSelector YA LO MUESTRA
     // La ubicación ya está guardada en el backend
+    console.log('📍 Ubicación actualizada:', locationData);
   };
 
   // Cargar datos del usuario al montar

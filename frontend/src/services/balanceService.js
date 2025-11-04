@@ -1,5 +1,6 @@
 // frontend/src/services/balanceService.js
 import SummaryApi from '../common';
+import { authGet, authPost } from '../helpers/authFetch';
 
 const API_BASE_URL = SummaryApi.baseURL;
 
@@ -13,13 +14,8 @@ class BalanceService {
      */
     static async getUserBalance() {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/perfil/saldo`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const response = await authGet(`${API_BASE_URL}/api/perfil/saldo`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,17 +34,11 @@ class BalanceService {
      */
     static async loadBalance(amount, currency = 'PYG', description = 'Carga de saldo') {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/perfil/cargar-saldo`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    amount: parseFloat(amount),
-                    currency,
-                    description
-                })
+            // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const response = await authPost(`${API_BASE_URL}/api/perfil/cargar-saldo`, {
+                amount: parseFloat(amount),
+                currency,
+                description
             });
 
             if (!response.ok) {
@@ -103,13 +93,8 @@ class BalanceService {
                 url += `&type=${type}`;
             }
 
-            const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const response = await authGet(url);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
