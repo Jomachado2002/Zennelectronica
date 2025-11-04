@@ -11,7 +11,7 @@ const saleSchema = new mongoose.Schema({
     saleType: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SalesType',
-        required: true
+        required: false // Opcional para ventas web de Bancard
     },
     saleTypeSnapshot: {
         name: String,
@@ -20,7 +20,7 @@ const saleSchema = new mongoose.Schema({
     client: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'client',
-        required: true
+        required: false // Opcional para ventas web de Bancard
     },
     clientSnapshot: {
         name: String,
@@ -40,7 +40,7 @@ const saleSchema = new mongoose.Schema({
     branch: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Branch',
-        required: true
+        required: false // Opcional para ventas web de Bancard
     },
     branchSnapshot: {
         name: String,
@@ -56,7 +56,7 @@ const saleSchema = new mongoose.Schema({
     salesperson: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Salesperson',
-        required: true
+        required: false // Opcional para ventas web de Bancard
     },
     salespersonSnapshot: {
         name: String,

@@ -182,10 +182,15 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             const taxAmount = subtotal * 0.10; // IVA 10%
                             const totalAmount = subtotal + taxAmount;
 
+                            // Solo crear venta si hay cliente con email
+                            if (!client || !client.email) {
+                                console.log('⚠️ No se puede crear venta: cliente sin email');
+                                throw new Error('Cliente sin email - venta no creada');
+                            }
+
                             // Crear la venta
                             const newSale = new SaleModel({
-                                saleType: null, // Puedes agregar un tipo de venta para "Venta Web" si lo tienes
-                                client: client ? client._id : null,
+                                client: client._id,
                                 clientSnapshot: {
                                     name: updatedTransaction.customer_name || 'Cliente Web',
                                     email: updatedTransaction.customer_email || '',
@@ -200,7 +205,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                                 paymentMethod: 'tarjeta', // Bancard
                                 paymentStatus: 'pagado', // Ya está pagado
                                 saleDate: new Date(),
-                                notes: `Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}`,
+                                notes: `Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}. Cliente: ${updatedTransaction.customer_email}`,
                                 createdBy: updatedTransaction.created_by || 'bancard_payment',
                                 isActive: true
                             });
