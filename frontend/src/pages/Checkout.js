@@ -140,12 +140,12 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                 } : null
             };
 
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/pago-con-token`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(paymentData)
-            });
+            // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const { authPost } = await import('../helpers/authFetch');
+            const response = await authPost(
+                `${process.env.REACT_APP_BACKEND_URL}/api/bancard/pago-con-token`,
+                paymentData
+            );
 
             if (!response.ok) {
                 throw new Error(`Error HTTP ${response.status}`);

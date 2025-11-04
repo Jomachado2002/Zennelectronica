@@ -99,14 +99,12 @@ const QuickPayWithCard = ({
 
       
 
-      const response = await fetch(`${SummaryApi.baseURL}/api/bancard/pago-con-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(paymentData)
-      });
+      // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const { authPost } = await import('../helpers/authFetch');
+      const response = await authPost(
+        `${SummaryApi.baseURL}/api/bancard/pago-con-token`,
+        paymentData
+      );
 
       const result = await response.json();
       

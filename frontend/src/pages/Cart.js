@@ -445,14 +445,12 @@ const Cart = () => {
 
             toast.info('Procesando pago con tarjeta guardada...');
 
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/pago-con-token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify(paymentData)
-            });
+            // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const { authPost } = await import('../helpers/authFetch');
+            const response = await authPost(
+                `${process.env.REACT_APP_BACKEND_URL}/api/bancard/pago-con-token`,
+                paymentData
+            );
 
             
             
