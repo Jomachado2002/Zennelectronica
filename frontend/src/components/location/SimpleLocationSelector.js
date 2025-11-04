@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaMapMarkerAlt, FaSpinner, FaCheckCircle, FaSave, FaSearch, FaLocationArrow, FaTimes, FaCrosshairs, FaMapPin, FaExternalLinkAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../../common';
+import { authPost } from '../../helpers/authFetch';
 
 const SimpleLocationSelector = ({ 
   initialLocation = null, 
@@ -218,10 +219,9 @@ const SimpleLocationSelector = ({
 
   const reverseGeocode = async (location) => {
     try {
-      const response = await fetch(SummaryApi.location.reverseGeocode.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: location.lat, lng: location.lng })
+      const response = await authPost(SummaryApi.location.reverseGeocode.url, {
+        lat: location.lat,
+        lng: location.lng
       });
 
       const result = await response.json();
@@ -310,12 +310,11 @@ const SimpleLocationSelector = ({
 
       
 
-      const response = await fetch(isUserLoggedIn ? SummaryApi.location.saveUserLocation.url : SummaryApi.location.saveGuestLocation.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
+      // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const response = await authPost(
+        isUserLoggedIn ? SummaryApi.location.saveUserLocation.url : SummaryApi.location.saveGuestLocation.url,
+        payload
+      );
 
       const result = await response.json();
       

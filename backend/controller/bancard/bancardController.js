@@ -124,9 +124,18 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             security_information: transactionData.security_information || {},
                             confirmation_date: new Date(),
                             extended_response_description: transactionData.extended_response_description,
-                            bancard_confirmed: true
+                            bancard_confirmed: true,
+                            // ✅ MARCAR COMO VISIBLE EN HISTORIAL DE COMPRAS
+                            show_in_user_purchases: true,
+                            visible_to_user: true
                         });
 
+                        console.log('✅ Transacción aprobada y marcada para historial del usuario:', {
+                            transaction_id: transaction._id,
+                            user_id: transaction.created_by || transaction.user_id,
+                            shop_process_id: transaction.shop_process_id,
+                            will_show_in_purchases: true
+                        });
                         
                         shouldSendEmail = true;
 

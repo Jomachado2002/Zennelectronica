@@ -23,6 +23,7 @@ import displayPYGCurrency from '../../helpers/displayCurrency';
 import StatusBadge, { StatusWithProgress } from '../common/StatusBadge';
 import RatingComponent from '../delivery/RatingComponent';
 import { toast } from 'react-toastify';
+import { authGet } from '../../helpers/authFetch';
 
 const UserPurchases = ({ user }) => {
   const [purchases, setPurchases] = useState([]);
@@ -49,34 +50,50 @@ const UserPurchases = ({ user }) => {
     try {
       const queryParams = new URLSearchParams();
       
+      // ✅ FILTRAR POR USUARIO ACTUAL
       if (user) {
-        if (user.bancardUserId) {
-          queryParams.append('user_bancard_id', user.bancardUserId);
-        }
         if (user._id) {
           queryParams.append('created_by', user._id);
         }
+        if (user.bancardUserId) {
+          queryParams.append('user_bancard_id', user.bancardUserId);
+        }
       }
       
+      // ✅ SOLO MOSTRAR TRANSACCIONES APROBADAS/CONFIRMADAS
+      queryParams.append('status', 'approved');
+      
+      // ✅ APLICAR FILTROS ADICIONALES
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
+        if (value && key !== 'status') { // No duplicar status
+          queryParams.append(key, value);
+        }
       });
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions?${queryParams.toString()}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const response = await authGet(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions?${queryParams.toString()}`
+      );
 
       const result = await response.json();
       
       if (result.success) {
-        setPurchases(result.data.transactions || []);
+        // ✅ FILTRAR SOLO COMPRAS CONFIRMADAS Y APROBADAS
+        const confirmedPurchases = (result.data.transactions || []).filter(tx => 
+          tx.status === 'approved' && 
+          tx.bancard_confirmed === true &&
+          (tx.response === 'S' || tx.response_code === '00')
+        );
         
+        setPurchases(confirmedPurchases);
         
-        
+        console.log('✅ Compras cargadas:', {
+          total: confirmedPurchases.length,
+          user_id: user._id
+        });
       }
     } catch (error) {
-      // console.error removed for production
+      console.error('❌ Error al cargar compras:', error);
       toast.error('Error al cargar tus compras');
     } finally {
       setLoading(false);

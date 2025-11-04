@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FaCreditCard, FaLock, FaSpinner, FaTimes, FaCheckCircle } from 'react-icons/fa';
 import { MdSecurity } from 'react-icons/md';
 import { toast } from 'react-toastify';
+import { authPost } from '../helpers/authFetch';
 
 const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -201,14 +202,10 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
         return_url: `${window.location.origin}/mi-perfil?tab=cards&status=registered`
       };
 
-      const response = await fetch(
+      // ✅ USAR authPost QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const response = await authPost(
         `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(cardData)
-        }
+        cardData
       );
 
       const result = await response.json();

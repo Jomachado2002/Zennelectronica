@@ -8,6 +8,7 @@ import SecurityInfoBanner from './SecurityInfoBanner';
 import SimpleLocationSelector from '../location/SimpleLocationSelector';
 import { FaClock, FaMapMarkerAlt, FaCheckCircle, FaExternalLinkAlt } from 'react-icons/fa';
 import SummaryApi from '../../common';
+import { authGet } from '../../helpers/authFetch';
 
 const UserProfile = ({ user, onUpdateProfile, onUploadImage }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -239,10 +240,8 @@ const UserLocationDisplay = ({ user, onLocationUpdate }) => {
   const loadUserLocation = async () => {
     setLoading(true);
     try {
-      const response = await fetch(SummaryApi.location.getUserLocation.url, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const response = await authGet(SummaryApi.location.getUserLocation.url);
       
       const result = await response.json();
       if (result.success && result.data) {
