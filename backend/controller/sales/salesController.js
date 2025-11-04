@@ -2,6 +2,7 @@
 const SaleModel = require('../../models/saleModel');
 const ClientModel = require('../../models/clientModel');
 const uploadProductPermission = require('../../helpers/permission');
+const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 
 /**
  * Crear una nueva venta
@@ -107,6 +108,22 @@ async function createSaleController(req, res) {
             clientId,
             { $push: { sales: savedSale._id } }
         );
+
+        // ✅ ENVIAR EMAIL DE CONFIRMACIÓN (sin bloquear la respuesta)
+        // Ejecutar en segundo plano para no retrasar la respuesta
+        if (client.email) {
+            sendPurchaseConfirmationEmail(savedSale, client)
+                .then(result => {
+                    if (result.success) {
+                        console.log('✅ Email de confirmación enviado:', result.messageId);
+                    } else {
+                        console.warn('⚠️ No se pudo enviar email de confirmación:', result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al enviar email:', error);
+                });
+        }
 
         res.status(201).json({
             message: "Venta creada correctamente",

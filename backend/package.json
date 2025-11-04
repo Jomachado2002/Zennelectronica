@@ -11,7 +11,8 @@
     "clear-categories": "node scripts/clear-categories.js",
     "export-categories": "node scripts/export-categories-to-code.js",
     "export-to-frontend": "node scripts/export-categories-to-frontend.js",
-    "sync-categories": "node scripts/sync-categories.js"
+    "sync-categories": "node scripts/sync-categories.js",
+    "test-brevo": "node test-brevo.js"
   },
   "author": "",
   "license": "ISC",
@@ -46,6 +47,7 @@
     "puppeteer": "^24.26.1",
     "qs": "6.11.0",
     "sharp": "^0.33.5",
+    "sib-api-v3-sdk": "^8.5.0",
     "side-channel": "1.0.4",
     "side-channel-map": "^1.0.1",
     "svg-to-pdfkit": "^0.1.8",

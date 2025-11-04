@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Pedido</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f6f6f6;
+            line-height: 1.6;
+            color: #333333;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f6f6f6;
+            padding: 20px 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* HEADER */
+        .header {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: center;
+        }
+        .logo {
+            max-width: 200px;
+            height: auto;
+        }
+        
+        /* MAIN CONTENT */
+        .content {
+            padding: 40px 40px 20px 40px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .message {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+        
+        /* ORDER SUMMARY BOX */
+        .order-summary {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .summary-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .summary-label {
+            display: table-cell;
+            color: #666;
+            padding: 5px 0;
+            width: 40%;
+        }
+        
+        .summary-value {
+            display: table-cell;
+            color: #333;
+            padding: 5px 0;
+            font-weight: 500;
+        }
+        
+        /* ITEMS TABLE */
+        .items-section {
+            margin: 30px 0;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #373592;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .items-table thead {
+            background-color: #f5f5f5;
+        }
+        
+        .items-table th {
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .items-table td {
+            padding: 15px 10px;
+            font-size: 14px;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .items-table tbody tr:last-child td {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .items-table .item-description {
+            font-weight: 500;
+        }
+        
+        .items-table .align-right {
+            text-align: right;
+        }
+        
+        .items-table .align-center {
+            text-align: center;
+        }
+        
+        /* TOTALS */
+        .totals-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #fafafa;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        
+        .total-label {
+            color: #666;
+        }
+        
+        .total-value {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .total-row.subtotal {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .total-row.grand-total {
+            border-top: 2px solid #373592;
+            padding-top: 15px;
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .total-row.grand-total .total-label {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .total-row.grand-total .total-value {
+            color: #373592;
+            font-size: 20px;
+        }
+        
+        /* PAYMENT INFO */
+        .payment-info {
+            background-color: #f9f9f9;
+            border-left: 3px solid #373592;
+            padding: 15px 20px;
+            margin: 20px 0;
+        }
+        
+        .payment-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .payment-info strong {
+            color: #333;
+        }
+        
+        /* STATUS BADGES */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-overdue {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* NOTES SECTION */
+        .notes-section {
+            background-color: #fffbf0;
+            border: 1px solid #ffe69c;
+            padding: 15px 20px;
+            margin: 20px 0;
+        }
+        
+        .notes-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        
+        .notes-content {
+            font-size: 14px;
+            color: #664d03;
+            line-height: 1.6;
+        }
+        
+        /* DUE DATE WARNING */
+        .due-date-warning {
+            background-color: #fff3cd;
+            border-left: 3px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+        }
+        
+        .due-date-warning p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        
+        .due-date-warning strong {
+            color: #664d03;
+        }
+        
+        /* HELP SECTION */
+        .help-section {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .help-section p {
+            font-size: 14px;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        .help-section a {
+            color: #373592;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        /* FOOTER */
+        .footer {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            padding: 30px 40px;
+            text-align: center;
+            font-size: 13px;
+        }
+        
+        .footer-company {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #ffffff;
+        }
+        
+        .footer-contact {
+            margin: 8px 0;
+            color: #cccccc;
+        }
+        
+        .footer-contact a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+        
+        .footer-contact a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer-legal {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #444;
+            font-size: 11px;
+            color: #999;
+            line-height: 1.6;
+        }
+        
+        /* RESPONSIVE */
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 30px 20px 20px 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .logo {
+                max-width: 150px;
+            }
+            
+            .items-table th,
+            .items-table td {
+                padding: 10px 5px;
+                font-size: 12px;
+            }
+            
+            .summary-row {
+                font-size: 13px;
+            }
+            
+            .totals-section {
+                padding: 15px;
+            }
+            
+            .footer {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="email-container">
+            
+            <!-- HEADER WITH LOGO -->
+            <div class="header">
+                <img src="https://www.zenn.com.py/logozenn.svg" alt="ZENN Electrónicos" class="logo">
+            </div>
+            
+            <!-- MAIN CONTENT -->
+            <div class="content">
+                
+                <!-- GREETING -->
+                <div class="greeting">
+                    Estimado/a {{params.clientName}},
+                </div>
+                
+                <!-- MESSAGE -->
+                <div class="message">
+                    Gracias por su compra. Hemos recibido su pedido correctamente y está siendo procesado. 
+                    A continuación encontrará los detalles de su transacción.
+                </div>
+                
+                <!-- ORDER SUMMARY -->
+                <div class="order-summary">
+                    <div class="summary-title">Información del Pedido</div>
+                    
+                    <div class="summary-row">
+                        <div class="summary-label">Número de Pedido:</div>
+                        <div class="summary-value">{{params.saleNumber}}</div>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <div class="summary-label">Fecha del Pedido:</div>
+                        <div class="summary-value">{{params.saleDate}}</div>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <div class="summary-label">Cliente:</div>
+                        <div class="summary-value">{{params.clientName}}</div>
+                    </div>
+                    
+                    {{#if params.clientCompany}}
+                    <div class="summary-row">
+                        <div class="summary-label">Empresa:</div>
+                        <div class="summary-value">{{params.clientCompany}}</div>
+                    </div>
+                    {{/if}}
+                    
+                    <div class="summary-row">
+                        <div class="summary-label">Email:</div>
+                        <div class="summary-value">{{params.clientEmail}}</div>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <div class="summary-label">Teléfono:</div>
+                        <div class="summary-value">{{params.clientPhone}}</div>
+                    </div>
+                </div>
+                
+                <!-- ITEMS -->
+                <div class="items-section">
+                    <div class="section-title">Detalle de Productos</div>
+                    
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="align-center">Cant.</th>
+                                <th class="align-right">Precio Unit.</th>
+                                <th class="align-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each params.items}}
+                            <tr>
+                                <td class="item-description">{{this.description}}</td>
+                                <td class="align-center">{{this.quantity}}</td>
+                                <td class="align-right">{{this.unitPriceFormatted}}</td>
+                                <td class="align-right">{{this.subtotalFormatted}}</td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- TOTALS -->
+                <div class="totals-section">
+                    <div class="total-row subtotal">
+                        <div class="total-label">Subtotal:</div>
+                        <div class="total-value">{{params.subtotalFormatted}}</div>
+                    </div>
+                    
+                    <div class="total-row">
+                        <div class="total-label">IVA ({{params.taxRate}}%):</div>
+                        <div class="total-value">{{params.taxAmountFormatted}}</div>
+                    </div>
+                    
+                    <div class="total-row grand-total">
+                        <div class="total-label">TOTAL:</div>
+                        <div class="total-value">{{params.totalAmountFormatted}}</div>
+                    </div>
+                </div>
+                
+                <!-- PAYMENT INFO -->
+                <div class="payment-info">
+                    <p><strong>Método de Pago:</strong> {{params.paymentMethod}}</p>
+                    {{#if params.paymentConfirmed}}
+                    <p><strong>Estado del Pago:</strong> <span class="status-badge status-paid">Pagado</span></p>
+                    {{/if}}
+                </div>
+                
+                <!-- NOTES (IF ANY) -->
+                {{#if params.notes}}
+                <div class="notes-section">
+                    <div class="notes-title">Notas Adicionales</div>
+                    <div class="notes-content">{{params.notes}}</div>
+                </div>
+                {{/if}}
+                
+                <!-- DUE DATE WARNING (IF ANY) -->
+                {{#if params.dueDate}}
+                <div class="due-date-warning">
+                    <p><strong>Fecha de Vencimiento:</strong> {{params.dueDate}}</p>
+                    <p>Por favor, asegúrese de realizar el pago antes de la fecha indicada.</p>
+                </div>
+                {{/if}}
+                
+                <!-- HELP SECTION -->
+                <div class="help-section">
+                    <p>¿Tiene alguna pregunta sobre su pedido?</p>
+                    <p><a href="mailto:josiasnicolas02@gmail.com">Contáctenos</a> y con gusto le asistiremos.</p>
+                </div>
+                
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="footer">
+                <div class="footer-company">ZENN Electrónicos</div>
+                
+                <div class="footer-contact">
+                    Email: <a href="mailto:josiasnicolas02@gmail.com">josiasnicolas02@gmail.com</a>
+                </div>
+                
+                <div class="footer-contact">
+                    Web: <a href="https://www.zenn.com.py">www.zenn.com.py</a>
+                </div>
+                
+                <div class="footer-legal">
+                    Este es un correo electrónico automático, por favor no responda directamente a este mensaje.
+                    Si tiene alguna consulta, utilice los canales de contacto proporcionados arriba.
+                    <br><br>
+                    © 2025 ZENN Electrónicos. Todos los derechos reservados.
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>
+
