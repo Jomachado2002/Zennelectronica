@@ -147,15 +147,19 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             
                             // Buscar o crear cliente
                             let client;
-                            if (updatedTransaction.customer_email) {
-                                client = await ClientModel.findOne({ email: updatedTransaction.customer_email });
+                            const customerEmail = updatedTransaction.customer_info?.email;
+                            const customerName = updatedTransaction.customer_info?.name;
+                            const customerPhone = updatedTransaction.customer_info?.phone;
+                            
+                            if (customerEmail) {
+                                client = await ClientModel.findOne({ email: customerEmail });
                                 
                                 if (!client) {
                                     // Crear nuevo cliente
                                     client = new ClientModel({
-                                        name: updatedTransaction.customer_name || 'Cliente Web',
-                                        email: updatedTransaction.customer_email,
-                                        phone: updatedTransaction.customer_phone || '',
+                                        name: customerName || 'Cliente Web',
+                                        email: customerEmail,
+                                        phone: customerPhone || '',
                                         createdBy: updatedTransaction.created_by || 'bancard_payment'
                                     });
                                     await client.save();
@@ -192,9 +196,9 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             const newSale = new SaleModel({
                                 client: client._id,
                                 clientSnapshot: {
-                                    name: updatedTransaction.customer_name || 'Cliente Web',
-                                    email: updatedTransaction.customer_email || '',
-                                    phone: updatedTransaction.customer_phone || ''
+                                    name: customerName || 'Cliente Web',
+                                    email: customerEmail || '',
+                                    phone: customerPhone || ''
                                 },
                                 items: saleItems,
                                 subtotal: subtotal,
@@ -205,7 +209,7 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                                 paymentMethod: 'tarjeta', // Bancard
                                 paymentStatus: 'pagado', // Ya está pagado
                                 saleDate: new Date(),
-                                notes: `Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}. Cliente: ${updatedTransaction.customer_email}`,
+                                notes: `Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}. Cliente: ${customerEmail}`,
                                 createdBy: updatedTransaction.created_by || 'bancard_payment',
                                 isActive: true
                             });
