@@ -115,8 +115,8 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                     let emailSent = false;
 
                     if (isSuccessful) {
-                        // ✅ ACTUALIZAR COMO APROBADA
-                        await BancardTransactionModel.findByIdAndUpdate(transaction._id, {
+                        // ✅ PREPARAR DATOS DE ACTUALIZACIÓN
+                        const updateData = {
                             status: 'approved',
                             response: transactionData.response,
                             response_code: transactionData.response_code,
@@ -130,13 +130,43 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             // ✅ MARCAR COMO VISIBLE EN HISTORIAL DE COMPRAS
                             show_in_user_purchases: true,
                             visible_to_user: true
-                        });
+                        };
+
+                        // ✅ ACTUALIZAR USER_ID SI ERA GUEST PERO TENEMOS UN USUARIO REAL
+                        // Esto puede pasar si el usuario inició sesión después de crear el pago
+                        const currentUserId = transaction.created_by || transaction.user_id;
+                        if (currentUserId && typeof currentUserId === 'string' && currentUserId.startsWith('guest-')) {
+                            // La transacción se creó como invitado, intentar encontrar el usuario real
+                            const customerEmail = transaction.customer_info?.email;
+                            if (customerEmail) {
+                                try {
+                                    const realUser = await UserModel.findOne({ email: customerEmail }).select('_id bancardUserId');
+                                    if (realUser) {
+                                        updateData.created_by = realUser._id;
+                                        updateData.user_bancard_id = realUser.bancardUserId;
+                                        updateData.user_type = 'REGISTERED';
+                                        console.log('✅ Transacción actualizada: usuario guest → usuario real', {
+                                            guest_id: currentUserId,
+                                            real_user_id: realUser._id,
+                                            email: customerEmail
+                                        });
+                                    }
+                                } catch (userLookupError) {
+                                    console.warn('⚠️ No se pudo buscar usuario real:', userLookupError.message);
+                                }
+                            }
+                        }
+
+                        // ✅ ACTUALIZAR TRANSACCIÓN
+                        await BancardTransactionModel.findByIdAndUpdate(transaction._id, updateData);
 
                         console.log('✅ Transacción aprobada y marcada para historial del usuario:', {
                             transaction_id: transaction._id,
-                            user_id: transaction.created_by || transaction.user_id,
+                            user_id: updateData.created_by || transaction.created_by || transaction.user_id,
                             shop_process_id: transaction.shop_process_id,
-                            will_show_in_purchases: true
+                            will_show_in_purchases: true,
+                            was_guest: typeof currentUserId === 'string' && currentUserId.startsWith('guest-'),
+                            now_registered: !!updateData.created_by
                         });
                         
                         shouldSendEmail = true;

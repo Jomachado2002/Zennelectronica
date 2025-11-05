@@ -424,14 +424,42 @@ ${customerData.location.google_maps_url || 'No disponible'}
             } : 'SIN UBICACIÓN'
         });
 
-        const response = await fetch(`${backendUrl}/api/bancard/create-payment`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify(paymentRequest)
-        });
+        // ✅ IMPORTAR authFetch SI EL USUARIO ESTÁ AUTENTICADO
+        let response;
+        try {
+            // Intentar obtener el token para verificar si hay usuario autenticado
+            let hasAuth = false;
+            if (localStorage.getItem('authToken') || document.cookie.includes('token=')) {
+                hasAuth = true;
+            }
+
+            if (hasAuth) {
+                // Usuario autenticado: usar authFetch para incluir token
+                const { authPost } = await import('../helpers/authFetch');
+                response = await authPost(`${backendUrl}/api/bancard/create-payment`, paymentRequest);
+            } else {
+                // Usuario invitado: usar fetch normal
+                response = await fetch(`${backendUrl}/api/bancard/create-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(paymentRequest)
+                });
+            }
+        } catch (importError) {
+            // Fallback si no se puede importar authFetch
+            console.warn('⚠️ No se pudo importar authFetch, usando fetch normal');
+            response = await fetch(`${backendUrl}/api/bancard/create-payment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(paymentRequest)
+            });
+        }
 
         
 
