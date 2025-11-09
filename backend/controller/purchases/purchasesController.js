@@ -545,6 +545,94 @@ async function getPurchasesSummaryController(req, res) {
 }
 
 /**
+ * Actualizar compra completa (PUT)
+ */
+async function updatePurchaseController(req, res) {
+    try {
+        const hasPermission = await uploadProductPermission(req.userId);
+        if (!hasPermission) {
+            throw new Error("Permiso denegado");
+        }
+
+        const { purchaseId } = req.params;
+
+        // Buscar compra existente
+        const purchase = await PurchaseModel.findById(purchaseId);
+        if (!purchase) {
+            throw new Error("Compra no encontrada");
+        }
+
+        // ✅ NO PERMITIR EDICIÓN COMPLETA SI ESTÁ PAGADA
+        if (purchase.paymentStatus === 'pagado') {
+            return res.status(403).json({
+                message: "No se puede editar una compra pagada. Solo se pueden modificar las notas.",
+                error: true,
+                success: false
+            });
+        }
+
+        const {
+            purchaseType,
+            supplierId,
+            supplierInfo,
+            branchId,
+            items,
+            purchaseDate,
+            dueDate,
+            invoiceNumber,
+            invoiceDate,
+            paymentMethod,
+            paymentStatus,
+            notes,
+            subtotal,
+            totalTaxAmount,
+            totalAmount
+        } = req.body;
+
+        // Preparar datos de actualización
+        const updateData = {
+            ...(purchaseType && { purchaseType }),
+            ...(supplierId && { supplierId }),
+            ...(supplierInfo && { supplierInfo }),
+            ...(branchId && { branchId }),
+            ...(items && { items }),
+            ...(purchaseDate && { purchaseDate: new Date(purchaseDate) }),
+            ...(dueDate && { dueDate: new Date(dueDate) }),
+            ...(invoiceNumber && { invoiceNumber }),
+            ...(invoiceDate && { invoiceDate: new Date(invoiceDate) }),
+            ...(paymentMethod && { paymentMethod }),
+            ...(paymentStatus && { paymentStatus }),
+            ...(notes !== undefined && { notes }),
+            ...(subtotal !== undefined && { subtotal }),
+            ...(totalTaxAmount !== undefined && { totalTaxAmount }),
+            ...(totalAmount !== undefined && { totalAmount }),
+            updatedBy: req.userId,
+            updatedAt: new Date()
+        };
+
+        const updatedPurchase = await PurchaseModel.findByIdAndUpdate(
+            purchaseId,
+            updateData,
+            { new: true, runValidators: true }
+        ).populate('supplier', 'name company email phone');
+
+        res.json({
+            message: "Compra actualizada completamente",
+            data: updatedPurchase,
+            success: true,
+            error: false
+        });
+
+    } catch (err) {
+        res.status(400).json({
+            message: err.message || err,
+            error: true,
+            success: false
+        });
+    }
+}
+
+/**
  * Eliminar una compra
  */
 async function deletePurchaseController(req, res) {
@@ -584,9 +672,11 @@ module.exports = {
     getAllPurchasesController,
     getPurchaseByIdController,
     updatePurchasePaymentController,
+    updatePurchaseController,
     uploadPurchaseDocumentsController,
     getPurchasesSummaryController,
-    deletePurchaseController
+    deletePurchaseController,
+    getPurchasesFormDataController
 };
 
 /**

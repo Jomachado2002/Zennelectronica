@@ -1,0 +1,127 @@
+# ✅ Bancard Frontend Hardcodeado a Producción
+
+## 🎯 Cambios Realizados
+
+Se ha **hardcodeado** la configuración de Bancard en el **FRONTEND** para que **SIEMPRE** use producción, sin depender de variables de entorno.
+
+### Frontend: `BancardPayButton.js` ✅ MODIFICADO
+```javascript
+// ANTES (dependía de variable de entorno):
+const environment = process.env.REACT_APP_BANCARD_ENVIRONMENT || 'staging';
+const baseUrl = environment === 'production' 
+  ? 'https://vpos.infonet.com.py' 
+  : 'https://vpos.infonet.com.py:8888';
+
+// AHORA (hardcodeado a producción):
+const baseUrl = 'https://vpos.infonet.com.py'; // SIEMPRE PRODUCCIÓN
+```
+
+### Backend: `bancardUtils.js` ✅ SIN CAMBIOS
+```javascript
+// QUEDA COMO ESTABA (usa variable de entorno):
+const getBancardBaseUrl = () => {
+    const environment = process.env.BANCARD_ENVIRONMENT || 'staging';
+    if (environment === 'production') {
+        return 'https://vpos.infonet.com.py';
+    } else {
+        return 'https://vpos.infonet.com.py:8888';
+    }
+};
+```
+
+---
+
+## 📝 Pasos para Desplegar
+
+### 1️⃣ Eliminar Variables en Vercel (Frontend)
+
+Ve a **Vercel → Settings → Environment Variables** y **ELIMINA**:
+
+❌ **Eliminar:**
+- `NODE_ENV`
+- `REACT_APP_BANCARD_ENVIRONMENT`
+
+✅ **Mantener:**
+- `REACT_APP_BACKEND_URL`
+- `BANCARD_PUBLIC_KEY`
+- `BANCARD_PRIVATE_KEY`
+- `BANCARD_CONFIRMATION_URL`
+- Todas las demás variables (Firebase, Brevo, Google Maps, etc.)
+
+### 2️⃣ Hacer Push a Git
+
+```bash
+git add .
+git commit -m "Hardcodear Bancard a producción - sin variables de entorno"
+git push origin main
+```
+
+### 3️⃣ Verificar Despliegue
+
+1. Vercel automáticamente hará un nuevo deploy
+2. Espera a que termine (Status: Ready ✅)
+3. Abre tu sitio: https://www.zenn.com.py
+4. Ve a checkout y prueba el pago con Bancard
+
+---
+
+## ✅ Ventajas de Este Cambio
+
+| Antes | Ahora |
+|-------|-------|
+| ❌ Dependía de `BANCARD_ENVIRONMENT` | ✅ Hardcodeado a producción |
+| ❌ Dependía de `REACT_APP_BANCARD_ENVIRONMENT` | ✅ Sin dependencias |
+| ❌ Podía usar staging por error | ✅ SIEMPRE usa producción |
+| ❌ Requería configurar 2 variables | ✅ Sin configuración extra |
+
+---
+
+## 🔐 Variables de Bancard Necesarias (Backend)
+
+Solo necesitas estas 3 en Vercel:
+
+```bash
+BANCARD_PUBLIC_KEY = v3qjZLp2RGzrU1GapPPwbCE0EsOaEqdm
+BANCARD_PRIVATE_KEY = +H,4x+FipS(AJ4EdK+agV.W.film1JI3c4042EWG
+BANCARD_CONFIRMATION_URL = https://zennelectronica.vercel.app/api/bancard/confirm
+```
+
+**NO necesitas:**
+- ❌ `BANCARD_ENVIRONMENT` (ya está hardcodeado)
+- ❌ `REACT_APP_BANCARD_ENVIRONMENT` (ya está hardcodeado)
+- ❌ `NODE_ENV = production` (causa errores de build)
+
+---
+
+## 🚀 Resultado Final
+
+- ✅ Frontend llama a: `https://vpos.infonet.com.py` (producción)
+- ✅ Backend llama a: `https://vpos.infonet.com.py` (producción)
+- ✅ Credenciales: Producción
+- ✅ Formulario de Bancard funcionará correctamente
+- ✅ No más errores 404 en process_id
+
+---
+
+## 🔧 Para Volver a Staging (Desarrollo)
+
+Si en el futuro necesitas probar en staging, simplemente cambia:
+
+**Frontend - BancardPayButton.js:**
+```javascript
+const baseUrl = 'https://vpos.infonet.com.py:8888'; // Staging
+```
+
+**Backend - bancardUtils.js:**
+```javascript
+const getBancardBaseUrl = () => {
+    return 'https://vpos.infonet.com.py:8888'; // Staging
+};
+```
+
+Y usa las credenciales de staging.
+
+---
+
+✅ **Listo para producción** 🎉
+

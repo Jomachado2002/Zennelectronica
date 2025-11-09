@@ -177,6 +177,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
         getAllPurchasesController,
         getPurchaseByIdController,
         updatePurchasePaymentController,
+        updatePurchaseController,
         uploadPurchaseDocumentsController,
         getPurchasesSummaryController,
         deletePurchaseController,
@@ -955,7 +956,6 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
     router.get("/channable/feed.xml", channableFeedController);
-    
 
 
     // ===========================================
@@ -1075,6 +1075,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/finanzas/compras", authToken, getAllPurchasesController);
     router.get("/finanzas/compras/:purchaseId", authToken, getPurchaseByIdController);
     router.patch("/finanzas/compras/:purchaseId/pago", authToken, updatePurchasePaymentController);
+    router.put("/finanzas/compras/:purchaseId", authToken, updatePurchaseController); // ✅ NUEVO: Edición completa
     router.post("/finanzas/compras/:purchaseId/documentos", authToken, uploadPurchaseDocumentsController);
     router.get("/finanzas/compras/resumen", authToken, getPurchasesSummaryController);
     router.delete("/finanzas/compras/:purchaseId", authToken, deletePurchaseController);

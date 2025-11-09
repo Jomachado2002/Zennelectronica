@@ -31,7 +31,8 @@ import {
   FaCompress,
   FaSyncAlt,
   FaSort,
-  FaTimes as FaClose
+  FaTimes as FaClose,
+  FaSave
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -67,6 +68,19 @@ const PurchaseManagement = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
   const [selectedPurchases, setSelectedPurchases] = useState([]);
+  
+  // ✅ Estados para edición rápida
+  const [showQuickEditModal, setShowQuickEditModal] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState(null);
+  const [quickEditData, setQuickEditData] = useState({
+    paymentStatus: '',
+    paymentMethod: '',
+    notes: ''
+  });
+
+  // ✅ Estados para edición completa
+  const [showFullEditModal, setShowFullEditModal] = useState(false);
+  const [fullEditData, setFullEditData] = useState(null);
 
   // Estado del formulario de nueva compra CON SOPORTE MULTI-MONEDA Y IVA
   const [newPurchaseData, setNewPurchaseData] = useState({
@@ -404,6 +418,147 @@ const PurchaseManagement = () => {
 
   const calculatePurchaseTotal = () => {
     return newPurchaseData.items.reduce((total, item) => total + calculateItemTotal(item), 0);
+  };
+
+  // ✅ Función para abrir modal de edición COMPLETA
+  const openFullEditModal = (purchase) => {
+    // ✅ VALIDAR: Si está pagado, NO permitir edición completa
+    if (purchase.paymentStatus === 'pagado') {
+      toast.error('❌ No se puede editar una compra pagada. Solo puedes modificar las notas o eliminarla.');
+      return;
+    }
+    
+    // Cargar todos los datos de la compra
+    setFullEditData({
+      ...purchase,
+      purchaseDate: purchase.purchaseDate ? new Date(purchase.purchaseDate).toISOString().split('T')[0] : '',
+      dueDate: purchase.dueDate ? new Date(purchase.dueDate).toISOString().split('T')[0] : '',
+      invoiceDate: purchase.invoiceDate ? new Date(purchase.invoiceDate).toISOString().split('T')[0] : '',
+      items: purchase.items || []
+    });
+    setShowFullEditModal(true);
+  };
+
+  // ✅ Función para abrir modal de edición rápida
+  const openQuickEditModal = (purchase) => {
+    setEditingPurchase(purchase);
+    setQuickEditData({
+      paymentStatus: purchase.paymentStatus || 'pendiente',
+      paymentMethod: purchase.paymentMethod || 'transferencia',
+      notes: purchase.notes || ''
+    });
+    setShowQuickEditModal(true);
+  };
+
+  // ✅ Función para actualizar estado de pago (edición rápida)
+  const handleQuickUpdate = async () => {
+    if (!editingPurchase) return;
+
+    try {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${editingPurchase._id}/pago`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(quickEditData)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Compra actualizada correctamente");
+        setShowQuickEditModal(false);
+        fetchPurchases(); // Recargar lista
+      } else {
+        toast.error(result.message || "Error al actualizar");
+      }
+    } catch (error) {
+      toast.error("Error de conexión");
+    }
+  };
+
+  // ✅ Función para actualizar compra completa
+  const handleFullUpdate = async () => {
+    if (!fullEditData) return;
+
+    try {
+      // Calcular totales
+      const subtotal = fullEditData.items.reduce((sum, item) => 
+        sum + (item.quantity * item.unitPrice), 0
+      );
+      const totalTaxAmount = fullEditData.items.reduce((sum, item) => 
+        sum + (item.taxAmount || 0), 0
+      );
+      const totalAmount = subtotal + totalTaxAmount;
+
+      const updatePayload = {
+        purchaseType: fullEditData.purchaseType,
+        supplierId: fullEditData.supplierId,
+        supplierInfo: fullEditData.supplierInfo,
+        branchId: fullEditData.branchId,
+        items: fullEditData.items,
+        purchaseDate: fullEditData.purchaseDate,
+        dueDate: fullEditData.dueDate,
+        invoiceNumber: fullEditData.invoiceNumber,
+        invoiceDate: fullEditData.invoiceDate,
+        paymentMethod: fullEditData.paymentMethod,
+        paymentStatus: fullEditData.paymentStatus,
+        notes: fullEditData.notes,
+        subtotal: subtotal,
+        totalTaxAmount: totalTaxAmount,
+        totalAmount: totalAmount
+      };
+
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${fullEditData._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(updatePayload)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("✅ Compra actualizada completamente");
+        setShowFullEditModal(false);
+        setFullEditData(null);
+        fetchPurchases(); // Recargar lista
+      } else {
+        toast.error(result.message || "Error al actualizar la compra");
+      }
+    } catch (error) {
+      toast.error("Error de conexión");
+    }
+  };
+
+  // ✅ Función para eliminar compra
+  const handleDeletePurchase = async (purchaseId, purchaseInfo) => {
+    // Confirmar eliminación
+    const confirmMessage = purchaseInfo 
+      ? `¿Estás seguro de eliminar la compra ${purchaseInfo}?` 
+      : '¿Estás seguro de eliminar esta compra?';
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${purchaseId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Compra eliminada correctamente");
+        fetchPurchases(); // Recargar lista
+      } else {
+        toast.error(result.message || "Error al eliminar la compra");
+      }
+    } catch (error) {
+      toast.error("Error de conexión");
+    }
   };
 
   const handleSubmitPurchase = async (e) => {
@@ -1016,14 +1171,23 @@ const PurchaseManagement = () => {
                           </a>
                         )}
                         <button
-                          className="text-green-600 hover:text-green-900"
-                          title="Editar"
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Editar Completo"
+                          onClick={() => openFullEditModal(purchase)}
                         >
                           <FaEdit className="w-4 h-4" />
                         </button>
                         <button
+                          className="text-green-600 hover:text-green-900"
+                          title="Edición Rápida"
+                          onClick={() => openQuickEditModal(purchase)}
+                        >
+                          <FaCheck className="w-4 h-4" />
+                        </button>
+                        <button
                           className="text-red-600 hover:text-red-900"
                           title="Eliminar"
+                          onClick={() => handleDeletePurchase(purchase._id, purchase.invoiceNumber)}
                         >
                           <FaTrash className="w-4 h-4" />
                         </button>
@@ -1528,6 +1692,386 @@ const PurchaseManagement = () => {
                 </button>
               </div>
             </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ✅ MODAL DE EDICIÓN COMPLETA */}
+      {showFullEditModal && fullEditData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
+            <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+              <h2 className="font-bold text-xl text-white">
+                Editar Compra Completa - {fullEditData.invoiceNumber || 'Sin factura'}
+              </h2>
+              <button 
+                className="text-white text-3xl hover:text-gray-200" 
+                onClick={() => setShowFullEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-6">
+                {/* Información Básica */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-4">Información Básica</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Número de Factura *
+                      </label>
+                      <input
+                        type="text"
+                        value={fullEditData.invoiceNumber || ''}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="001-001-0001234"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de Compra *
+                      </label>
+                      <input
+                        type="date"
+                        value={fullEditData.purchaseDate || ''}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de Vencimiento
+                      </label>
+                      <input
+                        type="date"
+                        value={fullEditData.dueDate || ''}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, dueDate: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha de Factura
+                      </label>
+                      <input
+                        type="date"
+                        value={fullEditData.invoiceDate || ''}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Estado de Pago
+                      </label>
+                      <select
+                        value={fullEditData.paymentStatus || 'pendiente'}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, paymentStatus: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="pendiente">Pendiente</option>
+                        <option value="pagado">Pagado</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="vencido">Vencido</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Método de Pago
+                      </label>
+                      <select
+                        value={fullEditData.paymentMethod || 'transferencia'}
+                        onChange={(e) => setFullEditData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="transferencia">Transferencia</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="tarjeta">Tarjeta</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items de la Compra */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-4">Items de la Compra</h3>
+                  <div className="space-y-3">
+                    {fullEditData.items && fullEditData.items.map((item, index) => (
+                      <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Descripción
+                            </label>
+                            <input
+                              type="text"
+                              value={item.description || ''}
+                              onChange={(e) => {
+                                const newItems = [...fullEditData.items];
+                                newItems[index] = { ...newItems[index], description: e.target.value };
+                                setFullEditData(prev => ({ ...prev, items: newItems }));
+                              }}
+                              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                              placeholder="Descripción del producto"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Cantidad
+                            </label>
+                            <input
+                              type="number"
+                              value={item.quantity || 0}
+                              onChange={(e) => {
+                                const newItems = [...fullEditData.items];
+                                newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
+                                setFullEditData(prev => ({ ...prev, items: newItems }));
+                              }}
+                              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                              min="1"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Precio Unitario
+                            </label>
+                            <input
+                              type="number"
+                              value={item.unitPrice || 0}
+                              onChange={(e) => {
+                                const newItems = [...fullEditData.items];
+                                newItems[index] = { ...newItems[index], unitPrice: parseFloat(e.target.value) || 0 };
+                                setFullEditData(prev => ({ ...prev, items: newItems }));
+                              }}
+                              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex justify-between items-center">
+                          <span className="text-sm text-gray-600">
+                            Subtotal: <span className="font-semibold">{displayPYGCurrency((item.quantity || 0) * (item.unitPrice || 0))}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newItems = fullEditData.items.filter((_, i) => i !== index);
+                              setFullEditData(prev => ({ ...prev, items: newItems }));
+                            }}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            <FaTrash className="inline mr-1" /> Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFullEditData(prev => ({
+                          ...prev,
+                          items: [
+                            ...prev.items,
+                            { description: '', category: 'producto', quantity: 1, unitPrice: 0, taxAmount: 0 }
+                          ]
+                        }));
+                      }}
+                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                    >
+                      <FaPlus className="inline mr-2" /> Agregar Item
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notas */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notas
+                  </label>
+                  <textarea
+                    value={fullEditData.notes || ''}
+                    onChange={(e) => setFullEditData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    rows="3"
+                    placeholder="Notas adicionales sobre la compra..."
+                  />
+                </div>
+
+                {/* Totales */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-900 mb-3">Resumen de Totales</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-700">Subtotal:</span>
+                      <span className="font-medium">
+                        {displayPYGCurrency(fullEditData.items?.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-700">IVA:</span>
+                      <span className="font-medium">
+                        {displayPYGCurrency(fullEditData.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-base border-t pt-2 border-blue-200">
+                      <span className="font-semibold text-gray-900">Total:</span>
+                      <span className="font-bold text-blue-900">
+                        {displayPYGCurrency(
+                          (fullEditData.items?.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0) +
+                          (fullEditData.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0)
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <button
+                type="button"
+                onClick={() => setShowFullEditModal(false)}
+                className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleFullUpdate}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              >
+                <FaSave className="mr-2" /> Guardar Cambios Completos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ MODAL DE EDICIÓN RÁPIDA */}
+      {showQuickEditModal && editingPurchase && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="font-bold text-lg text-gray-800">
+                Editar Compra - {editingPurchase.invoiceNumber || 'Sin factura'}
+              </h2>
+              <button 
+                className="text-2xl text-gray-600 hover:text-black" 
+                onClick={() => setShowQuickEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* ✅ ADVERTENCIA SI ESTÁ PAGADO */}
+              {editingPurchase.paymentStatus === 'pagado' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start">
+                  <div className="text-yellow-600 mr-2 text-lg">⚠️</div>
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Compra Pagada</p>
+                    <p className="text-xs text-yellow-700 mt-1">
+                      Esta compra ya está pagada. Solo puedes modificar las notas o eliminarla.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Estado de Pago */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado de Pago
+                </label>
+                <select
+                  value={quickEditData.paymentStatus}
+                  onChange={(e) => setQuickEditData(prev => ({ ...prev, paymentStatus: e.target.value }))}
+                  disabled={editingPurchase.paymentStatus === 'pagado'}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    editingPurchase.paymentStatus === 'pagado' 
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <option value="pendiente">Pendiente</option>
+                  <option value="pagado">Pagado</option>
+                  <option value="parcial">Parcial</option>
+                  <option value="vencido">Vencido</option>
+                </select>
+                {editingPurchase.paymentStatus === 'pagado' && (
+                  <p className="text-xs text-gray-500 mt-1">🔒 No se puede cambiar el estado de una compra pagada</p>
+                )}
+              </div>
+
+              {/* Método de Pago */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Método de Pago
+                </label>
+                <select
+                  value={quickEditData.paymentMethod}
+                  onChange={(e) => setQuickEditData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  disabled={editingPurchase.paymentStatus === 'pagado'}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    editingPurchase.paymentStatus === 'pagado' 
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="credito">Crédito</option>
+                </select>
+                {editingPurchase.paymentStatus === 'pagado' && (
+                  <p className="text-xs text-gray-500 mt-1">🔒 No se puede cambiar el método de pago de una compra pagada</p>
+                )}
+              </div>
+
+              {/* Notas */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas {editingPurchase.paymentStatus === 'pagado' ? '(único campo editable)' : '(opcional)'}
+                </label>
+                <textarea
+                  value={quickEditData.notes}
+                  onChange={(e) => setQuickEditData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows="3"
+                  placeholder="Agregar notas adicionales..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowQuickEditModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleQuickUpdate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Guardar Cambios
+              </button>
             </div>
           </div>
         </div>

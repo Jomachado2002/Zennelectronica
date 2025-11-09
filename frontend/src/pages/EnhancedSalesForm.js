@@ -39,6 +39,10 @@ const EnhancedSalesForm = () => {
     customPaymentTerms: '',
     internalNotes: '',
     customerNotes: '',
+    saleDate: new Date().toISOString().split('T')[0], // Fecha de venta
+    dueDate: '', // Fecha de vencimiento
+    invoiceNumber: '', // Número de factura
+    invoiceDate: new Date().toISOString().split('T')[0], // Fecha de factura
     items: [],
     attachments: []
   });
@@ -550,8 +554,21 @@ const EnhancedSalesForm = () => {
       // Crear los datos a enviar con solo los items válidos
       const saleData = {
         ...formData,
-        items: validItems
+        items: validItems,
+        // ✅ ASEGURAR QUE LAS FECHAS SE ENVÍEN EXPLÍCITAMENTE
+        saleDate: formData.saleDate,
+        dueDate: formData.dueDate || null,
+        invoiceNumber: formData.invoiceNumber,
+        invoiceDate: formData.invoiceDate
       };
+
+      // 🔍 DEBUG: Ver qué se está enviando
+      console.log('📤 Datos de venta enviados:', {
+        saleDate: saleData.saleDate,
+        dueDate: saleData.dueDate,
+        invoiceNumber: saleData.invoiceNumber,
+        invoiceDate: saleData.invoiceDate
+      });
 
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas-mejoradas`, {
         method: 'POST',
@@ -579,7 +596,12 @@ const EnhancedSalesForm = () => {
           customPaymentTerms: '',
           internalNotes: '',
           customerNotes: '',
-          items: []
+          saleDate: new Date().toISOString().split('T')[0], // ✅ Resetear fecha de venta
+          dueDate: '', // ✅ Resetear fecha de vencimiento
+          invoiceNumber: '', // ✅ Resetear número de factura
+          invoiceDate: new Date().toISOString().split('T')[0], // ✅ Resetear fecha de factura
+          items: [],
+          attachments: []
         });
         setCustomerSearch('');
         setCalculations({
@@ -697,6 +719,53 @@ const EnhancedSalesForm = () => {
                   <option value="PYG">Guaraní (₲)</option>
                   <option value="USD">Dólar ($)</option>
                 </select>
+              </div>
+            </div>
+            
+            {/* Nueva fila de fechas y factura */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Número de Factura *</label>
+                <input
+                  type="text"
+                  value={formData.invoiceNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="001-001-0001234"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de Venta *</label>
+                <input
+                  type="date"
+                  value={formData.saleDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, saleDate: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de Factura</label>
+                <input
+                  type="date"
+                  value={formData.invoiceDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de Vencimiento</label>
+                <input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  min={formData.saleDate}
+                />
               </div>
             </div>
             

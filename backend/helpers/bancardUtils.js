@@ -101,16 +101,12 @@ const verifyConfirmationToken = (receivedToken, shopProcessId, amount, currency 
 
 /**
  * Obtiene la URL base según el ambiente
+ * ✅ HARDCODEADO A PRODUCCIÓN
  * @returns {string} URL base de Bancard
  */
 const getBancardBaseUrl = () => {
-    const environment = process.env.BANCARD_ENVIRONMENT || 'staging';
-    
-    if (environment === 'production') {
-        return 'https://vpos.infonet.com.py';
-    } else {
-        return 'https://vpos.infonet.com.py:8888';
-    }
+    // ✅ SIEMPRE USAR PRODUCCIÓN - NO DEPENDE DE VARIABLES DE ENTORNO
+    return 'https://vpos.infonet.com.py';
 };
 
 /**

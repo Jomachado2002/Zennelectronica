@@ -215,8 +215,19 @@ const saleSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    invoiceNumber: {
+        type: String,
+        trim: true
+    },
+    invoiceDate: {
+        type: Date
+    },
     invoiceFile: {
         type: String
+    },
+    bancardTransactionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BancardTransaction'
     },
     notes: String,
     createdBy: {

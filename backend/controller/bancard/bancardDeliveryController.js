@@ -1,8 +1,11 @@
-// backend/controller/bancard/bancardDeliveryController.js - CON EMAILS AUTOMÁTICOS
+// backend/controller/bancard/bancardDeliveryController.js - CON EMAILS AUTOMÁTICOS Y CREACIÓN DE VENTAS
 
 const BancardTransactionModel = require('../../models/bancardTransactionModel');
+const SaleModel = require('../../models/saleModel');
+const ClientModel = require('../../models/clientModel');
 const uploadProductPermission = require('../../helpers/permission');
-const emailService = require('../../services/emailService'); // ✅ IMPORTAR EMAIL SERVICE
+const emailService = require('../../services/emailService');
+const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 
 /**
  * ✅ ACTUALIZAR ESTADO DE DELIVERY CON EMAILS AUTOMÁTICOS
@@ -111,6 +114,126 @@ const updateDeliveryStatusController = async (req, res) => {
             new_status: updatedTransaction.delivery_status
         });
 
+        // ✅ CREAR VENTA AUTOMÁTICAMENTE SI SE MARCA COMO DELIVERED
+        let saleCreated = null;
+        if (delivery_status === 'delivered' && previousDeliveryStatus !== 'delivered') {
+            try {
+                console.log('🛍️ Creando venta automáticamente para pedido entregado...');
+                
+                // Buscar o crear cliente
+                let client;
+                const customerEmail = updatedTransaction.customer_info?.email;
+                const customerName = updatedTransaction.customer_info?.name;
+                const customerPhone = updatedTransaction.customer_info?.phone;
+                
+                if (customerEmail) {
+                    client = await ClientModel.findOne({ email: customerEmail });
+                    
+                    if (!client) {
+                        // Crear nuevo cliente
+                        client = new ClientModel({
+                            name: customerName || 'Cliente Web',
+                            email: customerEmail,
+                            phone: customerPhone || '',
+                            createdBy: updatedTransaction.created_by || 'bancard_payment'
+                        });
+                        await client.save();
+                        console.log('✅ Cliente creado automáticamente:', client._id);
+                    }
+                } else {
+                    console.log('⚠️ No se puede crear venta: transacción sin email de cliente');
+                    throw new Error('Cliente sin email - venta no creada');
+                }
+
+                // Preparar items para la venta
+                const saleItems = updatedTransaction.items.map(item => ({
+                    description: item.description || item.name,
+                    quantity: item.quantity || 1,
+                    unitPrice: item.unit_price || 0,
+                    currency: 'PYG',
+                    exchangeRate: 1,
+                    unitPricePYG: item.unit_price || 0,
+                    taxType: 'iva_10',
+                    taxRate: 10,
+                    subtotal: (item.quantity || 1) * (item.unit_price || 0),
+                    subtotalWithTax: (item.quantity || 1) * (item.unit_price || 0) * 1.1
+                }));
+
+                // Calcular totales
+                const subtotal = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
+                const taxAmount = subtotal * 0.10; // IVA 10%
+                const totalAmount = subtotal + taxAmount;
+
+                // Crear la venta
+                const newSale = new SaleModel({
+                    client: client._id,
+                    clientSnapshot: {
+                        name: customerName || 'Cliente Web',
+                        email: customerEmail || '',
+                        phone: customerPhone || ''
+                    },
+                    items: saleItems,
+                    subtotal: subtotal,
+                    tax: 10,
+                    taxAmount: taxAmount,
+                    totalAmount: totalAmount,
+                    totalAmountPYG: totalAmount,
+                    paymentMethod: 'tarjeta', // Bancard
+                    paymentStatus: 'pagado', // Ya está pagado
+                    saleDate: updatedTransaction.actual_delivery_date || new Date(),
+                    notes: `Venta creada automáticamente al marcar como entregado. Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}. Cliente: ${customerEmail}`,
+                    createdBy: req.userId, // Usuario admin que marcó como entregado
+                    isActive: true,
+                    bancardTransactionId: updatedTransaction._id // Referencia a la transacción
+                });
+
+                const savedSale = await newSale.save();
+                console.log('✅ Venta creada automáticamente al entregar:', savedSale._id, savedSale.saleNumber);
+
+                // Actualizar transacción con la venta creada
+                updatedTransaction.sale_id = savedSale._id;
+                await updatedTransaction.save();
+
+                // Actualizar cliente con la venta
+                if (client) {
+                    await ClientModel.findByIdAndUpdate(
+                        client._id,
+                        { $push: { sales: savedSale._id } }
+                    );
+                }
+
+                // ✅ ENVIAR EMAIL DE CONFIRMACIÓN CON BREVO
+                if (client && client.email) {
+                    sendPurchaseConfirmationEmail(savedSale, client)
+                        .then(result => {
+                            if (result.success) {
+                                console.log('✅ Email Brevo de venta enviado:', result.messageId);
+                            } else {
+                                console.warn('⚠️ No se pudo enviar email Brevo:', result.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('❌ Error al enviar email Brevo:', error);
+                        });
+                }
+
+                saleCreated = {
+                    _id: savedSale._id,
+                    saleNumber: savedSale.saleNumber,
+                    totalAmount: savedSale.totalAmount
+                };
+
+            } catch (saleError) {
+                console.error('❌ Error al crear venta automática:', saleError);
+                // No bloqueamos el flujo de actualización de delivery si falla la creación de venta
+                // pero lo registramos para que el admin pueda crear la venta manualmente
+                saleCreated = {
+                    error: true,
+                    message: saleError.message
+                };
+            }
+        }
+
         // ✅ ENVIAR EMAILS AUTOMÁTICAMENTE
         let emailResults = {
             customer_email: null,
@@ -191,7 +314,8 @@ const updateDeliveryStatusController = async (req, res) => {
                 tracking_number: updatedTransaction.tracking_number,
                 courier_company: updatedTransaction.courier_company,
                 delivery_timeline: updatedTransaction.delivery_timeline,
-                delivery_progress: updatedTransaction.getDeliveryProgress()
+                delivery_progress: updatedTransaction.getDeliveryProgress(),
+                sale_id: updatedTransaction.sale_id // Incluir ID de venta si se creó
             },
             previous_status: previousDeliveryStatus,
             status_changed: previousDeliveryStatus !== delivery_status,
@@ -200,11 +324,16 @@ const updateDeliveryStatusController = async (req, res) => {
                 name: updatedTransaction.delivery_updated_by?.name
             },
             email_notifications: emailResults,
-            notifications_sent_count: updatedTransaction.notifications_sent.length
+            notifications_sent_count: updatedTransaction.notifications_sent.length,
+            sale_created: saleCreated // Información sobre la venta creada
         };
 
+        const successMessage = saleCreated && !saleCreated.error 
+            ? `Estado de delivery actualizado a: ${delivery_status}. Venta #${saleCreated.saleNumber} creada automáticamente.${emailResults.customer_email?.success ? ' Email enviado.' : ''}`
+            : `Estado de delivery actualizado a: ${delivery_status}${emailResults.customer_email?.success ? ' (Email enviado)' : ''}`;
+
         res.json({
-            message: `Estado de delivery actualizado a: ${delivery_status}${emailResults.customer_email?.success ? ' (Email enviado)' : ''}`,
+            message: successMessage,
             success: true,
             error: false,
             data: responseData

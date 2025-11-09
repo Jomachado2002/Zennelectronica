@@ -81,8 +81,22 @@ async function createEnhancedSaleController(req, res) {
             customPaymentTerms,
             internalNotes,
             customerNotes,
-            attachments = []
+            attachments = [],
+            saleDate,      // ✅ NUEVO: Fecha de venta
+            dueDate,       // ✅ NUEVO: Fecha de vencimiento
+            invoiceNumber, // ✅ NUEVO: Número de factura
+            invoiceDate    // ✅ NUEVO: Fecha de factura
         } = req.body;
+
+        // 🔍 DEBUG: Ver qué fechas llegan del frontend
+        console.log('📥 Fechas recibidas en backend:', {
+            saleDate,
+            dueDate,
+            invoiceNumber,
+            invoiceDate,
+            saleDate_type: typeof saleDate,
+            dueDate_type: typeof dueDate
+        });
 
         // Validations
         if (!saleTypeId || !clientId || !branchId || !salespersonId || !items || items.length === 0) {
@@ -209,9 +223,23 @@ async function createEnhancedSaleController(req, res) {
         const totalAmountPYG = totalAmount;
         const totalAmountUSD = currency === 'USD' ? totalAmount : totalAmount / currentExchangeRate;
 
-        // Calculate due date
-        const saleDate = new Date();
-        const dueDate = calculateDueDate(saleDate, paymentTerms, customPaymentTerms);
+        // ✅ USAR FECHAS DEL FORMULARIO O VALORES POR DEFECTO
+        const finalSaleDate = saleDate ? new Date(saleDate) : new Date();
+        const finalInvoiceDate = invoiceDate ? new Date(invoiceDate) : finalSaleDate;
+        
+        // Calculate due date: usar la del formulario si existe, sino calcular
+        const finalDueDate = dueDate 
+            ? new Date(dueDate) 
+            : calculateDueDate(finalSaleDate, paymentTerms, customPaymentTerms);
+
+        // 🔍 DEBUG: Ver fechas finales que se guardarán
+        console.log('💾 Fechas finales a guardar:', {
+            finalSaleDate,
+            finalInvoiceDate,
+            finalDueDate,
+            originalSaleDate: saleDate,
+            originalDueDate: dueDate
+        });
 
         // Generate amount in words
         const amountInWords = numberToWords(totalAmountPYG, 'PYG');
@@ -257,7 +285,10 @@ async function createEnhancedSaleController(req, res) {
             paymentMethod,
             paymentTerms,
             customPaymentTerms,
-            dueDate,
+            saleDate: finalSaleDate,        // ✅ USAR FECHA DEL FORMULARIO
+            dueDate: finalDueDate,          // ✅ USAR FECHA DEL FORMULARIO
+            invoiceNumber,                  // ✅ NUEVO: Número de factura
+            invoiceDate: finalInvoiceDate,  // ✅ NUEVO: Fecha de factura
             amountInWords,
             internalNotes,
             customerNotes,

@@ -8,6 +8,7 @@ import {
   FaBars, 
   FaTimes, 
   FaUsers, 
+  FaUser,
   FaBoxOpen, 
   FaChartPie, 
   FaUserFriends, 
@@ -127,6 +128,13 @@ const AdminPanel = () => {
           icon: <FaFileInvoiceDollar className="w-5 h-5" />,
           description: "Registrar nueva venta",
           color: "text-emerald-600 bg-emerald-50"
+        },
+        {
+          path: "clientes",
+          label: "Clientes",
+          icon: <FaUser className="w-5 h-5" />,
+          description: "Gestión de clientes",
+          color: "text-blue-600 bg-blue-50"
         },
         {
           path: "compras",
