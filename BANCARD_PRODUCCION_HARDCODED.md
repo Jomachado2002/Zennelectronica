@@ -35,18 +35,21 @@ const getBancardBaseUrl = () => {
 
 ### 1️⃣ Eliminar Variables en Vercel (Frontend)
 
-Ve a **Vercel → Settings → Environment Variables** y **ELIMINA**:
+Ve a **Vercel → Settings → Environment Variables** y **ELIMINA** estas 2:
 
 ❌ **Eliminar:**
-- `NODE_ENV`
-- `REACT_APP_BANCARD_ENVIRONMENT`
+- `NODE_ENV` (causa errores de build)
+- `REACT_APP_BANCARD_ENVIRONMENT` (ya no se necesita, está hardcodeado)
 
-✅ **Mantener:**
-- `REACT_APP_BACKEND_URL`
-- `BANCARD_PUBLIC_KEY`
-- `BANCARD_PRIVATE_KEY`
-- `BANCARD_CONFIRMATION_URL`
-- Todas las demás variables (Firebase, Brevo, Google Maps, etc.)
+✅ **Mantener en Backend:**
+- `BANCARD_PUBLIC_KEY` ✅
+- `BANCARD_PRIVATE_KEY` ✅
+- `BANCARD_ENVIRONMENT = production` ✅
+- `BANCARD_CONFIRMATION_URL` ✅
+
+✅ **Mantener en Frontend:**
+- `REACT_APP_BACKEND_URL` ✅
+- Todas las demás variables (Firebase, Brevo, Google Maps, etc.) ✅
 
 ### 2️⃣ Hacer Push a Git
 
@@ -76,20 +79,21 @@ git push origin main
 
 ---
 
-## 🔐 Variables de Bancard Necesarias (Backend)
+## 🔐 Variables de Bancard Necesarias
 
-Solo necesitas estas 3 en Vercel:
+### ✅ Backend (Vercel - All Environments):
 
 ```bash
 BANCARD_PUBLIC_KEY = v3qjZLp2RGzrU1GapPPwbCE0EsOaEqdm
 BANCARD_PRIVATE_KEY = +H,4x+FipS(AJ4EdK+agV.W.film1JI3c4042EWG
+BANCARD_ENVIRONMENT = production
 BANCARD_CONFIRMATION_URL = https://zennelectronica.vercel.app/api/bancard/confirm
 ```
 
-**NO necesitas:**
-- ❌ `BANCARD_ENVIRONMENT` (ya está hardcodeado)
-- ❌ `REACT_APP_BANCARD_ENVIRONMENT` (ya está hardcodeado)
-- ❌ `NODE_ENV = production` (causa errores de build)
+### ❌ Frontend (NO necesitas):
+
+- ❌ `REACT_APP_BANCARD_ENVIRONMENT` (ya está hardcodeado en el código)
+- ❌ `NODE_ENV = production` (causa errores de build con warnings de ESLint)
 
 ---
 
@@ -105,21 +109,19 @@ BANCARD_CONFIRMATION_URL = https://zennelectronica.vercel.app/api/bancard/confir
 
 ## 🔧 Para Volver a Staging (Desarrollo)
 
-Si en el futuro necesitas probar en staging, simplemente cambia:
+Si en el futuro necesitas probar en staging, cambia:
 
-**Frontend - BancardPayButton.js:**
+**Frontend - BancardPayButton.js línea 140:**
 ```javascript
 const baseUrl = 'https://vpos.infonet.com.py:8888'; // Staging
 ```
 
-**Backend - bancardUtils.js:**
-```javascript
-const getBancardBaseUrl = () => {
-    return 'https://vpos.infonet.com.py:8888'; // Staging
-};
+**Backend - Variable de entorno en Vercel:**
+```bash
+BANCARD_ENVIRONMENT = staging
 ```
 
-Y usa las credenciales de staging.
+Y usa las credenciales de staging de Bancard.
 
 ---
 
