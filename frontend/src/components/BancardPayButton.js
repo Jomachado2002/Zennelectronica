@@ -136,10 +136,12 @@ const BancardPayButton = ({
       console.log('🗑️ Script anterior removido');
     }
 
-    // ✅ HARDCODEADO A PRODUCCIÓN - NO DEPENDE DE VARIABLES DE ENTORNO
-    const baseUrl = 'https://vpos.infonet.com.py'; // SIEMPRE PRODUCCIÓN
+    const environment = process.env.REACT_APP_BANCARD_ENVIRONMENT || 'staging';
+    const baseUrl = environment === 'production' 
+      ? 'https://vpos.infonet.com.py' 
+      : 'https://vpos.infonet.com.py:8888';
 
-    console.log('🌐 URL de Bancard (PRODUCCIÓN FORZADA):', baseUrl);
+    console.log('🌐 URL de Bancard:', baseUrl);
 
     const script = document.createElement('script');
     script.id = 'bancard-script';
