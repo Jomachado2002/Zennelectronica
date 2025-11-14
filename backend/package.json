@@ -44,7 +44,7 @@
     "nodemailer": "^6.10.1",
     "nodemon": "^3.1.9",
     "pdfkit": "^0.17.1",
-    "puppeteer": "^24.26.1",
+    "puppeteer": "^24.30.0",
     "qs": "6.11.0",
     "sharp": "^0.33.5",
     "sib-api-v3-sdk": "^8.5.0",

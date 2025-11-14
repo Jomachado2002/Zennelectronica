@@ -79,6 +79,9 @@ import ExportProductsPage from "../pages/admin/ExportProductsPage"
 // Importar página de catálogo PDF
 import AdminCatalogoPDF from "../pages/admin/AdminCatalogoPDF"
 
+// Importar página de editor de imágenes
+import ImageEditorPage from "../pages/ImageEditorPage"
+
 const router = createBrowserRouter([
     {
         path: "/",
@@ -180,6 +183,12 @@ const router = createBrowserRouter([
             {
                 path: "api/bancard/confirm-payment",
                 element: <BancardConfirmProxy />
+            },
+            
+            // Editor de Imágenes - Página completa (fuera del layout del admin)
+            {
+                path: "panel-admin/editar-imagenes",
+                element: <ImageEditorPage />
             },
             
             // Panel de admin separado

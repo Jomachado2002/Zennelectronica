@@ -29,7 +29,8 @@ import {
   FaSyncAlt,
   FaUserCog,
   FaDownload,
-  FaFilePdf
+  FaFilePdf,
+  FaImage
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -152,7 +153,8 @@ const AdminPanel = () => {
         { path: "categorias", label: "Categorías", icon: <FaFolder className="w-5 h-5" />, description: "Gestionar categorías", color: "text-indigo-600 bg-indigo-50" },
         { path: "sincronizacion-inventario", label: "Sincronización Inventario", icon: <FaSyncAlt className="w-5 h-5" />, description: "Sincronizar inventario", color: "text-green-600 bg-green-50" },
         { path: "exportar-productos", label: "Exportar Productos", icon: <FaDownload className="w-5 h-5" />, description: "Exportar productos", color: "text-purple-600 bg-purple-50" },
-        { path: "catalogo-pdf", label: "Catálogo PDF", icon: <FaFilePdf className="w-5 h-5" />, description: "Generar catálogo PDF", color: "text-red-600 bg-red-50" }
+        { path: "catalogo-pdf", label: "Catálogo PDF", icon: <FaFilePdf className="w-5 h-5" />, description: "Generar catálogo PDF", color: "text-red-600 bg-red-50" },
+        { path: "editar-imagenes", label: "Editor de Imágenes", icon: <FaImage className="w-5 h-5" />, description: "Editar imágenes de productos", color: "text-pink-600 bg-pink-50" }
       ]
     },
     {

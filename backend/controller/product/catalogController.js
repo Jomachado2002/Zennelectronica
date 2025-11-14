@@ -250,38 +250,72 @@ const generateCatalogPDF = async (req, res) => {
         '--disable-extensions',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--single-process'
+        '--disable-renderer-backgrounding'
       ]
     };
 
     // En producción (Vercel), usar Chrome del sistema
     if (process.env.NODE_ENV === 'production') {
       launchOptions.executablePath = '/usr/bin/google-chrome-stable';
+    } else {
+      // En desarrollo, Puppeteer debería encontrar Chrome automáticamente
+      // Pero si no lo encuentra, intentar usar el Chrome instalado por Puppeteer
+      try {
+        const executablePath = puppeteer.executablePath();
+        if (executablePath) {
+          console.log('✅ Chrome encontrado en:', executablePath);
+        }
+      } catch (err) {
+        console.warn('⚠️ No se pudo encontrar el ejecutable de Chrome, Puppeteer intentará encontrarlo automáticamente');
+      }
     }
 
+    console.log('Lanzando Puppeteer con opciones:', JSON.stringify(launchOptions, null, 2));
     browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     
+    // Configurar timeouts más largos para desarrollo
+    page.setDefaultTimeout(120000); // 2 minutos
+    page.setDefaultNavigationTimeout(120000);
+    
     // Configurar el contenido HTML
     console.log('Configurando contenido HTML...');
-    await page.setContent(htmlContent, {
-      waitUntil: ['networkidle0', 'domcontentloaded'],
-      timeout: 60000
-    });
+    try {
+      await page.setContent(htmlContent, {
+        waitUntil: 'domcontentloaded', // Cambiar a domcontentloaded primero
+        timeout: 120000
+      });
+      console.log('✅ HTML configurado');
+    } catch (contentError) {
+      console.error('Error configurando contenido HTML:', contentError);
+      throw contentError;
+    }
     
-    // Esperar a que las imágenes se carguen
+    // Esperar a que las imágenes se carguen con timeout
     console.log('Esperando a que carguen las imágenes...');
-    await page.evaluate(() => {
-      return Promise.all(
-        Array.from(document.images)
-          .filter(img => !img.complete)
-          .map(img => new Promise(resolve => {
-            img.onload = img.onerror = resolve;
-          }))
-      );
-    });
+    try {
+      await Promise.race([
+        page.evaluate(() => {
+          return Promise.all(
+            Array.from(document.images)
+              .filter(img => !img.complete)
+              .map(img => new Promise(resolve => {
+                const timeout = setTimeout(() => resolve(), 5000); // Timeout de 5s por imagen
+                img.onload = img.onerror = () => {
+                  clearTimeout(timeout);
+                  resolve();
+                };
+              }))
+          );
+        }),
+        new Promise((resolve) => setTimeout(resolve, 30000)) // Timeout máximo de 30s para todas las imágenes
+      ]);
+      console.log('✅ Imágenes procesadas');
+    } catch (imageError) {
+      console.warn('⚠️ Algunas imágenes no se cargaron, continuando de todas formas:', imageError.message);
+      // Continuar aunque las imágenes no se hayan cargado
+    }
     
     // Generar PDF con configuración optimizada
     const pdfBuffer = await page.pdf({
@@ -316,7 +350,10 @@ const generateCatalogPDF = async (req, res) => {
     res.end();
     
   } catch (error) {
-    console.error('Error generando catálogo PDF:', error);
+    console.error('❌ Error generando catálogo PDF:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
     
     if (browser) {
       try {
@@ -331,7 +368,8 @@ const generateCatalogPDF = async (req, res) => {
       res.status(500).json({
         success: false,
         message: 'Error al generar el catálogo PDF',
-        error: error.message
+        error: error.message,
+        errorStack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     } else {
       console.error('No se puede enviar error porque la respuesta ya fue enviada');
