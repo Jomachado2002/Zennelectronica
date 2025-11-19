@@ -597,148 +597,43 @@ const channableFeedController = async (req, res) => {
                 // Product type para subcatálogos (formato: Categoría > Subcategoría)
                 const productType = `${categoryInfo.categoryLabel} > ${categoryInfo.subcategoryLabel}`;
                 
-                // Google product category (Channable lo requiere)
+                // Campos esenciales para Facebook/Channable
                 const googleCategory = categoryInfo.googleCategory || 'Electronics';
                 
+                // Precios formateados para imágenes
+                const sellingPrice = discountInfo.finalPrice;
+                const priceImagen = formatPriceWithDots(sellingPrice);
+                const price10Image = formatPriceWithDots(sellingPrice / 10);
+                
+                // XML simplificado - Solo campos esenciales
                 xml += `        <item>
             <g:id>${escapeXML(id)}</g:id>
             <g:title>${title}</g:title>
             <g:description>${description}</g:description>
             <g:google_product_category>${escapeXML(googleCategory)}</g:google_product_category>
             <fb_product_category>${escapeXML(fbProductCategory)}</fb_product_category>
-            <g:product_type>${escapeXML(productType)}</g:product_type>
             <link>${productUrl}</link>
             <g:image_link>${escapeXML(mainImage)}</g:image_link>`;
 
-                // Imágenes adicionales (siempre agregar al menos uno vacío si no hay)
-                if (additionalImages.length > 0) {
-                    additionalImages.forEach(img => {
-                        xml += `
-            <g:additional_image_link>${escapeXML(img)}</g:additional_image_link>`;
-                    });
-                } else {
-                    // Agregar campo vacío para que Channable no se queje
+                // Imágenes adicionales
+                additionalImages.forEach(img => {
                     xml += `
-            <g:additional_image_link></g:additional_image_link>`;
-                }
+            <g:additional_image_link>${escapeXML(img)}</g:additional_image_link>`;
+                });
 
                 xml += `
             <g:condition>new</g:condition>
             <g:availability>${availability}</g:availability>
-            <g:price>${price} ${XML_CONFIG.CURRENCY}</g:price>`;
-
-                // Precio de oferta (siempre agregar, vacío si no hay descuento)
-                if (discountInfo.hasDiscount && salePrice) {
-                    xml += `
-            <g:sale_price>${salePrice} ${XML_CONFIG.CURRENCY}</g:sale_price>
-            <g:sale_price_effective_date>${new Date().toISOString().split('T')[0]}/${new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0]}</g:sale_price_effective_date>`;
-                } else {
-                    xml += `
-            <g:sale_price></g:sale_price>
-            <g:sale_price_effective_date></g:sale_price_effective_date>`;
-                }
-
-                xml += `
+            <g:price>${price} ${XML_CONFIG.CURRENCY}</g:price>
             <g:brand>${brand}</g:brand>
-            <g:mpn>${escapeXML(id)}</g:mpn>
-            <g:identifier_exists>false</g:identifier_exists>
-            <g:age_group>adult</g:age_group>
-            <g:gender>unisex</g:gender>`;
-
-                // Información de envío
-                xml += `
-            <g:shipping>
-                <g:country>${XML_CONFIG.COUNTRY}</g:country>
-                <g:service>Standard</g:service>
-                <g:price>${formatPrice(XML_CONFIG.SHIPPING_COST)} ${XML_CONFIG.CURRENCY}</g:price>
-            </g:shipping>`;
-
-                // Campos específicos de Meta según el tipo de producto
-                const metaSpecificFields = generateMetaSpecificFields(product, categoryInfo);
-                if (metaSpecificFields) {
-                    xml += metaSpecificFields;
-                }
-                
-                // Agregar campos esperados por Channable siempre (vacíos si no tienen valor)
-                // Esto evita advertencias de Channable sobre campos faltantes
-                // Estos campos se agregan siempre, incluso si están vacíos
-                const modelValue = product.model || '';
-                const processorValue = product.processor || product.phoneProcessor || product.tabletProcessor || '';
-                const ramValue = product.memory || product.phoneRAM || product.tabletRAM || product.ramCapacity || '';
-                const storageValue = product.storage || product.phoneStorage || product.tabletStorage || product.hddCapacity || '';
-                const gpuValue = product.graphicsCard || product.graphicCardModel || '';
-                const screenValue = product.notebookScreen || product.tabletScreenSize || product.monitorSize || product.phoneScreenSize || '';
-                const resolutionValue = product.monitorResolution || product.tabletScreenResolution || '';
-                
-                // Agregar todos los campos esperados siempre
-                xml += `
-            <model>${escapeXML(modelValue)}</model>
-            <processor_type>${escapeXML(processorValue)}</processor_type>
-            <ram_memory>${escapeXML(ramValue)}</ram_memory>
-            <storage_capacity>${escapeXML(storageValue)}</storage_capacity>
-            <graphics_card_model>${escapeXML(gpuValue)}</graphics_card_model>
-            <screen_size>${escapeXML(screenValue)}</screen_size>
-            <resolution>${escapeXML(resolutionValue)}</resolution>`;
-
-                // Labels personalizados para Meta
-                xml += `
-            <g:custom_label_0>${escapeXML(categoryInfo.categoryLabel)}</g:custom_label_0>
-            <g:custom_label_1>${escapeXML(categoryInfo.subcategoryLabel)}</g:custom_label_1>
-            <g:custom_label_2>${escapeXML(brand)}</g:custom_label_2>`;
-                
-                if (discountInfo.hasDiscount) {
-                    xml += `
-            <g:custom_label_3>OFERTA ${discountInfo.discountPercentage}%</g:custom_label_3>`;
-                } else {
-                    xml += `
-            <g:custom_label_3>PRECIO REGULAR</g:custom_label_3>`;
-                }
-
-                // Especificaciones del producto (siempre agregar, vacío si no hay)
-                if (specifications && specifications.trim().length > 0) {
-                    xml += `
-            <g:custom_label_4>${escapeXML(specifications.substring(0, 100))}</g:custom_label_4>`;
-                } else {
-                    xml += `
-            <g:custom_label_4></g:custom_label_4>`;
-                }
-
-                // Campos adicionales para Meta
-                xml += `
-            <!-- DATOS DEL PRODUCTO PARA META -->
+            <g:custom_label_0>${escapeXML(categoryInfo.subcategoryLabel)}</g:custom_label_0>
             <titulo>${title}</titulo>
-            <precio_gs>${formatPrice(discountInfo.finalPrice)}</precio_gs>
-            <precio_original_gs>${formatPrice(discountInfo.originalPrice)}</precio_original_gs>
-            <categoria>${escapeXML(categoryInfo.categoryLabel)}</categoria>
-            <subcategoria>${escapeXML(categoryInfo.subcategoryLabel)}</subcategoria>
+            <categoria>${escapeXML(categoryInfo.subcategoryLabel)}</categoria>
             <marca>${brand}</marca>
-            <especificaciones>${escapeXML(specifications || '')}</especificaciones>
-            <tiene_descuento>${discountInfo.hasDiscount ? 'true' : 'false'}</tiene_descuento>`;
-            
-                // Descuento porcentaje (siempre agregar, vacío si no hay descuento)
-                if (discountInfo.hasDiscount) {
-                    xml += `
-            <descuento_porcentaje>${discountInfo.discountPercentage}</descuento_porcentaje>`;
-                } else {
-                    xml += `
-            <descuento_porcentaje></descuento_porcentaje>`;
-                }
-
-                // Campos de precio formateados con puntos para imágenes
-                const sellingPrice = discountInfo.finalPrice;
-                const priceImagen = formatPriceWithDots(sellingPrice);
-                const price10Image = formatPriceWithDots(sellingPrice / 10);
-                
-                xml += `
+            <precio_gs>${formatPrice(sellingPrice)}</precio_gs>
             <price_imagen>${priceImagen}</price_imagen>
-            <price10_image>${price10Image}</price10_image>`;
-
-                // ✅ INFORMACIÓN DE STOCK MEJORADA
-                const stockValue = Number(product.stock) || 1;
-                xml += `
-            <stock>${stockValue}</stock>
-            <stock_status>${product.stockStatus || 'in_stock'}</stock_status>
-            <fecha_actualizacion>${new Date().toISOString()}</fecha_actualizacion>
+            <price10_image>${price10Image}</price10_image>
+            <especificaciones>${escapeXML(specifications || '')}</especificaciones>
         </item>\n`;
                 
             } catch (itemError) {
