@@ -100,31 +100,49 @@ function isValidImageUrl(url) {
         
         // ✅ SOLO FORMATOS COMPATIBLES CON META
         const validExtensions = ['.jpg', '.jpeg', '.png'];
-        const pathname = urlObj.pathname.toLowerCase();
+        const urlLower = url.toLowerCase();
         
-        const hasValidExtension = validExtensions.some(ext => pathname.endsWith(ext));
+        // Decodificar URL para manejar caracteres codificados (%2F, etc.)
+        let decodedUrl = url;
+        let decodedPathname = urlObj.pathname.toLowerCase();
+        
+        try {
+            decodedUrl = decodeURIComponent(url);
+            decodedPathname = decodeURIComponent(urlObj.pathname).toLowerCase();
+        } catch (decodeError) {
+            // Si falla la decodificación, usar la URL original
+            decodedUrl = url;
+            decodedPathname = urlObj.pathname.toLowerCase();
+        }
+        
+        // Verificar extensión en pathname decodificado
+        const hasValidExtension = validExtensions.some(ext => decodedPathname.endsWith(ext));
+        
+        // Verificar extensión en URL completa decodificada
+        const hasValidExtensionInUrl = validExtensions.some(ext => decodedUrl.toLowerCase().includes(ext));
         
         if (url.includes('firebasestorage.googleapis.com')) {
             if (!url.includes('?alt=media&token=')) return false;
             
-            // Patrones problemáticos conocidos
+            // Patrones problemáticos conocidos (excluir %2F%2F pero permitir %2F solo)
             const problematicPatterns = [
                 'FONTE_ATX', 'FONTE-TP-LINK', '%2B', '%2F%2F', 'REAL_1.jpg', '%20_%20',
                 '.webp', '.gif', '.svg', '.bmp' // ✅ EXCLUIR FORMATOS NO COMPATIBLES
             ];
             
-            if (problematicPatterns.some(pattern => url.toLowerCase().includes(pattern.toLowerCase()))) {
+            if (problematicPatterns.some(pattern => urlLower.includes(pattern.toLowerCase()))) {
                 return false;
             }
             
-            // ✅ VALIDACIÓN ESPECÍFICA PARA META
+            // ✅ VALIDACIÓN ESPECÍFICA PARA META - verificar en URL decodificada
             return hasValidExtension || 
-                   url.toLowerCase().includes('.jpg') || 
-                   url.toLowerCase().includes('.jpeg') || 
-                   url.toLowerCase().includes('.png');
+                   hasValidExtensionInUrl ||
+                   urlLower.includes('.jpg') || 
+                   urlLower.includes('.jpeg') || 
+                   urlLower.includes('.png');
         }
         
-        return hasValidExtension;
+        return hasValidExtension || hasValidExtensionInUrl;
         
     } catch (error) {
         return false;
