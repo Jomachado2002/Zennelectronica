@@ -311,6 +311,171 @@ function extractProductSpecs(product) {
     return specs.join(' | ');
 }
 
+// Función auxiliar para validar que un campo tenga valor válido
+function hasValidValue(value) {
+    return value !== null && value !== undefined && String(value).trim().length > 0;
+}
+
+// Función para generar campos específicos de Meta según el tipo de producto
+function generateMetaSpecificFields(product, categoryInfo) {
+    let fields = '';
+    const category = product.category?.toLowerCase() || '';
+    const subcategory = product.subcategory?.toLowerCase() || '';
+    
+    // Campos para productos de informática (notebooks, computadoras, etc.)
+    if (category === 'informatica') {
+        // Procesador
+        if (hasValidValue(product.processor) || hasValidValue(product.phoneProcessor) || hasValidValue(product.tabletProcessor)) {
+            const processor = product.processor || product.phoneProcessor || product.tabletProcessor;
+            if (hasValidValue(processor)) {
+                fields += `
+            <processor_type>${escapeXML(String(processor).trim())}</processor_type>`;
+            }
+        }
+        
+        // RAM (solo si no se duplica)
+        if (hasValidValue(product.memory) || hasValidValue(product.phoneRAM) || hasValidValue(product.tabletRAM) || hasValidValue(product.ramCapacity)) {
+            const ram = product.memory || product.phoneRAM || product.tabletRAM || product.ramCapacity;
+            if (hasValidValue(ram)) {
+                fields += `
+            <ram_memory>${escapeXML(String(ram).trim())}</ram_memory>`;
+            }
+        }
+        
+        // Almacenamiento
+        if (hasValidValue(product.storage) || hasValidValue(product.phoneStorage) || hasValidValue(product.tabletStorage) || hasValidValue(product.hddCapacity)) {
+            const storage = product.storage || product.phoneStorage || product.tabletStorage || product.hddCapacity;
+            if (hasValidValue(storage)) {
+                fields += `
+            <storage_capacity>${escapeXML(String(storage).trim())}</storage_capacity>`;
+            }
+        }
+        
+        // Tarjeta gráfica
+        if (hasValidValue(product.graphicsCard) || hasValidValue(product.graphicCardModel)) {
+            const gpu = product.graphicsCard || product.graphicCardModel;
+            if (hasValidValue(gpu)) {
+                fields += `
+            <graphics_card_model>${escapeXML(String(gpu).trim())}</graphics_card_model>`;
+            }
+        }
+        
+        // Tamaño de pantalla (para notebooks, tablets, monitores)
+        if (hasValidValue(product.notebookScreen) || hasValidValue(product.tabletScreenSize) || hasValidValue(product.monitorSize) || hasValidValue(product.phoneScreenSize)) {
+            const screenSize = product.notebookScreen || product.tabletScreenSize || product.monitorSize || product.phoneScreenSize;
+            if (hasValidValue(screenSize)) {
+                fields += `
+            <screen_size>${escapeXML(String(screenSize).trim())}</screen_size>`;
+            }
+        }
+        
+        // Resolución (para monitores y tablets)
+        if (hasValidValue(product.monitorResolution) || hasValidValue(product.tabletScreenResolution)) {
+            const resolution = product.monitorResolution || product.tabletScreenResolution;
+            if (hasValidValue(resolution)) {
+                fields += `
+            <resolution>${escapeXML(String(resolution).trim())}</resolution>`;
+            }
+        }
+        
+        // Refresh rate (para monitores)
+        if (hasValidValue(product.monitorRefreshRate)) {
+            fields += `
+            <refresh_rate>${escapeXML(String(product.monitorRefreshRate).trim())}</refresh_rate>`;
+        }
+        
+        // Tipo de disco
+        if (hasValidValue(product.diskType) || hasValidValue(product.hddInterface)) {
+            const diskType = product.diskType || product.hddInterface;
+            if (hasValidValue(diskType)) {
+                fields += `
+            <hard_drive_type>${escapeXML(String(diskType).trim())}</hard_drive_type>`;
+            }
+        }
+    }
+    
+    // Campos para telefonía
+    if (category === 'telefonia') {
+        // Tamaño de pantalla
+        if (hasValidValue(product.phoneScreenSize) || hasValidValue(product.tabletScreenSize)) {
+            const screenSize = product.phoneScreenSize || product.tabletScreenSize;
+            if (hasValidValue(screenSize)) {
+                fields += `
+            <screen_size>${escapeXML(String(screenSize).trim())}</screen_size>`;
+            }
+        }
+        
+        // Resolución de cámara frontal
+        if (hasValidValue(product.phoneFrontCamera) || hasValidValue(product.tabletFrontCamera)) {
+            const frontCamera = product.phoneFrontCamera || product.tabletFrontCamera;
+            if (hasValidValue(frontCamera)) {
+                fields += `
+            <front_facing_camera_resolution>${escapeXML(String(frontCamera).trim())}</front_facing_camera_resolution>`;
+            }
+        }
+        
+        // Resolución de cámara trasera
+        if (hasValidValue(product.phoneRearCamera) || hasValidValue(product.tabletRearCamera)) {
+            const rearCamera = product.phoneRearCamera || product.tabletRearCamera;
+            if (hasValidValue(rearCamera)) {
+                fields += `
+            <rear_facing_camera_resolution>${escapeXML(String(rearCamera).trim())}</rear_facing_camera_resolution>`;
+            }
+        }
+        
+        // Almacenamiento
+        if (hasValidValue(product.phoneStorage) || hasValidValue(product.tabletStorage)) {
+            const storage = product.phoneStorage || product.tabletStorage;
+            if (hasValidValue(storage)) {
+                fields += `
+            <storage_capacity>${escapeXML(String(storage).trim())}</storage_capacity>`;
+            }
+        }
+        
+        // RAM
+        if (hasValidValue(product.phoneRAM) || hasValidValue(product.tabletRAM)) {
+            const ram = product.phoneRAM || product.tabletRAM;
+            if (hasValidValue(ram)) {
+                fields += `
+            <ram_memory>${escapeXML(String(ram).trim())}</ram_memory>`;
+            }
+        }
+        
+        // Procesador
+        if (hasValidValue(product.phoneProcessor) || hasValidValue(product.tabletProcessor)) {
+            const processor = product.phoneProcessor || product.tabletProcessor;
+            if (hasValidValue(processor)) {
+                fields += `
+            <processor_type>${escapeXML(String(processor).trim())}</processor_type>`;
+            }
+        }
+    }
+    
+    // Campos para periféricos (monitores)
+    if (category === 'perifericos' && subcategory === 'monitores') {
+        if (hasValidValue(product.monitorSize)) {
+            fields += `
+            <screen_size>${escapeXML(String(product.monitorSize).trim())}</screen_size>`;
+        }
+        if (hasValidValue(product.monitorResolution)) {
+            fields += `
+            <resolution>${escapeXML(String(product.monitorResolution).trim())}</resolution>`;
+        }
+        if (hasValidValue(product.monitorRefreshRate)) {
+            fields += `
+            <refresh_rate>${escapeXML(String(product.monitorRefreshRate).trim())}</refresh_rate>`;
+        }
+    }
+    
+    // Modelo del producto (si está disponible y tiene valor válido)
+    if (hasValidValue(product.model)) {
+        fields += `
+            <model>${escapeXML(String(product.model).trim())}</model>`;
+    }
+    
+    return fields;
+}
+
 // ===== CONTROLADOR PRINCIPAL OPTIMIZADO PARA META =====
 const channableFeedController = async (req, res) => {
     try {
@@ -413,11 +578,31 @@ const channableFeedController = async (req, res) => {
                 const price = formatPrice(discountInfo.hasDiscount ? discountInfo.originalPrice : discountInfo.finalPrice);
                 const salePrice = discountInfo.hasDiscount ? formatPrice(discountInfo.finalPrice) : null;
 
+                // Obtener el mapeo de Google para la subcategoría (no la categoría principal)
+                // Esto es lo que Channable usa para categorizar correctamente
+                let fbProductCategory = 'Electronics'; // Valor por defecto
+                const categoryData = CATEGORY_MAPPING[product.category?.toLowerCase()];
+                if (categoryData && product.subcategory) {
+                    const subcategoryData = categoryData.subcategories[product.subcategory.toLowerCase()];
+                    if (subcategoryData && subcategoryData.google) {
+                        fbProductCategory = subcategoryData.google;
+                    } else {
+                        // Si no hay mapeo específico, usar la categoría de Google de la subcategoría
+                        fbProductCategory = categoryInfo.googleCategory || 'Electronics';
+                    }
+                } else {
+                    fbProductCategory = categoryInfo.googleCategory || 'Electronics';
+                }
+                
+                // Product type para subcatálogos (formato: Categoría > Subcategoría)
+                const productType = `${categoryInfo.categoryLabel} > ${categoryInfo.subcategoryLabel}`;
+                
                 xml += `        <item>
             <g:id>${escapeXML(id)}</g:id>
-            <title>${title}</title>
-            <description>${description}</description>
-            <g:google_product_category>${categoryInfo.googleCategory}</g:google_product_category>
+            <g:title>${title}</g:title>
+            <g:description>${description}</g:description>
+            <fb_product_category>${escapeXML(fbProductCategory)}</fb_product_category>
+            <g:product_type>${escapeXML(productType)}</g:product_type>
             <link>${productUrl}</link>
             <g:image_link>${escapeXML(mainImage)}</g:image_link>`;
 
@@ -444,7 +629,6 @@ const channableFeedController = async (req, res) => {
                 xml += `
             <g:brand>${brand}</g:brand>
             <g:mpn>${escapeXML(id)}</g:mpn>
-            <g:identifier_exists>false</g:identifier_exists>
             <g:age_group>adult</g:age_group>
             <g:gender>unisex</g:gender>`;
 
@@ -455,6 +639,12 @@ const channableFeedController = async (req, res) => {
                 <g:service>Standard</g:service>
                 <g:price>${formatPrice(XML_CONFIG.SHIPPING_COST)} ${XML_CONFIG.CURRENCY}</g:price>
             </g:shipping>`;
+
+                // Campos específicos de Meta según el tipo de producto
+                const metaSpecificFields = generateMetaSpecificFields(product, categoryInfo);
+                if (metaSpecificFields) {
+                    xml += metaSpecificFields;
+                }
 
                 // Labels personalizados para Meta
                 xml += `
@@ -470,8 +660,8 @@ const channableFeedController = async (req, res) => {
             <g:custom_label_3>PRECIO REGULAR</g:custom_label_3>`;
                 }
 
-                // Especificaciones del producto
-                if (specifications) {
+                // Especificaciones del producto (solo si hay especificaciones válidas)
+                if (specifications && specifications.trim().length > 0) {
                     xml += `
             <g:custom_label_4>${escapeXML(specifications.substring(0, 100))}</g:custom_label_4>`;
                 }
