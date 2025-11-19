@@ -44,7 +44,8 @@ const CATEGORY_MAPPING = {
             'mouses': { label: 'Mouses', google: 'Electronics > Computer Accessories > Input Devices > Computer Mice' },
             'auriculares': { label: 'Auriculares', google: 'Electronics > Audio > Headphones' },
             'parlantes': { label: 'Parlantes', google: 'Electronics > Audio > Audio Players & Recorders > Speakers' },
-            'webcam': { label: 'Webcams', google: 'Electronics > Cameras & Optics > Cameras > Webcams' }
+            'webcam': { label: 'Webcams', google: 'Electronics > Cameras & Optics > Cameras > Webcams' },
+            'microfonos': { label: 'Micrófonos', google: 'Electronics > Audio > Audio Equipment > Microphones' }
         }
     },
     'telefonia': {
@@ -196,21 +197,47 @@ function generateOptimizedTitle(product) {
 }
 
 function getCategoryInfo(category, subcategory) {
-    const categoryData = CATEGORY_MAPPING[category];
+    // Asegurar que siempre tengamos valores válidos
+    const categoryKey = (category || '').toLowerCase().trim();
+    const subcategoryKey = (subcategory || '').toLowerCase().trim();
+    
+    const categoryData = CATEGORY_MAPPING[categoryKey];
     if (!categoryData) {
+        // Si no hay mapeo, usar valores de la BD directamente pero con formato válido
+        const fallbackSubcategory = subcategory || category || 'Electronics';
         return {
-            categoryLabel: category,
-            subcategoryLabel: subcategory,
+            categoryLabel: category || 'Electronics',
+            subcategoryLabel: fallbackSubcategory,
             googleCategory: 'Electronics'
         };
     }
     
-    const subcategoryData = categoryData.subcategories[subcategory];
+    const subcategoryData = categoryData.subcategories[subcategoryKey];
+    
+    // Si no hay mapeo de subcategoría, intentar buscar por variaciones comunes
+    let finalSubcategoryData = subcategoryData;
+    if (!finalSubcategoryData && subcategoryKey) {
+        // Buscar variaciones (singular/plural, con/sin guiones, etc.)
+        const variations = [
+            subcategoryKey,
+            subcategoryKey + 's',
+            subcategoryKey.replace(/s$/, ''),
+            subcategoryKey.replace(/_/g, ''),
+            subcategoryKey.replace(/-/g, '_')
+        ];
+        
+        for (const variation of variations) {
+            if (categoryData.subcategories[variation]) {
+                finalSubcategoryData = categoryData.subcategories[variation];
+                break;
+            }
+        }
+    }
     
     return {
         categoryLabel: categoryData.label,
-        subcategoryLabel: subcategoryData ? subcategoryData.label : subcategory,
-        googleCategory: subcategoryData ? subcategoryData.google : categoryData.googleCategory
+        subcategoryLabel: finalSubcategoryData ? finalSubcategoryData.label : (subcategory || categoryData.label),
+        googleCategory: finalSubcategoryData ? finalSubcategoryData.google : categoryData.googleCategory
     };
 }
 
@@ -581,16 +608,46 @@ const channableFeedController = async (req, res) => {
                 // Obtener el mapeo de Google para la subcategoría (no la categoría principal)
                 // Esto es lo que Channable usa para categorizar correctamente
                 let fbProductCategory = 'Electronics'; // Valor por defecto
-                const categoryData = CATEGORY_MAPPING[product.category?.toLowerCase()];
-                if (categoryData && product.subcategory) {
-                    const subcategoryData = categoryData.subcategories[product.subcategory.toLowerCase()];
+                const categoryKey = (product.category || '').toLowerCase().trim();
+                const subcategoryKey = (product.subcategory || '').toLowerCase().trim();
+                
+                const categoryData = CATEGORY_MAPPING[categoryKey];
+                if (categoryData && subcategoryKey) {
+                    // Buscar subcategoría exacta
+                    let subcategoryData = categoryData.subcategories[subcategoryKey];
+                    
+                    // Si no encuentra, buscar variaciones
+                    if (!subcategoryData) {
+                        const variations = [
+                            subcategoryKey + 's',
+                            subcategoryKey.replace(/s$/, ''),
+                            subcategoryKey.replace(/_/g, ''),
+                            subcategoryKey.replace(/-/g, '_'),
+                            subcategoryKey.replace(/ /g, '_')
+                        ];
+                        
+                        for (const variation of variations) {
+                            if (categoryData.subcategories[variation]) {
+                                subcategoryData = categoryData.subcategories[variation];
+                                break;
+                            }
+                        }
+                    }
+                    
                     if (subcategoryData && subcategoryData.google) {
                         fbProductCategory = subcategoryData.google;
                     } else {
-                        // Si no hay mapeo específico, usar la categoría de Google de la subcategoría
-                        fbProductCategory = categoryInfo.googleCategory || 'Electronics';
+                        // Si no hay mapeo específico, usar la categoría de Google de la categoría principal
+                        fbProductCategory = categoryData.googleCategory || 'Electronics';
                     }
                 } else {
+                    // Si no hay categoría válida, usar el valor de googleCategory del categoryInfo
+                    fbProductCategory = categoryInfo.googleCategory || 'Electronics';
+                }
+                
+                // Asegurar que siempre tengamos un valor válido de Google
+                if (!fbProductCategory || fbProductCategory.trim() === '' || fbProductCategory === 'Electronics') {
+                    // Intentar inferir categoría desde el título o descripción si es posible
                     fbProductCategory = categoryInfo.googleCategory || 'Electronics';
                 }
                 
@@ -599,6 +656,14 @@ const channableFeedController = async (req, res) => {
                 
                 // Campos esenciales para Facebook/Channable
                 const googleCategory = categoryInfo.googleCategory || 'Electronics';
+                
+                // Validación final: asegurar que todos los campos de categoría tengan valores válidos
+                const finalFbCategory = (fbProductCategory && fbProductCategory.trim() !== '') 
+                    ? fbProductCategory 
+                    : googleCategory;
+                const finalGoogleCategory = (googleCategory && googleCategory.trim() !== '') 
+                    ? googleCategory 
+                    : 'Electronics';
                 
                 // Precios formateados para imágenes
                 const sellingPrice = discountInfo.finalPrice;
@@ -610,8 +675,8 @@ const channableFeedController = async (req, res) => {
             <g:id>${escapeXML(id)}</g:id>
             <g:title>${title}</g:title>
             <g:description>${description}</g:description>
-            <g:google_product_category>${escapeXML(googleCategory)}</g:google_product_category>
-            <fb_product_category>${escapeXML(fbProductCategory)}</fb_product_category>
+            <g:google_product_category>${escapeXML(finalGoogleCategory)}</g:google_product_category>
+            <fb_product_category>${escapeXML(finalFbCategory)}</fb_product_category>
             <link>${productUrl}</link>
             <g:image_link>${escapeXML(mainImage)}</g:image_link>`;
 
@@ -621,14 +686,49 @@ const channableFeedController = async (req, res) => {
             <g:additional_image_link>${escapeXML(img)}</g:additional_image_link>`;
                 });
 
+                // Asegurar que subcategoryLabel siempre tenga un valor válido para Channable
+                // Este es el campo que Channable usa para categorizar automáticamente
+                let subcategoryForLabel = categoryInfo.subcategoryLabel || product.subcategory || product.category;
+                
+                // Si está vacío o no es válido, usar un valor por defecto basado en el título
+                if (!subcategoryForLabel || subcategoryForLabel.trim() === '' || subcategoryForLabel === 'undefined') {
+                    // Intentar inferir desde el título si es posible
+                    const titleLower = (product.productName || '').toLowerCase();
+                    if (titleLower.includes('notebook') || titleLower.includes('laptop')) {
+                        subcategoryForLabel = 'Notebooks';
+                    } else if (titleLower.includes('monitor')) {
+                        subcategoryForLabel = 'Monitores';
+                    } else if (titleLower.includes('teclado')) {
+                        subcategoryForLabel = 'Teclados';
+                    } else if (titleLower.includes('mouse')) {
+                        subcategoryForLabel = 'Mouses';
+                    } else if (titleLower.includes('auricular') || titleLower.includes('headphone')) {
+                        subcategoryForLabel = 'Auriculares';
+                    } else if (titleLower.includes('ram') || titleLower.includes('memoria')) {
+                        subcategoryForLabel = 'Memorias RAM';
+                    } else if (titleLower.includes('procesador') || titleLower.includes('cpu')) {
+                        subcategoryForLabel = 'Procesadores';
+                    } else if (titleLower.includes('tarjeta gráfica') || titleLower.includes('gpu') || titleLower.includes('video')) {
+                        subcategoryForLabel = 'Tarjetas Gráficas';
+                    } else if (titleLower.includes('teléfono') || titleLower.includes('phone') || titleLower.includes('smartphone')) {
+                        subcategoryForLabel = 'Teléfonos Móviles';
+                    } else if (titleLower.includes('micrófono') || titleLower.includes('microfono') || titleLower.includes('microphone')) {
+                        subcategoryForLabel = 'Micrófonos';
+                    } else {
+                        subcategoryForLabel = 'Electronics';
+                    }
+                }
+                
+                const subcategoryForCategory = String(subcategoryForLabel).trim() || 'Electronics';
+                
                 xml += `
             <g:condition>new</g:condition>
             <g:availability>${availability}</g:availability>
             <g:price>${price} ${XML_CONFIG.CURRENCY}</g:price>
             <g:brand>${brand}</g:brand>
-            <g:custom_label_0>${escapeXML(categoryInfo.subcategoryLabel)}</g:custom_label_0>
+            <g:custom_label_0>${escapeXML(subcategoryForCategory)}</g:custom_label_0>
             <titulo>${title}</titulo>
-            <categoria>${escapeXML(categoryInfo.subcategoryLabel)}</categoria>
+            <categoria>${escapeXML(subcategoryForCategory)}</categoria>
             <marca>${brand}</marca>
             <precio_gs>${formatPrice(sellingPrice)}</precio_gs>
             <price_imagen>${priceImagen}</price_imagen>
