@@ -141,6 +141,12 @@ function formatPrice(priceInGuaranis) {
     return Math.round(Number(priceInGuaranis)).toString();
 }
 
+// Función para formatear precio con puntos (ej: 1200000 -> "1.200.000")
+function formatPriceWithDots(priceInGuaranis) {
+    const price = Math.round(Number(priceInGuaranis) || 0);
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 function generateCleanId(product) {
     const id = product._id.toString();
     const brand = (product.brandName || 'prod').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -468,6 +474,15 @@ const channableFeedController = async (req, res) => {
                     xml += `
             <descuento_porcentaje>${discountInfo.discountPercentage}</descuento_porcentaje>`;
                 }
+
+                // Campos de precio formateados con puntos para imágenes
+                const sellingPrice = discountInfo.finalPrice;
+                const priceImagen = formatPriceWithDots(sellingPrice);
+                const price10Image = formatPriceWithDots(sellingPrice / 10);
+                
+                xml += `
+            <price_imagen>${priceImagen}</price_imagen>
+            <price10_image>${price10Image}</price10_image>`;
 
                 // ✅ INFORMACIÓN DE STOCK MEJORADA
                 const stockValue = Number(product.stock) || 1;
