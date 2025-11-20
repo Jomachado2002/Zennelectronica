@@ -12,7 +12,8 @@
     "export-categories": "node scripts/export-categories-to-code.js",
     "export-to-frontend": "node scripts/export-categories-to-frontend.js",
     "sync-categories": "node scripts/sync-categories.js",
-    "test-brevo": "node test-brevo.js"
+    "test-brevo": "node test-brevo.js",
+    "test-meta": "node scripts/test-meta-conversions-api.js"
   },
   "author": "",
   "license": "ISC",

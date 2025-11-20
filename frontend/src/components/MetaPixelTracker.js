@@ -5,7 +5,7 @@ const MetaPixelTracker = () => {
   useEffect(() => {
     // Función para cargar Meta Pixel
     const loadMetaPixel = () => {
-      // Meta Pixel Code en una función asignada
+      // Meta Pixel Code - Versión actualizada con nuevo Pixel ID
       const initPixel = function(f,b,e,v,n,t,s) {
         if(f.fbq)return;n=f.fbq=function(){n.callMethod?
         n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -19,11 +19,10 @@ const MetaPixelTracker = () => {
       initPixel(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
      
-      // Inicializar pixel
+      // Inicializar pixel con el nuevo Pixel ID
       if (typeof window.fbq !== 'undefined') {
-        window.fbq('init', '1668993647830344');
+        window.fbq('init', '1535652171192853');
         window.fbq('track', 'PageView');
-        
       }
     };
      
@@ -205,25 +204,61 @@ export const trackInitiateCheckout = (cartItems, totalValue) => {
 };
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR COMPRA COMPLETADA
-export const trackPurchase = (transactionData, cartItems) => {
-  
-  
+export const trackPurchase = async (transactionData, cartItems) => {
   if (typeof window.fbq !== 'undefined') {
+    // ✅ Generar event_id único para deduplicación
+    const transactionId = transactionData.shop_process_id || transactionData.transaction_id;
+    const eventId = `purchase_${transactionId}_${Date.now()}`;
+    
     // ✅ Usar generateCleanId para consistencia
     const contentIds = cartItems
       .filter(item => item && item.productId && item.productId._id)
       .map(item => generateCleanId(item.productId))
       .filter(Boolean);
     
+    // ✅ Trackear con Meta Pixel (client-side)
     window.fbq('track', 'Purchase', {
       content_ids: contentIds,
       value: transactionData.amount,
       currency: 'PYG',
-      transaction_id: transactionData.shop_process_id || transactionData.transaction_id,
-      num_items: cartItems.length
+      transaction_id: transactionId,
+      num_items: cartItems.length,
+      eventID: eventId // ✅ Event ID para deduplicación
     });
     
-    
+    // ✅ También enviar al servidor para tracking server-side (deduplicación)
+    try {
+      // Usar SummaryApi para obtener la URL del backend
+      const backendUrl = SummaryApi.baseURL || process.env.REACT_APP_BACKEND_URL || window.location.origin;
+      
+      if (backendUrl) {
+        // Obtener datos del usuario si están disponibles
+        const userData = {
+          email: transactionData.customer_email,
+          phone: transactionData.customer_phone
+        };
+        
+        await fetch(`${backendUrl}/api/meta/track-purchase`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            transactionId: String(transactionId),
+            value: transactionData.amount,
+            currency: 'PYG',
+            contentIds: contentIds,
+            userData: userData,
+            eventId: eventId, // ✅ Mismo event_id para deduplicación
+            eventSourceUrl: window.location.href
+          })
+        });
+      }
+    } catch (error) {
+      // No bloquear si falla el tracking server-side
+      console.warn('⚠️ Error al enviar tracking al servidor:', error);
+    }
   }
 };
 

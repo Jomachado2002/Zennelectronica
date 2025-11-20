@@ -1681,4 +1681,31 @@ router.get('/catalog-products', authToken, getCatalogProducts);
  */
 router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 
+// ===== RUTAS DE META TRACKING (Conversions API) =====
+const { trackEventController, trackPurchaseController } = require('../controller/meta/metaTrackingController');
+
+/**
+ * POST /api/meta/track-event
+ * Endpoint para trackear eventos genéricos desde el frontend
+ * Body: { eventName, eventData, userData, eventId, eventSourceUrl }
+ */
+router.post('/meta/track-event', trackEventController);
+
+/**
+ * POST /api/meta/track-purchase
+ * Endpoint específico para trackear compras
+ * Body: { transactionId, value, currency, contentIds, userData, eventId, eventSourceUrl }
+ */
+router.post('/meta/track-purchase', trackPurchaseController);
+
+/**
+ * POST /api/meta/test-event
+ * Endpoint de prueba para validar la configuración de Meta Conversions API
+ * Body: { testEventCode, eventName (opcional), eventData (opcional), userData (opcional) }
+ * 
+ * IMPORTANTE: Obtén el testEventCode desde Meta Events Manager → Test Events
+ */
+const { testEventController } = require('../controller/meta/metaTrackingController');
+router.post('/meta/test-event', testEventController);
+
     module.exports = router;

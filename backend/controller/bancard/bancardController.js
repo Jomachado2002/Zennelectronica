@@ -9,6 +9,7 @@ const UserModel = require('../../models/userModel');
 const ClientModel = require('../../models/clientModel');
 const emailService = require('../../services/emailService');
 const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
+const metaConversionsService = require('../../services/metaConversionsService');
 const { 
     verifyConfirmationToken, 
     validateBancardConfig,
@@ -193,6 +194,48 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             const adminEmailResult = await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_aprobado');
                             if (adminEmailResult.success) {
                                 
+                            }
+
+                            // ✅ TRACKEAR COMPRA EN META CONVERSIONS API (server-side)
+                            try {
+                                const transactionAmount = parseFloat(updatedTransaction.amount || transactionData.amount || 0);
+                                const contentIds = (updatedTransaction.items || []).map(item => {
+                                    // Generar ID consistente con el formato del frontend
+                                    if (item.productId && item.productId._id) {
+                                        const product = item.productId;
+                                        const brand = (product.brandName || 'prod').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        const category = (product.subcategory || product.category || 'item').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        return `${brand}${category}${product._id}`.substring(0, 50);
+                                    }
+                                    return null;
+                                }).filter(Boolean);
+
+                                const userData = {
+                                    email: updatedTransaction.customer_info?.email,
+                                    phone: updatedTransaction.customer_info?.phone,
+                                    firstName: updatedTransaction.customer_info?.name?.split(' ')[0],
+                                    lastName: updatedTransaction.customer_info?.name?.split(' ').slice(1).join(' ')
+                                };
+
+                                await metaConversionsService.trackPurchase({
+                                    transactionId: String(updatedTransaction.shop_process_id),
+                                    value: transactionAmount,
+                                    currency: updatedTransaction.currency || 'PYG',
+                                    contentIds: contentIds,
+                                    userData: userData,
+                                    eventSourceUrl: 'https://www.zenn.com.py',
+                                    userAgent: headers?.['user-agent'],
+                                    clientIp: clientIp,
+                                    eventId: `purchase_${updatedTransaction.shop_process_id}_${Date.now()}`
+                                });
+
+                                console.log('✅ Meta Conversions API: Compra trackeada correctamente', {
+                                    transaction_id: updatedTransaction.shop_process_id,
+                                    amount: transactionAmount
+                                });
+                            } catch (metaTrackingError) {
+                                // No bloquear el flujo si falla el tracking
+                                console.warn('⚠️ Error al trackear compra en Meta:', metaTrackingError.message);
                             }
 
                         } catch (emailError) {
