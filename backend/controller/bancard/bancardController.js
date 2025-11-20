@@ -768,8 +768,6 @@ const getTransactionStatusController = async (req, res) => {
 
 const rollbackPaymentController = async (req, res) => {
     try {
-        
-        
         const { shop_process_id } = req.body;
         
         if (!shop_process_id) {
@@ -780,29 +778,45 @@ const rollbackPaymentController = async (req, res) => {
             });
         }
 
-        const configValidation = validateBancardConfig();
-        if (!configValidation.isValid) {
-            return res.status(500).json({
-                message: "Error de configuración del sistema",
+        // Validar que shop_process_id sea un número válido
+        const shopProcessId = parseInt(shop_process_id);
+        if (isNaN(shopProcessId) || shopProcessId <= 0) {
+            return res.status(400).json({
+                message: "shop_process_id debe ser un número válido",
                 success: false,
                 error: true
             });
         }
 
-        
+        const configValidation = validateBancardConfig();
+        if (!configValidation.isValid) {
+            return res.status(500).json({
+                message: "Error de configuración del sistema",
+                success: false,
+                error: true,
+                details: configValidation.error
+            });
+        }
 
-        const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${shop_process_id}rollback0.00`;
+        // Validar que las variables de entorno estén definidas
+        if (!process.env.BANCARD_PRIVATE_KEY || !process.env.BANCARD_PUBLIC_KEY) {
+            return res.status(500).json({
+                message: "Configuración de Bancard incompleta",
+                success: false,
+                error: true
+            });
+        }
+
+        const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${shopProcessId}rollback0.00`;
         const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
 
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
                 token: token,
-                shop_process_id: parseInt(shop_process_id)
+                shop_process_id: shopProcessId
             }
         };
-
-        
 
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/rollback`;
         
@@ -814,26 +828,25 @@ const rollbackPaymentController = async (req, res) => {
             timeout: 30000
         });
 
-        
-
         if (response.status === 200 && response.data.status === 'success') {
             try {
                 await BancardTransactionModel.findOneAndUpdate(
-                    { shop_process_id: parseInt(shop_process_id) },
+                    { shop_process_id: shopProcessId },
                     {
                         is_rolled_back: true,
                         rollback_date: new Date(),
-                        rollback_reason: 'Rollback solicitado',
+                        rollback_reason: req.body.reason || 'Rollback solicitado',
                         status: 'rolled_back'
-                    }
+                    },
+                    { new: true }
                 );
-                
             } catch (dbError) {
-                // console.error removed for production
+                console.error('❌ Error al actualizar transacción en BD:', dbError.message);
+                // Continuar aunque falle la actualización en BD
             }
         }
 
-        if (response.status === 200) {
+        if (response.status === 200 && response.data.status === 'success') {
             res.json({
                 message: "Rollback procesado exitosamente",
                 success: true,
@@ -841,7 +854,22 @@ const rollbackPaymentController = async (req, res) => {
                 data: response.data
             });
         } else {
-            res.status(response.status).json({
+            // Manejar respuestas de error de Bancard
+            const isAlreadyConfirmed = response.data?.messages?.some(msg => 
+                msg.key === 'TransactionAlreadyConfirmed'
+            );
+
+            if (isAlreadyConfirmed) {
+                return res.status(400).json({
+                    message: "La transacción ya fue confirmada y no puede ser reversada automáticamente",
+                    success: false,
+                    error: true,
+                    requiresManualReversal: true,
+                    data: response.data
+                });
+            }
+
+            res.status(response.status || 400).json({
                 message: "Error en rollback",
                 success: false,
                 error: true,
@@ -850,16 +878,25 @@ const rollbackPaymentController = async (req, res) => {
         }
 
     } catch (error) {
-        // console.error removed for production
+        console.error('❌ Error en rollbackPaymentController:', {
+            error: error.message,
+            stack: error.stack,
+            shop_process_id: req.body?.shop_process_id
+        });
         
         let errorMessage = "Error al procesar rollback";
         let errorDetails = error.message;
         
+        // Manejar errores de axios
         if (error.response) {
-            errorDetails = error.response.data;
-            if (error.response.data?.messages?.[0]?.key === 'TransactionAlreadyConfirmed') {
+            errorDetails = error.response.data || error.response.statusText;
+            const isAlreadyConfirmed = error.response.data?.messages?.[0]?.key === 'TransactionAlreadyConfirmed';
+            if (isAlreadyConfirmed) {
                 errorMessage = "La transacción ya fue confirmada y no puede ser cancelada";
             }
+        } else if (error.request) {
+            errorMessage = "No se pudo conectar con el servidor de Bancard";
+            errorDetails = "Timeout o error de red";
         }
         
         res.status(500).json({
