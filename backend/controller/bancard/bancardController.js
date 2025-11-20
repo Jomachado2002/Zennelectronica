@@ -871,6 +871,7 @@ const rollbackPaymentController = async (req, res) => {
             timeout: 30000
         });
 
+        // Verificar si el rollback fue exitoso
         if (response.status === 200 && response.data.status === 'success') {
             try {
                 await BancardTransactionModel.findOneAndUpdate(
@@ -887,10 +888,8 @@ const rollbackPaymentController = async (req, res) => {
                 console.error('❌ Error al actualizar transacción en BD:', dbError.message);
                 // Continuar aunque falle la actualización en BD
             }
-        }
 
-        if (response.status === 200 && response.data.status === 'success') {
-            res.json({
+            return res.json({
                 message: "Rollback procesado exitosamente",
                 success: true,
                 error: false,
@@ -898,24 +897,58 @@ const rollbackPaymentController = async (req, res) => {
             });
         } else {
             // Manejar respuestas de error de Bancard
-            const isAlreadyConfirmed = response.data?.messages?.some(msg => 
-                msg.key === 'TransactionAlreadyConfirmed'
-            );
+            const messages = response.data?.messages || [];
+            const errorKey = messages.find(msg => msg.level === 'error')?.key || messages[0]?.key;
 
-            if (isAlreadyConfirmed) {
-                return res.status(400).json({
-                    message: "La transacción ya fue confirmada y no puede ser reversada automáticamente",
+            // Verificar diferentes tipos de errores según la documentación de Bancard
+            if (errorKey === 'TransactionAlreadyConfirmed') {
+                return res.status(409).json({
+                    message: "La transacción ya fue confirmada (cuponada) y no puede ser reversada automáticamente. Debe realizar el proceso manual de reversión a través del portal de comercios de Bancard.",
                     success: false,
                     error: true,
+                    errorCode: 'TransactionAlreadyConfirmed',
                     requiresManualReversal: true,
                     data: response.data
                 });
             }
 
-            res.status(response.status || 400).json({
-                message: "Error en rollback",
+            if (errorKey === 'AlreadyRollbackedError') {
+                return res.status(409).json({
+                    message: "Esta transacción ya tiene un rollback previo. No se puede realizar otro rollback.",
+                    success: false,
+                    error: true,
+                    errorCode: 'AlreadyRollbackedError',
+                    data: response.data
+                });
+            }
+
+            if (errorKey === 'PaymentNotFoundError') {
+                return res.status(404).json({
+                    message: "No existe un pedido de pago para esta transacción. El cliente no completó el pago.",
+                    success: false,
+                    error: true,
+                    errorCode: 'PaymentNotFoundError',
+                    data: response.data
+                });
+            }
+
+            if (errorKey === 'BuyNotFoundError') {
+                return res.status(404).json({
+                    message: "No existe el proceso de compra seleccionado.",
+                    success: false,
+                    error: true,
+                    errorCode: 'BuyNotFoundError',
+                    data: response.data
+                });
+            }
+
+            // Error genérico de Bancard
+            const errorDescription = messages.find(msg => msg.dsc)?.dsc || 'Error desconocido en rollback';
+            return res.status(response.status || 400).json({
+                message: errorDescription,
                 success: false,
                 error: true,
+                errorCode: errorKey || 'UnknownError',
                 data: response.data
             });
         }
@@ -924,29 +957,80 @@ const rollbackPaymentController = async (req, res) => {
         console.error('❌ Error en rollbackPaymentController:', {
             error: error.message,
             stack: error.stack,
-            shop_process_id: req.body?.shop_process_id
+            shop_process_id: req.body?.shop_process_id,
+            responseStatus: error.response?.status,
+            responseData: error.response?.data
         });
         
         let errorMessage = "Error al procesar rollback";
         let errorDetails = error.message;
+        let statusCode = 500;
+        let errorCode = 'UnknownError';
         
-        // Manejar errores de axios
+        // Manejar errores de axios (respuestas HTTP con error)
         if (error.response) {
-            errorDetails = error.response.data || error.response.statusText;
-            const isAlreadyConfirmed = error.response.data?.messages?.[0]?.key === 'TransactionAlreadyConfirmed';
-            if (isAlreadyConfirmed) {
-                errorMessage = "La transacción ya fue confirmada y no puede ser cancelada";
+            statusCode = error.response.status;
+            const responseData = error.response.data || {};
+            const messages = responseData.messages || [];
+            
+            // Buscar el mensaje de error específico
+            const errorMsg = messages.find(msg => msg.level === 'error') || messages[0];
+            
+            if (errorMsg) {
+                errorCode = errorMsg.key || 'UnknownError';
+                errorDetails = errorMsg.dsc || errorMessage;
+                
+                // Mensajes específicos según el código de error de Bancard
+                switch (errorCode) {
+                    case 'TransactionAlreadyConfirmed':
+                        errorMessage = "La transacción ya fue confirmada (cuponada) y no puede ser reversada automáticamente. Debe realizar el proceso manual de reversión a través del portal de comercios de Bancard.";
+                        statusCode = 409;
+                        break;
+                    case 'AlreadyRollbackedError':
+                        errorMessage = "Esta transacción ya tiene un rollback previo. No se puede realizar otro rollback.";
+                        statusCode = 409;
+                        break;
+                    case 'PaymentNotFoundError':
+                        errorMessage = "No existe un pedido de pago para esta transacción. El cliente no completó el pago.";
+                        statusCode = 404;
+                        break;
+                    case 'BuyNotFoundError':
+                        errorMessage = "No existe el proceso de compra seleccionado.";
+                        statusCode = 404;
+                        break;
+                    case 'InvalidTokenError':
+                        errorMessage = "El token generado es inválido. Verifique la configuración de Bancard.";
+                        statusCode = 400;
+                        break;
+                    case 'InvalidPublicKeyError':
+                        errorMessage = "La clave pública es inválida. Verifique la configuración de Bancard.";
+                        statusCode = 400;
+                        break;
+                    case 'PosCommunicationError':
+                        errorMessage = "Error de comunicación con el sistema de Bancard. Intente nuevamente más tarde.";
+                        statusCode = 503;
+                        break;
+                    default:
+                        errorMessage = errorDetails || errorMessage;
+                }
+            } else {
+                errorDetails = JSON.stringify(responseData);
             }
         } else if (error.request) {
-            errorMessage = "No se pudo conectar con el servidor de Bancard";
+            // Error de red (sin respuesta del servidor)
+            errorMessage = "No se pudo conectar con el servidor de Bancard. Verifique su conexión a internet.";
             errorDetails = "Timeout o error de red";
+            statusCode = 503;
+            errorCode = 'NetworkError';
         }
         
-        res.status(500).json({
+        res.status(statusCode).json({
             message: errorMessage,
             success: false,
             error: true,
-            details: errorDetails
+            errorCode: errorCode,
+            details: errorDetails,
+            requiresManualReversal: errorCode === 'TransactionAlreadyConfirmed'
         });
     }
 };
