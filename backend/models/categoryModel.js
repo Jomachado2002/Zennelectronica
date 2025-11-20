@@ -40,8 +40,7 @@ const subcategorySchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
   label: {
     type: String,
@@ -51,8 +50,7 @@ const subcategorySchema = new mongoose.Schema({
   value: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
   isActive: {
     type: Boolean,
@@ -70,8 +68,7 @@ const categorySchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
   label: {
     type: String,
@@ -81,8 +78,7 @@ const categorySchema = new mongoose.Schema({
   value: {
     type: String,
     required: true,
-    trim: true,
-    unique: true
+    trim: true
   },
   order: {
     type: Number,
@@ -106,11 +102,11 @@ const categorySchema = new mongoose.Schema({
 });
 
 // Índices para mejorar rendimiento
-categorySchema.index({ name: 1 });
-categorySchema.index({ value: 1 });
+categorySchema.index({ name: 1 }, { unique: true });
+categorySchema.index({ value: 1 }, { unique: true });
 categorySchema.index({ isActive: 1 });
 categorySchema.index({ order: 1 });
-subcategorySchema.index({ value: 1 });
+subcategorySchema.index({ value: 1 }, { unique: true });
 
 // Métodos del modelo
 categorySchema.methods.toJSON = function() {

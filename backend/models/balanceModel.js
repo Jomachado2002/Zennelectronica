@@ -4,8 +4,7 @@ const balanceSchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
-        unique: true
+        required: true
     },
     current_balance: {
         type: Number,
@@ -64,7 +63,7 @@ const balanceSchema = new mongoose.Schema({
 });
 
 // Índices para optimizar consultas
-balanceSchema.index({ user_id: 1 });
+balanceSchema.index({ user_id: 1 }, { unique: true });
 balanceSchema.index({ 'transactions.transaction_date': -1 });
 balanceSchema.index({ current_balance: 1 });
 

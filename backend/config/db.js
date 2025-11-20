@@ -4,8 +4,6 @@ async function connectDB() {
     try {
         // ✅ CONFIGURACIÓN OPTIMIZADA PARA PRODUCCIÓN
         const options = {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 30000, // 30 segundos
             socketTimeoutMS: 45000, // 45 segundos
             maxPoolSize: 10,

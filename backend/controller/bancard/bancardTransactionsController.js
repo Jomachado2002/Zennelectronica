@@ -552,6 +552,15 @@ function getPaymentMethodDisplay(paymentMethod) {
 
 const rollbackBancardTransactionController = async (req, res) => {
     try {
+        // Validar que el usuario esté autenticado (no guest)
+        if (!req.userId || req.userId.toString().startsWith('guest-')) {
+            return res.status(401).json({
+                message: "Debe estar autenticado para realizar esta acción",
+                error: true,
+                success: false
+            });
+        }
+
         const hasPermission = await uploadProductPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({
@@ -564,14 +573,37 @@ const rollbackBancardTransactionController = async (req, res) => {
         const { transactionId } = req.params;
         const { reason } = req.body;
 
-        
-        
-        
+        // Validar transactionId
+        if (!transactionId) {
+            return res.status(400).json({
+                message: "ID de transacción es requerido",
+                error: true,
+                success: false
+            });
+        }
+
+        // Validar formato de ObjectId
+        if (!transactionId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                message: "ID de transacción inválido",
+                error: true,
+                success: false
+            });
+        }
 
         const transaction = await BancardTransactionModel.findById(transactionId);
         if (!transaction) {
             return res.status(404).json({
                 message: "Transacción no encontrada",
+                error: true,
+                success: false
+            });
+        }
+
+        // Validar que shop_process_id exista
+        if (!transaction.shop_process_id) {
+            return res.status(400).json({
+                message: "La transacción no tiene un shop_process_id válido",
                 error: true,
                 success: false
             });
@@ -597,6 +629,16 @@ const rollbackBancardTransactionController = async (req, res) => {
         if (!configValidation.isValid) {
             return res.status(500).json({
                 message: "Error de configuración de Bancard",
+                error: true,
+                success: false,
+                details: configValidation.error
+            });
+        }
+
+        // Validar que las variables de entorno estén definidas
+        if (!process.env.BANCARD_PRIVATE_KEY || !process.env.BANCARD_PUBLIC_KEY) {
+            return res.status(500).json({
+                message: "Configuración de Bancard incompleta",
                 error: true,
                 success: false
             });
@@ -675,16 +717,31 @@ const rollbackBancardTransactionController = async (req, res) => {
         }
 
     } catch (error) {
-        // console.error removed for production
+        console.error('❌ Error en rollbackBancardTransactionController:', {
+            error: error.message,
+            stack: error.stack,
+            transactionId: req.params?.transactionId,
+            userId: req.userId
+        });
         
         let errorMessage = "Error al procesar rollback";
         let errorDetails = error.message;
         
+        // Manejar errores de axios
         if (error.response) {
-            errorDetails = error.response.data;
+            errorDetails = error.response.data || error.response.statusText;
             if (error.response.data?.messages?.[0]?.key === 'TransactionAlreadyConfirmed') {
                 errorMessage = "La transacción ya fue confirmada y no puede ser cancelada";
             }
+        } else if (error.request) {
+            errorMessage = "No se pudo conectar con el servidor de Bancard";
+            errorDetails = "Timeout o error de red";
+        }
+        
+        // Manejar errores de validación de Mongoose
+        if (error.name === 'CastError') {
+            errorMessage = "ID de transacción inválido";
+            errorDetails = "El formato del ID no es válido";
         }
         
         res.status(500).json({

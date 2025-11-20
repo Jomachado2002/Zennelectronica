@@ -6,7 +6,6 @@ const profitabilityAnalysisSchema = new mongoose.Schema({
     analysisNumber: {
         type: String,
         required: false, // CAMBIAR A OPCIONAL TEMPORALMENTE
-        unique: true,
         default: function() {
             return `ANAL-${Date.now().toString().slice(-5)}`;
         }

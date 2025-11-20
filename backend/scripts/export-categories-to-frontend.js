@@ -24,10 +24,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://josiasnicolas02:jO
  */
 async function connectToDatabase() {
   try {
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(MONGODB_URI);
     console.log('✅ Conectado a MongoDB exitosamente');
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);

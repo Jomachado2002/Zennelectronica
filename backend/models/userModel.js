@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        unique: true,
         required: true,
         lowercase: true,
         trim: true
@@ -178,7 +177,6 @@ const userSchema = new mongoose.Schema({
     // ✅ CAMPOS PARA BANCARD - MEJORADOS
     bancardUserId: {
         type: Number, // ID único numérico para Bancard
-        unique: true,
         sparse: true // Permite valores null/undefined únicos
     },
     
@@ -456,8 +454,8 @@ userSchema.statics.findByBancardUserId = function(bancardUserId) {
 };
 
 // ✅ ÍNDICES PARA MEJORAR RENDIMIENTO
-userSchema.index({ email: 1 });
-userSchema.index({ bancardUserId: 1 });
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ bancardUserId: 1 }, { unique: true, sparse: true });
 userSchema.index({ resetPasswordToken: 1 });
 userSchema.index({ createdAt: 1 });
 

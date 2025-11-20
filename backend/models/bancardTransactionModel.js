@@ -329,7 +329,6 @@ const bancardTransactionSchema = mongoose.Schema({
     invoice_number: {
         type: String,
         required: false,
-        unique: true,
         sparse: true
     },
     receipt_url: {
@@ -514,8 +513,7 @@ const bancardTransactionSchema = mongoose.Schema({
     tracking_number: {
         type: String,
         required: false,
-        trim: true,
-        index: true
+        trim: true
     },
     
     courier_company: {
@@ -610,7 +608,7 @@ bancardTransactionSchema.index({ authorization_number: 1, ticket_number: 1 });
 bancardTransactionSchema.index({ environment: 1, is_certification_test: 1 });
 bancardTransactionSchema.index({ payment_method: 1, device_type: 1 });
 bancardTransactionSchema.index({ 'customer_info.email': 1, status: 1 });
-bancardTransactionSchema.index({ invoice_number: 1 }, { sparse: true });
+bancardTransactionSchema.index({ invoice_number: 1 }, { unique: true, sparse: true });
 
 // ===== NUEVOS ÍNDICES PARA DELIVERY =====
 bancardTransactionSchema.index({ delivery_status: 1, createdAt: -1 });

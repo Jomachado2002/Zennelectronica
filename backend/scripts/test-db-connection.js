@@ -26,8 +26,6 @@ async function main() {
 
     // Intentar conectar
     await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000 // Timeout de 5 segundos
     });
 

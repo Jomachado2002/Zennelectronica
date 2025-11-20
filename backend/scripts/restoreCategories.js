@@ -4,10 +4,7 @@ require('dotenv').config();
 // Conectar a MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tu_base_de_datos', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tu_base_de_datos');
     // console.log removed for production
   } catch (error) {
     // console.error removed for production
