@@ -24,10 +24,40 @@ async function getExportProductsController(req, res) {
             });
         }
 
+        // Normalizar los valores (trim y convertir a string)
+        const normalizedCategoryId = String(category_id).trim();
+        const normalizedSubcategoryId = String(subcategory_id).trim();
+
+        // Validar que la subcategoría pertenece a la categoría
+        const category = await categoryModel.findOne({
+            value: normalizedCategoryId,
+            isActive: true
+        }).lean();
+
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                error: 'Categoría no encontrada'
+            });
+        }
+
+        // Verificar que la subcategoría existe y pertenece a esta categoría
+        const subcategoryExists = category.subcategories.some(
+            sub => sub.value === normalizedSubcategoryId && sub.isActive !== false
+        );
+
+        if (!subcategoryExists) {
+            return res.status(404).json({
+                success: false,
+                error: 'Subcategoría no encontrada o no pertenece a la categoría seleccionada'
+            });
+        }
+
         // Buscar productos por categoría y subcategoría con stock > 0
+        // Usar comparación estricta y normalizada
         const products = await productModel.find({
-            category: category_id,
-            subcategory: subcategory_id,
+            category: normalizedCategoryId,
+            subcategory: normalizedSubcategoryId,
             stock: { $gt: 0 } // Solo productos con stock mayor a 0
         }).select({
             _id: 1,
@@ -38,11 +68,21 @@ async function getExportProductsController(req, res) {
             productImage: 1,
             codigo: 1,
             brandName: 1,
-            stock: 1
+            stock: 1,
+            category: 1,
+            subcategory: 1
         }).lean();
 
+        // Filtrar productos que realmente coincidan (doble verificación)
+        const filteredProducts = products.filter(product => {
+            const productCategory = String(product.category || '').trim();
+            const productSubcategory = String(product.subcategory || '').trim();
+            return productCategory === normalizedCategoryId && 
+                   productSubcategory === normalizedSubcategoryId;
+        });
+
         // Formatear datos para la respuesta
-        const formattedProducts = products.map(product => {
+        const formattedProducts = filteredProducts.map(product => {
             // Convertir especificaciones de objeto a string si es necesario
             let especificaciones = '';
             if (product.specifications) {
@@ -121,9 +161,41 @@ async function downloadProductImagesController(req, res) {
             });
         }
 
+        // Normalizar los valores
+        const normalizedCategory = String(category).trim();
+        const normalizedSubcategory = String(subcategory).trim();
+
+        // Validar que la subcategoría pertenece a la categoría
+        const categoryDoc = await categoryModel.findOne({
+            value: normalizedCategory,
+            isActive: true
+        }).lean();
+
+        if (!categoryDoc) {
+            return res.status(404).json({
+                success: false,
+                error: 'Categoría no encontrada'
+            });
+        }
+
+        // Verificar que la subcategoría existe y pertenece a esta categoría
+        const subcategoryExists = categoryDoc.subcategories.some(
+            sub => sub.value === normalizedSubcategory && sub.isActive !== false
+        );
+
+        if (!subcategoryExists) {
+            return res.status(404).json({
+                success: false,
+                error: 'Subcategoría no encontrada o no pertenece a la categoría seleccionada'
+            });
+        }
+
         // Obtener productos seleccionados con stock > 0
+        // Filtrar también por categoría y subcategoría para asegurar que pertenecen
         const products = await productModel.find({
             _id: { $in: product_ids },
+            category: normalizedCategory,
+            subcategory: normalizedSubcategory,
             stock: { $gt: 0 } // Solo productos con stock mayor a 0
         }).select({
             _id: 1,
@@ -134,20 +206,64 @@ async function downloadProductImagesController(req, res) {
             productImage: 1,
             codigo: 1,
             brandName: 1,
-            stock: 1
+            stock: 1,
+            category: 1,
+            subcategory: 1
         }).lean();
 
-        if (products.length === 0) {
+        // Filtrar productos que realmente coincidan (doble verificación)
+        const filteredProducts = products.filter(product => {
+            const productCategory = String(product.category || '').trim();
+            const productSubcategory = String(product.subcategory || '').trim();
+            return productCategory === normalizedCategory && 
+                   productSubcategory === normalizedSubcategory;
+        });
+
+        if (filteredProducts.length === 0) {
             return res.status(404).json({
                 success: false,
-                error: 'No se encontraron productos con los IDs proporcionados'
+                error: 'No se encontraron productos válidos con los IDs proporcionados que pertenezcan a la subcategoría seleccionada'
             });
         }
 
         // Crear directorio temporal - Compatible con Vercel
-        const tempDir = process.env.NODE_ENV === 'production' ? '/tmp' : path.join(__dirname, '../../temp');
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
+        // En Vercel solo se puede escribir en /tmp
+        // Detectar si estamos en Vercel o en un entorno serverless
+        // Verificar múltiples formas de detectar Vercel
+        const isVercel = process.env.VERCEL === '1' || 
+                        process.env.VERCEL_ENV || 
+                        process.env.VERCEL_URL ||
+                        process.cwd().includes('/var/task') ||
+                        __dirname.includes('/var/task');
+        
+        // Usar /tmp en Vercel/serverless, o el directorio local en desarrollo
+        let tempDir = '/tmp'; // Por defecto usar /tmp (funciona en Vercel y local)
+        
+        // Solo usar directorio local si NO estamos en Vercel y estamos en desarrollo
+        if (!isVercel && process.env.NODE_ENV !== 'production') {
+            const localTempDir = path.join(__dirname, '../../temp');
+            try {
+                // Intentar usar directorio local en desarrollo
+                if (!fs.existsSync(localTempDir)) {
+                    fs.mkdirSync(localTempDir, { recursive: true });
+                }
+                tempDir = localTempDir;
+            } catch (error) {
+                console.warn('No se pudo crear directorio local, usando /tmp:', error.message);
+                tempDir = '/tmp';
+            }
+        }
+        
+        // Asegurarse de que el directorio temporal existe
+        // En Vercel, /tmp siempre existe pero puede estar vacío
+        try {
+            if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
+            }
+        } catch (error) {
+            // Si falla, forzar uso de /tmp
+            console.warn('Error verificando directorio temporal, usando /tmp:', error.message);
+            tempDir = '/tmp';
         }
 
         const exportDir = path.join(tempDir, `export_${Date.now()}`);
@@ -158,7 +274,7 @@ async function downloadProductImagesController(req, res) {
         fs.mkdirSync(subcategoryDir, { recursive: true });
 
         // Generar Excel
-        const excelData = products.map((product, index) => {
+        const excelData = filteredProducts.map((product, index) => {
             // Generar descripción con mensaje de contacto
             let descripcionCompleta = '';
             const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
@@ -187,7 +303,7 @@ async function downloadProductImagesController(req, res) {
         XLSX.writeFile(workbook, excelPath);
 
         // Descargar y organizar TODAS las imágenes de cada producto
-        const imagePromises = products.map(async (product, index) => {
+        const imagePromises = filteredProducts.map(async (product, index) => {
             const productDir = path.join(subcategoryDir, `${index + 1}`);
             fs.mkdirSync(productDir, { recursive: true });
 
