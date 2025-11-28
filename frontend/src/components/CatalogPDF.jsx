@@ -16,7 +16,10 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
     
     try {
       // Llamar al endpoint del backend que usa Puppeteer
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}/api/generate-catalog-pdf`, {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 
+        (typeof window !== 'undefined' && window.location.origin) || 
+        '';
+      const response = await fetch(`${backendUrl}/api/generate-catalog-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

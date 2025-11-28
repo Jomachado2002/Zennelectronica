@@ -1,4 +1,9 @@
-    const backendDomain = process.env.REACT_APP_BACKEND_URL;
+    // Detectar el dominio del backend
+    // Si REACT_APP_BACKEND_URL está definido, usarlo
+    // Si no, usar URL relativa (mismo dominio) para producción en Vercel
+    const backendDomain = process.env.REACT_APP_BACKEND_URL || 
+      (typeof window !== 'undefined' && window.location.origin) || 
+      '';
 
     const SummaryApi = {
         // ===========================================
