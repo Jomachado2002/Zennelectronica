@@ -94,9 +94,29 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
 
         
 
-        const isSuccessful = (transactionData.response === 'S' && transactionData.response_code === '00') ||
+        // ✅ VERIFICACIÓN MEJORADA: Según documentación Bancard
+        // Un pago es exitoso cuando:
+        // 1. response='S' y response_code='00' (según documentación)
+        // 2. O cuando hay authorization_number y ticket_number (dinero debitado = exitoso, aunque response_code pueda faltar)
+        // 3. O cuando response_code='00' (código de aprobación)
+        const hasAuthorization = transactionData.authorization_number && transactionData.ticket_number;
+        const hasResponseAndCode = transactionData.response === 'S' && transactionData.response_code === '00';
+        const hasApprovalCode = transactionData.response_code === '00';
+        
+        const isSuccessful = hasResponseAndCode ||
                            queryParams.status === 'success' ||
-                           (transactionData.authorization_number && transactionData.ticket_number);
+                           hasAuthorization ||  // ✅ Si hay autorización y ticket, dinero fue debitado = exitoso
+                           hasApprovalCode;     // ✅ Si response_code='00', fue aprobado
+        
+        console.log('🔍 Verificación de éxito del pago:', {
+            shop_process_id: transactionData.shop_process_id,
+            response: transactionData.response,
+            response_code: transactionData.response_code,
+            has_authorization: hasAuthorization,
+            has_response_and_code: hasResponseAndCode,
+            has_approval_code: hasApprovalCode,
+            is_successful: isSuccessful
+        });
 
         
 

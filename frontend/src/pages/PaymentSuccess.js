@@ -38,11 +38,24 @@ const PaymentSuccess = () => {
     const version = searchParams.get('version');
     const risk_index = searchParams.get('risk_index');
 
-    // Determinar si el pago fue exitoso
-    const isPaymentSuccessful = response_code === '00' || 
-                           (!response_code && shop_process_id) ||
-                           (authorization_number && ticket_number) ||
-                           searchParams.get('status') === 'payment_success';
+    // ✅ Estado para determinar si el pago fue exitoso (se actualizará con datos reales)
+    const [isPaymentSuccessful, setIsPaymentSuccessful] = useState(false);
+    
+    // ✅ Determinar inicialmente basándose en parámetros de URL
+    useEffect(() => {
+        const urlResponseCode = searchParams.get('response_code');
+        const urlResponse = searchParams.get('response');
+        const urlAuthNumber = searchParams.get('authorization_number');
+        const urlTicketNumber = searchParams.get('ticket_number');
+        
+        // ✅ Verificación inicial según documentación Bancard
+        const initialSuccess = urlResponseCode === '00' || 
+                              (urlResponse === 'S' && urlResponseCode === '00') ||
+                              (urlAuthNumber && urlTicketNumber) ||
+                              searchParams.get('status') === 'payment_success';
+        
+        setIsPaymentSuccessful(initialSuccess);
+    }, [searchParams]);
 
     useEffect(() => {
         
@@ -82,9 +95,11 @@ const PaymentSuccess = () => {
             setIsLoading(false);
             setError("No se recibió ID de transacción");
         }
+    }, [shop_process_id, response_code, searchParams]);
 
-        // Limpiar carrito si el pago fue exitoso
-        if (isPaymentSuccessful) {
+    // ✅ Limpiar carrito cuando se confirme que el pago fue exitoso
+    useEffect(() => {
+        if (isPaymentSuccessful && !isLoading) {
             setTimeout(() => {
                 localCartHelper.clearCart();
                 
@@ -101,7 +116,7 @@ const PaymentSuccess = () => {
                 
             }
         }
-    }, [shop_process_id, response_code]);
+    }, [isPaymentSuccessful, isLoading, shop_process_id, transactionDetails, amount, currency_id]);
 
     const fetchTransactionDetails = async (transactionId) => {
         try {
@@ -118,6 +133,40 @@ const PaymentSuccess = () => {
 
             if (result.success) {
                 setTransactionDetails(result.data);
+                
+                // ✅ VERIFICAR ESTADO REAL DE LA TRANSACCIÓN DESDE BD
+                const transaction = result.data?.transaction || result.data?.local_transaction || result.data?.confirmation;
+                if (transaction) {
+                    const realStatus = transaction.status;
+                    const realResponse = transaction.response;
+                    const realResponseCode = transaction.response_code;
+                    const realAuthNumber = transaction.authorization_number;
+                    const realTicketNumber = transaction.ticket_number;
+                    
+                    // ✅ Según documentación Bancard: verificar estado real
+                    const confirmedSuccess = realStatus === 'approved' ||
+                                           (realResponse === 'S' && realResponseCode === '00') ||
+                                           (realAuthNumber && realTicketNumber);
+                    
+                    setIsPaymentSuccessful(confirmedSuccess);
+                    
+                    console.log('🔍 Estado real de transacción:', {
+                        status: realStatus,
+                        response: realResponse,
+                        response_code: realResponseCode,
+                        has_authorization: !!(realAuthNumber && realTicketNumber),
+                        confirmed_success: confirmedSuccess
+                    });
+                }
+                
+                // ✅ TAMBIÉN VERIFICAR EN bancard_status SI EXISTE
+                const bancardStatus = result.data?.bancard_status;
+                if (bancardStatus?.confirmation) {
+                    const confirmation = bancardStatus.confirmation;
+                    const confirmedSuccess = confirmation.response === 'S' && confirmation.response_code === '00' ||
+                                           (confirmation.authorization_number && confirmation.ticket_number);
+                    setIsPaymentSuccessful(confirmedSuccess);
+                }
             } else {
                 // console.warn removed for production
                 // No mostrar error, seguir con los datos de URL

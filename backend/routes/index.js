@@ -1303,7 +1303,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
         }
     });
 
-    router.get("/bancard/redirect/success", (req, res) => {
+    router.get("/bancard/redirect/success", async (req, res) => {
         try {
             
             
@@ -1313,14 +1313,64 @@ router.post("/actualizar-producto", authToken, updateProductController);
             // Obtener TODOS los parámetros que envía Bancard
             const params = req.query;
             
-            // ✅ DETERMINAR SI ES ÉXITO O ERROR SEGÚN LOS PARÁMETROS DE BANCARD
-            const response = params.response;
-            const responseCode = params.response_code;
-            const hasAuthorization = params.authorization_number && params.ticket_number;
+            // ✅ VERIFICAR ESTADO REAL DE LA TRANSACCIÓN EN BD SI HAY shop_process_id
+            let isSuccess = false;
+            const shopProcessId = params.shop_process_id;
             
-            // ✅ Según documentación Bancard: response='S' y response_code='00' = éxito
-            const isSuccess = (response === 'S' && responseCode === '00') || 
-                             (hasAuthorization && responseCode === '00');
+            if (shopProcessId) {
+                try {
+                    const BancardTransactionModel = require('../models/bancardTransactionModel');
+                    const transaction = await BancardTransactionModel.findOne({ 
+                        shop_process_id: parseInt(shopProcessId) 
+                    });
+                    
+                    if (transaction) {
+                        // ✅ VERIFICAR ESTADO REAL EN BD
+                        const isApprovedInDb = transaction.status === 'approved' || 
+                                              (transaction.response === 'S' && transaction.response_code === '00') ||
+                                              (transaction.authorization_number && transaction.ticket_number);
+                        
+                        if (isApprovedInDb) {
+                            isSuccess = true;
+                            console.log('✅ Transacción confirmada como exitosa en BD:', {
+                                shop_process_id: shopProcessId,
+                                status: transaction.status,
+                                response: transaction.response,
+                                response_code: transaction.response_code
+                            });
+                        }
+                    }
+                } catch (dbError) {
+                    console.error('❌ Error al consultar transacción en BD:', dbError.message);
+                }
+            }
+            
+            // ✅ SI NO ENCONTRAMOS EN BD, VERIFICAR PARÁMETROS DE LA URL
+            if (!isSuccess) {
+                const response = params.response;
+                const responseCode = params.response_code;
+                const hasAuthorization = params.authorization_number && params.ticket_number;
+                const hasResponseAndCode = response === 'S' && responseCode === '00';
+                const hasApprovalCode = responseCode === '00';
+                
+                // ✅ Según documentación Bancard: 
+                // - response='S' y response_code='00' = éxito
+                // - Si hay authorization_number y ticket_number, dinero fue debitado = éxito
+                // - Si response_code='00', fue aprobado
+                isSuccess = hasResponseAndCode || 
+                           (hasAuthorization) || // ✅ Si hay autorización y ticket, considerar éxito (dinero debitado)
+                           hasApprovalCode;      // ✅ Si response_code='00', considerar éxito
+                
+                console.log('🔍 Verificación en redirect URL:', {
+                    shop_process_id: shopProcessId,
+                    response,
+                    response_code: responseCode,
+                    has_authorization: hasAuthorization,
+                    authorization_number: params.authorization_number,
+                    ticket_number: params.ticket_number,
+                    is_success: isSuccess
+                });
+            }
             
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
             const redirectParams = new URLSearchParams(params).toString();

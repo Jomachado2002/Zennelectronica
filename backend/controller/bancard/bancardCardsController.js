@@ -300,8 +300,27 @@ const chargeWithTokenController = async (req, res) => {
                 // ✅ SI HAY RESPUESTA INMEDIATA, GUARDAR TODOS LOS DATOS Y ENVIAR EMAILS
                 if (operationData?.response) {
                     // ✅ VERIFICACIÓN MEJORADA: Según documentación Bancard
-                    const isApproved = (operationData.response === 'S' && operationData.response_code === '00') ||
-                                     (operationData.authorization_number && operationData.ticket_number);
+                    // Un pago es exitoso cuando:
+                    // 1. response='S' y response_code='00'
+                    // 2. O cuando hay authorization_number y ticket_number (dinero debitado)
+                    // 3. O cuando response_code='00' (código de aprobación)
+                    const hasAuthorization = operationData.authorization_number && operationData.ticket_number;
+                    const hasResponseAndCode = operationData.response === 'S' && operationData.response_code === '00';
+                    const hasApprovalCode = operationData.response_code === '00';
+                    
+                    const isApproved = hasResponseAndCode ||
+                                     hasAuthorization ||  // ✅ Si hay autorización y ticket, dinero fue debitado = exitoso
+                                     hasApprovalCode;     // ✅ Si response_code='00', fue aprobado
+                    
+                    console.log('🔍 Verificación de pago con token:', {
+                        shop_process_id: finalShopProcessId,
+                        response: operationData.response,
+                        response_code: operationData.response_code,
+                        has_authorization: hasAuthorization,
+                        authorization_number: operationData.authorization_number,
+                        ticket_number: operationData.ticket_number,
+                        is_approved: isApproved
+                    });
                     
                     updateData.response = operationData.response;
                     updateData.response_code = operationData.response_code;
@@ -396,17 +415,26 @@ const chargeWithTokenController = async (req, res) => {
                     }
                 });
             } else {
-                // ✅ PAGO PROCESADO DIRECTAMENTE
-                const isApproved = operationData?.response === 'S' && operationData?.response_code === '00';
+                // ✅ PAGO PROCESADO DIRECTAMENTE - VERIFICAR MEJOR
+                const hasAuth = operationData?.authorization_number && operationData?.ticket_number;
+                const hasResponseAndCode = operationData?.response === 'S' && operationData?.response_code === '00';
+                const hasApprovalCode = operationData?.response_code === '00';
                 
-             
+                const isApproved = hasResponseAndCode || hasAuth || hasApprovalCode;
+                
+                console.log('🔍 Verificación final de pago directo:', {
+                    shop_process_id: finalShopProcessId,
+                    response: operationData?.response,
+                    response_code: operationData?.response_code,
+                    has_authorization: hasAuth,
+                    is_approved: isApproved
+                });
 
                 res.json({
                     message: isApproved ? "Pago procesado exitosamente" : "Pago rechazado por el banco",
                     success: isApproved,
                     error: !isApproved,
-                    requires3DS: false,
-                    email_sent: true, // ✅ INDICAR QUE SE ENVIÓ EMAIL
+                    email_sent: isApproved,
                     data: {
                         ...response.data,
                         shop_process_id: finalShopProcessId,
@@ -415,8 +443,8 @@ const chargeWithTokenController = async (req, res) => {
                         authorization_number: operationData?.authorization_number,
                         ticket_number: operationData?.ticket_number,
                         response_description: operationData?.response_description,
-                        customer_email_sent: true, // ✅ CONFIRMACIÓN DE EMAIL AL CLIENTE
-                        admin_notification_sent: true // ✅ CONFIRMACIÓN DE NOTIFICACIÓN ADMIN
+                        customer_email_sent: isApproved,
+                        admin_notification_sent: isApproved
                     }
                 });
             }
