@@ -1,5 +1,5 @@
 // frontend/src/pages/UserProfilePage.js - VERSIÓN MEJORADA COMPATIBLE CON IOS
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -97,6 +97,52 @@ const UserProfilePage = () => {
     }
   };
 
+  // ✅ FUNCIÓN MEJORADA PARA OBTENER TARJETAS CON VALIDACIONES (MOVIDA ANTES DEL useEffect)
+  const handleFetchCards = useCallback(async (userId) => {
+    try {
+      
+      
+      // ✅ VALIDAR USUARIO
+      if (!user?._id) {
+        // console.error removed for production
+        toast.error('❌ Error: Usuario no válido');
+        return [];
+      }
+
+      // ✅ USAR bancardUserId O _id COMO FALLBACK
+      const targetUserId = user.bancardUserId || user._id;
+      
+      
+      // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+      const { authGet } = await import('../helpers/authFetch');
+      const response = await authGet(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`
+      );
+
+      const result = await response.json();
+      
+      if (result.success) {
+        
+        return result.data.cards || [];
+      } else {
+        // console.warn removed for production
+        
+        // ✅ MANEJO ESPECÍFICO PARA USUARIOS SIN BANCARD ID
+        if (result.message?.includes('bancardUserId')) {
+          toast.info('ℹ️ Aún no tienes tarjetas registradas. Puedes registrar tu primera tarjeta.');
+          return [];
+        }
+        
+        toast.warn(result.message || '⚠️ No se pudieron cargar las tarjetas');
+        return [];
+      }
+    } catch (error) {
+      // console.error removed for production
+      toast.error('❌ Error al cargar tarjetas');
+      return [];
+    }
+  }, [user]);
+
   // ✅ LEER TAB DESDE URL PARAMS Y RECARGAR TARJETAS SI ES NECESARIO
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
@@ -107,7 +153,7 @@ const UserProfilePage = () => {
     }
     
     // ✅ SI SE REGISTRÓ UNA TARJETA, RECARGAR AUTOMÁTICAMENTE
-    if (cardRegistered === 'true' && tabFromUrl === 'cards' && handleFetchCards) {
+    if (cardRegistered === 'true' && tabFromUrl === 'cards') {
       console.log('🔄 Tarjeta registrada detectada, recargando tarjetas...');
       setTimeout(() => {
         if (user?._id || user?.bancardUserId) {
@@ -184,51 +230,6 @@ const UserProfilePage = () => {
     }
   };
 
-  // ✅ FUNCIÓN MEJORADA PARA OBTENER TARJETAS CON VALIDACIONES
-  const handleFetchCards = async (userId) => {
-    try {
-      
-      
-      // ✅ VALIDAR USUARIO
-      if (!user?._id) {
-        // console.error removed for production
-        toast.error('❌ Error: Usuario no válido');
-        return [];
-      }
-
-      // ✅ USAR bancardUserId O _id COMO FALLBACK
-      const targetUserId = user.bancardUserId || user._id;
-      
-      
-      // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
-      const { authGet } = await import('../helpers/authFetch');
-      const response = await authGet(
-        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${targetUserId}`
-      );
-
-      const result = await response.json();
-      
-      if (result.success) {
-        
-        return result.data.cards || [];
-      } else {
-        // console.warn removed for production
-        
-        // ✅ MANEJO ESPECÍFICO PARA USUARIOS SIN BANCARD ID
-        if (result.message?.includes('bancardUserId')) {
-          toast.info('ℹ️ Aún no tienes tarjetas registradas. Puedes registrar tu primera tarjeta.');
-          return [];
-        }
-        
-        toast.warn(result.message || '⚠️ No se pudieron cargar las tarjetas');
-        return [];
-      }
-    } catch (error) {
-      // console.error removed for production
-      toast.error('❌ Error al cargar tarjetas');
-      return [];
-    }
-  };
 
   // ✅ FUNCIÓN MEJORADA PARA ELIMINAR TARJETAS
   const handleDeleteCard = async (userId, aliasToken) => {

@@ -1305,10 +1305,11 @@ router.post("/actualizar-producto", authToken, updateProductController);
 
     router.get("/bancard/redirect/success", async (req, res) => {
         try {
-            
-            
-            
-            
+            console.log('🔄 Redirect recibido de Bancard:', {
+                query: req.query,
+                method: req.method,
+                url: req.url
+            });
             
             // Obtener TODOS los parámetros que envía Bancard
             const params = req.query;
@@ -1316,6 +1317,9 @@ router.post("/actualizar-producto", authToken, updateProductController);
             // ✅ VERIFICAR ESTADO REAL DE LA TRANSACCIÓN EN BD SI HAY shop_process_id
             let isSuccess = false;
             const shopProcessId = params.shop_process_id;
+            
+            // ✅ ENRIQUECER PARÁMETROS DESDE BD SI ES NECESARIO
+            let enrichedParams = { ...params };
             
             if (shopProcessId) {
                 try {
@@ -1339,6 +1343,22 @@ router.post("/actualizar-producto", authToken, updateProductController);
                                 response_code: transaction.response_code
                             });
                         }
+                        
+                        // ✅ ENRIQUECER PARÁMETROS CON DATOS DE BD SI FALTAN EN LA URL
+                        if (!enrichedParams.shop_process_id) enrichedParams.shop_process_id = String(transaction.shop_process_id);
+                        if (!enrichedParams.amount && transaction.amount) enrichedParams.amount = String(transaction.amount);
+                        if (!enrichedParams.currency && transaction.currency) enrichedParams.currency = transaction.currency;
+                        if (!enrichedParams.response_code && transaction.response_code) enrichedParams.response_code = transaction.response_code;
+                        if (!enrichedParams.response && transaction.response) enrichedParams.response = transaction.response;
+                        if (!enrichedParams.authorization_number && transaction.authorization_number) enrichedParams.authorization_number = transaction.authorization_number;
+                        if (!enrichedParams.ticket_number && transaction.ticket_number) enrichedParams.ticket_number = transaction.ticket_number;
+                        if (!enrichedParams.response_description && transaction.response_description) enrichedParams.response_description = transaction.response_description;
+                        
+                        console.log('📦 Parámetros enriquecidos desde BD:', {
+                            original: Object.keys(params),
+                            enriched: Object.keys(enrichedParams),
+                            has_authorization: !!(enrichedParams.authorization_number && enrichedParams.ticket_number)
+                        });
                     }
                 } catch (dbError) {
                     console.error('❌ Error al consultar transacción en BD:', dbError.message);
@@ -1347,9 +1367,10 @@ router.post("/actualizar-producto", authToken, updateProductController);
             
             // ✅ SI NO ENCONTRAMOS EN BD, VERIFICAR PARÁMETROS DE LA URL
             if (!isSuccess) {
-                const response = params.response;
-                const responseCode = params.response_code;
-                const hasAuthorization = params.authorization_number && params.ticket_number;
+                const response = enrichedParams.response || params.response;
+                const responseCode = enrichedParams.response_code || params.response_code;
+                const hasAuthorization = (enrichedParams.authorization_number || params.authorization_number) && 
+                                       (enrichedParams.ticket_number || params.ticket_number);
                 const hasResponseAndCode = response === 'S' && responseCode === '00';
                 const hasApprovalCode = responseCode === '00';
                 
@@ -1362,39 +1383,54 @@ router.post("/actualizar-producto", authToken, updateProductController);
                            hasApprovalCode;      // ✅ Si response_code='00', considerar éxito
                 
                 console.log('🔍 Verificación en redirect URL:', {
-                    shop_process_id: shopProcessId,
+                    shop_process_id: shopProcessId || enrichedParams.shop_process_id,
                     response,
                     response_code: responseCode,
                     has_authorization: hasAuthorization,
-                    authorization_number: params.authorization_number,
-                    ticket_number: params.ticket_number,
+                    authorization_number: enrichedParams.authorization_number || params.authorization_number,
+                    ticket_number: enrichedParams.ticket_number || params.ticket_number,
                     is_success: isSuccess
                 });
             }
             
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-            const redirectParams = new URLSearchParams(params).toString();
+            
+            // ✅ CONSTRUIR PARÁMETROS DE REDIRECCIÓN (SOLO VALORES NO VACÍOS)
+            const redirectParams = new URLSearchParams();
+            Object.entries(enrichedParams).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '') {
+                    redirectParams.append(key, String(value));
+                }
+            });
+            
+            const paramsString = redirectParams.toString();
             
             // ✅ REDIRIGIR A LA PÁGINA CORRECTA SEGÚN EL RESULTADO
             let finalUrl;
             if (isSuccess) {
                 // Pago exitoso: redirigir a página de éxito
-                finalUrl = `${frontendUrl}/pago-exitoso?${redirectParams}`;
+                finalUrl = paramsString ? `${frontendUrl}/pago-exitoso?${paramsString}` : `${frontendUrl}/pago-exitoso`;
+                console.log('✅ Redirigiendo a pago-exitoso:', finalUrl);
             } else {
                 // Pago rechazado o error: redirigir a página de cancelación con todos los parámetros
-                finalUrl = `${frontendUrl}/pago-cancelado?${redirectParams}`;
+                finalUrl = paramsString ? `${frontendUrl}/pago-cancelado?${paramsString}` : `${frontendUrl}/pago-cancelado`;
+                console.log('❌ Redirigiendo a pago-cancelado:', finalUrl);
             }
-            
-            
             
             // Redirección HTTP 302 (temporal) hacia el frontend
             res.redirect(302, finalUrl);
             
         } catch (error) {
-            // console.error removed for production
+            console.error('❌ Error en redirect:', error);
             
-            // En caso de error, redirigir a página de error
-            const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pago-cancelado?error=redirect_error&details=${encodeURIComponent(error.message)}`;
+            // En caso de error, redirigir a página de error con información básica
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const errorParams = new URLSearchParams();
+            errorParams.append('error', 'redirect_error');
+            if (req.query.shop_process_id) {
+                errorParams.append('shop_process_id', req.query.shop_process_id);
+            }
+            const errorUrl = `${frontendUrl}/pago-cancelado?${errorParams.toString()}`;
             res.redirect(302, errorUrl);
         }
     });

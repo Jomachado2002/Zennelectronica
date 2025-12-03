@@ -33,8 +33,13 @@ const bancardConfirmController = async (req, res) => {
     console.log('📥 Query:', JSON.stringify(req.query, null, 2));
     console.log('📥 Method:', req.method);
     console.log('📥 IP:', req.ip || req.headers['x-forwarded-for'] || 'unknown');
+    console.log('📥 Headers:', {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+    });
     
     // ✅ GARANTIZAR QUE SIEMPRE RESPONDA 200 (CRÍTICO PARA BANCARD)
+    // Bancard requiere que siempre respondamos 200, incluso si hay errores internos
     let responseSent = false;
     
     const sendSuccessResponse = () => {
@@ -49,26 +54,9 @@ const bancardConfirmController = async (req, res) => {
     };
     
     try {
-        
-        
-        
-        
-        
-        
-        
-        
-
-        // ✅ VALIDAR QUE LA RESPUESTA NO SE HAYA ENVIADO YA
-        if (res.headersSent) {
-            return;
-        }
-
-        // ✅ RESPONDER INMEDIATAMENTE A BANCARD (CRÍTICO)
-        const responseData = {
-            status: "success"
-        };
-
-        // ✅ ENVIAR RESPUESTA INMEDIATAMENTE
+        // ✅ ENVIAR RESPUESTA INMEDIATA PARA EVITAR TIMEOUTS
+        // Esto asegura que Bancard reciba confirmación rápidamente
+        // Bancard requiere respuesta rápida (menos de 5 segundos)
         sendSuccessResponse();
         console.log('✅ Respuesta 200 enviada a Bancard inmediatamente');
 

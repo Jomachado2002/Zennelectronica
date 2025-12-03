@@ -11,31 +11,7 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
   const [processId, setProcessId] = useState('');
   const [iframeReady, setIframeReady] = useState(false);
 
-  // ✅ AGREGAR Y LIMPIAR LISTENER DE MENSAJES
-  useEffect(() => {
-    if (isOpen) {
-      window.addEventListener('message', handleIframeMessage, false);
-      console.log('✅ Listener de mensajes agregado para catastro');
-    }
-    
-    return () => {
-      window.removeEventListener('message', handleIframeMessage, false);
-      console.log('🧹 Listener de mensajes removido');
-    };
-  }, [isOpen, handleIframeMessage]);
-
-  // Limpiar al cerrar
-  useEffect(() => {
-    if (!isOpen) {
-      setProcessId('');
-      setLoading(false);
-      setIframeReady(false);
-      const script = document.getElementById('bancard-card-script');
-      if (script) script.remove();
-    }
-  }, [isOpen]);
-
-  // Manejar mensajes del iframe
+  // ✅ MANEJAR MENSAJES DEL IFRAME (DECLARADO PRIMERO)
   const handleIframeMessage = useCallback((event) => {
     const validOrigins = [
       'https://vpos.infonet.com.py',
@@ -95,6 +71,30 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
       console.error('Error processing message:', error);
     }
   }, [onSuccess, onClose]);
+
+  // ✅ AGREGAR Y LIMPIAR LISTENER DE MENSAJES (DESPUÉS DE DECLARAR handleIframeMessage)
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('message', handleIframeMessage, false);
+      console.log('✅ Listener de mensajes agregado para catastro');
+    }
+    
+    return () => {
+      window.removeEventListener('message', handleIframeMessage, false);
+      console.log('🧹 Listener de mensajes removido');
+    };
+  }, [isOpen, handleIframeMessage]);
+
+  // Limpiar al cerrar
+  useEffect(() => {
+    if (!isOpen) {
+      setProcessId('');
+      setLoading(false);
+      setIframeReady(false);
+      const script = document.getElementById('bancard-card-script');
+      if (script) script.remove();
+    }
+  }, [isOpen]);
 
   // Cargar script de Bancard
   const loadBancardScript = useCallback((receivedProcessId, retryCount = 0) => {
@@ -276,12 +276,12 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
       startCardRegistration();
     }
     
+    // ✅ Limpiar script al desmontar (el listener se limpia en el useEffect principal)
     return () => {
-      window.removeEventListener('message', handleIframeMessage, false);
       const script = document.getElementById('bancard-card-script');
       if (script) script.remove();
     };
-  }, [isOpen, user, handleIframeMessage]);
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 

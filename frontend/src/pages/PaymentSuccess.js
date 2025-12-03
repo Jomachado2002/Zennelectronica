@@ -59,7 +59,14 @@ const PaymentSuccess = () => {
 
     useEffect(() => {
         
-        console.log("📋 Parámetros recibidos:", {
+        // ✅ OBTENER TODOS LOS PARÁMETROS DE LA URL (MEJORADO)
+        const allParams = {};
+        searchParams.forEach((value, key) => {
+            allParams[key] = value;
+        });
+        
+        console.log("📋 Parámetros recibidos de URL:", allParams);
+        console.log("📋 Parámetros individuales:", {
             shop_process_id,
             operation_id,
             currency_id,
@@ -82,18 +89,28 @@ const PaymentSuccess = () => {
             try {
                 const parsedData = JSON.parse(savedPaymentData);
                 setPaymentData(parsedData);
+                console.log("💾 Datos de pago desde sessionStorage:", parsedData);
                 
+                // ✅ SI NO HAY shop_process_id EN LA URL, USAR EL DE sessionStorage
+                if (!shop_process_id && parsedData.shop_process_id) {
+                    console.log("🔄 Usando shop_process_id de sessionStorage:", parsedData.shop_process_id);
+                    fetchTransactionDetails(parsedData.shop_process_id);
+                    return;
+                }
             } catch (e) {
-                // console.error removed for production
+                console.error("❌ Error al parsear datos de sessionStorage:", e);
             }
         }
 
-        // Consultar detalles de la transacción si hay ID
-        if (shop_process_id) {
-            fetchTransactionDetails(shop_process_id);
+        // ✅ Consultar detalles de la transacción si hay ID (en URL o sessionStorage)
+        const transactionId = shop_process_id || paymentData?.shop_process_id;
+        if (transactionId) {
+            console.log("🔍 Consultando transacción:", transactionId);
+            fetchTransactionDetails(transactionId);
         } else {
+            console.warn("⚠️ No se encontró shop_process_id en URL ni en sessionStorage");
             setIsLoading(false);
-            setError("No se recibió ID de transacción");
+            setError("No se recibió ID de transacción. Por favor, verifica tu correo electrónico para confirmar el estado del pago.");
         }
     }, [shop_process_id, response_code, searchParams]);
 
@@ -121,15 +138,28 @@ const PaymentSuccess = () => {
     const fetchTransactionDetails = async (transactionId) => {
         try {
             setIsLoading(true);
-            
+            console.log("📡 Consultando estado de transacción:", transactionId);
 
             const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/status/${transactionId}`, {
                 method: 'GET',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
 
+            if (!response.ok) {
+                console.warn("⚠️ Error al consultar transacción:", response.status, response.statusText);
+                // Intentar usar parámetros de URL si están disponibles
+                if (response_code === '00' || (authorization_number && ticket_number)) {
+                    setIsPaymentSuccessful(true);
+                }
+                setIsLoading(false);
+                return;
+            }
+
             const result = await response.json();
-            
+            console.log("📦 Respuesta del backend:", result);
 
             if (result.success) {
                 setTransactionDetails(result.data);
@@ -150,12 +180,14 @@ const PaymentSuccess = () => {
                     
                     setIsPaymentSuccessful(confirmedSuccess);
                     
-                    console.log('🔍 Estado real de transacción:', {
+                    console.log('✅ Estado real de transacción desde BD:', {
                         status: realStatus,
                         response: realResponse,
                         response_code: realResponseCode,
                         has_authorization: !!(realAuthNumber && realTicketNumber),
-                        confirmed_success: confirmedSuccess
+                        confirmed_success: confirmedSuccess,
+                        authorization_number: realAuthNumber,
+                        ticket_number: realTicketNumber
                     });
                 }
                 
@@ -163,17 +195,31 @@ const PaymentSuccess = () => {
                 const bancardStatus = result.data?.bancard_status;
                 if (bancardStatus?.confirmation) {
                     const confirmation = bancardStatus.confirmation;
-                    const confirmedSuccess = confirmation.response === 'S' && confirmation.response_code === '00' ||
+                    const confirmedSuccess = (confirmation.response === 'S' && confirmation.response_code === '00') ||
                                            (confirmation.authorization_number && confirmation.ticket_number);
-                    setIsPaymentSuccessful(confirmedSuccess);
+                    if (confirmedSuccess) {
+                        setIsPaymentSuccessful(true);
+                    }
+                    console.log('✅ Estado desde bancard_status:', {
+                        response: confirmation.response,
+                        response_code: confirmation.response_code,
+                        has_authorization: !!(confirmation.authorization_number && confirmation.ticket_number),
+                        confirmed_success: confirmedSuccess
+                    });
                 }
             } else {
-                // console.warn removed for production
-                // No mostrar error, seguir con los datos de URL
+                console.warn("⚠️ Respuesta no exitosa del backend:", result.message);
+                // Intentar usar parámetros de URL si están disponibles
+                if (response_code === '00' || (authorization_number && ticket_number)) {
+                    setIsPaymentSuccessful(true);
+                }
             }
         } catch (error) {
-            // console.error removed for production
-            // No mostrar error, seguir con los datos de URL
+            console.error("❌ Error al consultar transacción:", error);
+            // Intentar usar parámetros de URL si están disponibles
+            if (response_code === '00' || (authorization_number && ticket_number)) {
+                setIsPaymentSuccessful(true);
+            }
         } finally {
             setIsLoading(false);
         }
