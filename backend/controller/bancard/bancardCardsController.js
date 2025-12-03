@@ -608,6 +608,16 @@ const createCardController = async (req, res) => {
 
         
 
+        // ✅ VALIDAR QUE FRONTEND_URL ESTÉ CONFIGURADA
+        const frontendUrl = process.env.FRONTEND_URL;
+        if (!frontendUrl || !frontendUrl.startsWith('http')) {
+            return res.status(500).json({
+                message: "Error de configuración: FRONTEND_URL no está configurada correctamente",
+                success: false,
+                error: true
+            });
+        }
+
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
@@ -616,9 +626,17 @@ const createCardController = async (req, res) => {
                 user_id: parseInt(finalUserId),
                 user_cell_phone: finalUserPhone,
                 user_mail: finalUserEmail,
-                return_url: `${process.env.FRONTEND_URL}/catastro-resultado`
+                // ✅ return_url va al FRONTEND (donde Bancard redirige después del catastro)
+                return_url: return_url || `${frontendUrl}/catastro-resultado`
             }
         };
+        
+        console.log('📤 Payload para catastro de tarjeta:', {
+            card_id: finalCardId,
+            user_id: finalUserId,
+            return_url: payload.operation.return_url,
+            frontend_url: frontendUrl
+        });
 
 
 

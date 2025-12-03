@@ -31,6 +31,23 @@ const CardManagementPage = ({
     }
   }, [user?._id, user?.bancardUserId]);
 
+  // ✅ ESCUCHAR EVENTO DE TARJETA REGISTRADA (DESDE CatastroResult O IFRAME)
+  useEffect(() => {
+    const handleCardRegistered = (event) => {
+      console.log('🔄 Evento de tarjeta registrada recibido, recargando tarjetas...', event.detail);
+      // ✅ RECARGAR TARJETAS AUTOMÁTICAMENTE
+      setTimeout(() => {
+        fetchUserCards();
+      }, 1000); // Esperar 1 segundo para que Bancard sincronice
+    };
+
+    window.addEventListener('bancard_card_registered', handleCardRegistered);
+    
+    return () => {
+      window.removeEventListener('bancard_card_registered', handleCardRegistered);
+    };
+  }, []);
+
   const fetchUserCards = async () => {
     setLoading(true);
     try {

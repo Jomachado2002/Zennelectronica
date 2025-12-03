@@ -97,13 +97,25 @@ const UserProfilePage = () => {
     }
   };
 
-  // ✅ LEER TAB DESDE URL PARAMS
+  // ✅ LEER TAB DESDE URL PARAMS Y RECARGAR TARJETAS SI ES NECESARIO
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
+    const cardRegistered = searchParams.get('card_registered');
+    
     if (tabFromUrl && ['profile', 'cards', 'balance', 'favorites', 'settings', 'purchases'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
-  }, [searchParams]);
+    
+    // ✅ SI SE REGISTRÓ UNA TARJETA, RECARGAR AUTOMÁTICAMENTE
+    if (cardRegistered === 'true' && tabFromUrl === 'cards') {
+      console.log('🔄 Tarjeta registrada detectada, recargando tarjetas...');
+      setTimeout(() => {
+        if (user?._id || user?.bancardUserId) {
+          handleFetchCards(user?.bancardUserId || user?._id);
+        }
+      }, 1500); // Esperar para que Bancard sincronice
+    }
+  }, [searchParams, user]);
 
   // ✅ FUNCIÓN MEJORADA PARA REGISTRO DE TARJETAS CON VALIDACIONES
   const handleRegisterCard = async (cardData) => {

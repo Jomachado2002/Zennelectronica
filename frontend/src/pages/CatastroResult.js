@@ -1,44 +1,57 @@
 // frontend/src/pages/CatastroResult.js
-import React, { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaCheckCircle, FaExclamationCircle, FaSpinner } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 
 const CatastroResult = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [cardsReloaded, setCardsReloaded] = useState(false);
   
   useEffect(() => {
-    
-    
-    
     const status = searchParams.get('status');
     const description = searchParams.get('description');
+    const isSuccess = status === 'add_new_card_success';
     
+    console.log('📥 CatastroResult - Parámetros recibidos:', {
+      status,
+      description,
+      isSuccess,
+      allParams: Object.fromEntries(searchParams)
+    });
     
-    
+    // ✅ RECARGAR TARJETAS AUTOMÁTICAMENTE SI EL CATASTRO FUE EXITOSO
+    if (isSuccess && !cardsReloaded) {
+      setCardsReloaded(true);
+      console.log('✅ Catastro exitoso, recargando tarjetas...');
+      
+      // ✅ DISPARAR EVENTO PARA QUE LOS COMPONENTES RECARGUEN TARJETAS
+      window.dispatchEvent(new CustomEvent('bancard_card_registered', {
+        detail: { status: 'success', description }
+      }));
+      
+      toast.success('✅ Tarjeta registrada exitosamente. Recargando tarjetas...');
+      
+      // ✅ REDIRIGIR A PERFIL DESPUÉS DE UN MOMENTO
+      setTimeout(() => {
+        navigate('/mi-perfil?tab=cards&card_registered=true');
+      }, 2000);
+    }
     
     // Enviar mensaje al parent (si estamos en iframe)
     if (window.parent !== window) {
-      
-      
       const message = {
         type: 'bancard_catastro_result',
         status: status,
         description: decodeURIComponent(description || ''),
-        success: status === 'add_new_card_success'
+        success: isSuccess
       };
       
-      
+      console.log('📤 Enviando mensaje al parent:', message);
       window.parent.postMessage(message, '*');
-      
-    } else {
-      // Si no estamos en iframe, redirigir después de mostrar el mensaje
-      
-      
-     // setTimeout(() => {
-       // window.location.href = '/mi-perfil?tab=cards';
-     // }, 3000);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate, cardsReloaded]);
 
   const status = searchParams.get('status');
   const description = searchParams.get('description');

@@ -11,6 +11,19 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
   const [processId, setProcessId] = useState('');
   const [iframeReady, setIframeReady] = useState(false);
 
+  // ✅ AGREGAR Y LIMPIAR LISTENER DE MENSAJES
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('message', handleIframeMessage, false);
+      console.log('✅ Listener de mensajes agregado para catastro');
+    }
+    
+    return () => {
+      window.removeEventListener('message', handleIframeMessage, false);
+      console.log('🧹 Listener de mensajes removido');
+    };
+  }, [isOpen, handleIframeMessage]);
+
   // Limpiar al cerrar
   useEffect(() => {
     if (!isOpen) {
@@ -26,28 +39,53 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
   const handleIframeMessage = useCallback((event) => {
     const validOrigins = [
       'https://vpos.infonet.com.py',
-      'https://vpos.infonet.com.py:8888'
+      'https://vpos.infonet.com.py:8888',
+      window.location.origin // ✅ PERMITIR MENSAJES DEL MISMO ORIGEN (CatastroResult)
     ];
     
-    if (!validOrigins.includes(event.origin)) return;
+    // ✅ PERMITIR MENSAJES DEL MISMO ORIGEN O DE BANCARD
+    if (!validOrigins.includes(event.origin) && event.origin !== window.location.origin) {
+      console.log('⚠️ Mensaje de origen no válido:', event.origin);
+      return;
+    }
 
-    console.log('📨 Mensaje del iframe de catastro:', event.data);
+    console.log('📨 Mensaje del iframe de catastro:', {
+      origin: event.origin,
+      data: event.data,
+      type: typeof event.data
+    });
 
     try {
       let data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
       
       if (data && typeof data === 'object') {
-        if (data.status === 'add_new_card_success') {
+        // ✅ MANEJAR ÉXITO DEL CATASTRO
+        if (data.status === 'add_new_card_success' || 
+            (data.type === 'bancard_catastro_result' && data.success === true)) {
           console.log('✅ Tarjeta registrada exitosamente');
           toast.success('✅ Tarjeta registrada exitosamente');
+          
+          // ✅ DISPARAR EVENTO PARA RECARGAR TARJETAS
+          window.dispatchEvent(new CustomEvent('bancard_card_registered', {
+            detail: { status: 'success', description: data.description }
+          }));
+          
+          // ✅ RECARGAR TARJETAS Y CERRAR MODAL
           setTimeout(() => {
-            onSuccess();
+            if (onSuccess) {
+              onSuccess(); // ✅ Esto recarga las tarjetas
+            }
             onClose();
           }, 1500);
-        } else if (data.status === 'add_new_card_fail') {
+        } 
+        // ✅ MANEJAR ERROR DEL CATASTRO
+        else if (data.status === 'add_new_card_fail' || 
+                 (data.type === 'bancard_catastro_result' && data.success === false)) {
           console.error('❌ Error al registrar tarjeta:', data.description);
           toast.error(data.description || 'Error al registrar la tarjeta');
-        } else if (data.type === 'iframe_loaded') {
+        } 
+        // ✅ MANEJAR CARGA DEL IFRAME
+        else if (data.type === 'iframe_loaded' || data.message === 'loaded') {
           console.log('✅ Iframe cargado');
           setIframeReady(true);
           setLoading(false);
@@ -164,8 +202,8 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
       
       console.log('✅ Formulario de catastro creado');
       
-      // ✅ AGREGAR LISTENER
-      window.addEventListener('message', handleIframeMessage, false);
+      // ✅ NOTA: El listener ya se agregó en el useEffect principal
+      // No es necesario agregarlo aquí de nuevo
       
       setTimeout(() => {
         console.log('⏰ Removiendo loading del catastro');
