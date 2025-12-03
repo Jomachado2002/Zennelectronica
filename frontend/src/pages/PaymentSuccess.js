@@ -138,15 +138,14 @@ const PaymentSuccess = () => {
     const fetchTransactionDetails = async (transactionId) => {
         try {
             setIsLoading(true);
-            console.log("📡 Consultando estado de transacción:", transactionId);
+            console.log("📡 Consultando y actualizando estado de transacción:", transactionId);
 
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/status/${transactionId}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            // Este endpoint ahora consulta Bancard Y actualiza la transacción inmediatamente
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(
+                `${process.env.REACT_APP_BACKEND_URL}/api/bancard/status/${transactionId}`
+            );
 
             if (!response.ok) {
                 console.warn("⚠️ Error al consultar transacción:", response.status, response.statusText);

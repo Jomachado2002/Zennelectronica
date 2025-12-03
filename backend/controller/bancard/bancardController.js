@@ -878,12 +878,23 @@ const createPaymentController = async (req, res) => {
     }
 };
 
+/**
+ * ✅ CONSULTAR Y ACTUALIZAR ESTADO DE TRANSACCIÓN INMEDIATAMENTE
+ * Igual que con tarjeta catastrada - actualiza la BD con todos los datos
+ * FUNCIONA SIN AUTENTICACIÓN (puede ser llamado desde frontend o por Bancard)
+ */
 const getTransactionStatusController = async (req, res) => {
     try {
         const { transactionId } = req.params;
         
-        
-        
+        // ✅ VALIDAR transactionId
+        if (!transactionId || isNaN(parseInt(transactionId))) {
+            return res.status(400).json({
+                message: "ID de transacción inválido",
+                success: false,
+                error: true
+            });
+        }
         
         const configValidation = validateBancardConfig();
         if (!configValidation.isValid) {
@@ -894,6 +905,20 @@ const getTransactionStatusController = async (req, res) => {
             });
         }
 
+        // ✅ BUSCAR TRANSACCIÓN EN BD PRIMERO
+        const transaction = await BancardTransactionModel.findOne({ 
+            shop_process_id: parseInt(transactionId) 
+        });
+
+        if (!transaction) {
+            return res.status(404).json({
+                message: "Transacción no encontrada",
+                success: false,
+                error: true
+            });
+        }
+
+        // ✅ CONSULTAR ESTADO EN BANCARD
         const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${transactionId}get_confirmation`;
         const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
 
@@ -905,8 +930,6 @@ const getTransactionStatusController = async (req, res) => {
             }
         };
 
-        
-
         const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
         
         const response = await axios.post(bancardUrl, payload, {
@@ -917,17 +940,96 @@ const getTransactionStatusController = async (req, res) => {
             timeout: 30000
         });
 
-        
+        // ✅ PROCESAR RESPUESTA DE BANCARD Y ACTUALIZAR TRANSACCIÓN (IGUAL QUE chargeWithTokenController)
+        if (response.status === 200 && response.data) {
+            const confirmation = response.data?.confirmation || response.data?.operation || response.data;
+            
+            if (confirmation) {
+                // ✅ VERIFICAR SI EL PAGO FUE EXITOSO
+                const hasAuthorization = confirmation.authorization_number && confirmation.ticket_number;
+                const hasResponseAndCode = confirmation.response === 'S' && confirmation.response_code === '00';
+                const hasApprovalCode = confirmation.response_code === '00';
+                
+                const isApproved = hasResponseAndCode || hasAuthorization || hasApprovalCode;
+                
+                // ✅ PREPARAR DATOS DE ACTUALIZACIÓN (IGUAL QUE chargeWithTokenController)
+                const updateData = {
+                    bancard_confirmed: true,
+                    confirmation_date: new Date(),
+                    response: confirmation.response || null,
+                    response_code: confirmation.response_code || null,
+                    response_description: confirmation.response_description || null,
+                    extended_response_description: confirmation.extended_response_description || null,
+                    authorization_number: confirmation.authorization_number || null,
+                    ticket_number: confirmation.ticket_number || null,
+                    status: isApproved ? 'approved' : (confirmation.response === 'N' ? 'rejected' : 'pending'),
+                    can_rollback: isApproved, // ✅ PERMITIR ROLLBACK SI ESTÁ APROBADO
+                    show_in_user_purchases: isApproved,
+                    visible_to_user: true
+                };
 
+                if (confirmation.security_information) {
+                    updateData.security_information = confirmation.security_information;
+                }
+
+                // ✅ ACTUALIZAR TRANSACCIÓN EN BD
+                const updatedTransaction = await BancardTransactionModel.findOneAndUpdate(
+                    { shop_process_id: parseInt(transactionId) },
+                    updateData,
+                    { new: true }
+                );
+
+                // ✅ ENVIAR EMAILS SI EL PAGO FUE APROBADO (IGUAL QUE chargeWithTokenController)
+                if (isApproved && updatedTransaction) {
+                    try {
+                        const customerEmailResult = await emailService.sendPurchaseConfirmationEmail(updatedTransaction, true);
+                        if (customerEmailResult.success) {
+                            updatedTransaction.notifications_sent = updatedTransaction.notifications_sent || [];
+                            updatedTransaction.notifications_sent.push({
+                                type: 'email',
+                                status: 'purchase_approved',
+                                sent_at: new Date(),
+                                success: true,
+                                recipient: updatedTransaction.customer_info?.email
+                            });
+                            await updatedTransaction.save();
+                        }
+
+                        await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_aprobado');
+                    } catch (emailError) {
+                        console.warn('⚠️ Error al enviar emails:', emailError.message);
+                    }
+                }
+
+                return res.json({
+                    message: "Estado consultado y transacción actualizada",
+                    success: true,
+                    error: false,
+                    data: {
+                        transaction: updatedTransaction,
+                        bancard_status: response.data,
+                        is_approved: isApproved,
+                        can_rollback: isApproved
+                    }
+                });
+            }
+        }
+
+        // ✅ SI NO HAY CONFIRMACIÓN AÚN, RETORNAR ESTADO ACTUAL
         res.json({
-            message: "Estado obtenido exitosamente",
+            message: "Estado consultado (sin confirmación aún)",
             success: true,
             error: false,
-            data: response.data
+            data: {
+                transaction: transaction,
+                bancard_status: response.data,
+                is_approved: false,
+                can_rollback: false
+            }
         });
 
     } catch (error) {
-        // console.error removed for production
+        console.error('❌ Error al consultar estado:', error.message);
         res.status(500).json({
             message: "Error al consultar estado de la transacción",
             success: false,

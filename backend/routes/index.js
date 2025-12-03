@@ -1324,6 +1324,85 @@ router.post("/actualizar-producto", authToken, updateProductController);
             if (shopProcessId) {
                 try {
                     const BancardTransactionModel = require('../models/bancardTransactionModel');
+                    const { getBancardBaseUrl } = require('../helpers/bancardUtils');
+                    const axios = require('axios');
+                    const crypto = require('crypto');
+                    
+                    // ✅ CONSULTAR ESTADO EN BANCARD Y ACTUALIZAR TRANSACCIÓN (IGUAL QUE getTransactionStatusController)
+                    try {
+                        const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${shopProcessId}get_confirmation`;
+                        const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
+                        
+                        const payload = {
+                            public_key: process.env.BANCARD_PUBLIC_KEY,
+                            operation: {
+                                token: token,
+                                shop_process_id: parseInt(shopProcessId)
+                            }
+                        };
+                        
+                        const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
+                        const confirmationResponse = await axios.post(bancardUrl, payload, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'User-Agent': 'Zenn-eCommerce/1.0'
+                            },
+                            timeout: 10000 // Timeout corto para no bloquear el redirect
+                        });
+                        
+                        // ✅ ACTUALIZAR TRANSACCIÓN CON DATOS DE BANCARD
+                        if (confirmationResponse.status === 200 && confirmationResponse.data) {
+                            const confirmation = confirmationResponse.data?.confirmation || confirmationResponse.data?.operation;
+                            
+                            if (confirmation) {
+                                const hasAuthorization = confirmation.authorization_number && confirmation.ticket_number;
+                                const hasResponseAndCode = confirmation.response === 'S' && confirmation.response_code === '00';
+                                const hasApprovalCode = confirmation.response_code === '00';
+                                const isApproved = hasResponseAndCode || hasAuthorization || hasApprovalCode;
+                                
+                                const updateData = {
+                                    bancard_confirmed: true,
+                                    confirmation_date: new Date(),
+                                    response: confirmation.response || null,
+                                    response_code: confirmation.response_code || null,
+                                    response_description: confirmation.response_description || null,
+                                    authorization_number: confirmation.authorization_number || null,
+                                    ticket_number: confirmation.ticket_number || null,
+                                    status: isApproved ? 'approved' : (confirmation.response === 'N' ? 'rejected' : 'pending'),
+                                    can_rollback: isApproved,
+                                    show_in_user_purchases: isApproved,
+                                    visible_to_user: true
+                                };
+                                
+                                if (confirmation.security_information) {
+                                    updateData.security_information = confirmation.security_information;
+                                }
+                                
+                                await BancardTransactionModel.findOneAndUpdate(
+                                    { shop_process_id: parseInt(shopProcessId) },
+                                    updateData
+                                );
+                                
+                                console.log('✅ Transacción actualizada desde redirect:', {
+                                    shop_process_id: shopProcessId,
+                                    status: updateData.status,
+                                    can_rollback: updateData.can_rollback
+                                });
+                                
+                                isSuccess = isApproved;
+                                
+                                // ✅ ENRIQUECER PARÁMETROS CON DATOS ACTUALIZADOS
+                                if (confirmation.authorization_number) enrichedParams.authorization_number = confirmation.authorization_number;
+                                if (confirmation.ticket_number) enrichedParams.ticket_number = confirmation.ticket_number;
+                                if (confirmation.response_code) enrichedParams.response_code = confirmation.response_code;
+                                if (confirmation.response) enrichedParams.response = confirmation.response;
+                            }
+                        }
+                    } catch (confirmationError) {
+                        console.warn('⚠️ Error al consultar confirmación (continuando con BD):', confirmationError.message);
+                    }
+                    
+                    // ✅ FALLBACK: VERIFICAR ESTADO EN BD
                     const transaction = await BancardTransactionModel.findOne({ 
                         shop_process_id: parseInt(shopProcessId) 
                     });
@@ -1334,7 +1413,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
                                               (transaction.response === 'S' && transaction.response_code === '00') ||
                                               (transaction.authorization_number && transaction.ticket_number);
                         
-                        if (isApprovedInDb) {
+                        if (isApprovedInDb && !isSuccess) {
                             isSuccess = true;
                             console.log('✅ Transacción confirmada como exitosa en BD:', {
                                 shop_process_id: shopProcessId,

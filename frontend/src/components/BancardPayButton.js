@@ -14,6 +14,7 @@ const BancardPayButton = ({
   const [loading, setLoading] = useState(false);
   const [showIframe, setShowIframe] = useState(false);
   const [processId, setProcessId] = useState('');
+  const [shopProcessId, setShopProcessId] = useState(null); // ✅ GUARDAR shop_process_id
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   // ✅ FUNCIÓN PARA CAPTURAR DATOS DE TRACKING
@@ -69,15 +70,49 @@ const BancardPayButton = ({
         
         if (data && typeof data === 'object') {
           if (data.type === 'payment_success' || data.status === 'success') {
+            // ✅ CONSULTAR Y ACTUALIZAR ESTADO INMEDIATAMENTE (IGUAL QUE TARJETA CATASTRADA)
+            const updateTransactionStatus = async () => {
+              try {
+                const savedPayment = sessionStorage.getItem('bancard_payment');
+                const paymentData = savedPayment ? JSON.parse(savedPayment) : null;
+                const shopProcessIdToCheck = data.shop_process_id || paymentData?.shop_process_id || shopProcessId;
+                
+                if (shopProcessIdToCheck) {
+                  console.log('🔄 Consultando y actualizando estado de transacción:', shopProcessIdToCheck);
+                  
+                  // ✅ CONSULTAR ESTADO Y ACTUALIZAR TRANSACCIÓN EN BD
+                  const { authGet } = await import('../helpers/authFetch');
+                  const statusResponse = await authGet(
+                    `${process.env.REACT_APP_BACKEND_URL}/api/bancard/status/${shopProcessIdToCheck}`
+                  );
+                  
+                  if (statusResponse.ok) {
+                    const statusResult = await statusResponse.json();
+                    console.log('✅ Transacción actualizada:', statusResult);
+                  }
+                }
+              } catch (updateError) {
+                console.warn('⚠️ Error al actualizar estado (continuando):', updateError);
+                // No bloquear el flujo si falla la actualización
+              }
+            };
+            
+            // ✅ ACTUALIZAR ESTADO ANTES DE REDIRIGIR
+            updateTransactionStatus();
             
             setShowIframe(false);
             setLoading(false);
             setPaymentProcessing(false);
             onPaymentSuccess(data);
-            // Redirigir a página de éxito
+            
+            // ✅ REDIRIGIR A PÁGINA DE ÉXITO CON shop_process_id
+            const savedPayment = sessionStorage.getItem('bancard_payment');
+            const paymentData = savedPayment ? JSON.parse(savedPayment) : null;
+            const finalShopProcessId = data.shop_process_id || paymentData?.shop_process_id || shopProcessId;
+            
             setTimeout(() => {
-              window.location.href = '/pago-exitoso?shop_process_id=' + (data.shop_process_id || Date.now());
-            }, 1000);
+              window.location.href = `/pago-exitoso?shop_process_id=${finalShopProcessId}`;
+            }, 1500); // Dar tiempo para que se actualice
           } else if (data.type === 'payment_error' || data.status === 'error') {
             // console.error removed for production
             setShowIframe(false);
@@ -468,6 +503,7 @@ ${customerData.location.google_maps_url || 'No disponible'}
             
             
             setProcessId(result.data.process_id);
+            setShopProcessId(result.data.shop_process_id); // ✅ GUARDAR shop_process_id EN ESTADO
             setShowIframe(true);
             
             sessionStorage.setItem('bancard_payment', JSON.stringify({
