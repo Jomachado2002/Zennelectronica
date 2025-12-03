@@ -24,12 +24,31 @@ const CardManagementPage = ({
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [deletingCardId, setDeletingCardId] = useState(null);
 
+  // ✅ FUNCIÓN PARA CARGAR TARJETAS (DECLARADA PRIMERO)
+  const fetchUserCards = React.useCallback(async () => {
+    if (!user?._id && !user?.bancardUserId) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const userId = user.bancardUserId || user._id;
+      const userCards = await onFetchCards(userId);
+      setCards(userCards || []);
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+      toast.error('Error al cargar tarjetas');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, onFetchCards]);
+
   // ✅ CARGAR TARJETAS AL MONTAR
   useEffect(() => {
     if (user?._id || user?.bancardUserId) {
       fetchUserCards();
     }
-  }, [user?._id, user?.bancardUserId]);
+  }, [user?._id, user?.bancardUserId, fetchUserCards]);
 
   // ✅ ESCUCHAR EVENTO DE TARJETA REGISTRADA (DESDE CatastroResult O IFRAME)
   useEffect(() => {
@@ -46,21 +65,7 @@ const CardManagementPage = ({
     return () => {
       window.removeEventListener('bancard_card_registered', handleCardRegistered);
     };
-  }, []);
-
-  const fetchUserCards = async () => {
-    setLoading(true);
-    try {
-      const userId = user.bancardUserId || user._id;
-      const userCards = await onFetchCards(userId);
-      setCards(userCards || []);
-    } catch (error) {
-      console.error('Error fetching cards:', error);
-      toast.error('Error al cargar tarjetas');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchUserCards]);
 
   // ✅ ELIMINAR TARJETA
   const handleDelete = async (card) => {

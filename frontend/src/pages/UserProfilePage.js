@@ -107,7 +107,7 @@ const UserProfilePage = () => {
     }
     
     // ✅ SI SE REGISTRÓ UNA TARJETA, RECARGAR AUTOMÁTICAMENTE
-    if (cardRegistered === 'true' && tabFromUrl === 'cards') {
+    if (cardRegistered === 'true' && tabFromUrl === 'cards' && handleFetchCards) {
       console.log('🔄 Tarjeta registrada detectada, recargando tarjetas...');
       setTimeout(() => {
         if (user?._id || user?.bancardUserId) {
@@ -115,7 +115,7 @@ const UserProfilePage = () => {
         }
       }, 1500); // Esperar para que Bancard sincronice
     }
-  }, [searchParams, user]);
+  }, [searchParams, user, handleFetchCards]);
 
   // ✅ FUNCIÓN MEJORADA PARA REGISTRO DE TARJETAS CON VALIDACIONES
   const handleRegisterCard = async (cardData) => {
