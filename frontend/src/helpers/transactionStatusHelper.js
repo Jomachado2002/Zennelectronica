@@ -126,6 +126,29 @@ export const canManageDelivery = (transaction) => {
 };
 
 // ✅ FUNCIÓN PARA VERIFICAR SI PUEDE HACER ROLLBACK
+// Permite rollback si:
+// 1. Status es 'approved' (normal)
+// 2. O si está en 'pending' pero tiene authorization_number y ticket_number (dinero ya debitado)
+// 3. O si tiene response_code='00' (aprobado por Bancard aunque no confirmado)
 export const canRollback = (transaction) => {
-    return transaction.status === 'approved' && !transaction.is_rolled_back;
+    if (transaction.is_rolled_back) {
+        return false;
+    }
+    
+    // Si está aprobada, se puede hacer rollback
+    if (transaction.status === 'approved') {
+        return true;
+    }
+    
+    // Si está pendiente pero tiene datos de autorización (dinero debitado), se puede hacer rollback
+    if (transaction.status === 'pending') {
+        const hasAuthorization = transaction.authorization_number && transaction.ticket_number;
+        const hasApprovalCode = transaction.response_code === '00';
+        const isBancardConfirmed = transaction.bancard_confirmed === true;
+        
+        return hasAuthorization || hasApprovalCode || isBancardConfirmed;
+    }
+    
+    // Para otros estados (rejected, failed, etc.), no se puede hacer rollback
+    return false;
 };

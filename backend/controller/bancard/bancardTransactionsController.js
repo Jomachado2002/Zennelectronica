@@ -609,11 +609,48 @@ const rollbackBancardTransactionController = async (req, res) => {
             });
         }
 
-        if (transaction.status !== 'approved') {
+        // ✅ LÓGICA MEJORADA: Permitir rollback si:
+        // 1. Status es 'approved' (normal)
+        // 2. O si está en 'pending' pero tiene authorization_number y ticket_number (dinero ya debitado)
+        // 3. O si tiene response_code='00' (aprobado por Bancard aunque no confirmado)
+        const hasAuthorization = transaction.authorization_number && transaction.ticket_number;
+        const hasApprovalCode = transaction.response_code === '00';
+        const isApprovedStatus = transaction.status === 'approved';
+        
+        // ✅ Verificar si realmente se puede hacer rollback
+        const canPerformRollback = isApprovedStatus || 
+                                   (transaction.status === 'pending' && (hasAuthorization || hasApprovalCode)) ||
+                                   (transaction.status === 'pending' && transaction.bancard_confirmed === true);
+        
+        if (!canPerformRollback) {
+            let reason = "Solo se pueden reversar transacciones aprobadas";
+            
+            if (transaction.status === 'pending') {
+                if (!hasAuthorization && !hasApprovalCode) {
+                    reason = "Esta transacción está pendiente y no tiene confirmación de pago. No se puede reversar hasta que se confirme el pago.";
+                } else {
+                    reason = "Esta transacción está pendiente de confirmación. Intente nuevamente después de que se confirme el pago.";
+                }
+            } else if (transaction.status === 'rejected') {
+                reason = "No se puede reversar una transacción rechazada. Solo se pueden reversar transacciones aprobadas.";
+            } else if (transaction.status === 'rolled_back') {
+                reason = "Esta transacción ya fue reversada anteriormente.";
+            }
+            
             return res.status(400).json({
-                message: "Solo se pueden reversar transacciones aprobadas",
+                message: reason,
                 error: true,
-                success: false
+                success: false,
+                error_code: 'CannotRollback',
+                details: {
+                    status: transaction.status,
+                    has_authorization: hasAuthorization,
+                    has_approval_code: hasApprovalCode,
+                    authorization_number: transaction.authorization_number,
+                    ticket_number: transaction.ticket_number,
+                    response_code: transaction.response_code,
+                    bancard_confirmed: transaction.bancard_confirmed
+                }
             });
         }
 
