@@ -541,20 +541,21 @@ const createPaymentController = async (req, res) => {
         
         const token = generateSingleBuyToken(shopProcessId, formattedAmount, currency);
 
-        const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
-        
-        // ✅ VALIDAR QUE LAS URLs ESTÉN BIEN CONFIGURADAS
-        if (!backendUrl || !backendUrl.startsWith('http')) {
+        // ✅ VALIDAR QUE FRONTEND_URL ESTÉ CONFIGURADA
+        const frontendUrl = process.env.FRONTEND_URL;
+        if (!frontendUrl || !frontendUrl.startsWith('http')) {
             return res.status(500).json({
-                message: "Error de configuración: BACKEND_URL no está configurada correctamente",
+                message: "Error de configuración: FRONTEND_URL no está configurada correctamente",
                 success: false,
                 error: true
             });
         }
 
         // ✅ CONSTRUIR URLs Y VALIDAR FORMATO (EVITA ArgumentError)
-        const returnUrl = `${backendUrl}/api/bancard/redirect/success`;
-        const cancelUrl = `${backendUrl}/api/bancard/redirect/cancel`;
+        // IMPORTANTE: return_url y cancel_url van DIRECTAMENTE al frontend
+        // Bancard redirige al usuario a estas URLs después del pago
+        const returnUrl = `${frontendUrl}/pago-exitoso`;
+        const cancelUrl = `${frontendUrl}/pago-cancelado`;
         
         // Validar que las URLs sean válidas
         try {
@@ -570,8 +571,9 @@ const createPaymentController = async (req, res) => {
             });
         }
 
-        // ✅ PAYLOAD PARA PAGO OCASIONAL - USAR URLs DEL BACKEND (COMO PAGO CON TOKEN)
-        // Esto evita el error ArgumentError y permite procesar la confirmación correctamente
+        // ✅ PAYLOAD PARA PAGO OCASIONAL
+        // return_url y cancel_url: URLs del FRONTEND (donde Bancard redirige al usuario)
+        // La confirmación del pago viene a BANCARD_CONFIRMATION_URL (configurada en portal Bancard)
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
@@ -682,8 +684,8 @@ const createPaymentController = async (req, res) => {
                         description: description,
                         customer_info: normalizedCustomerInfo,
                         items: normalizedItems,
-                        return_url: `${backendUrl}/api/bancard/redirect/success`,
-                        cancel_url: `${backendUrl}/api/bancard/redirect/cancel`,
+                        return_url: `${frontendUrl}/pago-exitoso`,
+                        cancel_url: `${frontendUrl}/pago-cancelado`,
                         status: 'pending',
                         environment: process.env.BANCARD_ENVIRONMENT || 'staging',
                         sale_id: sale_id || null,
@@ -848,8 +850,8 @@ const createPaymentController = async (req, res) => {
                             `
                         },
                         
-                        return_url: `${backendUrl}/api/bancard/redirect/success`,
-                        cancel_url: `${backendUrl}/api/bancard/redirect/cancel`,
+                        return_url: `${frontendUrl}/pago-exitoso`,
+                        cancel_url: `${frontendUrl}/pago-cancelado`,
                         
                         bancard_config: {
                             environment: process.env.BANCARD_ENVIRONMENT || 'staging',
