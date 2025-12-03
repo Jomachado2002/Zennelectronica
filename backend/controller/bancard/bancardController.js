@@ -175,29 +175,52 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                 
                 console.log(`🔍 Buscando transacción: ${transactionData.shop_process_id}`, {
                     found: !!transaction,
-                    currentStatus: transaction?.status
+                    currentStatus: transaction?.status,
+                    has_authorization: !!(transactionData.authorization_number && transactionData.ticket_number),
+                    response_code: transactionData.response_code,
+                    response: transactionData.response
                 });
+
+                if (!transaction) {
+                    console.warn('⚠️ Transacción no encontrada en BD:', {
+                        shop_process_id: transactionData.shop_process_id,
+                        body: body,
+                        query: query
+                    });
+                    // No retornar, continuar para registrar el intento
+                    return;
+                }
 
                 if (transaction) {
                     let shouldSendEmail = false;
                     let emailSent = false;
 
+                    // ✅ ACTUALIZAR SIEMPRE, INCLUSO SI FALTAN ALGUNOS DATOS
+                    // Esto asegura que la transacción se actualice correctamente
+                    const baseUpdateData = {
+                        bancard_confirmed: true,
+                        confirmation_date: new Date()
+                    };
+                    
+                    // Agregar datos disponibles
+                    if (transactionData.response) baseUpdateData.response = transactionData.response;
+                    if (transactionData.response_code) baseUpdateData.response_code = transactionData.response_code;
+                    if (transactionData.response_description) baseUpdateData.response_description = transactionData.response_description;
+                    if (transactionData.authorization_number) baseUpdateData.authorization_number = transactionData.authorization_number;
+                    if (transactionData.ticket_number) baseUpdateData.ticket_number = transactionData.ticket_number;
+                    if (transactionData.extended_response_description) baseUpdateData.extended_response_description = transactionData.extended_response_description;
+                    if (transactionData.security_information) baseUpdateData.security_information = transactionData.security_information;
+
                     if (isSuccessful) {
-                        // ✅ PREPARAR DATOS DE ACTUALIZACIÓN
+                        // ✅ PREPARAR DATOS DE ACTUALIZACIÓN PARA PAGO EXITOSO
                         const updateData = {
+                            ...baseUpdateData,
                             status: 'approved',
-                            response: transactionData.response,
-                            response_code: transactionData.response_code,
-                            response_description: transactionData.response_description,
-                            authorization_number: transactionData.authorization_number,
-                            ticket_number: transactionData.ticket_number,
-                            security_information: transactionData.security_information || {},
-                            confirmation_date: new Date(),
-                            extended_response_description: transactionData.extended_response_description,
-                            bancard_confirmed: true,
                             // ✅ MARCAR COMO VISIBLE EN HISTORIAL DE COMPRAS
                             show_in_user_purchases: true,
-                            visible_to_user: true
+                            visible_to_user: true,
+                            // ✅ MARCAR COMO ELEGIBLE PARA ROLLBACK
+                            can_rollback: true
                         };
 
                         // ✅ ACTUALIZAR USER_ID SI ERA GUEST PERO TENEMOS UN USUARIO REAL
@@ -312,13 +335,10 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                     } else {
                         // ✅ ACTUALIZAR COMO RECHAZADA Y VERIFICAR SI SE NECESITA ROLLBACK
                         const updateRejectedData = {
+                            ...baseUpdateData,
                             status: 'rejected',
-                            response: transactionData.response,
-                            response_code: transactionData.response_code,
-                            response_description: transactionData.response_description,
-                            extended_response_description: transactionData.extended_response_description,
-                            confirmation_date: new Date(),
-                            bancard_confirmed: true
+                            // ✅ NO SE PUEDE HACER ROLLBACK DE TRANSACCIONES RECHAZADAS
+                            can_rollback: false
                         };
 
                         // ✅ VERIFICAR SI EL DINERO SE DESCONTÓ PERO HAY ERROR

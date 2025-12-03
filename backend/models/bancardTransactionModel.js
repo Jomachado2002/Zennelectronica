@@ -368,6 +368,55 @@ const bancardTransactionSchema = mongoose.Schema({
         ref: 'user',
         default: null
     },
+    // ✅ NUEVOS CAMPOS PARA INFORMACIÓN DETALLADA DE ROLLBACK
+    rollback_attempted: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    rollback_attempt_date: {
+        type: Date,
+        default: null
+    },
+    rollback_error: {
+        type: String,
+        required: false,
+        maxlength: 1000
+    },
+    rollback_error_code: {
+        type: String,
+        required: false,
+        enum: [
+            'TransactionAlreadyConfirmed',
+            'AlreadyRollbackedError',
+            'PaymentNotFoundError',
+            'BuyNotFoundError',
+            'InvalidTokenError',
+            'NetworkError',
+            'TimeoutError',
+            'UnknownError'
+        ]
+    },
+    rollback_error_reason: {
+        type: String,
+        required: false,
+        maxlength: 500
+    },
+    rollback_result: {
+        type: String,
+        required: false,
+        enum: ['success', 'failed', 'already_confirmed', 'already_rolled_back', 'error', 'pending']
+    },
+    needs_rollback_check: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    can_rollback: {
+        type: Boolean,
+        default: true,
+        index: true
+    },
     
     // ===== RELACIONES =====
     sale_id: {
