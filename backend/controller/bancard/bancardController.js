@@ -17,7 +17,8 @@ const {
     generateSingleBuyToken,
     generateShopProcessId,
     getBancardBaseUrl,
-    formatAmount
+    formatAmount,
+    generateRollbackToken
 } = require('../../helpers/bancardUtils');
 
 /**
@@ -243,8 +244,8 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                         }
 
                     } else {
-                        // ✅ ACTUALIZAR COMO RECHAZADA
-                        await BancardTransactionModel.findByIdAndUpdate(transaction._id, {
+                        // ✅ ACTUALIZAR COMO RECHAZADA Y VERIFICAR SI SE NECESITA ROLLBACK
+                        const updateRejectedData = {
                             status: 'rejected',
                             response: transactionData.response,
                             response_code: transactionData.response_code,
@@ -252,7 +253,31 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                             extended_response_description: transactionData.extended_response_description,
                             confirmation_date: new Date(),
                             bancard_confirmed: true
-                        });
+                        };
+
+                        // ✅ VERIFICAR SI EL DINERO SE DESCONTÓ PERO HAY ERROR
+                        // Si hay authorization_number o ticket_number pero el response_code no es '00',
+                        // puede que el dinero se haya debitado pero la transacción fue rechazada
+                        const hasAuthorization = transactionData.authorization_number || transactionData.ticket_number;
+                        const isErrorCode = transactionData.response_code && transactionData.response_code !== '00';
+                        
+                        if (hasAuthorization && isErrorCode) {
+                            console.warn('⚠️ Posible débito con error detectado. Se requiere verificación de rollback.', {
+                                shop_process_id: transactionData.shop_process_id,
+                                response_code: transactionData.response_code,
+                                authorization_number: transactionData.authorization_number,
+                                ticket_number: transactionData.ticket_number
+                            });
+                            updateRejectedData.needs_rollback_check = true;
+                            updateRejectedData.rollback_attempted = false;
+                            
+                            // ✅ INTENTAR ROLLBACK AUTOMÁTICO EN BACKGROUND
+                            setImmediate(() => {
+                                attemptAutomaticRollback(transactionData.shop_process_id, transaction._id.toString());
+                            });
+                        }
+
+                        await BancardTransactionModel.findByIdAndUpdate(transaction._id, updateRejectedData);
 
                         
                         shouldSendEmail = true;
@@ -1431,6 +1456,117 @@ const getUserBalanceController = async (req, res) => {
             error: true,
             details: error.message
         });
+    }
+};
+
+/**
+ * ✅ FUNCIÓN HELPER: Intentar rollback automático cuando se detecta error pero dinero debitado
+ */
+const attemptAutomaticRollback = async (shopProcessId, transactionId) => {
+    try {
+        console.log('🔄 Intentando rollback automático para transacción:', {
+            shop_process_id: shopProcessId,
+            transaction_id: transactionId
+        });
+
+        // Validar configuración
+        const configValidation = validateBancardConfig();
+        if (!configValidation.isValid) {
+            console.error('❌ Configuración de Bancard inválida para rollback automático');
+            return { success: false, error: 'Configuración inválida' };
+        }
+
+        // Verificar que la transacción no haya sido ya revertida
+        const transaction = await BancardTransactionModel.findById(transactionId);
+        if (!transaction || transaction.is_rolled_back) {
+            console.log('ℹ️ Transacción ya revertida o no existe');
+            return { success: false, error: 'Ya revertida o no existe' };
+        }
+
+        // Generar token de rollback
+        const token = generateRollbackToken(shopProcessId);
+
+        const payload = {
+            public_key: process.env.BANCARD_PUBLIC_KEY,
+            operation: {
+                token: token,
+                shop_process_id: parseInt(shopProcessId)
+            }
+        };
+
+        const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/rollback`;
+        
+        const response = await axios.post(bancardUrl, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Zenn-eCommerce/1.0'
+            },
+            timeout: 30000
+        });
+
+        if (response.status === 200 && response.data.status === 'success') {
+            // Actualizar transacción como revertida
+            await BancardTransactionModel.findByIdAndUpdate(transactionId, {
+                is_rolled_back: true,
+                rollback_date: new Date(),
+                rollback_reason: 'Rollback automático por error después de débito',
+                status: 'rolled_back',
+                rollback_attempted: true,
+                needs_rollback_check: false
+            });
+
+            console.log('✅ Rollback automático exitoso:', {
+                shop_process_id: shopProcessId,
+                transaction_id: transactionId
+            });
+
+            return { success: true, data: response.data };
+        } else {
+            // Verificar si la transacción ya fue confirmada (cuponada)
+            const messages = response.data?.messages || [];
+            const isAlreadyConfirmed = messages.some(msg => msg.key === 'TransactionAlreadyConfirmed');
+
+            await BancardTransactionModel.findByIdAndUpdate(transactionId, {
+                rollback_attempted: true,
+                rollback_attempt_date: new Date(),
+                rollback_result: isAlreadyConfirmed ? 'already_confirmed' : 'failed',
+                rollback_error: JSON.stringify(response.data)
+            });
+
+            if (isAlreadyConfirmed) {
+                console.warn('⚠️ Rollback automático fallido: Transacción ya confirmada (cuponada)', {
+                    shop_process_id: shopProcessId
+                });
+            } else {
+                console.error('❌ Rollback automático fallido:', {
+                    shop_process_id: shopProcessId,
+                    response: response.data
+                });
+            }
+
+            return { success: false, error: isAlreadyConfirmed ? 'already_confirmed' : 'rollback_failed', data: response.data };
+        }
+
+    } catch (error) {
+        console.error('❌ Error en rollback automático:', {
+            shop_process_id: shopProcessId,
+            error: error.message,
+            stack: error.stack
+        });
+
+        // Marcar que se intentó pero falló
+        try {
+            await BancardTransactionModel.findByIdAndUpdate(transactionId, {
+                rollback_attempted: true,
+                rollback_attempt_date: new Date(),
+                rollback_result: 'error',
+                rollback_error: error.message
+            });
+        } catch (dbError) {
+            console.error('❌ Error al actualizar estado de rollback en BD:', dbError.message);
+        }
+
+        return { success: false, error: error.message };
     }
 };
 

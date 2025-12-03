@@ -221,6 +221,26 @@ const generateDeleteCardToken = (userId, aliasToken) => {
     return token;
 };
 
+/**
+ * ✅ NUEVA FUNCIÓN: Genera token para rollback según documentación Bancard
+ * @param {string} shopProcessId - ID de la transacción
+ * @returns {string} Token MD5
+ */
+const generateRollbackToken = (shopProcessId) => {
+    const privateKey = process.env.BANCARD_PRIVATE_KEY;
+    
+    // ✅ ORDEN PARA ROLLBACK: private_key + shop_process_id + "rollback" + "0.00"
+    const hashString = `${privateKey}${shopProcessId}rollback0.00`;
+    const token = crypto.createHash('md5').update(hashString, 'utf8').digest('hex');
+    
+    console.log('🔐 Token de rollback generado:', {
+        shopProcessId,
+        token
+    });
+    
+    return token;
+};
+
 module.exports = {
     generateSingleBuyToken,
     verifyConfirmationToken,
@@ -230,5 +250,6 @@ module.exports = {
     formatAmount,
     parseAmount,
     generateChargeToken, // ✅ EXPORTAR NUEVA FUNCIÓN
-    generateDeleteCardToken // ✅ EXPORTAR NUEVA FUNCIÓN
+    generateDeleteCardToken, // ✅ EXPORTAR NUEVA FUNCIÓN
+    generateRollbackToken // ✅ EXPORTAR NUEVA FUNCIÓN PARA ROLLBACK
 };

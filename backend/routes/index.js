@@ -1313,12 +1313,27 @@ router.post("/actualizar-producto", authToken, updateProductController);
             // Obtener TODOS los parámetros que envía Bancard
             const params = req.query;
             
-            // Construir URL del frontend con TODOS los parámetros
+            // ✅ DETERMINAR SI ES ÉXITO O ERROR SEGÚN LOS PARÁMETROS DE BANCARD
+            const response = params.response;
+            const responseCode = params.response_code;
+            const hasAuthorization = params.authorization_number && params.ticket_number;
+            
+            // ✅ Según documentación Bancard: response='S' y response_code='00' = éxito
+            const isSuccess = (response === 'S' && responseCode === '00') || 
+                             (hasAuthorization && responseCode === '00');
+            
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
             const redirectParams = new URLSearchParams(params).toString();
             
-            // URL final hacia tu página PaymentSuccess.js existente
-            const finalUrl = `${frontendUrl}/pago-exitoso?${redirectParams}`;
+            // ✅ REDIRIGIR A LA PÁGINA CORRECTA SEGÚN EL RESULTADO
+            let finalUrl;
+            if (isSuccess) {
+                // Pago exitoso: redirigir a página de éxito
+                finalUrl = `${frontendUrl}/pago-exitoso?${redirectParams}`;
+            } else {
+                // Pago rechazado o error: redirigir a página de cancelación con todos los parámetros
+                finalUrl = `${frontendUrl}/pago-cancelado?${redirectParams}`;
+            }
             
             
             

@@ -98,7 +98,7 @@ const chargeWithTokenController = async (req, res) => {
 
         const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
 
-        // ✅ PAYLOAD CORREGIDO
+        // ✅ PAYLOAD CORREGIDO SEGÚN DOCUMENTACIÓN BANCARD
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
@@ -277,8 +277,15 @@ const chargeWithTokenController = async (req, res) => {
         if (response.status === 200) {
             
             const operationData = response.data?.operation || response.data?.confirmation || response.data;
-            const requiresAuth = response.data?.operation?.process_id && !operationData?.response;
             
+            // ✅ DETECTAR SI HAY RESPUESTA INMEDIATA O REQUIERE REDIRECCIÓN
+            const hasResponse = operationData?.response;
+            
+            console.log('🔍 Análisis de respuesta Bancard:', {
+                hasResponse: !!hasResponse,
+                response: operationData?.response,
+                response_code: operationData?.response_code
+            });
        
 
             // ✅ ACTUALIZAR TRANSACCIÓN INMEDIATAMENTE CON TODOS LOS DATOS
@@ -292,7 +299,9 @@ const chargeWithTokenController = async (req, res) => {
 
                 // ✅ SI HAY RESPUESTA INMEDIATA, GUARDAR TODOS LOS DATOS Y ENVIAR EMAILS
                 if (operationData?.response) {
-                    const isApproved = operationData.response === 'S' && operationData.response_code === '00';
+                    // ✅ VERIFICACIÓN MEJORADA: Según documentación Bancard
+                    const isApproved = (operationData.response === 'S' && operationData.response_code === '00') ||
+                                     (operationData.authorization_number && operationData.ticket_number);
                     
                     updateData.response = operationData.response;
                     updateData.response_code = operationData.response_code;
@@ -303,6 +312,13 @@ const chargeWithTokenController = async (req, res) => {
                     updateData.status = isApproved ? 'approved' : 'rejected';
                     updateData.bancard_confirmed = true;
                     updateData.confirmation_date = new Date();
+                    
+                    // ✅ SI EL DINERO SE DESCONTÓ PERO HAY ERROR, HACER ROLLBACK AUTOMÁTICO
+                    if (!isApproved && operationData.response_code && operationData.response_code !== '00') {
+                        console.warn('⚠️ Pago rechazado pero puede haberse debitado. Verificando necesidad de rollback...');
+                        updateData.needs_rollback_check = true;
+                        updateData.rollback_attempted = false;
+                    }
                     
                     if (operationData.security_information) {
                         updateData.security_information = operationData.security_information;
@@ -356,7 +372,7 @@ const chargeWithTokenController = async (req, res) => {
                         }
                     }
                 } else {
-                    // ✅ SOLO ACTUALIZAR SIN EMAILS (REQUIERE 3DS)
+                    // ✅ SOLO ACTUALIZAR SIN EMAILS (LA CONFIRMACIÓN LLEGARÁ DESPUÉS VÍA WEBHOOK)
                     await BancardTransactionModel.findOneAndUpdate(
                         { shop_process_id: parseInt(finalShopProcessId) },
                         updateData
@@ -367,17 +383,16 @@ const chargeWithTokenController = async (req, res) => {
             } catch (dbError) {
             }
 
-            if (requiresAuth) {
+            // ✅ SI NO HAY RESPUESTA INMEDIATA, LA CONFIRMACIÓN LLEGARÁ VÍA WEBHOOK
+            if (!hasResponse) {
                 res.json({
-                    message: "Pago requiere autenticación 3DS",
+                    message: "Pago en proceso. La confirmación llegará en breve",
                     success: true,
                     error: false,
-                    requires3DS: true,
                     data: {
                         ...response.data,
                         shop_process_id: finalShopProcessId,
-                        iframe_url: response.data?.operation?.process_id ? 
-                            `${getBancardBaseUrl()}/checkout/new/${response.data.operation.process_id}` : null
+                        status: 'pending_confirmation'
                     }
                 });
             } else {
