@@ -48,7 +48,7 @@ const Footer = () => {
             <h3 className="text-2xl font-bold mb-6 text-white">Síguenos</h3>
             <div className="flex justify-center md:justify-end space-x-6">
               <a
-                href="https://www.instagram.com/zenn.py"
+                href="https://www.instagram.com/zennelectronicos/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"
@@ -64,7 +64,7 @@ const Footer = () => {
                 <FontAwesomeIcon icon={faWhatsapp} size="2x" />
               </a>
               <a
-                href="https://www.facebook.com/people/zenn/100071147355980/#"
+                href="https://www.facebook.com/Zennelectronicos/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"
