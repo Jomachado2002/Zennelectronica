@@ -95,10 +95,19 @@ const chargeWithTokenController = async (req, res) => {
         const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
 
         
-
-        const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
+        
+        // ✅ VALIDAR QUE FRONTEND_URL ESTÉ CONFIGURADA
+        const frontendUrl = process.env.FRONTEND_URL;
+        if (!frontendUrl || !frontendUrl.startsWith('http')) {
+            return res.status(500).json({
+                message: "Error de configuración: FRONTEND_URL no está configurada correctamente",
+                success: false,
+                error: true
+            });
+        }
 
         // ✅ PAYLOAD CORREGIDO SEGÚN DOCUMENTACIÓN BANCARD
+        // return_url va al FRONTEND (donde Bancard redirige después del pago)
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
@@ -110,7 +119,7 @@ const chargeWithTokenController = async (req, res) => {
                 additional_data: "",
                 description: description || "Pago Zenn con tarjeta registrada",
                 alias_token: alias_token,
-                return_url: `${backendUrl}/api/bancard/redirect/success`
+                return_url: return_url || `${frontendUrl}/pago-exitoso`
             }
         };
 
@@ -218,8 +227,8 @@ const chargeWithTokenController = async (req, res) => {
                     `https://www.google.com/maps/dir/?api=1&destination=${delivery_location.lat},${delivery_location.lng}` :
                     'No disponible'}`,
                 } : null,
-                return_url: `${backendUrl}/api/bancard/redirect/success`,
-                cancel_url: `${backendUrl}/api/bancard/redirect/cancel`,
+                return_url: `${frontendUrl}/pago-exitoso`,
+                cancel_url: `${frontendUrl}/pago-cancelado`,
                 status: 'pending',
                 environment: process.env.BANCARD_ENVIRONMENT || 'staging',
                 created_by: req.userId,
