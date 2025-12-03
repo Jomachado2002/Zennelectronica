@@ -37,17 +37,33 @@ const bancardConfirmController = async (req, res) => {
         
         
 
-        // ✅ RESPONDER INMEDIATAMENTE A BANCARD
+        // ✅ VALIDAR QUE LA RESPUESTA NO SE HAYA ENVIADO YA
+        if (res.headersSent) {
+            return;
+        }
+
+        // ✅ RESPONDER INMEDIATAMENTE A BANCARD (CRÍTICO)
         const responseData = {
             status: "success"
         };
 
-        
+        // ✅ ENVIAR RESPUESTA INMEDIATAMENTE
         res.status(200).json(responseData);
 
-        // ✅ PROCESAR EN BACKGROUND CON EMAILS
-        setImmediate(() => {
-            processConfirmationWithEmails(req.body, req.query, req.headers, req.ip);
+        // ✅ PROCESAR EN BACKGROUND (DESPUÉS DE RESPONDER)
+        setImmediate(async () => {
+            try {
+                // ✅ Obtener datos de forma segura
+                const body = req.body || {};
+                const query = req.query || {};
+                const headers = req.headers || {};
+                const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+                
+                await processConfirmationWithEmails(body, query, headers, clientIp);
+            } catch (backgroundError) {
+                // No bloquear si hay error en background
+                console.error('❌ Error en procesamiento background:', backgroundError.message);
+            }
         });
 
     } catch (error) {

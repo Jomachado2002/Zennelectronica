@@ -756,20 +756,47 @@ const getUserCardsController = async (req, res) => {
         });
 
 
-        if (response.status === 200) {
+        if (response.status === 200 && response.data) {
+            // ✅ PROCESAR RESPUESTA DE BANCARD CORRECTAMENTE
+            const bancardData = response.data || {};
+            // ✅ Bancard puede devolver cards como array o como objeto
+            let cards = [];
+            
+            if (Array.isArray(bancardData.cards)) {
+                cards = bancardData.cards;
+            } else if (bancardData.cards && typeof bancardData.cards === 'object') {
+                // Si es un objeto, intentar convertirlo a array
+                cards = Object.values(bancardData.cards);
+            } else if (bancardData.status === 'success' && !bancardData.cards) {
+                // Si status es success pero no hay cards, significa que no hay tarjetas
+                cards = [];
+            }
+            
+            console.log('📋 Tarjetas obtenidas de Bancard:', {
+                user_id: targetUserId,
+                cards_count: cards.length,
+                bancard_status: bancardData.status,
+                has_cards: cards.length > 0,
+                raw_response: JSON.stringify(bancardData).substring(0, 200)
+            });
+            
             res.json({
-                message: "Tarjetas obtenidas exitosamente",
+                message: cards.length > 0 ? "Tarjetas obtenidas exitosamente" : "No hay tarjetas registradas",
                 success: true,
                 error: false,
-                data: response.data,
-                user_id: targetUserId
+                data: {
+                    cards: cards,
+                    cards_count: cards.length,
+                    user_id: targetUserId,
+                    bancard_response: bancardData
+                }
             });
         } else {
-            res.status(response.status).json({
-                message: "Error al obtener tarjetas",
+            res.status(response.status || 500).json({
+                message: "Error al obtener tarjetas de Bancard",
                 success: false,
                 error: true,
-                data: response.data
+                data: response.data || { message: 'Respuesta inesperada de Bancard' }
             });
         }
 
