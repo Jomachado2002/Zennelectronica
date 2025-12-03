@@ -719,18 +719,32 @@ const getUserCardsController = async (req, res) => {
         
         let targetUserId = req.params.user_id;
         
+        // ✅ VALIDAR QUE EL USUARIO ESTÉ AUTENTICADO (NO INVITADO)
+        if (!req.isAuthenticated || !req.userId || (typeof req.userId === 'string' && req.userId.startsWith('guest-'))) {
+            return res.status(401).json({
+                message: "Debes iniciar sesión para ver tus tarjetas",
+                success: false,
+                error: true,
+                isGuest: true
+            });
+        }
+        
         if (!targetUserId || targetUserId === 'me') {
-            if (!req.isAuthenticated) {
-                return res.status(401).json({
-                    message: "Debes iniciar sesión para ver tus tarjetas",
+            // ✅ OBTENER bancardUserId DE FORMA SEGURA
+            targetUserId = req.bancardUserId || req.user?.bancardUserId;
+            
+            if (!targetUserId) {
+                return res.status(400).json({
+                    message: "No tienes un ID de Bancard asociado. Contacta al soporte.",
                     success: false,
                     error: true
                 });
             }
-            targetUserId = req.bancardUserId || req.user.bancardUserId;
         }
 
-        if (req.userRole !== 'ADMIN' && targetUserId != (req.bancardUserId || req.user.bancardUserId)) {
+        // ✅ VALIDAR PERMISOS DE FORMA SEGURA
+        const userBancardId = req.bancardUserId || req.user?.bancardUserId;
+        if (req.userRole !== 'ADMIN' && targetUserId != userBancardId) {
             return res.status(403).json({
                 message: "No puedes ver tarjetas de otros usuarios",
                 success: false,

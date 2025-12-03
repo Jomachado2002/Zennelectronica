@@ -18,36 +18,46 @@ export const authFetch = async (url, options = {}) => {
     let token = null;
 
     // 1. Intentar obtener de localStorage
-    token = localStorage.getItem('authToken');
+    try {
+        token = localStorage.getItem('authToken');
+    } catch (e) {
+        // localStorage puede no estar disponible en algunos contextos
+    }
 
     // 2. Intentar obtener de window (si se guardó ahí)
-    if (!token && window.authToken) {
+    if (!token && typeof window !== 'undefined' && window.authToken) {
         token = window.authToken;
     }
 
-    // 3. Intentar leer de cookies manualmente
-    if (!token && document.cookie) {
-        const cookies = document.cookie.split(';');
-        for (const cookie of cookies) {
-            const [key, value] = cookie.trim().split('=');
-            if (key === 'token' && value && value !== 'undefined') {
-                token = decodeURIComponent(value);
-                break;
+    // 3. Intentar leer de cookies manualmente (solo en navegador)
+    if (!token && typeof document !== 'undefined' && document.cookie) {
+        try {
+            const cookies = document.cookie.split(';');
+            for (const cookie of cookies) {
+                const [key, value] = cookie.trim().split('=');
+                if (key === 'token' && value && value !== 'undefined' && value !== 'null') {
+                    token = decodeURIComponent(value);
+                    break;
+                }
             }
+        } catch (e) {
+            // Error al leer cookies, continuar sin token
         }
     }
 
-    // ✅ SI HAY TOKEN, AGREGARLO A LOS HEADERS
-    if (token && token !== 'undefined' && token !== 'null') {
+    // ✅ SI HAY TOKEN VÁLIDO, AGREGARLO A LOS HEADERS
+    // authFetch funciona tanto con token (usuario logueado) como sin token (invitado)
+    if (token && token !== 'undefined' && token !== 'null' && token.trim() !== '') {
         headers['Authorization'] = `Bearer ${token}`;
         // También como header alternativo para compatibilidad con iOS/Vercel
         headers['x-auth-token'] = token;
     }
+    // ✅ SI NO HAY TOKEN, NO AGREGAR NADA - EL BACKEND MANEJARÁ COMO INVITADO
 
     // ✅ PREPARAR OPCIONES FINALES
     const finalOptions = {
         ...options,
-        credentials: 'include', // Siempre incluir cookies
+        credentials: 'include', // Siempre incluir cookies (puede haber cookies de sesión)
         headers
     };
 
@@ -57,12 +67,16 @@ export const authFetch = async (url, options = {}) => {
             url,
             method: finalOptions.method || 'GET',
             hasToken: !!token,
-            tokenPreview: token ? `${token.substring(0, 15)}...` : 'NO TOKEN',
-            headers: Object.keys(headers)
+            tokenPreview: token ? `${token.substring(0, 15)}...` : 'NO TOKEN (invitado)',
+            headers: Object.keys(headers),
+            mode: token ? 'authenticated' : 'guest'
         });
     }
 
     // Realizar la petición
+    // ✅ EL BACKEND DEBE MANEJAR AMBOS CASOS:
+    // - Con token: usuario autenticado
+    // - Sin token: usuario invitado (si el endpoint lo permite)
     return fetch(url, finalOptions);
 };
 

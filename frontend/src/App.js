@@ -19,37 +19,35 @@ function App() {
   const [cartProductCount, setCartProductCount] = useState(0)
   
   const fetchUserDetails = useCallback(async() => {
-    // ✅ PREPARAR HEADERS CON TOKEN COMO FALLBACK
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    
-    // ✅ AGREGAR TOKEN DEL LOCALSTORAGE SI EXISTE
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    const dataResponse = await fetch(SummaryApi.current_user.url, {
-      method: SummaryApi.current_user.method,
-      credentials: 'include',
-      headers: headers
-    })
-    
-    const dataApi = await dataResponse.json()
-    
-    console.log("🔍 App.js - Respuesta del backend:", {
-      success: dataApi.success,
-      data: dataApi.data,
-      userRole: dataApi.data?.role,
-      userEmail: dataApi.data?.email
-    });
-    
-    if (dataApi.success) {
-      dispatch(setUserDetails(dataApi.data))
-      // console.log removed for production
-    } else {
-      // console.log removed for production
+    try {
+      // ✅ USAR authFetch QUE MANEJA AUTOMÁTICAMENTE EL TOKEN (O SU AUSENCIA)
+      const { authFetch } = await import('./helpers/authFetch');
+      
+      const dataResponse = await authFetch(SummaryApi.current_user.url, {
+        method: SummaryApi.current_user.method,
+        credentials: 'include'
+      });
+      
+      const dataApi = await dataResponse.json();
+      
+      console.log("🔍 App.js - Respuesta del backend:", {
+        success: dataApi.success,
+        data: dataApi.data,
+        userRole: dataApi.data?.role,
+        userEmail: dataApi.data?.email,
+        isAuthenticated: !!dataApi.data
+      });
+      
+      if (dataApi.success && dataApi.data) {
+        dispatch(setUserDetails(dataApi.data));
+      } else {
+        // ✅ SI NO HAY USUARIO, LIMPIAR REDUX (USUARIO INVITADO)
+        dispatch(setUserDetails(null));
+      }
+    } catch (error) {
+      // ✅ EN CASO DE ERROR, NO ROMPER LA APP (PERMITIR USO COMO INVITADO)
+      console.warn("⚠️ Error al obtener detalles del usuario:", error);
+      dispatch(setUserDetails(null));
     }
   }, [dispatch])
   

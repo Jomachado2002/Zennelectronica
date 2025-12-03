@@ -78,14 +78,9 @@ const Cart = () => {
            // ✅ VERIFICAR LA URL COMPLETA
            const url = `${SummaryApi.baseURL}/api/bancard/tarjetas/${user.bancardUserId}`;
            
-           
-           const response = await fetch(url, {
-               method: 'GET',
-               credentials: 'include',
-               headers: {
-                   'Content-Type': 'application/json'
-               }
-           });
+           // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+           const { authGet } = await import('../helpers/authFetch');
+           const response = await authGet(url);
 
            
            
@@ -174,10 +169,9 @@ const Cart = () => {
         if (!isLoggedIn) return;
         
         try {
-            const response = await fetch(SummaryApi.location.getUserLocation.url, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(SummaryApi.location.getUserLocation.url);
             
             const result = await response.json();
             if (result.success && result.data) {

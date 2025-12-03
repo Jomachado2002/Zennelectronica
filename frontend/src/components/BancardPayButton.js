@@ -427,27 +427,10 @@ ${customerData.location.google_maps_url || 'No disponible'}
         // ✅ IMPORTAR authFetch SI EL USUARIO ESTÁ AUTENTICADO
         let response;
         try {
-            // Intentar obtener el token para verificar si hay usuario autenticado
-            let hasAuth = false;
-            if (localStorage.getItem('authToken') || document.cookie.includes('token=')) {
-                hasAuth = true;
-            }
-
-            if (hasAuth) {
-                // Usuario autenticado: usar authFetch para incluir token
-                const { authPost } = await import('../helpers/authFetch');
-                response = await authPost(`${backendUrl}/api/bancard/create-payment`, paymentRequest);
-            } else {
-                // Usuario invitado: usar fetch normal
-                response = await fetch(`${backendUrl}/api/bancard/create-payment`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(paymentRequest)
-                });
-            }
+            // ✅ USAR SIEMPRE authPost - MANEJA AUTOMÁTICAMENTE USUARIOS LOGUEADOS E INVITADOS
+            // authFetch detecta automáticamente si hay token y lo incluye, o funciona sin token para invitados
+            const { authPost } = await import('../helpers/authFetch');
+            response = await authPost(`${backendUrl}/api/bancard/create-payment`, paymentRequest);
         } catch (importError) {
             // Fallback si no se puede importar authFetch
             console.warn('⚠️ No se pudo importar authFetch, usando fetch normal');

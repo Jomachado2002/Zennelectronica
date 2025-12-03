@@ -51,11 +51,9 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
 
             try {
                 const url = `${process.env.REACT_APP_BACKEND_URL}/api/bancard/tarjetas/${user.bancardUserId}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+                const { authGet } = await import('../helpers/authFetch');
+                const response = await authGet(url);
 
                 if (response.ok) {
                     const result = await response.json();
@@ -348,10 +346,9 @@ const Checkout = () => {
         if (!isLoggedIn) return;
         
         try {
-            const response = await fetch(SummaryApi.location.getUserLocation.url, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            // ✅ USAR authGet QUE INCLUYE AUTOMÁTICAMENTE EL TOKEN
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(SummaryApi.location.getUserLocation.url);
             
             const result = await response.json();
             if (result.success && result.data && result.data.lat && result.data.lng) {
