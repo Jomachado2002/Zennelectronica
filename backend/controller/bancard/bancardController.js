@@ -27,6 +27,27 @@ const {
 const bancardConfirmController = async (req, res) => {
     const startTime = Date.now();
     
+    // ✅ LOGS DETALLADOS PARA DEBUGGING
+    console.log('🔍 CONFIRMACIÓN RECIBIDA DE BANCARD:');
+    console.log('📥 Body:', JSON.stringify(req.body, null, 2));
+    console.log('📥 Query:', JSON.stringify(req.query, null, 2));
+    console.log('📥 Method:', req.method);
+    console.log('📥 IP:', req.ip || req.headers['x-forwarded-for'] || 'unknown');
+    
+    // ✅ GARANTIZAR QUE SIEMPRE RESPONDA 200 (CRÍTICO PARA BANCARD)
+    let responseSent = false;
+    
+    const sendSuccessResponse = () => {
+        if (!responseSent && !res.headersSent) {
+            responseSent = true;
+            res.status(200).json({
+                status: "success",
+                message: "Confirmación recibida",
+                timestamp: new Date().toISOString()
+            });
+        }
+    };
+    
     try {
         
         
@@ -48,7 +69,8 @@ const bancardConfirmController = async (req, res) => {
         };
 
         // ✅ ENVIAR RESPUESTA INMEDIATAMENTE
-        res.status(200).json(responseData);
+        sendSuccessResponse();
+        console.log('✅ Respuesta 200 enviada a Bancard inmediatamente');
 
         // ✅ PROCESAR EN BACKGROUND (DESPUÉS DE RESPONDER)
         setImmediate(async () => {
@@ -59,21 +81,29 @@ const bancardConfirmController = async (req, res) => {
                 const headers = req.headers || {};
                 const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
                 
+                console.log('🔄 Iniciando procesamiento en background...');
                 await processConfirmationWithEmails(body, query, headers, clientIp);
+                console.log('✅ Procesamiento en background completado');
             } catch (backgroundError) {
                 // No bloquear si hay error en background
-                console.error('❌ Error en procesamiento background:', backgroundError.message);
+                console.error('❌ Error en procesamiento background:', {
+                    message: backgroundError.message,
+                    stack: backgroundError.stack,
+                    shop_process_id: req.body?.operation?.shop_process_id || req.query?.shop_process_id
+                });
             }
         });
 
     } catch (error) {
-        // console.error removed for production
-        
-        res.status(200).json({
-            status: "success", 
-            message: "Confirmación recibida",
-            timestamp: new Date().toISOString()
+        console.error('❌ ERROR EN bancardConfirmController:', {
+            message: error.message,
+            stack: error.stack,
+            body: req.body,
+            query: req.query
         });
+        
+        // ✅ AÚN CON ERROR, RESPONDER 200 (BANCARD LO REQUIERE)
+        sendSuccessResponse();
     }
 };
 
@@ -493,8 +523,35 @@ const createPaymentController = async (req, res) => {
 
         const backendUrl = process.env.BACKEND_URL || process.env.REACT_APP_BACKEND_URL || 'https://zenn.vercel.app';
         
+        // ✅ VALIDAR QUE LAS URLs ESTÉN BIEN CONFIGURADAS
+        if (!backendUrl || !backendUrl.startsWith('http')) {
+            return res.status(500).json({
+                message: "Error de configuración: BACKEND_URL no está configurada correctamente",
+                success: false,
+                error: true
+            });
+        }
 
-        // ✅ PAYLOAD PARA PAGO OCASIONAL
+        // ✅ CONSTRUIR URLs Y VALIDAR FORMATO (EVITA ArgumentError)
+        const returnUrl = `${backendUrl}/api/bancard/redirect/success`;
+        const cancelUrl = `${backendUrl}/api/bancard/redirect/cancel`;
+        
+        // Validar que las URLs sean válidas
+        try {
+            new URL(returnUrl);
+            new URL(cancelUrl);
+        } catch (urlError) {
+            console.error('❌ Error al validar URLs:', urlError.message);
+            return res.status(500).json({
+                message: "Error de configuración: URLs inválidas",
+                success: false,
+                error: true,
+                details: urlError.message
+            });
+        }
+
+        // ✅ PAYLOAD PARA PAGO OCASIONAL - USAR URLs DEL BACKEND (COMO PAGO CON TOKEN)
+        // Esto evita el error ArgumentError y permite procesar la confirmación correctamente
         const payload = {
             public_key: process.env.BANCARD_PUBLIC_KEY,
             operation: {
@@ -503,8 +560,8 @@ const createPaymentController = async (req, res) => {
                 amount: formattedAmount,
                 currency: currency,
                 description: description.substring(0, 20),
-                return_url: `${process.env.FRONTEND_URL}/pago-exitoso`,
-                cancel_url: `${process.env.FRONTEND_URL}/pago-cancelado`
+                return_url: returnUrl,
+                cancel_url: cancelUrl
             }
         };
 
@@ -605,8 +662,8 @@ const createPaymentController = async (req, res) => {
                         description: description,
                         customer_info: normalizedCustomerInfo,
                         items: normalizedItems,
-                        return_url: `${process.env.FRONTEND_URL}/pago-exitoso`,
-                        cancel_url: `${process.env.FRONTEND_URL}/pago-cancelado`,
+                        return_url: `${backendUrl}/api/bancard/redirect/success`,
+                        cancel_url: `${backendUrl}/api/bancard/redirect/cancel`,
                         status: 'pending',
                         environment: process.env.BANCARD_ENVIRONMENT || 'staging',
                         sale_id: sale_id || null,
@@ -771,8 +828,8 @@ const createPaymentController = async (req, res) => {
                             `
                         },
                         
-                        return_url: `${process.env.FRONTEND_URL}/pago-exitoso`,
-                        cancel_url: `${process.env.FRONTEND_URL}/pago-cancelado`,
+                        return_url: `${backendUrl}/api/bancard/redirect/success`,
+                        cancel_url: `${backendUrl}/api/bancard/redirect/cancel`,
                         
                         bancard_config: {
                             environment: process.env.BANCARD_ENVIRONMENT || 'staging',

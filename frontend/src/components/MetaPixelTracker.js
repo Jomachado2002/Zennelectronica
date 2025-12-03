@@ -1,5 +1,6 @@
 // frontend/src/components/MetaPixelTracker.js - VERSIÓN CORREGIDA
 import { useEffect } from 'react';
+import SummaryApi from '../common';
 
 const MetaPixelTracker = () => {
   useEffect(() => {
