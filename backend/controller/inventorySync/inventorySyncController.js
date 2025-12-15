@@ -656,12 +656,49 @@ async function bulkUpdatePricesController(req, res) {
                     continue;
                 }
 
-                // Actualizar el producto en la base de datos
+                // Obtener el producto actual para respetar su configuración financiera
+                const existingProduct = await productModel.findById(productId).select(
+                    'exchangeRate deliveryCost profitMargin'
+                );
+
+                if (!existingProduct) {
+                    results.failed++;
+                    results.errors.push({
+                        productId,
+                        error: 'Producto no encontrado'
+                    });
+                    continue;
+                }
+
+                // Usar los valores actuales del producto o valores por defecto
+                const exchangeRate = existingProduct.exchangeRate || 7300;
+                const deliveryCost = existingProduct.deliveryCost || 30000;
+                const profitMargin = existingProduct.profitMargin || 20;
+
+                // Recalcular todos los precios relacionados (compra PYG, venta, utilidad, etc.)
+                const prices = calculatePrices(
+                    newPrice,
+                    exchangeRate,
+                    deliveryCost,
+                    profitMargin
+                );
+
+                const now = new Date();
+
                 const updatedProduct = await productModel.findByIdAndUpdate(
                     productId,
-                    { 
-                        purchasePriceUSD: newPrice,
-                        updatedAt: new Date()
+                    {
+                        $set: {
+                            purchasePriceUSD: prices.purchasePriceUSD,
+                            exchangeRate: prices.exchangeRate,
+                            purchasePrice: prices.purchasePrice,
+                            deliveryCost: prices.deliveryCost,
+                            profitMargin: prices.profitMargin,
+                            profitAmount: prices.profitAmount,
+                            sellingPrice: prices.sellingPrice,
+                            lastUpdatedFinance: now,
+                            updatedAt: now
+                        }
                     },
                     { new: true, runValidators: true }
                 );
@@ -672,7 +709,7 @@ async function bulkUpdatePricesController(req, res) {
                     results.failed++;
                     results.errors.push({
                         productId,
-                        error: 'Producto no encontrado'
+                        error: 'Producto no encontrado al actualizar'
                     });
                 }
 
