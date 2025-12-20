@@ -14,6 +14,7 @@ import { localCartHelper } from './helpers/addToCart'; // Importa el helper
 import MetaPixelTracker from './components/MetaPixelTracker'; // Importa el tracker
 import GoogleAnalytics from './components/GoogleAnalytics'; // Importa Google Analytics
 import { Analytics } from '@vercel/analytics/react'; // Importa Vercel Analytics
+import { SpeedInsights } from '@vercel/speed-insights/react'; // Importa Speed Insights para métricas de rendimiento
 
 
 function App() {
@@ -81,6 +82,7 @@ function App() {
         <MetaPixelTracker />
         <GoogleAnalytics />
         <Analytics />
+        <SpeedInsights />
         
         <ToastContainer 
           position='top-center'
