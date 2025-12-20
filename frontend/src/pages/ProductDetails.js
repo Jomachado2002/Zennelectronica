@@ -7,6 +7,7 @@ import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import { trackWhatsAppContact, trackAddToCart, trackViewContent } from '../components/MetaPixelTracker';
+import { trackGAEvent, trackProductView, trackWhatsAppClick as trackGAWhatsApp } from '../components/GoogleAnalytics';
 import { useQuery } from '@tanstack/react-query';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
@@ -131,8 +132,9 @@ useEffect(() => {
       setActiveImage(productData.productImage[0]);
     }
     
-    // ✅ TRACKEAR VIEW CONTENT CUANDO SE CARGA EL PRODUCTO
+    // ✅ TRACKEAR VIEW CONTENT CUANDO SE CARGA EL PRODUCTO (Meta Pixel + GA4)
     trackViewContent(productData);
+    trackProductView(productData); // Google Analytics 4
   } else {
     setLoading(productLoading);
   }
@@ -174,10 +176,22 @@ useEffect(() => {
     await addToCart(e, product);
     fetchUserAddToCart();
     
-    // Tracking de Add to Cart
+    // Tracking de Add to Cart (Meta Pixel + GA4)
     if (typeof trackAddToCart === 'function') {
       trackAddToCart(product);
     }
+    // Google Analytics 4
+    trackGAEvent('add_to_cart', {
+      currency: 'PYG',
+      value: product.sellingPrice || product.price || 0,
+      items: [{
+        item_id: product._id || product.id,
+        item_name: product.productName || product.name,
+        item_category: product.category || 'general',
+        price: product.sellingPrice || product.price || 0,
+        quantity: 1
+      }]
+    });
   };
 
   // Función para ir al carrito
@@ -211,7 +225,7 @@ Precio: ${price}
 ${productUrl}
 ¿Me puedes brindar más detalles sobre disponibilidad y envío?`;
     
-    // Tracking de WhatsApp - EVENTO PRINCIPAL
+    // Tracking de WhatsApp - EVENTO PRINCIPAL (Meta Pixel + GA4)
     if (typeof trackWhatsAppContact === 'function') {
       trackWhatsAppContact({
         _id: data._id,
@@ -222,6 +236,8 @@ ${productUrl}
         sellingPrice: data.sellingPrice
       });
     }
+    // Google Analytics 4
+    trackGAWhatsApp(data);
     
     const whatsappUrl = `https://wa.me/+595973345284?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');

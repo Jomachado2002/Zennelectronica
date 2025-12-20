@@ -12,6 +12,8 @@ import { useDispatch } from 'react-redux';
 import { setUserDetails } from './store/userSlice';
 import { localCartHelper } from './helpers/addToCart'; // Importa el helper
 import MetaPixelTracker from './components/MetaPixelTracker'; // Importa el tracker
+import GoogleAnalytics from './components/GoogleAnalytics'; // Importa Google Analytics
+import { Analytics } from '@vercel/analytics/react'; // Importa Vercel Analytics
 
 
 function App() {
@@ -75,8 +77,10 @@ function App() {
         cartProductCount, // current user add to cart product count,
         fetchUserAddToCart
       }}>
-        {/* Meta Pixel Tracker */}
+        {/* Analytics Trackers */}
         <MetaPixelTracker />
+        <GoogleAnalytics />
+        <Analytics />
         
         <ToastContainer 
           position='top-center'
