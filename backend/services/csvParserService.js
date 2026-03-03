@@ -233,37 +233,50 @@ async function validateCSVStructure(csvBuffer) {
                 hasData = true;
             })
             .on('end', () => {
-                // Validar encabezados requeridos para ambos formatos (antiguo y nuevo)
+                // Validar encabezados requeridos para ambos formatos (antiguo y nuevos)
                 const legacyHeaders = [
                     'link-dtw-prod href',
                     'img-dtw-prod src',
                     'card-dtw-subtitulo',
-                    'card-dtw-preco-dolar', 
+                    'card-dtw-preco-dolar',
                     'card-dtw-codigo-lista',
                     'card-dtw-preco-real',
                     'card-dtw-preco-guarani'
                 ];
 
-                const newVisaovipHeaders = [
+                // Formato nuevo "largo" (el primero que usamos)
+                const newVisaovipHeadersFull = [
                     'no-underline href', // URL del producto
                     'mb-2 src',          // URL de la imagen
-                    'p-0',               // categoría / texto
+                    'p-0',               // texto/categoría
                     'p-0 2',             // nombre del producto
                     'p-0 3',             // marca
                     'm-0',               // precio USD "U$ 39,00"
                     'm-0 2'              // código/id del producto
                 ];
 
+                // Formato nuevo "corto" actual (sin columna "p-0 2")
+                const newVisaovipHeadersShort = [
+                    'no-underline href', // URL del producto
+                    'mb-2 src',          // URL de la imagen
+                    'p-0',               // nombre del producto
+                    'p-0 3',             // marca
+                    'm-0',               // precio USD "U$ 39,00"
+                    'm-0 2'              // código/id del producto
+                ];
+
                 const missingLegacy = legacyHeaders.filter(header => !headers.includes(header));
-                const missingNew = newVisaovipHeaders.filter(header => !headers.includes(header));
+                const missingNewFull = newVisaovipHeadersFull.filter(header => !headers.includes(header));
+                const missingNewShort = newVisaovipHeadersShort.filter(header => !headers.includes(header));
 
                 const hasLegacyStructure = missingLegacy.length === 0;
-                const hasNewStructure = missingNew.length === 0;
+                const hasNewFullStructure = missingNewFull.length === 0;
+                const hasNewShortStructure = missingNewShort.length === 0;
 
-                if (!hasLegacyStructure && !hasNewStructure) {
+                if (!hasLegacyStructure && !hasNewFullStructure && !hasNewShortStructure) {
                     resolve({
                         isValid: false,
-                        error: 'Encabezados del CSV no coinciden con el formato esperado (antiguo o nuevo del proveedor).'
+                        error: 'Encabezados del CSV no coinciden con el formato esperado (antiguo o nuevos del proveedor).'
                     });
                     return;
                 }
