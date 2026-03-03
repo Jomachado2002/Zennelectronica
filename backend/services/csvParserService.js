@@ -265,6 +265,14 @@ async function validateCSVStructure(csvBuffer) {
                     'm-0 2'              // código/id del producto
                 ];
 
+                // Encabezados esenciales comunes a cualquier CSV nuevo de Visaovip
+                const newVisaovipEssentialHeaders = [
+                    'no-underline href', // URL del producto
+                    'mb-2 src',          // URL de la imagen
+                    'm-0',               // precio USD
+                    'm-0 2'              // código/id del producto
+                ];
+
                 const missingLegacy = legacyHeaders.filter(header => !headers.includes(header));
                 const missingNewFull = newVisaovipHeadersFull.filter(header => !headers.includes(header));
                 const missingNewShort = newVisaovipHeadersShort.filter(header => !headers.includes(header));
@@ -273,7 +281,12 @@ async function validateCSVStructure(csvBuffer) {
                 const hasNewFullStructure = missingNewFull.length === 0;
                 const hasNewShortStructure = missingNewShort.length === 0;
 
-                if (!hasLegacyStructure && !hasNewFullStructure && !hasNewShortStructure) {
+                // Versión flexible: permitir variaciones mientras tenga campos esenciales + nombre
+                const hasNewEssentialHeaders = newVisaovipEssentialHeaders.every(header => headers.includes(header));
+                const hasNewNameField = headers.includes('p-0 2') || headers.includes('p-0');
+                const hasNewFlexibleStructure = hasNewEssentialHeaders && hasNewNameField;
+
+                if (!hasLegacyStructure && !hasNewFullStructure && !hasNewShortStructure && !hasNewFlexibleStructure) {
                     resolve({
                         isValid: false,
                         error: 'Encabezados del CSV no coinciden con el formato esperado (antiguo o nuevos del proveedor).'
