@@ -84,13 +84,51 @@ function normalizeProductName(productName) {
 function parseCSVRow(csvRow) {
     try {
         // Extraer campos
-        const providerCode = extractCode(csvRow['card-dtw-codigo-lista']);
-        const productName = csvRow['card-dtw-subtitulo'] || '';
-        const priceUSD = extractPrice(csvRow['card-dtw-preco-dolar']);
-        const imageUrl = csvRow['img-dtw-prod src'] || '';
-        const productUrl = csvRow['link-dtw-prod href'] || '';
-        const priceReal = csvRow['card-dtw-preco-real'] || '';
-        const priceGuarani = csvRow['card-dtw-preco-guarani'] || '';
+        // Soportar tanto el CSV antiguo como el nuevo de Visaovip
+        const providerCode = extractCode(
+            csvRow['card-dtw-codigo-lista'] || // formato antiguo
+            csvRow['m-0 2'] ||                 // nuevo formato: código/id
+            csvRow['codigo'] ||
+            csvRow['code'] ||
+            csvRow['productCode']
+        );
+
+        const productName =
+            csvRow['card-dtw-subtitulo'] || // formato antiguo
+            csvRow['p-0 2'] ||              // nuevo formato: nombre/título
+            csvRow['p-0'] ||
+            csvRow['title'] ||
+            '';
+
+        const priceUSD = extractPrice(
+            csvRow['card-dtw-preco-dolar'] || // formato antiguo
+            csvRow['m-0'] ||                  // nuevo formato: precio en USD "U$ 39,00"
+            csvRow['priceUSD'] ||
+            csvRow['price'] ||
+            ''
+        );
+
+        const imageUrl =
+            csvRow['img-dtw-prod src'] || // formato antiguo
+            csvRow['mb-2 src'] ||         // nuevo formato: URL de imagen
+            csvRow['image'] ||
+            '';
+
+        const productUrl =
+            csvRow['link-dtw-prod href'] || // formato antiguo
+            csvRow['no-underline href'] ||  // nuevo formato: URL del producto
+            csvRow['url'] ||
+            '';
+
+        const priceReal =
+            csvRow['card-dtw-preco-real'] || // solo disponible en formato antiguo
+            csvRow['priceReal'] ||
+            '';
+
+        const priceGuarani =
+            csvRow['card-dtw-preco-guarani'] || // solo disponible en formato antiguo
+            csvRow['priceGuarani'] ||
+            '';
 
         // Validar campos requeridos
         if (!providerCode) {
@@ -195,8 +233,8 @@ async function validateCSVStructure(csvBuffer) {
                 hasData = true;
             })
             .on('end', () => {
-                // Validar encabezados requeridos
-                const requiredHeaders = [
+                // Validar encabezados requeridos para ambos formatos (antiguo y nuevo)
+                const legacyHeaders = [
                     'link-dtw-prod href',
                     'img-dtw-prod src',
                     'card-dtw-subtitulo',
@@ -206,14 +244,26 @@ async function validateCSVStructure(csvBuffer) {
                     'card-dtw-preco-guarani'
                 ];
 
-                const missingHeaders = requiredHeaders.filter(header => 
-                    !headers.includes(header)
-                );
+                const newVisaovipHeaders = [
+                    'no-underline href', // URL del producto
+                    'mb-2 src',          // URL de la imagen
+                    'p-0',               // categoría / texto
+                    'p-0 2',             // nombre del producto
+                    'p-0 3',             // marca
+                    'm-0',               // precio USD "U$ 39,00"
+                    'm-0 2'              // código/id del producto
+                ];
 
-                if (missingHeaders.length > 0) {
+                const missingLegacy = legacyHeaders.filter(header => !headers.includes(header));
+                const missingNew = newVisaovipHeaders.filter(header => !headers.includes(header));
+
+                const hasLegacyStructure = missingLegacy.length === 0;
+                const hasNewStructure = missingNew.length === 0;
+
+                if (!hasLegacyStructure && !hasNewStructure) {
                     resolve({
                         isValid: false,
-                        error: `Encabezados faltantes: ${missingHeaders.join(', ')}`
+                        error: 'Encabezados del CSV no coinciden con el formato esperado (antiguo o nuevo del proveedor).'
                     });
                     return;
                 }
