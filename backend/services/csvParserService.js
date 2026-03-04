@@ -78,56 +78,92 @@ function normalizeProductName(productName) {
 
 /**
  * Parsea una fila CSV del proveedor
+ * - Soporta CSV antiguo y los distintos formatos nuevos de Visaovip
+ * - Normaliza encabezados para evitar problemas de espacios / BOM
+ * - Elige SIEMPRE el nombre más específico cuando hay varias columnas (p-0, p-0 2)
  * @param {Object} csvRow - Fila del CSV parseado
  * @returns {Object} Producto parseado
  */
 function parseCSVRow(csvRow) {
     try {
+        // Normalizar claves de la fila (encabezados):
+        // - quitar BOM
+        // - colapsar espacios múltiples
+        // - recortar espacios al inicio/fin
+        const normalizedRow = {};
+        Object.keys(csvRow || {}).forEach((key) => {
+            if (!key) return;
+            const normalizedKey = key
+                .replace(/\uFEFF/g, '')   // BOM
+                .replace(/\s+/g, ' ')     // espacios múltiples -> uno solo
+                .trim();
+            normalizedRow[normalizedKey] = csvRow[key];
+        });
+
         // Extraer campos
-        // Soportar tanto el CSV antiguo como el nuevo de Visaovip
+        // Soportar tanto el CSV antiguo como los nuevos de Visaovip
         const providerCode = extractCode(
-            csvRow['card-dtw-codigo-lista'] || // formato antiguo
-            csvRow['m-0 2'] ||                 // nuevo formato: código/id
-            csvRow['codigo'] ||
-            csvRow['code'] ||
-            csvRow['productCode']
+            normalizedRow['card-dtw-codigo-lista'] || // formato antiguo
+            normalizedRow['m-0 2'] ||                 // nuevo formato: código/id
+            normalizedRow['codigo'] ||
+            normalizedRow['code'] ||
+            normalizedRow['productCode']
         );
 
-        const productName =
-            csvRow['card-dtw-subtitulo'] || // formato antiguo
-            csvRow['p-0 2'] ||              // nuevo formato: nombre/título
-            csvRow['p-0'] ||
-            csvRow['title'] ||
-            '';
+        // Nombre del producto:
+        // - legacy: card-dtw-subtitulo
+        // - formatos nuevos: p-0 (categoría / nombre corto) y p-0 2 (nombre largo)
+        //   → cuando existan ambos, elegimos el string MÁS LARGO (más específico)
+        let productName = '';
+
+        if (normalizedRow['card-dtw-subtitulo']) {
+            // CSV antiguo
+            productName = normalizedRow['card-dtw-subtitulo'];
+        } else {
+            const nameFromP02 = normalizedRow['p-0 2'];
+            const nameFromP0 = normalizedRow['p-0'];
+
+            if (nameFromP02 && nameFromP0) {
+                const n1 = String(nameFromP02).trim();
+                const n2 = String(nameFromP0).trim();
+                productName = n1.length >= n2.length ? n1 : n2;
+            } else {
+                productName =
+                    nameFromP02 ||
+                    nameFromP0 ||
+                    normalizedRow['title'] ||
+                    '';
+            }
+        }
 
         const priceUSD = extractPrice(
-            csvRow['card-dtw-preco-dolar'] || // formato antiguo
-            csvRow['m-0'] ||                  // nuevo formato: precio en USD "U$ 39,00"
-            csvRow['priceUSD'] ||
-            csvRow['price'] ||
+            normalizedRow['card-dtw-preco-dolar'] || // formato antiguo
+            normalizedRow['m-0'] ||                  // nuevo formato: precio en USD "U$ 39,00"
+            normalizedRow['priceUSD'] ||
+            normalizedRow['price'] ||
             ''
         );
 
         const imageUrl =
-            csvRow['img-dtw-prod src'] || // formato antiguo
-            csvRow['mb-2 src'] ||         // nuevo formato: URL de imagen
-            csvRow['image'] ||
+            normalizedRow['img-dtw-prod src'] || // formato antiguo
+            normalizedRow['mb-2 src'] ||         // nuevo formato: URL de imagen
+            normalizedRow['image'] ||
             '';
 
         const productUrl =
-            csvRow['link-dtw-prod href'] || // formato antiguo
-            csvRow['no-underline href'] ||  // nuevo formato: URL del producto
-            csvRow['url'] ||
+            normalizedRow['link-dtw-prod href'] || // formato antiguo
+            normalizedRow['no-underline href'] ||  // nuevo formato: URL del producto
+            normalizedRow['url'] ||
             '';
 
         const priceReal =
-            csvRow['card-dtw-preco-real'] || // solo disponible en formato antiguo
-            csvRow['priceReal'] ||
+            normalizedRow['card-dtw-preco-real'] || // solo disponible en formato antiguo
+            normalizedRow['priceReal'] ||
             '';
 
         const priceGuarani =
-            csvRow['card-dtw-preco-guarani'] || // solo disponible en formato antiguo
-            csvRow['priceGuarani'] ||
+            normalizedRow['card-dtw-preco-guarani'] || // solo disponible en formato antiguo
+            normalizedRow['priceGuarani'] ||
             '';
 
         // Validar campos requeridos
@@ -149,7 +185,7 @@ function parseCSVRow(csvRow) {
             priceGuarani,
             normalizedName: normalizeProductName(productName),
             // Campos adicionales para compatibilidad
-            rawData: csvRow
+            rawData: normalizedRow
         };
 
     } catch (error) {

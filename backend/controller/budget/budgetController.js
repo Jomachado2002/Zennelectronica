@@ -618,7 +618,24 @@ async function generateBudgetPDF(budgetId) {
     let rowCounter = 0;
     
     tableConfig.rows.forEach((row, rowIndex) => {
-      if (yPos > doc.page.height - 150) {
+      // Altura máxima útil de la página antes de salto
+      const maxContentY = doc.page.height - 150;
+
+      // Texto completo de la descripción (sin cortar)
+      const nameText = row.name || '';
+
+      // Calcular altura necesaria para la descripción con ajuste de línea
+      const descriptionWidth = tableConfig.headers[0].width - 10;
+      const nameHeight = doc.heightOfString(nameText, {
+        width: descriptionWidth,
+        align: 'left'
+      });
+
+      // Altura mínima por fila (para que no quede demasiado comprimido)
+      const rowHeight = Math.max(nameHeight, 12);
+
+      // Verificar si necesitamos una nueva página antes de dibujar la fila
+      if (yPos + rowHeight + 10 > maxContentY) {
         doc.addPage();
         yPos = 50;
         
@@ -657,13 +674,15 @@ async function generateBudgetPDF(budgetId) {
         yPos += 25;
       }
       
+      // Fondo alternado para filas (adaptado a la altura real de la fila)
       if (rowCounter % 2 === 0) {
         doc.fillColor('#F7F7F7')
-           .rect(50, yPos - 5, 500, 25)
+           .rect(50, yPos - 5, 500, rowHeight + 10)
            .fill();
       }
       rowCounter++;
       
+      // Texto de la fila
       doc.fontSize(8).fillColor(secondaryColor);
       
       const col1 = 55;
@@ -672,15 +691,10 @@ async function generateBudgetPDF(budgetId) {
       const col4 = col3 + tableConfig.headers[2].width;
       const col5 = col4 + tableConfig.headers[3].width;
       
-      let displayName = row.name;
-      if (displayName && displayName.length > 40) {
-        displayName = displayName.substring(0, 37) + '...';
-      }
-      doc.text(displayName || '', col1, yPos, { 
-        width: tableConfig.headers[0].width - 10,
-        align: 'left',
-        ellipsis: false,
-        lineBreak: false
+      // Descripción: mostrar texto completo con salto de línea automático
+      doc.text(nameText, col1, yPos, { 
+        width: descriptionWidth,
+        align: 'left'
       });
       
       doc.text(row.quantity || '', col2, yPos, { 
@@ -706,8 +720,9 @@ async function generateBudgetPDF(budgetId) {
         align: 'right',
         lineBreak: false
       });
-      
-      yPos += 25;
+
+      // Avanzar en Y según la altura real de la fila
+      yPos += rowHeight + 10;
     });
     
     // ----- RESUMEN DE TOTALES -----

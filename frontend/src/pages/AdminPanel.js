@@ -30,7 +30,8 @@ import {
   FaUserCog,
   FaDownload,
   FaFilePdf,
-  FaImage
+  FaImage,
+  FaFileAlt
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -136,6 +137,13 @@ const AdminPanel = () => {
           icon: <FaUser className="w-5 h-5" />,
           description: "Gestión de clientes",
           color: "text-blue-600 bg-blue-50"
+        },
+        {
+          path: "presupuestos",
+          label: "Presupuestos",
+          icon: <FaFileAlt className="w-5 h-5" />,
+          description: "Crear y gestionar presupuestos",
+          color: "text-amber-600 bg-amber-50"
         },
         {
           path: "compras",
