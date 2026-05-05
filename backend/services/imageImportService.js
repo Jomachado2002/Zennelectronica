@@ -224,6 +224,35 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
     }
 }
 
+function sleepMs(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Reintentos tras fallo de red / Firebase (útil en sync masivo).
+ * @param {number} extraRetries - Reintentos tras el primer intento (2 = 3 intentos en total).
+ */
+async function importImageFromUrlWithRetries(
+    imageUrl,
+    providerCode,
+    options = {},
+    extraRetries = 2
+) {
+    let lastErr;
+    const tries = Math.max(0, extraRetries) + 1;
+    for (let attempt = 0; attempt < tries; attempt++) {
+        try {
+            return await importImageFromUrl(imageUrl, providerCode, options);
+        } catch (e) {
+            lastErr = e;
+            if (attempt + 1 < tries) {
+                await sleepMs(450 + Math.floor(Math.random() * 450));
+            }
+        }
+    }
+    throw lastErr;
+}
+
 // Mantener la función original para compatibilidad
 async function importImage(imageUrl, providerCode, options = {}) {
     return await importImageFromUrl(imageUrl, providerCode, options);
@@ -317,6 +346,7 @@ module.exports = {
     uploadImageToFirebase,
     importImage,
     importImageFromUrl,
+    importImageFromUrlWithRetries,
     importMultipleImages,
     validateImageUrl
 };

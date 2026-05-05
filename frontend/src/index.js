@@ -10,24 +10,8 @@ import { Provider } from 'react-redux';
 import { store } from './store/store';
 import { initPerformanceOptimizations } from './utils/performanceOptimizations';
 
-// ✅ NUEVAS IMPORTACIONES PARA REACT QUERY
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// import { ReactQueryDevtools } from '@tanstack/react-query-devtools'; // Removed unused import
-
-// ✅ CONFIGURACIÓN DEL QUERY CLIENT OPTIMIZADA
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // ⚡ CONFIGURACIÓN DE CACHÉ AGRESIVA
-      staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados "frescos"
-      cacheTime: 10 * 60 * 1000, // 10 minutos - tiempo en caché
-      retry: 1, // Solo 1 reintento en caso de error
-      refetchOnWindowFocus: false, // No refrescar al cambiar de ventana
-      refetchOnMount: false, // No refrescar al montar componente
-      refetchOnReconnect: false, // No refrescar al reconectar internet
-    },
-  },
-});
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queryClient';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

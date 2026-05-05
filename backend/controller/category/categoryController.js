@@ -586,9 +586,9 @@ const updateProductsWithSpecificationChanges = async (categoryValue, subcategory
 // Obtener todas las categorías para el menú (optimizado)
 const getCategoriesForMenu = async (req, res) => {
   try {
-    const categories = await Category.find({}, 'name label value')
-      .sort({ createdAt: 1 }) // Orden por fecha de creación (más antiguas primero)
-      .lean(); // .lean() para mejor performance
+    const categories = await Category.find({ isActive: true }, 'name label value')
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
 
     const formattedCategories = categories.map(category => ({
       id: category._id,
@@ -616,19 +616,21 @@ const getSubcategoriesForMenu = async (req, res) => {
   try {
     const { categoryValue } = req.params;
 
-    const category = await Category.findOne(
-      { value: categoryValue },
-      'subcategories.name subcategories.label subcategories.value'
-    ).lean();
+    const category = await Category.findOne({
+      value: categoryValue,
+      isActive: true
+    }).lean();
 
-    if (!category) {
+    if (!category || !category.subcategories) {
       return res.status(404).json({
         success: false,
         message: 'Categoría no encontrada'
       });
     }
 
-    const subcategories = category.subcategories.map(sub => ({
+    const subcategories = category.subcategories
+      .filter((sub) => sub.isActive !== false)
+      .map((sub) => ({
       id: sub._id,
       value: sub.value,
       label: sub.label,
@@ -695,23 +697,29 @@ const getSpecificationsForMenu = async (req, res) => {
 // Obtener TODA la estructura de categorías de una vez (optimizado para precarga)
 const getAllCategoriesStructure = async (req, res) => {
   try {
-    const categories = await Category.find({})
-      .sort({ createdAt: 1 }) // Orden por fecha de creación (más antiguas primero)
-      .lean(); // .lean() para mejor performance
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
 
-    const structuredData = categories.map(category => ({
+    const structuredData = categories.map((category) => ({
       id: category._id,
       value: category.value,
       label: category.label,
       name: category.name,
-      subcategories: category.subcategories.map(subcategory => ({
+      visaoNavigationTree: category.visaoNavigationTree || null,
+      subcategories: [...(category.subcategories || [])]
+        .filter((sub) => sub.isActive !== false)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map((subcategory) => ({
         id: subcategory._id,
         value: subcategory.value,
         label: subcategory.label,
         name: subcategory.name,
-        specifications: subcategory.specifications.map(specification => ({
+        specifications: [...(subcategory.specifications || [])]
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((specification) => ({
           id: specification._id,
-          value: specification.value,
+          value: specification.name,
           label: specification.label,
           name: specification.name,
           type: specification.type

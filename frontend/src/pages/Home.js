@@ -17,6 +17,7 @@ import '../styles/global.css';
 // Importar la función scrollTop mejorada
 import scrollTop from '../helpers/scrollTop';
 import { showPerformanceReport } from '../utils/performanceMonitor';
+import { HOME_SLOT_ROUTES, HOME_SECTION_SUBTITLES, categoriaProductoHref } from '../config/homeSlotRoutes';
 
 // Animaciones simplificadas para mejor performance
 const fadeIn = {
@@ -29,13 +30,9 @@ const Home = () => {
   const { data: homeData, isLoading: homeLoading } = useHomeProducts();
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
-  // ✅ EXTRAER DATOS POR CATEGORÍA PARA PASAR COMO PROPS
-  const getProductsForCategory = (category, subcategory) => {
-    if (!homeData?.data?.[category]?.[subcategory]) {
-      return [];
-    }
-    return homeData.data[category][subcategory];
-  };
+  const slots = homeData?.data?.slots;
+  const slotProducts = (slotKey) =>
+    Array.isArray(slots?.[slotKey]) ? slots[slotKey] : [];
 
   // Optimizaciones de carga
   useEffect(() => {
@@ -156,12 +153,14 @@ const Home = () => {
               >
                 <div className="h-full relative overflow-hidden rounded-2xl shadow-2xl group">
                   <NotebookBanner />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6 transform translate-y-2 group-hover:translate-y-0 transition duration-300">
-                    <div className="text-white">
-                      <Link to="/categoria-producto?category=informatica&subcategory=notebooks"
-                            onClick={() => scrollTop()}>
-                      </Link>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6 transform translate-y-2 group-hover:translate-y-0 transition duration-300 pointer-events-none">
+                    <Link
+                      to={categoriaProductoHref(HOME_SLOT_ROUTES.notebooks.category, HOME_SLOT_ROUTES.notebooks.subcategory)}
+                      onClick={() => scrollTop()}
+                      className="pointer-events-auto text-white font-semibold text-sm hover:underline"
+                    >
+                      Ver catálogo de notebooks →
+                    </Link>
                   </div>
                 </div>
               </motion.div>
@@ -190,6 +189,7 @@ const Home = () => {
                         </span>
                         Notebooks de Alto Rendimiento
                       </h2>
+                      <p className="mt-2 text-sm text-gray-600 max-w-xl">{HOME_SECTION_SUBTITLES.notebooks}</p>
                       <div 
                         className="h-1 w-32 mb-6 rounded-full"
                         style={{
@@ -198,7 +198,8 @@ const Home = () => {
                       ></div>
                     </div>
                     
-                      <Link to="/categoria-producto?category=informatica&subcategory=notebooks" 
+                      <Link
+                        to={categoriaProductoHref(HOME_SLOT_ROUTES.notebooks.category, HOME_SLOT_ROUTES.notebooks.subcategory)}
                             onClick={() => scrollTop()}>
                         <button 
                           className="px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center group/btn"
@@ -213,10 +214,11 @@ const Home = () => {
                   
                   {/* ✅ COMPONENTE OPTIMIZADO - CARGA RÁPIDA */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="notebooks"
+                    category={HOME_SLOT_ROUTES.notebooks.category}
+                    subcategory={HOME_SLOT_ROUTES.notebooks.subcategory}
+                    carouselKey="notebooks"
                     heading=""
-                    products={getProductsForCategory('informatica', 'notebooks')}
+                    products={slotProducts('notebooks')}
                     loading={homeLoading}
                   />
                 </div>
@@ -247,7 +249,7 @@ const Home = () => {
                     >
                       Teléfonos Móviles
                     </h2>
-                    <p className="mt-2 text-gray-600 max-w-lg">La última tecnología móvil al alcance de tus manos</p>
+                    <p className="mt-2 text-sm text-gray-600 max-w-xl">{HOME_SECTION_SUBTITLES.celulares}</p>
                     <div 
                       className="h-1 w-24 mt-2 rounded-full"
                       style={{
@@ -255,7 +257,8 @@ const Home = () => {
                       }}
                     ></div>
                   </div>
-                  <Link to="/categoria-producto?category=telefonia&subcategory=telefonos_moviles" 
+                  <Link
+                    to={categoriaProductoHref(HOME_SLOT_ROUTES.celulares.category, HOME_SLOT_ROUTES.celulares.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="mt-4 md:mt-0 px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -271,10 +274,11 @@ const Home = () => {
                 <div className="mt-6">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="telefonia"
-                    subcategory="telefonos_moviles"
+                    category={HOME_SLOT_ROUTES.celulares.category}
+                    subcategory={HOME_SLOT_ROUTES.celulares.subcategory}
+                    carouselKey="celulares"
                     heading=""
-                    products={getProductsForCategory('telefonia', 'telefonos_moviles')}
+                    products={slotProducts('celulares')}
                     loading={homeLoading}
                   />
                 </div>
@@ -313,7 +317,8 @@ const Home = () => {
                       }}
                     ></div>
                   </div>
-                  <Link to="/categoria-producto?category=informatica&subcategory=placas_madre" 
+                  <Link
+                    to={categoriaProductoHref(HOME_SLOT_ROUTES.placas_madre.category, HOME_SLOT_ROUTES.placas_madre.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="mt-4 md:mt-0 px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -329,10 +334,11 @@ const Home = () => {
                 <div className="mt-6">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="placas_madre"
+                    category={HOME_SLOT_ROUTES.placas_madre.category}
+                    subcategory={HOME_SLOT_ROUTES.placas_madre.subcategory}
+                    carouselKey="placas_madre"
                     heading=""
-                    products={getProductsForCategory('informatica', 'placas_madre')}
+                    products={slotProducts('placas_madre')}
                     loading={homeLoading}
                   />
                 </div>
@@ -367,20 +373,22 @@ const Home = () => {
                     </span>
                     Mouses
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.mouses}</p>
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="perifericos"
-                    subcategory="mouses"
+                    category={HOME_SLOT_ROUTES.mouses.category}
+                    subcategory={HOME_SLOT_ROUTES.mouses.subcategory}
+                    carouselKey="mouses"
                     heading=""
-                    products={getProductsForCategory('perifericos', 'mouses')}
+                    products={slotProducts('mouses')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=perifericos&subcategory=mouses"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.mouses.category, HOME_SLOT_ROUTES.mouses.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -410,20 +418,22 @@ const Home = () => {
                     </span>
                     Monitores
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.monitores}</p>
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="perifericos"
-                    subcategory="monitores"
+                    category={HOME_SLOT_ROUTES.monitores.category}
+                    subcategory={HOME_SLOT_ROUTES.monitores.subcategory}
+                    carouselKey="monitores"
                     heading=""
-                    products={getProductsForCategory('perifericos', 'monitores')}
+                    products={slotProducts('monitores')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=perifericos&subcategory=monitores"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.monitores.category, HOME_SLOT_ROUTES.monitores.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -453,20 +463,22 @@ const Home = () => {
                     </span>
                     Memorias RAM
                   </h2>
-                  <div className="h-1 w-20 bg-blue-300 mt-2 mb-4 rounded-full"></div>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.memorias_ram}</p>
+                  <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="memorias_ram"
+                    category={HOME_SLOT_ROUTES.memorias_ram.category}
+                    subcategory={HOME_SLOT_ROUTES.memorias_ram.subcategory}
+                    carouselKey="memorias_ram"
                     heading=""
-                    products={getProductsForCategory('informatica', 'memorias_ram')}
+                    products={slotProducts('memorias_ram')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=informatica&subcategory=memorias_ram"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.memorias_ram.category, HOME_SLOT_ROUTES.memorias_ram.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -496,20 +508,22 @@ const Home = () => {
                     </span>
                     Discos Duros
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.discos}</p>
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="discos_duros"
+                    category={HOME_SLOT_ROUTES.discos.category}
+                    subcategory={HOME_SLOT_ROUTES.discos.subcategory}
+                    carouselKey="discos"
                     heading=""
-                    products={getProductsForCategory('informatica', 'discos_duros')}
+                    products={slotProducts('discos')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=informatica&subcategory=discos_duros"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.discos.category, HOME_SLOT_ROUTES.discos.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -539,20 +553,22 @@ const Home = () => {
                     </span>
                     Tarjetas Gráficas
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.tarjetas_graficas}</p>
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="tarjeta_grafica"
+                    category={HOME_SLOT_ROUTES.tarjetas_graficas.category}
+                    subcategory={HOME_SLOT_ROUTES.tarjetas_graficas.subcategory}
+                    carouselKey="tarjetas_graficas"
                     heading=""
-                    products={getProductsForCategory('informatica', 'tarjeta_grafica')}
+                    products={slotProducts('tarjetas_graficas')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=informatica&subcategory=tarjeta_grafica"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.tarjetas_graficas.category, HOME_SLOT_ROUTES.tarjetas_graficas.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -566,7 +582,7 @@ const Home = () => {
                 </div>
               </motion.div>
               
-              {/* Gabinetes */}
+              {/* Apple (iPhone, MacBook, iPad y accesorios) */}
               <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div 
                   className="p-6 text-white"
@@ -577,25 +593,26 @@ const Home = () => {
                   <h2 className="text-2xl font-bold flex items-center">
                     <span className="mr-3">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     </span>
-                    Gabinetes
+                    Apple
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.apple}</p>
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
-                  {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="gabinetes"
+                    category={HOME_SLOT_ROUTES.apple.category}
+                    subcategory={HOME_SLOT_ROUTES.apple.subcategory}
+                    carouselKey="apple"
                     heading=""
-                    products={getProductsForCategory('informatica', 'gabinetes')}
+                    products={slotProducts('apple')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=informatica&subcategory=gabinetes"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.apple.category, HOME_SLOT_ROUTES.apple.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -625,20 +642,22 @@ const Home = () => {
                     </span>
                     Procesadores
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.procesadores}</p>
                   <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="informatica"
-                    subcategory="procesador"
+                    category={HOME_SLOT_ROUTES.procesadores.category}
+                    subcategory={HOME_SLOT_ROUTES.procesadores.subcategory}
+                    carouselKey="procesadores"
                     heading=""
-                    products={getProductsForCategory('informatica', 'procesador')}
+                    products={slotProducts('procesadores')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=informatica&subcategory=procesador"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.procesadores.category, HOME_SLOT_ROUTES.procesadores.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -668,20 +687,22 @@ const Home = () => {
                     </span>
                     Teclados
                   </h2>
+                  <p className="text-sm text-white/90 mt-1 max-w-xl">{HOME_SECTION_SUBTITLES.teclados}</p>
                   <div className="h-1 w-20 bg-white/30 mt-2 mb-4 rounded-full"></div>
                 </div>
                 <div className="p-4">
                   {/* ✅ COMPONENTE OPTIMIZADO */}
                   <VerticalCardProductOptimized
-                    category="perifericos"
-                    subcategory="teclados"
+                    category={HOME_SLOT_ROUTES.teclados.category}
+                    subcategory={HOME_SLOT_ROUTES.teclados.subcategory}
+                    carouselKey="teclados"
                     heading=""
-                    products={getProductsForCategory('perifericos', 'teclados')}
+                    products={slotProducts('teclados')}
                     loading={homeLoading}
                   />
                 </div>
                 <div className="p-4 pt-0 text-center">
-                  <Link to="/categoria-producto?category=perifericos&subcategory=teclados"
+                  <Link to={categoriaProductoHref(HOME_SLOT_ROUTES.teclados.category, HOME_SLOT_ROUTES.teclados.subcategory)}
                         onClick={() => scrollTop()}>
                     <button 
                       className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg group/btn"
@@ -762,7 +783,7 @@ const Home = () => {
                 </Link>
               </div>
               
-              <LatestProductsMix limit={5} />
+              <LatestProductsMix limit={20} />
             </div>
           </motion.section>
 

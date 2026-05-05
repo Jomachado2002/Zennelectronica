@@ -5,6 +5,8 @@ import { BiX, BiFilter, BiChevronDown, BiChevronUp, BiCheck } from 'react-icons/
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext'; // Ajustada la ruta a context sin 's'
 import usePreloadedCategories from '../../hooks/usePreloadedCategories';
+import SubcategoryTreePicker from '../SubcategoryTreePicker';
+import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
 
 const MobileFilters = () => {
   const { 
@@ -481,27 +483,38 @@ const MobileFilters = () => {
                         </div>
                         
                         {filterCategoryList.includes(category.value) && (
-                          <div className="border-t border-gray-100 bg-gray-50">
-                            {getSubcategories(category.value).map((subcat) => (
-                              <div 
-                                key={subcat.value}
-                                className="flex items-center py-3 px-4 border-b border-gray-100 last:border-b-0"
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                                  checked={filterSubcategoryList.includes(subcat.value)}
-                                  onChange={() => handleSelectSubcategory(subcat.value)}
-                                  id={`subcategory-${subcat.value}`}
-                                />
-                                <label 
-                                  htmlFor={`subcategory-${subcat.value}`} 
-                                  className="text-gray-700 cursor-pointer"
+                          <div className="border-t border-gray-100 bg-gray-50 p-3">
+                            {usableVisaoTree(category.visaoNavigationTree) ? (
+                              <SubcategoryTreePicker
+                                tree={category.visaoNavigationTree}
+                                categoryValue={category.value}
+                                mode="filter"
+                                selectedSubcategoryValues={filterSubcategoryList}
+                                onToggleSubcategory={handleSelectSubcategory}
+                                gridColsClass="grid grid-cols-1 gap-2"
+                              />
+                            ) : (
+                              getSubcategories(category.value).map((subcat) => (
+                                <div
+                                  key={subcat.value}
+                                  className="flex items-center py-3 px-4 border-b border-gray-100 last:border-b-0"
                                 >
-                                  {subcat.label}
-                                </label>
-                              </div>
-                            ))}
+                                  <input
+                                    type="checkbox"
+                                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+                                    checked={filterSubcategoryList.includes(subcat.value)}
+                                    onChange={() => handleSelectSubcategory(subcat.value)}
+                                    id={`subcategory-${subcat.value}`}
+                                  />
+                                  <label
+                                    htmlFor={`subcategory-${subcat.value}`}
+                                    className="text-gray-700 cursor-pointer"
+                                  >
+                                    {subcat.label}
+                                  </label>
+                                </div>
+                              ))
+                            )}
                           </div>
                         )}
                       </div>

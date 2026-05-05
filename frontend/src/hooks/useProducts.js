@@ -5,11 +5,10 @@ import SummaryApi from '../common';
 // ✅ HOOK PARA PRODUCTOS DEL HOME - CORREGIDO
 export const useHomeProducts = () => {
   return useQuery({
-    queryKey: ['category-products', 'all'],
+    queryKey: ['category-products', 'home', 'slots-v2'],
     queryFn: async () => {
       try {
-        // Usar el endpoint actual de todos los productos
-        const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos-home', {
+        const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos', {
           method: SummaryApi.allProduct.method,
           credentials: 'include'
         });
@@ -23,7 +22,11 @@ export const useHomeProducts = () => {
         if (!result.success) {
           throw new Error(result.message || 'Error en la respuesta');
         }
-                
+
+        if (result.data && result.data.slots && typeof result.data.slots === 'object') {
+          return { success: true, data: result.data };
+        }
+
         // ✅ VERIFICACIÓN CORREGIDA - ACEPTAR TANTO ARRAY COMO OBJETO
         let products = [];
         
@@ -150,14 +153,6 @@ export const useHomeProducts = () => {
           }
         };
         
-        // ✅ LOG FINAL PARA VERIFICAR RESULTADOS
-        console.log('✅ DATOS ORGANIZADOS FINALES:', {
-          notebooks: organizedData.informatica.notebooks.length,
-          placas_madre: organizedData.informatica.placas_madre.length,
-          telefonos: organizedData.telefonia.telefonos_moviles.length,
-          mouses: organizedData.perifericos.mouses.length
-        });
-                
         return {
           success: true,
           data: organizedData

@@ -5,9 +5,27 @@ const productSchema = mongoose.Schema({
     brandName: { type: String, required: true },
     category: { type: String, required: true },
     subcategory: { type: String, required: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true },
+    /** _id del subdocumento subcategoría dentro de Category */
+    subcategoryId: { type: mongoose.Schema.Types.ObjectId, index: true },
     productImage: { type: [String], required: true },
     documentationLink: { type: String },
     description: { type: String },
+    /** Especificaciones con claves canónicas (slug) alineadas a subcategoría.specifications.name */
+    technicalSpecifications: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
+    /** Mismo mapa canónico agrupado (filtros / API); sync Visão lo rellena junto a technicalSpecifications */
+    specifications: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
+    /** Migas Visão + URL de listado hoja (sync mirror); JSON flexible para filtros jerárquicos */
+    visaoTaxonomy: {
+        type: mongoose.Schema.Types.Mixed,
+        default: undefined
+    },
     price: { type: Number, required: true },
     sellingPrice: { type: Number, required: true },
     // ✅ NUEVO CAMPO: CÓDIGO DEL PRODUCTO
@@ -18,6 +36,13 @@ const productSchema = mongoose.Schema({
         uppercase: true,
         trim: true,
         index: true
+    },
+    /** Marca origen para sync (ej. visao_vip) y operaciones masivas post-scrape */
+    syncSource: {
+        type: String,
+        index: true,
+        sparse: true,
+        trim: true
     },
     stock: {
     type: Number,

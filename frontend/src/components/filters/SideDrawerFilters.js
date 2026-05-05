@@ -4,6 +4,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { BiX, BiFilter, BiChevronDown, BiChevronUp } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext'; // Ajustada la ruta a context sin 's'
+import SubcategoryTreePicker from '../SubcategoryTreePicker';
+import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
 
 const SideDrawerFilters = ({ 
   categories = [], 
@@ -502,30 +504,41 @@ const SideDrawerFilters = ({
                           </div>
                           
                           {filterCategoryList.includes(category.value) && (
-                            <div className="border-t border-gray-100 bg-gray-50">
-                              {(() => {
-                                const subcategories = getSubcategoriesForCategory(category.value);
-                                return subcategories.length > 0 ? (
-                                  subcategories.map((subcat) => (
-                                    <div 
-                                      key={subcat.value}
-                                      className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                                        checked={filterSubcategoryList.includes(subcat.value)}
-                                        onChange={() => handleSelectSubcategory(subcat.value)}
-                                      />
-                                      <span className="text-gray-700">{subcat.label}</span>
+                            <div className="border-t border-gray-100 bg-gray-50 p-2">
+                              {usableVisaoTree(category.visaoNavigationTree) ? (
+                                <SubcategoryTreePicker
+                                  tree={category.visaoNavigationTree}
+                                  categoryValue={category.value}
+                                  mode="filter"
+                                  selectedSubcategoryValues={filterSubcategoryList}
+                                  onToggleSubcategory={handleSelectSubcategory}
+                                  gridColsClass="grid grid-cols-1 gap-2"
+                                />
+                              ) : (
+                                (() => {
+                                  const subcategories = getSubcategoriesForCategory(category.value);
+                                  return subcategories.length > 0 ? (
+                                    subcategories.map((subcat) => (
+                                      <div
+                                        key={subcat.value}
+                                        className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+                                          checked={filterSubcategoryList.includes(subcat.value)}
+                                          onChange={() => handleSelectSubcategory(subcat.value)}
+                                        />
+                                        <span className="text-gray-700">{subcat.label}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="py-2.5 px-3 text-xs text-gray-500 italic">
+                                      No hay subcategorías disponibles
                                     </div>
-                                  ))
-                                ) : (
-                                  <div className="py-2.5 px-3 text-xs text-gray-500 italic">
-                                    No hay subcategorías disponibles
-                                  </div>
-                                );
-                              })()}
+                                  );
+                                })()
+                              )}
                             </div>
                           )}
                         </div>

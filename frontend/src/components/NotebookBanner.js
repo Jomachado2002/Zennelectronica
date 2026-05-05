@@ -10,6 +10,7 @@ import {
   MonitorIcon,
   MouseIcon
 } from 'lucide-react';
+import { categoriaProductoHref } from '../config/homeSlotRoutes';
 
 // Función para hacer scroll al inicio de la página
 const scrollTop = () => {
@@ -25,8 +26,8 @@ const NotebookBanner = () => {
     {
       id: 'notebooks',
       title: 'Notebooks',
-      category: 'informatica',
-      subcategory: 'notebooks',
+      category: 'notebook_y_computadoras',
+      subcategory: 'notebook_y_computadoras__notebook__20',
       icon: <CpuIcon className="w-5 h-5" />,
       specs: [
         { icon: <CpuIcon className="w-6 h-6 mt-1 text-blue-300" />, title: 'Procesador', desc: 'Intel Core i5/i7 o AMD Ryzen 5/7' },
@@ -39,7 +40,7 @@ const NotebookBanner = () => {
       id: 'perifericos',
       title: 'Periféricos',
       category: 'perifericos',
-      subcategory: '',
+      subcategory: 'perifericos__mouse__30',
       icon: <MouseIcon className="w-5 h-5" />,
       specs: [
         { icon: <MonitorIcon className="w-6 h-6 mt-1 text-blue-300" />, title: 'Monitores', desc: 'Alta resolución para mayor productividad' },
@@ -51,8 +52,8 @@ const NotebookBanner = () => {
     {
       id: 'memorias_ram',
       title: 'Memorias',
-      category: 'informatica',
-      subcategory: 'memorias_ram',
+      category: 'almacenamiento',
+      subcategory: 'almacenamiento__memorias__21',
       icon: <MemoryStickIcon className="w-5 h-5" />,
       specs: [
         { icon: <MemoryStickIcon className="w-6 h-6 mt-1 text-blue-300" />, title: 'Capacidad', desc: 'Desde 8GB hasta 64GB' },
@@ -65,7 +66,7 @@ const NotebookBanner = () => {
 
   const handleNavigate = (category, subcategory) => {
     scrollTop();
-    navigate(`/categoria-producto?category=${category}${subcategory ? `&subcategory=${subcategory}` : ''}`);
+    navigate(categoriaProductoHref(category, subcategory));
   };
 
   const activeTabData = tabsData[activeTab];

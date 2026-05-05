@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BiCategoryAlt } from "react-icons/bi";
 import { FaWhatsapp, FaPhone } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import productCategory from '../helpers/productCategory';
+import usePreloadedCategories from '../hooks/usePreloadedCategories';
+import SubcategoryTreePicker from './SubcategoryTreePicker';
+import { leafLabelFromStoredLabel, usableVisaoTree } from '../helpers/visaoNavigationTree';
+import { useSubcategoryPreviewMap } from '../hooks/useSubcategoryPreviewMap';
+import { categoriaProductoHref } from '../config/homeSlotRoutes';
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -53,13 +58,29 @@ const MenuCategorias = ({
   const menuRef = useRef(null);
   const overlayRef = useRef(null);
 
-  // ✅ Usar categorías hardcodeadas (sin consultas a la BD)
-  const categories = productCategory;
-  const categoriesLoading = false;
-  const categoriesError = null;
-  const loadingSubcategories = false; // Ya no necesitamos cargar, están hardcodeadas
+  const { data: menuFromApi, loading: categoriesLoading, error: categoriesFetchError } = usePreloadedCategories();
 
-  // Función para obtener subcategorías de una categoría (hardcodeado)
+  const categories = useMemo(() => {
+    if (menuFromApi && menuFromApi.length > 0) {
+      return menuFromApi.map((cat) => ({
+        id: cat.id,
+        value: cat.value,
+        label: cat.label || cat.name,
+        visaoNavigationTree: cat.visaoNavigationTree || null,
+        subcategories: (cat.subcategories || []).map((sub) => ({
+          id: sub.id,
+          value: sub.value,
+          label: sub.label || sub.name
+        }))
+      }));
+    }
+    return productCategory;
+  }, [menuFromApi]);
+
+  const categoriesError = categoriesFetchError ? categoriesFetchError.message || 'Error cargando categorías' : null;
+  const loadingSubcategories = false;
+
+  // Función para obtener subcategorías de una categoría (API o fallback)
   const loadSubcategories = useCallback((categoryValue) => {
     const category = categories.find(cat => cat.value === categoryValue);
     return Promise.resolve(category ? category.subcategories : []);
@@ -114,6 +135,12 @@ const MenuCategorias = ({
       window.location.reload();
     }, 10);
   };
+
+  const desktopCategory =
+    isOpen && !isMobile && activeCategoryIndex !== null ? categories[activeCategoryIndex] : null;
+  const desktopVisaoTree = desktopCategory?.visaoNavigationTree;
+  const desktopPreviewEnabled = !!desktopCategory && usableVisaoTree(desktopVisaoTree);
+  const desktopPreviewBySub = useSubcategoryPreviewMap(desktopVisaoTree, desktopPreviewEnabled);
 
   if (!isOpen) return null;
 
@@ -352,6 +379,33 @@ const MenuCategorias = ({
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     <span className="ml-3 text-gray-600">Cargando subcategorías...</span>
                   </div>
+                ) : usableVisaoTree(categories[activeCategoryIndex]?.visaoNavigationTree) ? (
+                  <>
+                    <SubcategoryTreePicker
+                      tree={categories[activeCategoryIndex].visaoNavigationTree}
+                      categoryValue={categories[activeCategoryIndex].value}
+                      mode="navigate"
+                      gridColsClass="grid grid-cols-2 gap-4"
+                      previewBySubcategoryValue={desktopPreviewBySub}
+                      onLeafNavigate={({ categoryValue, subcategoryValue }) =>
+                        handleNavigateWithReload(categoriaProductoHref(categoryValue, subcategoryValue))
+                      }
+                    />
+                    <div className="mt-8 flex justify-end">
+                      <button
+                        type="button"
+                        className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavigateWithReload(
+                            categoriaProductoHref(categories[activeCategoryIndex].value)
+                          );
+                        }}
+                      >
+                        Ver toda la colección
+                      </button>
+                    </div>
+                  </>
                 ) : activeSubcategories.length > 0 ? (
                   <>
                     <div className="grid grid-cols-2 gap-4">
@@ -362,14 +416,19 @@ const MenuCategorias = ({
                           className="group p-3 hover:bg-blue-50 transition-colors flex items-center w-full text-left"
                           onClick={(e) => {
                             e.preventDefault();
-                            handleNavigateWithReload(`/categoria-producto?category=${categories[activeCategoryIndex].value}&subcategory=${subcategory.value}`);
+                            handleNavigateWithReload(
+                              categoriaProductoHref(
+                                categories[activeCategoryIndex].value,
+                                subcategory.value
+                              )
+                            );
                           }}
                         >
                           <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full text-blue-600 group-hover:bg-blue-200 transition-colors flex-shrink-0 mr-3">
                             <BiCategoryAlt className="text-sm" />
                           </div>
                           <span className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors text-sm">
-                            {subcategory.label}
+                            {leafLabelFromStoredLabel(subcategory.label)}
                           </span>
                         </button>
                       ))}
@@ -381,7 +440,9 @@ const MenuCategorias = ({
                         className="py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleNavigateWithReload(`/categoria-producto?category=${categories[activeCategoryIndex].value}`);
+                          handleNavigateWithReload(
+                            categoriaProductoHref(categories[activeCategoryIndex].value)
+                          );
                         }}
                       >
                         Ver toda la colección
@@ -422,13 +483,23 @@ const CategoryAccordion = ({
   const [subcategories, setSubcategories] = useState([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
+  const mobileTreePreviewEnabled =
+    expandedCategories.includes(index) && usableVisaoTree(category.visaoNavigationTree);
+  const mobilePreviewBySub = useSubcategoryPreviewMap(
+    category.visaoNavigationTree,
+    mobileTreePreviewEnabled
+  );
+
   const handleCategoryClick = async () => {
     if (!expandedCategories.includes(index)) {
-      // Si se está expandiendo, cargar subcategorías
-      setLoadingSubcategories(true);
-      const subs = await loadSubcategories(category.value);
-      setSubcategories(subs);
-      setLoadingSubcategories(false);
+      if (!usableVisaoTree(category.visaoNavigationTree)) {
+        setLoadingSubcategories(true);
+        const subs = await loadSubcategories(category.value);
+        setSubcategories(subs);
+        setLoadingSubcategories(false);
+      } else {
+        setSubcategories([]);
+      }
     }
     onCategoryClick(index);
   };
@@ -487,6 +558,34 @@ const CategoryAccordion = ({
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-500"></div>
               <span className="ml-2 text-sm text-gray-600">Cargando...</span>
             </div>
+          ) : usableVisaoTree(category.visaoNavigationTree) ? (
+            <>
+              <div className="p-3">
+                <SubcategoryTreePicker
+                  tree={category.visaoNavigationTree}
+                  categoryValue={category.value}
+                  mode="navigate"
+                  gridColsClass="grid grid-cols-1 gap-2"
+                  previewBySubcategoryValue={mobilePreviewBySub}
+                  onLeafNavigate={({ categoryValue, subcategoryValue }) =>
+                    onNavigateWithReload(categoriaProductoHref(categoryValue, subcategoryValue))
+                  }
+                />
+              </div>
+              <button
+                type="button"
+                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg w-full"
+                style={{
+                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigateWithReload(categoriaProductoHref(category.value));
+                }}
+              >
+                Ver toda la colección →
+              </button>
+            </>
           ) : (
             <>
               {subcategories.map((subcategory) => (
@@ -496,7 +595,9 @@ const CategoryAccordion = ({
                   className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group w-full text-left"
                   onClick={(e) => {
                     e.preventDefault();
-                    onNavigateWithReload(`/categoria-producto?category=${category.value}&subcategory=${subcategory.value}`);
+                    onNavigateWithReload(
+                      categoriaProductoHref(category.value, subcategory.value)
+                    );
                   }}
                 >
                   <div className="flex items-center">
@@ -504,7 +605,7 @@ const CategoryAccordion = ({
                       style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
                     />
                     <span className="text-sm text-gray-700 group-hover:text-cyan-600 font-medium transition-colors">
-                      {subcategory.label}
+                      {leafLabelFromStoredLabel(subcategory.label)}
                     </span>
                   </div>
                   <svg 
@@ -527,7 +628,7 @@ const CategoryAccordion = ({
                 }}
                 onClick={(e) => {
                   e.preventDefault();
-                  onNavigateWithReload(`/categoria-producto?category=${category.value}`);
+                  onNavigateWithReload(categoriaProductoHref(category.value));
                 }}
               >
                 Ver toda la colección →

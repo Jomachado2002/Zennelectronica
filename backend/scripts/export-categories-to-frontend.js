@@ -39,7 +39,15 @@ async function extractCategories() {
   try {
     console.log('\n🔄 Extrayendo categorías desde la base de datos...\n');
 
-    const categories = await Category.find({}).sort({ order: 1, createdAt: 1 }).lean();
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+
+    categories.forEach((cat) => {
+      if (cat.subcategories && cat.subcategories.length) {
+        cat.subcategories = cat.subcategories.filter((sub) => sub.isActive !== false);
+      }
+    });
     
     if (categories.length === 0) {
       console.log('⚠️  No hay categorías en la base de datos para exportar.');

@@ -1,6 +1,8 @@
 // frontend/src/hooks/usePreloadedCategories.js
 import { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../config/axiosInstance';
+import { queryClient } from '../queryClient';
+import { prefetchCategoryShowcasePreviews } from '../api/prefetchCategoryShowcasePreviews';
 
 // Cache global para evitar recargas innecesarias
 let globalCache = null;
@@ -30,9 +32,9 @@ const usePreloadedCategories = () => {
 
     // Si ya está en caché, usar los datos
     if (globalCache) {
-      // Usando datos del caché global
       setData(globalCache);
       setLoading(false);
+      prefetchCategoryShowcasePreviews(queryClient, globalCache, 5);
       return;
     }
 
@@ -55,6 +57,7 @@ const usePreloadedCategories = () => {
         globalCache = structuredData;
         setData(structuredData);
         setError(null);
+        prefetchCategoryShowcasePreviews(queryClient, structuredData, 5);
       } else {
         throw new Error('Respuesta no exitosa del servidor');
       }
@@ -73,7 +76,8 @@ const usePreloadedCategories = () => {
       id: category.id,
       value: category.value,
       label: category.label,
-      name: category.name
+      name: category.name,
+      visaoNavigationTree: category.visaoNavigationTree || null
     }));
   }, [data]);
 

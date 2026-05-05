@@ -17,23 +17,34 @@ const GlobalImagePreloader = ({ homeData, onPreloadComplete }) => {
 
       // Recopilar todas las imágenes de todas las categorías
       const allImageUrls = new Set();
-      
-      Object.values(homeData.data).forEach(category => {
-        if (typeof category === 'object') {
-          Object.values(category).forEach(subcategory => {
-            if (Array.isArray(subcategory)) {
-              subcategory.forEach(product => {
-                if (product?.productImage?.[0]) {
-                  allImageUrls.add(product.productImage[0]);
-                }
-                if (product?.productImage?.[1]) {
-                  allImageUrls.add(product.productImage[1]);
-                }
-              });
-            }
+      const data = homeData.data;
+
+      if (data.slots && typeof data.slots === 'object') {
+        Object.values(data.slots).forEach((slotArr) => {
+          if (!Array.isArray(slotArr)) return;
+          slotArr.forEach((product) => {
+            if (product?.productImage?.[0]) allImageUrls.add(product.productImage[0]);
+            if (product?.productImage?.[1]) allImageUrls.add(product.productImage[1]);
           });
-        }
-      });
+        });
+      } else {
+        Object.values(data).forEach(category => {
+          if (typeof category === 'object') {
+            Object.values(category).forEach(subcategory => {
+              if (Array.isArray(subcategory)) {
+                subcategory.forEach(product => {
+                  if (product?.productImage?.[0]) {
+                    allImageUrls.add(product.productImage[0]);
+                  }
+                  if (product?.productImage?.[1]) {
+                    allImageUrls.add(product.productImage[1]);
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
 
       const imageUrls = Array.from(allImageUrls);
       const totalImages = imageUrls.length;

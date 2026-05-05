@@ -13,7 +13,9 @@
     "export-to-frontend": "node scripts/export-categories-to-frontend.js",
     "sync-categories": "node scripts/sync-categories.js",
     "test-brevo": "node test-brevo.js",
-    "test-meta": "node scripts/test-meta-conversions-api.js"
+    "test-meta": "node scripts/test-meta-conversions-api.js",
+    "run-sync": "node scripts/run-sync.js",
+    "visao-purge-full": "node scripts/visao-purge-and-full-mirror.js --confirm-purge"
   },
   "author": "",
   "license": "ISC",

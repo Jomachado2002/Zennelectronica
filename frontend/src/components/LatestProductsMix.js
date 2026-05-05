@@ -48,17 +48,25 @@ const LatestProductsMix = ({ limit = 5 }) => {
 const queryClient = useQueryClient();
 
 useEffect(() => {
-    // Intentar obtener datos del caché de home-products
-    const homeCache = queryClient.getQueryData(['category-products', 'all']);
-    
-    if (homeCache && homeCache.data) {
-        
+    const homeCache = queryClient.getQueryData(['category-products', 'home', 'slots-v2']);
+
+    const slots = homeCache?.data?.slots;
+    if (homeCache?.data && Array.isArray(slots?.recientes) && slots.recientes.length > 0) {
+        const filteredProducts = slots.recientes.filter(product => {
+            const s = product?.stock;
+            return s === undefined || s === null || s > 0 || s === 0;
+        });
+        const uniqueProducts = filteredProducts.filter((product, index, self) =>
+            index === self.findIndex(p => p._id === product._id)
+        );
+        setData(uniqueProducts.slice(0, limit));
         setLoading(false);
-        
-        // Procesar datos del caché organizado
+        return;
+    }
+
+    if (homeCache && homeCache.data && !slots) {
+        setLoading(false);
         const allCachedProducts = [];
-        
-        // Extraer productos de todas las categorías cacheadas
         Object.values(homeCache.data).forEach(categoryData => {
             Object.values(categoryData).forEach(products => {
                 if (Array.isArray(products)) {
@@ -66,21 +74,16 @@ useEffect(() => {
                 }
             });
         });
-        
+
         if (allCachedProducts.length > 0) {
-            // Ordenar por fecha de creación (más recientes primero)
             allCachedProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            
-            // Tomar solo los primeros 15 productos más recientes
-            const latestProducts = allCachedProducts.slice(0, 15);
-            setData(latestProducts);
+            setData(allCachedProducts.slice(0, limit));
             return;
         }
     }
-    
-    // Si no hay caché, cargar datos
+
     fetchDataFromServer();
-}, [queryClient]);
+}, [queryClient, limit]);
 
 const fetchDataFromServer = async () => {
     setLoading(true);
@@ -99,6 +102,20 @@ const fetchDataFromServer = async () => {
         }
 
         const responseData = await response.json();
+
+        if (responseData.success && responseData.data?.slots?.recientes?.length) {
+            const filteredProducts = responseData.data.slots.recientes.filter(product => {
+                const hasStock = product?.stock === undefined || product?.stock === null || product?.stock > 0;
+                return hasStock;
+            });
+            const uniqueProducts = filteredProducts.filter((product, index, self) =>
+                index === self.findIndex(p => p._id === product._id)
+            );
+            uniqueProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            setData(uniqueProducts.slice(0, limit));
+            setLoading(false);
+            return;
+        }
 
         // ✅ VALIDACIÓN Y PROCESAMIENTO DE DATOS:
         // ✅ VALIDACIÓN Y PROCESAMIENTO DE DATOS:
@@ -134,7 +151,7 @@ const fetchDataFromServer = async () => {
             
             // Ordenar por fecha y tomar solo los más recientes
             uniqueProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const latestProducts = uniqueProducts.slice(0, 15);
+            const latestProducts = uniqueProducts.slice(0, limit);
             
             setData(latestProducts);
         } else {

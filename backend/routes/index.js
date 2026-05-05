@@ -17,7 +17,7 @@
     const allUsers = require('../controller/user/allUser');
     const updateUser = require('../controller/user/updateUser');
     const UploadProductController = require('../controller/product/uploadProduct');
-    const { getProductController, getHomeProductsController } = require('../controller/product/getProduct');
+    const { getProductController, getHomeProductsController, getSubcategoryPreviewImagesController } = require('../controller/product/getProduct');
     const { updateProductController} = require('../controller/product/updateProduct');
     const getCategoryProduct = require('../controller/product/getCategoryProduct');
 const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB');
@@ -917,6 +917,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     // ===========================================
     router.post("/cargar-producto", authToken, requirePermission('products', 'upload'), UploadProductController);
     router.get("/obtener-productos-home", cookieDebug, authToken, getHomeProductsController);
+    router.get("/subcategory-preview-images", cookieDebug, authToken, getSubcategoryPreviewImagesController);
 router.get("/obtener-productos-admin", cookieDebug, authToken, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
@@ -1796,6 +1797,9 @@ const {
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
 router.use('/test', authTestRoutes);
+
+const testRoutes = require('./testRoutes');
+router.use('/test-routes', testRoutes);
 
 // ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
 router.get('/admin/products/:id', authToken, async (req, res) => {

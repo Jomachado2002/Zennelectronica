@@ -96,7 +96,15 @@ const categorySchema = new mongoose.Schema({
     type: String,
     default: 'FaFolder'
   },
-  subcategories: [subcategorySchema]
+  subcategories: [subcategorySchema],
+  /**
+   * Espejo jerárquico del menú Visão (nodos anidados con children).
+   * Las hojas llevan listingUrl + subcategoryValue del listado.
+   */
+  visaoNavigationTree: {
+    type: mongoose.Schema.Types.Mixed,
+    default: undefined
+  }
 }, {
   timestamps: true
 });

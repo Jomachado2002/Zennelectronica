@@ -4,6 +4,8 @@ import { BiCategoryAlt, BiChevronDown, BiChevronUp } from 'react-icons/bi';
 import { IoMdClose } from 'react-icons/io';
 import { FaDollarSign } from 'react-icons/fa';
 import usePreloadedCategories from '../../hooks/usePreloadedCategories';
+import SubcategoryTreePicker from '../SubcategoryTreePicker';
+import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
 
 const MobileSearchFilters = ({
   isOpen,
@@ -163,9 +165,9 @@ const MobileSearchFilters = ({
                     >
                       <div className="flex items-center">
                         <span className="font-medium text-gray-800">{category.label}</span>
-                        {subcategories.length > 0 && (
+                        {(subcategories.length > 0 || usableVisaoTree(category.visaoNavigationTree)) && (
                           <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                            {subcategories.length}
+                            {usableVisaoTree(category.visaoNavigationTree) ? '≡' : subcategories.length}
                           </span>
                         )}
                       </div>
@@ -177,7 +179,22 @@ const MobileSearchFilters = ({
                     {/* Subcategorías */}
                     {isExpanded && (
                       <div className="border-t border-gray-100 bg-gray-50">
-                        {subcategories.length > 0 ? (
+                        {usableVisaoTree(category.visaoNavigationTree) ? (
+                          <div className="p-2">
+                            <SubcategoryTreePicker
+                              tree={category.visaoNavigationTree}
+                              categoryValue={category.value}
+                              mode="navigate"
+                              gridColsClass="grid grid-cols-1 gap-2"
+                              onLeafNavigate={({ categoryValue, subcategoryValue }) => {
+                                onClose();
+                                navigate(
+                                  `/categoria-producto?category=${encodeURIComponent(categoryValue)}&subcategory=${encodeURIComponent(subcategoryValue)}`
+                                );
+                              }}
+                            />
+                          </div>
+                        ) : subcategories.length > 0 ? (
                           <div className="p-2">
                             {subcategories.map((subcategory) => (
                               <button

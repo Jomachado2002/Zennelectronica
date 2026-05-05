@@ -7,10 +7,12 @@ import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
 import { trackAddToCart } from './MetaPixelTracker';
+import { categoriaProductoHref } from '../config/homeSlotRoutes';
 
 const VerticalCardProductOptimized = ({ 
   category, 
   subcategory, 
+  carouselKey,
   heading, 
   products = [],
   loading = false
@@ -43,35 +45,38 @@ const VerticalCardProductOptimized = ({
   // ✅ CONFIGURACIÓN DE DATOS CON LÍMITES OPTIMIZADOS Y FILTRADO DE STOCK
   useEffect(() => {
     if (products && products.length > 0) {
+      const lim = isMobile ? 5 : 10;
       const limits = {
-        'mouses': isMobile ? 5 : 10,
-        'teclados': isMobile ? 5 : 10,
-        'auriculares': isMobile ? 5 : 10,
-        'microfonos': isMobile ? 5 : 10,
-        'notebooks': isMobile ? 5 : 10,
-        'monitores': isMobile ? 5 : 10,
-        'memorias_ram': isMobile ? 5 : 10,
-        'discos_duros': isMobile ? 5 : 10,
-        'tarjeta_grafica': isMobile ? 5 : 10,
-        'gabinetes': isMobile ? 5 : 10,
-        'procesador': isMobile ? 5 : 10,
-        'placas_madre': isMobile ? 5 : 10,
-        'telefonos_moviles': isMobile ? 5 : 10,
+        mouses: lim,
+        teclados: lim,
+        auriculares: lim,
+        microfonos: lim,
+        notebooks: lim,
+        monitores: lim,
+        memorias_ram: lim,
+        discos: lim,
+        discos_duros: lim,
+        tarjeta_grafica: lim,
+        tarjetas_graficas: lim,
+        gabinetes: lim,
+        apple: lim,
+        procesador: lim,
+        procesadores: lim,
+        placas_madre: lim,
+        telefonos_moviles: lim,
+        celulares: lim,
       };
       
-      const limit = limits[subcategory] || (isMobile ? 5 : 10);
-      
-      // ✅ FILTRAR PRODUCTOS CON STOCK > 0 ANTES DE APLICAR LÍMITE
-      const productsWithStock = products.filter(product => 
-        product?.stock === undefined || product?.stock === null || product?.stock > 0
-      );
-      
-      const limitedProducts = productsWithStock.slice(0, limit);
+      const limitKey = carouselKey || subcategory || '';
+      const limit = limits[limitKey] || lim;
+
+      /** El backend del home ya aplica filtros de stock; no descartamos aquí (evita carruseles vacíos con stock 0 del sync). */
+      const limitedProducts = products.slice(0, limit);
       setData(limitedProducts);
     } else {
       setData([]);
     }
-  }, [products, subcategory, isMobile]);
+  }, [products, subcategory, carouselKey, isMobile]);
 
   // ✅ PRECARGA ELIMINADA - SE HACE GLOBALMENTE EN HOME
 
@@ -134,7 +139,7 @@ const VerticalCardProductOptimized = ({
             <div className='h-1 w-20 bg-[#002060] mt-2 rounded-full'></div>
           </div>
           <Link 
-            to={`/categoria-producto?category=${category}${subcategory ? `&subcategory=${subcategory}` : ''}`}
+            to={categoriaProductoHref(category, subcategory)}
             className='text-[#002060] hover:text-[#003399] text-sm font-semibold transition-colors flex items-center'
             onClick={scrollTop}
           >

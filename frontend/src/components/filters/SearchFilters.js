@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { BiCategoryAlt, BiChevronDown, BiChevronUp } from 'react-icons/bi';
 import { FaDollarSign } from 'react-icons/fa';
 import usePreloadedCategories from '../../hooks/usePreloadedCategories';
+import SubcategoryTreePicker from '../SubcategoryTreePicker';
+import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
 
 const SearchFilters = ({
   selectedCategories = [],
@@ -133,9 +135,9 @@ const SearchFilters = ({
                 >
                   <div className="flex items-center">
                     <span className="font-medium text-gray-800">{category.label}</span>
-                    {subcategories.length > 0 && (
+                    {(subcategories.length > 0 || usableVisaoTree(category.visaoNavigationTree)) && (
                       <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {subcategories.length}
+                        {usableVisaoTree(category.visaoNavigationTree) ? '≡' : subcategories.length}
                       </span>
                     )}
                   </div>
@@ -147,7 +149,17 @@ const SearchFilters = ({
                 {/* Subcategorías */}
                 {isExpanded && (
                   <div className="py-2 pl-4 pr-1 bg-gray-50 rounded-md mb-2">
-                    {subcategories.length > 0 ? (
+                    {usableVisaoTree(category.visaoNavigationTree) ? (
+                      <SubcategoryTreePicker
+                        tree={category.visaoNavigationTree}
+                        categoryValue={category.value}
+                        mode="navigate"
+                        gridColsClass="grid grid-cols-1 gap-2"
+                        onLeafNavigate={({ categoryValue, subcategoryValue }) =>
+                          handleSubcategoryClick(subcategoryValue, categoryValue)
+                        }
+                      />
+                    ) : subcategories.length > 0 ? (
                       <div className="space-y-1">
                         {subcategories.map((subcategory) => (
                           <button

@@ -7,6 +7,8 @@ import FilterAccordion from './FilterAccordion';
 import FilterCheckbox from './FilterCheckbox';
 import PriceFilterAccordion from './PriceFilterAccordion';
 import SpecificationFilter from './SpecificationFilter';
+import SubcategoryTreePicker from '../SubcategoryTreePicker';
+import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
 
 const DesktopFilters = ({ 
   categories = [], 
@@ -378,21 +380,32 @@ const DesktopFilters = ({
                 
                 {filterCategoryList.includes(category.value) && (
                   <div className="ml-6 mt-1 space-y-1 border-l-2 border-blue-200 pl-2">
-                    {(() => {
-                      const subcategories = getSubcategoriesForCategory(category.value);
-                      return subcategories.length > 0 ? (
-                        subcategories.map((subcat) => (
-                          <FilterCheckbox
-                            key={subcat.value}
-                            label={subcat.label}
-                            checked={filterSubcategoryList.includes(subcat.value)}
-                            onChange={() => handleSelectSubcategory(subcat.value)}
-                          />
-                        ))
-                      ) : (
-                        <div className="text-xs text-gray-500 py-1 italic">No hay subcategorías disponibles</div>
-                      );
-                    })()}
+                    {usableVisaoTree(category.visaoNavigationTree) ? (
+                      <SubcategoryTreePicker
+                        tree={category.visaoNavigationTree}
+                        categoryValue={category.value}
+                        mode="filter"
+                        selectedSubcategoryValues={filterSubcategoryList}
+                        onToggleSubcategory={handleSelectSubcategory}
+                        gridColsClass="grid grid-cols-1 gap-2"
+                      />
+                    ) : (
+                      (() => {
+                        const subcategories = getSubcategoriesForCategory(category.value);
+                        return subcategories.length > 0 ? (
+                          subcategories.map((subcat) => (
+                            <FilterCheckbox
+                              key={subcat.value}
+                              label={subcat.label}
+                              checked={filterSubcategoryList.includes(subcat.value)}
+                              onChange={() => handleSelectSubcategory(subcat.value)}
+                            />
+                          ))
+                        ) : (
+                          <div className="text-xs text-gray-500 py-1 italic">No hay subcategorías disponibles</div>
+                        );
+                      })()
+                    )}
                   </div>
                 )}
               </div>
