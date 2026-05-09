@@ -6,6 +6,10 @@
 const fs = require('fs');
 const path = require('path');
 const Category = require('../models/categoryModel');
+const {
+    validateHomeFeaturedSlotsAgainstMongo,
+    generateHomeSlotNavRoutesFrontendFile
+} = require('./homeFeaturedSlotsSync');
 
 /** Mismo orden relativo histórico; el resto al final */
 const PREFERRED_ORDER = [
@@ -95,10 +99,45 @@ async function writeProductCategoryJsFromMongo() {
     }
 
     fs.writeFileSync(frontendFilePath, jsCode, 'utf8');
+
+    let homeFeaturedReport = {};
+    try {
+        generateHomeSlotNavRoutesFrontendFile();
+        homeFeaturedReport.generatedNav = true;
+    } catch (e) {
+        homeFeaturedReport.generatedNav = false;
+        homeFeaturedReport.generateError = e.message || String(e);
+        console.warn('[HEADER] Home slot nav frontend:', homeFeaturedReport.generateError);
+    }
+
+    try {
+        const validated = await validateHomeFeaturedSlotsAgainstMongo();
+        homeFeaturedReport = { ...homeFeaturedReport, homeSlotsValid: validated.ok, homeSlotsErrors: validated.errors };
+        if (!validated.ok) {
+            console.warn(
+                '[HEADER] Rutas de vitrinas home no coinciden con categorías activas — editá backend/config/homeFeaturedSlots.js'
+            );
+            validated.errors.forEach((msg) => console.warn('       •', msg));
+            if (process.env.HOME_SLOTS_STRICT === '1') {
+                return {
+                    ok: false,
+                    error: `Home featured slots invalidos (${validated.errors.length})`,
+                    homeFeaturedReport,
+                    path: frontendFilePath,
+                    count: frontendCategories.length
+                };
+            }
+        }
+    } catch (e) {
+        homeFeaturedReport.homeSlotsValidateError = e.message || String(e);
+        console.warn('[HEADER] Validación home slots:', homeFeaturedReport.homeSlotsValidateError);
+    }
+
     return {
         ok: true,
         path: frontendFilePath,
-        count: frontendCategories.length
+        count: frontendCategories.length,
+        homeFeaturedReport
     };
 }
 

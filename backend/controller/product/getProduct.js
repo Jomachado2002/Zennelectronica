@@ -1,5 +1,6 @@
 // backend/controller/product/getProduct.js - VERSIÓN OPTIMIZADA COMPLETA
 const productModel = require("../../models/productModel")
+const { HOME_SLOT_DEFS } = require("../../config/homeFeaturedSlots")
 
 const getProductController = async(req, res)=>{
     try{
@@ -136,88 +137,6 @@ function shuffleInPlace(arr) {
     }
     return arr;
 }
-
-/** Slots alineados a taxonomía Visão + legacy donde aplica */
-const HOME_SLOT_DEFS = [
-    {
-        key: 'notebooks',
-        limit: 20,
-        pairs: [{ category: 'notebook_y_computadoras', subcategory: 'notebook_y_computadoras__notebook__20' }]
-    },
-    {
-        key: 'celulares',
-        limit: 20,
-        pairs: [{ category: 'celulares_y_tablets', subcategory: 'celulares_y_tablets__celulares__32' }]
-    },
-    {
-        key: 'placas_madre',
-        limit: 20,
-        pairs: [
-            { category: 'placas_madres', subcategory: 'placas_madres__mb_amd__22' },
-            { category: 'placas_madres', subcategory: 'placas_madres__mb_intel__22' }
-        ]
-    },
-    {
-        key: 'mouses',
-        limit: 12,
-        pairs: [{ category: 'perifericos', subcategory: 'perifericos__mouse__30' }]
-    },
-    {
-        key: 'monitores',
-        limit: 20,
-        pairs: [
-            { category: 'apple', subcategory: 'apple__monitor__19' },
-            { category: 'electronicos', subcategory: 'electronicos__tv_y_video__33' }
-        ]
-    },
-    {
-        key: 'memorias_ram',
-        limit: 20,
-        pairs: [{ category: 'almacenamiento', subcategory: 'almacenamiento__memorias__21' }]
-    },
-    {
-        key: 'discos',
-        limit: 20,
-        pairs: [
-            { category: 'almacenamiento', subcategory: 'almacenamiento__hd__21' },
-            { category: 'almacenamiento', subcategory: 'almacenamiento__ssd__21' },
-            { category: 'almacenamiento', subcategory: 'almacenamiento__pendrive__21' }
-        ]
-    },
-    {
-        key: 'tarjetas_graficas',
-        limit: 20,
-        pairs: [
-            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas__vga_nvidia__23' },
-            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas__vga_radeon__23' },
-            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas__vga_intel__23' }
-        ]
-    },
-    {
-        key: 'apple',
-        limit: 20,
-        pairs: [
-            { category: 'apple', subcategory: 'apple__iphone__19' },
-            { category: 'apple', subcategory: 'apple__macbook__19' },
-            { category: 'apple', subcategory: 'apple__ipad__19' },
-            { category: 'apple', subcategory: 'apple__accesorios__19' }
-        ]
-    },
-    {
-        key: 'procesadores',
-        limit: 20,
-        pairs: [
-            { category: 'procesadores', subcategory: 'procesadores__cpu_amd__24' },
-            { category: 'procesadores', subcategory: 'procesadores__cpu_intel__24' },
-            { category: 'procesadores', subcategory: 'procesadores__cpu_oem__24' }
-        ]
-    },
-    {
-        key: 'teclados',
-        limit: 12,
-        pairs: [{ category: 'perifericos', subcategory: 'perifericos__teclados__30' }]
-    }
-];
 
 const getHomeProductsController = async(req, res) => {
     try {

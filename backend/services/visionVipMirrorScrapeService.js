@@ -23,6 +23,16 @@ async function ensureMirrorBrowser(ctx) {
     await relaunchMutableBrowserHolder(ctx);
 }
 
+function absolutizeListingUrl(u) {
+    try {
+        const abs = new URL(String(u || '').trim(), HOME_URL).href;
+        if (!/visaovip\.com/i.test(abs)) return null;
+        return abs.split('?')[0].replace(/\/+$/, '');
+    } catch {
+        return null;
+    }
+}
+
 /** URL de listado canónica sin query para deduplicar. */
 function canonCategoryUrl(u) {
     try {
@@ -43,16 +53,24 @@ function crumbDepth(label) {
 /** Se queda la fila con migas más profundas (espejo del menú desplegable). */
 /** Profundidad de ruta de listado (migas) para elegir la meta correcta por PDP duplicada en varios niveles. */
 function listingBreadcrumbDepth(row) {
-    if (!row || !row.subcategoryLabel) return 0;
+    if (!row) return 0;
+    if (Array.isArray(row.taxonomyPathLabels) && row.taxonomyPathLabels.length) {
+        return row.taxonomyPathLabels.filter(Boolean).length;
+    }
+    if (!row.subcategoryLabel) return 0;
     return String(row.subcategoryLabel)
         .split(' › ')
         .map((s) => s.trim())
         .filter(Boolean).length;
 }
 
+function taxonomyPathDepth(row) {
+    return listingBreadcrumbDepth(row);
+}
+
 function shouldPreferListingMeta(existing, incoming) {
-    const d1 = listingBreadcrumbDepth(existing);
-    const d2 = listingBreadcrumbDepth(incoming);
+    const d1 = taxonomyPathDepth(existing);
+    const d2 = taxonomyPathDepth(incoming);
     if (d2 > d1) return true;
     if (d2 === d1 && String(incoming.subcategoryValue || '').length > String(existing.subcategoryValue || '').length) {
         return true;
@@ -72,12 +90,16 @@ function extractVisaoProdSegment(productUrl) {
 }
 
 function rowHaystackForProdMatch(row) {
+    const joinedPath = Array.isArray(row.taxonomyPathLabels)
+        ? row.taxonomyPathLabels.join(' ')
+        : '';
     return [
         canonCategoryUrl(row.listingUrl),
         String(row.categoryValue || ''),
         String(row.categoryLabel || ''),
         String(row.subcategoryValue || ''),
-        String(row.subcategoryLabel || '')
+        String(row.subcategoryLabel || ''),
+        joinedPath
     ]
         .join(' ')
         .toLowerCase();
@@ -104,8 +126,9 @@ function rowMatchesProdSegment(row, segment) {
 /** Puntuación alta = meta de listado coherente con la URL real de la PDP. */
 function listingMetaTrustScore(row, productUrl) {
     const seg = extractVisaoProdSegment(productUrl);
-    if (!seg) return listingBreadcrumbDepth(row);
-    return (rowMatchesProdSegment(row, seg) ? 1000 : 0) + listingBreadcrumbDepth(row);
+    const depth = taxonomyPathDepth(row);
+    if (!seg) return depth;
+    return (rowMatchesProdSegment(row, seg) ? 1000 : 0) + depth;
 }
 
 function shouldPreferListingMetaForUrl(existing, incoming, productUrl) {
@@ -117,8 +140,8 @@ function shouldPreferListingMetaForUrl(existing, incoming, productUrl) {
 }
 
 function mergeMenuRowsPreferDeeper(existing, incoming) {
-    const dm = crumbDepth(existing.subcategoryLabel);
-    const dn = crumbDepth(incoming.subcategoryLabel);
+    const dm = taxonomyPathDepth(existing);
+    const dn = taxonomyPathDepth(incoming);
     if (dn > dm) return incoming;
     if (dn === dm && String(incoming.subcategoryValue || '').length > String(existing.subcategoryValue || '').length) {
         return incoming;
@@ -137,383 +160,242 @@ function slugifyLabel(text) {
     return (s || 'item').slice(0, 80);
 }
 
+/** Valor canónico de subcategoría alineado al listado hoja: `{slug}__{idListado}` (ej. monitores__21). */
+function buildLeafListingValue(leafLabel, listingId) {
+    const slug = slugifyLabel(String(leafLabel || '').trim());
+    const idSafe = String(listingId || '').replace(/[^a-z0-9]+/gi, '_');
+    if (!slug && !idSafe) return 'item';
+    if (!idSafe) return slug || 'item';
+    return `${slug || 'cat'}__${idSafe}`;
+}
+
+function listingIdFromUrl(href) {
+    const m = String(href || '').match(/\/categoria\/[^/]+\/([^/?#]+)/i);
+    return m ? String(m[1]).trim() : '';
+}
+
 /**
- * Jerarquía desde el sidebar Visão (incluye subníveles cargados tras hover).
- * Agrupa migas hasta el último slug para que category = raíz real (p. ej. Apple) y
- * subcategory = ruta › ruta › hoja estabilizada con id del listado.
- * @returns {Promise<Array<{categoryLabel, categoryValue, subcategoryLabel, subcategoryValue, listingUrl}>>}
+ * Regla de mapeo "Primero y Último":
+ * - categoría padre = primer nodo de la ruta
+ * - subcategoría final = último nodo (hoja de listado)
+ * - si sólo hay un nivel, ambos quedan iguales
+ * Mantiene la ruta completa para navegación/debug en taxonomyPath*.
+ */
+function resolveFirstAndLastNodes(pathNodes, listingUrl) {
+    const cleanNodes = (Array.isArray(pathNodes) ? pathNodes : []).filter(
+        (n) => n && String(n.label || '').trim()
+    );
+    const first = cleanNodes[0] || {};
+    const last = cleanNodes[cleanNodes.length - 1] || first;
+
+    const categoryLabel = String(first.label || last.label || '').trim();
+    const categoryValue = slugifyLabel(categoryLabel).slice(0, 120);
+    const leafLabel = String(last.label || categoryLabel || '').trim();
+    const leafListingId =
+        String(last.id || '').trim() ||
+        String(listingIdFromUrl(listingUrl) || '').trim() ||
+        ((String(listingUrl || '').match(/\/categoria\/[^/]+\/([^/?#]+)/i) || [])[1] || '');
+
+    return {
+        categoryLabel,
+        categoryValue,
+        subcategoryLabel: leafLabel || categoryLabel,
+        subcategoryValue: buildLeafListingValue(leafLabel || categoryLabel, leafListingId),
+        taxonomyPathLabels: cleanNodes.map((n) => String(n.label || '').trim()).filter(Boolean),
+        taxonomyPathValues: cleanNodes.map((n) =>
+            buildLeafListingValue(n.label || n.slug, n.id || '')
+        )
+    };
+}
+
+/**
+ * Jerarquía desde el sidebar Visão (recursiva, sin techo de profundidad).
+ * `isTarget === true`: nodo hoja observado (sin submenú con más enlaces `/busca/categoria/`).
+ * Importante: incluso si un nodo tiene hijos, su URL de listado se conserva para no perder categorías
+ * que venden productos directamente y además exponen subfiltros.
+ * @returns {Promise<Array<{categoryLabel, categoryValue, subcategoryLabel, subcategoryValue, listingUrl, isTarget, taxonomyPathLabels, taxonomyPathValues}>>}
  */
 async function collectMenuHierarchy(page) {
-    await page.goto(HOME_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
-    try {
-        await page.waitForSelector('aside .menu-list', { timeout: 18000 });
-    } catch {
-        await page.waitForSelector('.menu-list', { timeout: 12000 });
-    }
-
-    await delay(950);
-    await page.waitForNetworkIdle({ idleTime: 550, timeout: 22000 }).catch(() => {});
-
     /** @type {Map<string, object>} */
     const merged = new Map();
+    const noiseRx = /^(categor[ií]as|links [uú]tiles|buscar productos\.{0,3}|categor[ií]as m[aá]s buscadas|volver a categor[ií]as|inicio|buscar)$/i;
 
-    /**
-     * @param {string | null | undefined} hoverRootLabel — texto del nivel 0 bajo hover (overlay Prime suele omitir ancestors).
-     * @param {string | null | undefined} hoverHostSelector — selector del `<li>` hovered; solo entonces se antepone la raíz
-     *   a migas de un solo segmento **si el enlace está dentro de ese host**. Evita mezclar ítems del mega menú global
-     *   (p. ej. "Impresoras" bajo "Notebook") cuando el overlay lista otras categorías raíz.
-     */
-    async function absorbEvaluatedRows(hoverRootLabel, hoverHostSelector) {
-        const rootPass = hoverRootLabel == null ? '' : String(hoverRootLabel).trim();
-        const hostSel =
-            hoverHostSelector == null || hoverHostSelector === undefined
-                ? ''
-                : String(hoverHostSelector).trim();
+    function normalizeLabel(s) {
+        return String(s || '').replace(/\s+/g, ' ').trim();
+    }
 
-        const batch = await page.evaluate((rootLbl, hoverHostSel) => {
-            const hoveredRootCat =
-                typeof rootLbl === 'string' && rootLbl.trim() ? rootLbl.trim().slice(0, 160) : '';
-            const hoverHostSelectorInner =
-                typeof hoverHostSel === 'string' && hoverHostSel.trim() ? hoverHostSel.trim() : '';
+    function isNoiseLabel(s) {
+        return noiseRx.test(normalizeLabel(s).toLowerCase());
+    }
 
-            function slugify(text) {
-                if (!text || typeof text !== 'string') return 'item';
-                let s = text
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^a-z0-9]+/g, '_')
-                    .replace(/^_|_$/g, '');
-                return (s || 'item').slice(0, 80);
-            }
+    async function openHeaderCategories() {
+        await page.goto(HOME_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await delay(900);
+        await page.evaluate(() => {
+            const btn = [...document.querySelectorAll('button,a,div,span')].find((el) =>
+                /categor[ií]as/i.test(String(el.textContent || '').trim())
+            );
+            if (btn) btn.click();
+        });
+        await delay(750);
+    }
 
-            function humanizeSlug(seg) {
-                return String(seg)
-                    .replace(/-/g, ' ')
-                    .trim()
+    async function extractTopCategoriesFromHeader() {
+        const rows = await page.evaluate(() => {
+            function txt(el) {
+                return String((el && el.textContent) || '')
                     .replace(/\s+/g, ' ')
-                    .replace(/\b\w/g, (c) => String(c).toUpperCase());
+                    .trim();
             }
-
-            const menuRoot =
-                document.querySelector('aside .menu-list') || document.querySelector('.menu-list');
-
-            /** Navegable solo dentro de aside para evitar breadcrumbs absurdos desde el footer. */
-            function labelFromDirectA(directA) {
-                if (!directA) return '';
-                const sp = directA.querySelector(':scope > .menu-label');
-                const raw = sp ? String(sp.textContent || '') : String(directA.textContent || '');
-                return raw.trim().replace(/\s+/g, ' ').slice(0, 200);
+            const out = [];
+            for (const li of document.querySelectorAll('aside .menu-list > li')) {
+                let a = li.querySelector(':scope > a.menu-link');
+                if (!a) a = li.querySelector(':scope > a[href]');
+                if (!a) continue;
+                const label = txt(a.querySelector(':scope > .menu-label') || a);
+                const href = a.getAttribute('href') || a.href || '';
+                if (label && href) out.push({ label, href });
             }
+            return out;
+        });
+        const seen = new Set();
+        const clean = [];
+        for (const r of rows || []) {
+            const label = normalizeLabel(r.label);
+            const u = canonCategoryUrl(absolutizeListingUrl(r.href));
+            if (!label || !u || isNoiseLabel(label)) continue;
+            const k = label.toLowerCase();
+            if (seen.has(k)) continue;
+            seen.add(k);
+            clean.push({ label, url: u });
+        }
+        return clean;
+    }
 
-            /**
-             * Breadcrumb raíz→hoja usando la jerarquía de <li> en el sidebar.
-             * Se detiene al llegar al <ul.menu-list> raíz del menú.
-             */
-            function breadcrumbsFromCategoryLink(link) {
+    async function extractListingTilesByUrl(listingUrl) {
+        await page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await delay(950);
+        const rows = await page.evaluate(() => {
+            function txt(el) {
+                return String((el && el.textContent) || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+            const out = [];
+            const anchors = document.querySelectorAll('a.flex.flex-1.h-full.no-underline.text-inherit');
+            for (const a of anchors) {
+                const href = a.getAttribute('href') || a.href || '';
+                if (!/\/es\/busca\/categoria\//i.test(href)) continue;
+                const label = txt(a);
+                if (!label || label.length > 70) continue;
+                const rect = a.getBoundingClientRect();
+                if (rect.width < 120 || rect.height < 80) continue;
+                out.push({ label, href });
+            }
+            return out;
+        });
+        const seen = new Set();
+        const clean = [];
+        for (const r of rows || []) {
+            const label = normalizeLabel(r.label);
+            const u = canonCategoryUrl(absolutizeListingUrl(r.href));
+            if (!label || !u || isNoiseLabel(label)) continue;
+            const k = `${label.toLowerCase()}|${u}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            clean.push({ label, url: u });
+        }
+        return clean;
+    }
+
+    async function collectLeafPathsForTop(top) {
+        const leaves = [];
+        const stack = [{ node: top, path: [top] }];
+        const visited = new Set();
+        const maxDepth = 4;
+
+        while (stack.length) {
+            const { node, path } = stack.pop();
+            const key = `${node.url}|${path.map((p) => p.url).join('>')}`;
+            if (visited.has(key)) continue;
+            visited.add(key);
+
+            let children = [];
+            for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    if (link.closest('[aria-hidden="true"]')) return null;
-                } catch (_) {
-                    /* ignore */
+                    children = await extractListingTilesByUrl(node.url);
+                    break;
+                } catch (err) {
+                    if (attempt === 3) {
+                        console.warn(
+                            `[Visão mirror][NAV_RETRY] fallo nodo "${node.label}" (${node.url}) tras 3 intentos: ${err.message || String(err)}`
+                        );
+                    }
+                    await delay(450);
                 }
-
-                const parts = [];
-
-                /** Contenidos en sidebar o submenu Prime desacoplado del <ul.menu-list>. */
-                const structuredZone =
-                    (menuRoot && menuRoot.contains(link)) ||
-                    !!link.closest(
-                        [
-                            '[data-pc-name="tieredmenu_submenu"]',
-                            '[data-pc-section="submenu"]',
-                            '.p-tieredmenu-submenu',
-                            '.p-megamenu-panel',
-                            '[class*="submenu-panel"]'
-                        ].join(',')
-                    );
-                if (!structuredZone) return null;
-
-                let li =
-                    link.parentElement && link.parentElement.tagName === 'LI'
-                        ? link.parentElement
-                        : link.closest('li');
-                let guard = 0;
-
-                while (li && guard++ < 40) {
-                    const directA =
-                        li.querySelector(':scope > a.menu-link') ||
-                        li.querySelector(':scope > a[href*="/busca/categoria/"]');
-                    const lt = labelFromDirectA(directA);
-                    if (lt && lt.length < 200) parts.unshift(lt);
-
-                    const parentUl = li.parentElement;
-                    if (!parentUl || parentUl.tagName !== 'UL') break;
-                    /** Contenedor nivel cero Visão (.menu-list) */
-                    if (parentUl.classList.contains('menu-list')) break;
-
-                    const grandLi = parentUl.parentElement;
-                    if (!grandLi || grandLi.tagName !== 'LI') break;
-                    li = grandLi;
-                }
-
-                /** Únicos en orden estable (evita dos “Apple” seguidos en UI rara). */
-                const uniq = [];
-                const seenLbl = new Set();
-                for (const p of parts) {
-                    const k = String(p).toLowerCase();
-                    if (seenLbl.has(k)) continue;
-                    seenLbl.add(k);
-                    uniq.push(p);
-                }
-                return uniq.length ? uniq : null;
             }
 
-            function rowFromBc(bc, rawHref) {
-                const href = String(rawHref || '')
-                    .split('?')[0]
-                    .replace(/\/+$/, '');
-                if (!href || !/\/es\/busca\/categoria\//i.test(href)) return null;
-                if (/lista-desejos|lista-deseos|promocoes|blog|\blogin\b/i.test(href)) return null;
-
-                const mUrl = href.match(/\/categoria\/([^/]+)\/(\d+)/i);
-                const slugSeg = mUrl ? mUrl[1] : '';
-                const idTail = mUrl ? mUrl[2] : '';
-                const idSafe = String(idTail || 'id').replace(/[^a-z0-9]+/gi, '_');
-
-                if (!bc.length) return null;
-
-                const categoryLabel = bc[0];
-                const slugPieces = bc.map((lbl) =>
-                    slugify(String(lbl).replace(/-/g, ' ').trim())
-                );
-                const categoryValue = slugPieces[0] || slugify(categoryLabel.replace(/-/g, ' '));
-                const slugChain =
-                    slugPieces.length >= 2
-                        ? slugPieces.join('__')
-                        : slugPieces[0] || slugify((slugSeg || categoryLabel || 'cat').replace(/-/g, ' '));
-
-                const subcategoryLabel = bc.join(' › ');
-                const subcategoryValue = slugChain.endsWith(`__${idSafe}`)
-                    ? slugChain
-                    : `${slugChain}__${idSafe}`;
-
-                return {
-                    categoryLabel,
-                    categoryValue,
-                    subcategoryLabel,
-                    subcategoryValue,
-                    listingUrl: href
-                };
+            const filtered = [];
+            const seen = new Set();
+            for (const c of children) {
+                if (c.url === node.url) continue;
+                if (path.some((p) => p.url === c.url)) continue;
+                if (isNoiseLabel(c.label)) continue;
+                const k = `${c.label.toLowerCase()}|${c.url}`;
+                if (seen.has(k)) continue;
+                seen.add(k);
+                filtered.push(c);
             }
 
-            /** Colecta dentro de aside sólo cuando existe; si no, cae abajo en fallback global.m */
-            function collectScope() {
-                const outIdx = {};
-                /** href -> último índice en output */
-                const order = [];
-
-                function upsert(row) {
-                    const u = row.listingUrl;
-                    if (!outIdx[u]) {
-                        order.push(u);
-                        outIdx[u] = row;
-                        return;
-                    }
-                    const prev = outIdx[u];
-                    const dPrev = prev.subcategoryLabel.split(' › ').length;
-                    const dNew = row.subcategoryLabel.split(' › ').length;
-                    if (
-                        dNew > dPrev ||
-                        (dNew === dPrev && row.subcategoryValue.length > prev.subcategoryValue.length)
-                    ) {
-                        outIdx[u] = row;
-                    }
-                }
-
-                const aside = document.querySelector('aside');
-
-                /** Sidebar + overlays Prime (tieredmegamenu) suelen estar fuera de <aside>. */
-                function anchorLooksLikeCatalogNav(an) {
-                    if (!aside) return true;
-                    if (an.closest('aside')) return true;
-                    return !!an.closest(
-                        [
-                            '[class*="layout-sidebar"]',
-                            '[class*="layout-menu"]',
-                            '[class*="p-tieredmenu"]',
-                            '[class*="TieredMenu"]',
-                            '[class*="MegaMenu"]',
-                            '[data-pc-name="tieredmenu_submenu"]',
-                            '[data-pc-section="submenu"]',
-                            '[class*="submenu-panel"]'
-                        ].join(',')
-                    );
-                }
-
-                /** Prioridad links del menú lateral/overlays Visão (no footer). */
-                document.querySelectorAll('a[href*="/es/busca/categoria/"]').forEach((a) => {
-                    if (/lista-desejos|lista-deseos|blog/i.test(a.href)) return;
-                    if (!anchorLooksLikeCatalogNav(a)) return;
-
-                    let bcUse = breadcrumbsFromCategoryLink(a);
-                    if (!bcUse) return;
-
-                    if (
-                        hoveredRootCat &&
-                        bcUse.length === 1 &&
-                        slugify(String(bcUse[0]).replace(/-/g, ' ').trim()) !==
-                            slugify(hoveredRootCat.replace(/-/g, ' ').trim())
-                    ) {
-                        let allowPrepend = true;
-                        if (hoverHostSelectorInner) {
-                            const host = document.querySelector(hoverHostSelectorInner);
-                            allowPrepend = !!(host && typeof host.contains === 'function' && host.contains(a));
-                        }
-                        if (allowPrepend) {
-                            bcUse = [hoveredRootCat, bcUse[0]];
-                        }
-                    }
-
-                    const row = rowFromBc(bcUse, a.href);
-                    if (!row) return;
-                    upsert(row);
-                });
-
-                /** Si no apareció nada (DOM raro sin aside), igual escaneamos menú conocido más plano JSON. */
-                if (!order.length) {
-                    document.querySelectorAll('a[href*="/es/busca/categoria/"]').forEach((b) => {
-                        const href = b.href.split('?')[0].replace(/\/+$/, '');
-                        if (/lista-desejos|lista-deseos|promocoes|blog/i.test(href)) return;
-                        const lbl = labelFromDirectA(b) || (b.textContent || '').trim() || 'Item';
-                        const m = href.match(/\/categoria\/([^/]+)\/([^/?#]+)/i);
-                        const slugSegRaw = m ? m[1] : slugify(lbl.replace(/-/g, ' '));
-                        const idPart = m ? m[2] : 'x';
-                        const cv = slugify(slugSegRaw.replace(/-/g, ' '));
-                        const labelCat = humanizeSlug(slugSegRaw);
-                        const sv = `${cv}__${String(idPart).replace(/[^a-z0-9]+/gi, '_')}`;
-                        upsert({
-                            categoryLabel: labelCat,
-                            categoryValue: cv,
-                            subcategoryLabel: lbl,
-                            subcategoryValue: sv,
-                            listingUrl: href
-                        });
-                    });
-                }
-
-                return order.map((u) => outIdx[u]).filter(Boolean);
+            if (!filtered.length || path.length >= maxDepth) {
+                leaves.push(path);
+                continue;
             }
 
-            return collectScope();
-        }, rootPass, hostSel);
+            for (const child of filtered) {
+                stack.push({ node: child, path: [...path, child] });
+            }
+        }
 
-        for (const r of batch || []) {
-            const u = canonCategoryUrl(r.listingUrl);
-            if (!u) continue;
+        return leaves;
+    }
+
+    await openHeaderCategories();
+    const tops = await extractTopCategoriesFromHeader();
+    for (const top of tops) {
+        const leafPaths = await collectLeafPathsForTop(top);
+        if (!leafPaths.length) {
+            leafPaths.push([top]);
+        }
+        for (const p of leafPaths) {
+            const leaf = p[p.length - 1];
+            const pathNodes = p.map((n) => ({
+                label: n.label,
+                id: listingIdFromUrl(n.url),
+                slug: slugifyLabel(n.label)
+            }));
+            const listingUrl = canonCategoryUrl(leaf.url);
+            const firstLast = resolveFirstAndLastNodes(pathNodes, listingUrl);
+            if (!firstLast.categoryLabel || !firstLast.subcategoryLabel || !listingUrl) continue;
+
             const normalized = {
-                categoryLabel: r.categoryLabel,
-                categoryValue: r.categoryValue,
-                subcategoryLabel: r.subcategoryLabel,
-                subcategoryValue: r.subcategoryValue,
-                listingUrl: u
+                categoryLabel: firstLast.categoryLabel,
+                categoryValue: firstLast.categoryValue,
+                breadcrumbTrail: firstLast.taxonomyPathLabels.join(' › '),
+                subcategoryLabel: firstLast.subcategoryLabel,
+                subcategoryValue: firstLast.subcategoryValue,
+                listingUrl,
+                isTarget: true,
+                hasSubcategories: p.length > 1,
+                taxonomyPathLabels: firstLast.taxonomyPathLabels,
+                taxonomyPathValues: firstLast.taxonomyPathValues
             };
-            const prev = merged.get(u);
-            merged.set(u, prev ? mergeMenuRowsPreferDeeper(prev, normalized) : normalized);
+            const prev = merged.get(listingUrl);
+            merged.set(listingUrl, prev ? mergeMenuRowsPreferDeeper(prev, normalized) : normalized);
         }
-    }
-
-    await absorbEvaluatedRows(undefined, null);
-
-    let topCandidates = [];
-    try {
-        topCandidates = await page.$$(
-            'aside .menu-list > li.level-0, aside .menu-list > li.menu-item.level-0'
-        );
-    } catch {
-        topCandidates = [];
-    }
-
-    /** Si no hay clase level-0, únicamente ítems directos del primer <ul.menu-list>. */
-    if (!topCandidates.length) {
-        topCandidates = await page.$$('aside .menu-list > li').catch(() => []);
-    }
-
-    /** Evitar volar desde la home tocando navegador: sólo hover, nunca clic en enlaces categoría top. */
-
-    try {
-        const max = Math.min(topCandidates.length || 0, 60);
-        for (let i = 0; i < max; i++) {
-            const h = topCandidates[i];
-            const hoverLbl =
-                (
-                    await h
-                        .evaluate((li) => {
-                            const anchor =
-                                li.querySelector(':scope > a.menu-link') ||
-                                li.querySelector(':scope > a[href*="/busca/categoria/"]');
-                            if (!anchor) return '';
-                            const sp = anchor.querySelector(':scope > .menu-label');
-                            return (
-                                String(sp ? sp.textContent : anchor.textContent || '')
-                                    .trim()
-                                    .replace(/\s+/g, ' ')
-                                    .slice(0, 160)
-                            );
-                        })
-                        .catch(() => '')
-                ) || '';
-
-            const box = await h.boundingBox().catch(() => null);
-            if (!box || box.height < 1) continue;
-            await h
-                .hover()
-                .catch(() =>
-                    h.evaluate((el) =>
-                        el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }))
-                    )
-                );
-            await delay(470);
-
-            const HOST_ATTR = 'data-vv-sync-hover-host';
-            await h.evaluate((el, attr) => {
-                try {
-                    el.setAttribute(attr, '1');
-                } catch (_) {
-                    /* ignore */
-                }
-            }, HOST_ATTR);
-            await absorbEvaluatedRows(hoverLbl, `[${HOST_ATTR}="1"]`);
-            await h.evaluate((el, attr) => {
-                try {
-                    el.removeAttribute(attr);
-                } catch (_) {
-                    /* ignore */
-                }
-            }, HOST_ATTR);
-        }
-
-        await page.mouse.move(8, 8).catch(() => {});
-        await delay(150);
-        await absorbEvaluatedRows(undefined, null);
-    } catch (_) {
-        /* mejor parcial que fallar todo el scrape */
-        await absorbEvaluatedRows(undefined, null);
-    }
-
-    /** Listado raíz de categoría (p. ej. /categoria/apple/19) sin hoja intermedia: no es subcategoría real. */
-    function isRootOnlyListingRow(row) {
-        const cat = String(row.categoryLabel || '').trim().toLowerCase();
-        if (!cat) return false;
-        const parts = String(row.subcategoryLabel || '')
-            .split(/\s*›\s*/)
-            .map((s) => s.trim())
-            .filter(Boolean);
-        if (parts.length !== 1) return false;
-        return parts[0].toLowerCase() === cat;
     }
 
     return [...merged.values()]
-        .filter((r) => !isRootOnlyListingRow(r))
         .sort((a, b) => {
             const c = String(a.categoryValue).localeCompare(String(b.categoryValue));
             if (c !== 0) return c;
@@ -543,6 +425,19 @@ async function mapPool(items, limit, mapper) {
 
 async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
     const attempts = Math.max(1, Number(opts.attempts) || 3);
+    const targetListingUrl = absolutizeListingUrl(row && row.listingUrl);
+    if (!targetListingUrl) {
+        console.warn(
+            `[Visão mirror][LISTING_SKIP] listado inválido/relativo sin normalizar: ${row && row.listingUrl ? row.listingUrl : 'n/a'}`
+        );
+        return [];
+    }
+    function isRetryableListingError(err) {
+        const msg = err && err.message ? String(err.message) : String(err || '');
+        return /Target closed|Target\.createTarget|Runtime\.callFunctionOn|Navigating frame was detached|Session closed|Connection closed|browser has disconnected/i.test(
+            msg
+        );
+    }
     let lastErr = null;
     for (let attempt = 1; attempt <= attempts; attempt++) {
         await ensureMirrorBrowser(ctx);
@@ -550,7 +445,7 @@ async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
         try {
             pg = await ctx.browser.newPage();
             await pg.setViewport({ width: 1366, height: 900 });
-            const urls = await collectProductUrlsForCategory(pg, row.listingUrl, {
+            const urls = await collectProductUrlsForCategory(pg, targetListingUrl, {
                 urlBudget: opts.urlBudget,
                 singlePageOnly: opts.singlePageOnly
             });
@@ -561,8 +456,12 @@ async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
             console.warn(
                 `[Visão mirror][LISTING_RETRY] intento ${attempt}/${attempts} falló en ${row.listingUrl}: ${msg}`
             );
-            if (isDisconnectedOrDeadBrowserError(err)) {
-                await relaunchMutableBrowserHolder(ctx);
+            if (isDisconnectedOrDeadBrowserError(err) || isRetryableListingError(err)) {
+                if (typeof opts.relaunchSafely === 'function') {
+                    await opts.relaunchSafely();
+                } else {
+                    await relaunchMutableBrowserHolder(ctx);
+                }
             }
         } finally {
             if (pg) await pg.close().catch(() => {});
@@ -597,8 +496,9 @@ async function scrapeVisionVipMirror(opts = {}) {
             : null;
     const detailConcurrency =
         opts.detailConcurrency != null ? Math.min(12, Math.max(1, opts.detailConcurrency)) : 2;
+    /** Estabilidad > velocidad: listados en paralelo alto dispara cierres de target en Chromium/macOS. */
     const listingConcurrency =
-        opts.listingConcurrency != null ? Math.min(6, Math.max(1, opts.listingConcurrency)) : 1;
+        opts.listingConcurrency != null ? Math.min(2, Math.max(1, opts.listingConcurrency)) : 1;
 
     const ctx = { browser: null };
     try {
@@ -627,13 +527,20 @@ async function scrapeVisionVipMirror(opts = {}) {
                 const idPart = m ? m[2] : 'id';
                 const cv = slugifyLabel(slugSeg.replace(/-/g, ' '));
                 const labelCat = slugSeg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-                const sv = `${cv}__${String(idPart).replace(/[^a-z0-9]+/gi, '_')}`;
+                const idSafe = String(idPart).replace(/[^a-z0-9]+/gi, '_');
+                const sv = buildLeafListingValue(labelCat, idSafe);
+                const taxonomyPathLabels = [labelCat];
+                const taxonomyPathValues = [sv];
                 return {
                     categoryLabel: labelCat,
                     categoryValue: cv,
                     subcategoryLabel: labelCat,
                     subcategoryValue: sv,
-                    listingUrl
+                    listingUrl,
+                    breadcrumbTrail: labelCat,
+                    taxonomyPathLabels,
+                    taxonomyPathValues,
+                    isTarget: true
                 };
             });
         }
@@ -646,29 +553,53 @@ async function scrapeVisionVipMirror(opts = {}) {
 
         const urlToMeta = new Map();
 
-        const listingTasks = menuRows.map((row, idx) => ({ row, idx }));
-        await mapPool(listingTasks, listingConcurrency, async ({ row }) => {
-            const perListingBudget =
-                maxProductUrls != null
-                    ? Math.max(
-                          1,
-                          Math.ceil(maxProductUrls / Math.max(1, menuRows.length))
-                      )
-                    : undefined;
-            const urls = await collectProductUrlsForCategoryWithRetries(ctx, row, {
-                urlBudget: perListingBudget,
-                singlePageOnly: singlePageListing,
-                attempts: 3
-            });
-            console.log(`[Visão mirror][LISTING] ${row.listingUrl} -> ${urls.length} URLs`);
-            for (const u of urls) {
-                const prev = urlToMeta.get(u);
-                if (!prev || shouldPreferListingMetaForUrl(prev, row, u)) {
-                    urlToMeta.set(u, row);
+        /** Serializa relanzamientos de Chromium durante fase listing para no romper workers concurrentes. */
+        let relaunchMux = Promise.resolve();
+        function runSerialized(fn) {
+            const p = relaunchMux.then(fn, fn);
+            relaunchMux = p.catch(() => {});
+            return p;
+        }
+
+        const rowsByRootCategory = new Map();
+        for (const row of menuRows) {
+            const key = String(row.categoryValue || '').trim() || '__without_root__';
+            if (!rowsByRootCategory.has(key)) rowsByRootCategory.set(key, []);
+            rowsByRootCategory.get(key).push(row);
+        }
+        const groupedRows = [...rowsByRootCategory.entries()];
+        for (const [rootCategory, rows] of groupedRows) {
+            console.log(
+                `[Visão mirror][NAV] Procesando categoría raíz "${rootCategory}" (${rows.length} listados)...`
+            );
+            const listingTasks = rows.map((row, idx) => ({ row, idx }));
+            await mapPool(listingTasks, Math.min(1, listingConcurrency), async ({ row }) => {
+                const perListingBudget =
+                    maxProductUrls != null
+                        ? Math.max(
+                              1,
+                              Math.ceil(maxProductUrls / Math.max(1, menuRows.length))
+                          )
+                        : undefined;
+                const urls = await collectProductUrlsForCategoryWithRetries(ctx, row, {
+                    urlBudget: perListingBudget,
+                    singlePageOnly: singlePageListing,
+                    attempts: 3,
+                    relaunchSafely: () =>
+                        runSerialized(async () => {
+                            await relaunchMutableBrowserHolder(ctx);
+                        })
+                });
+                console.log(`[Visão mirror][LISTING] ${row.listingUrl} -> ${urls.length} URLs`);
+                for (const u of urls) {
+                    const prev = urlToMeta.get(u);
+                    if (!prev || shouldPreferListingMetaForUrl(prev, row, u)) {
+                        urlToMeta.set(u, row);
+                    }
                 }
-            }
-            return null;
-        });
+                return null;
+            });
+        }
 
         let productUrls = [...urlToMeta.keys()];
         if (maxProductUrls != null && productUrls.length > maxProductUrls) {
@@ -698,7 +629,12 @@ async function scrapeVisionVipMirror(opts = {}) {
                 _categoryLabel: meta.categoryLabel,
                 _subcategoryValue: meta.subcategoryValue,
                 _subcategoryLabel: meta.subcategoryLabel,
-                _listingUrl: meta.listingUrl
+                _listingUrl: meta.listingUrl,
+                _taxonomyPathLabels: meta.taxonomyPathLabels,
+                _taxonomyPathValues: meta.taxonomyPathValues,
+                _pdpBreadcrumbLabels: p.pdpBreadcrumbLabels || [],
+                _isLeafCategoryNode: meta.isTarget === true || meta.isLeaf === true,
+                _isTargetCategoryNode: meta.isTarget === true
             };
         });
 

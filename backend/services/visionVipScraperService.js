@@ -704,6 +704,61 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 if (/U\s*\$\s*|G\$\s*[\d]/i.test(txt)) mainPrices.push(txt);
             });
 
+            /** Migas de categoría desde la PDP (no el menú lateral). */
+            function extractPdpBreadcrumbLabelsPDP() {
+                const norm = (s) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+                const skip = /^(inicio|home|visaovi?p\.?com|visaovip|catálogo|catalogo)$/i;
+
+                function dedupeSeq(items) {
+                    const out = [];
+                    const seen = new Set();
+                    for (const item of items) {
+                        const k = String(item).toLowerCase();
+                        if (!k || skip.test(norm(item))) continue;
+                        if (seen.has(k)) continue;
+                        seen.add(k);
+                        out.push(norm(item));
+                    }
+                    return out.slice(0, 32);
+                }
+
+                function linksToLabels(nodes) {
+                    const out = [];
+                    const list = [...nodes];
+                    for (let i = 0; i < list.length && out.length < 32; i++) {
+                        const a = list[i];
+                        if (!(a instanceof HTMLAnchorElement)) continue;
+                        const href = String(a.getAttribute('href') || a.href || '');
+                        if (!/\/es\/busca\/categoria\//i.test(href)) continue;
+                        const t = norm(a.textContent);
+                        if (!t || skip.test(t)) continue;
+                        out.push(t);
+                    }
+                    return dedupeSeq(out);
+                }
+
+                const rootEl = document.querySelector('main') || document.body;
+                if (!rootEl) return [];
+
+                const containers = [
+                    ...rootEl.querySelectorAll(
+                        '[class*="breadcrumb"], [data-pc-name="breadcrumb"], [data-pc-section="breadcrumb"], nav[aria-label*="readcrumb" i]'
+                    )
+                ];
+                let best = [];
+                for (const c of containers) {
+                    const labs = linksToLabels([...c.querySelectorAll('a[href]')]);
+                    if (labs.length > best.length) best = labs;
+                }
+                if (best.length) return best;
+
+                /** Respaldo: primeros enlaces de categoría en orden visual del main. */
+                const flatAnchors = [...rootEl.querySelectorAll('a[href*="/es/busca/categoria/"]')].slice(0, 16);
+                return linksToLabels(flatAnchors);
+            }
+
+            const pdpBreadcrumbLabels = extractPdpBreadcrumbLabelsPDP();
+
             return {
                 supplierCodeStr: supplierCodeFinal ? String(supplierCodeFinal).trim() : '',
                 titulo,
@@ -714,7 +769,8 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 imagenes: [...new Set(imgs)],
                 especificaciones,
                 descripcionFull: bodyText.slice(0, 10000),
-                descripcion
+                descripcion,
+                pdpBreadcrumbLabels
             };
         }, urlParam);
     }
@@ -872,6 +928,11 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         console.warn(`[SCRAPER][SIN_SPECS] ${productUrl}`);
     }
 
+    const pdpBreadcrumbLabels =
+        Array.isArray(raw.pdpBreadcrumbLabels) && raw.pdpBreadcrumbLabels.length
+            ? raw.pdpBreadcrumbLabels.map((s) => String(s || '').trim()).filter(Boolean)
+            : [];
+
     return {
         url: productUrl,
         supplierCode: raw.supplierCodeStr ? parseInt(raw.supplierCodeStr, 10) || raw.supplierCodeStr : null,
@@ -879,7 +940,8 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         precioUsd,
         descripcion,
         especificaciones: raw.especificaciones,
-        imagenes: raw.imagenes
+        imagenes: raw.imagenes,
+        pdpBreadcrumbLabels
     };
 }
 

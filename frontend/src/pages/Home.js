@@ -226,7 +226,7 @@ const Home = () => {
             </div>
           </motion.section>
 
-          {/* Sección: Teléfonos Móviles */}
+          {/* Sección: Celulares */}
           <motion.section 
             initial="hidden"
             whileInView="visible"
@@ -247,7 +247,7 @@ const Home = () => {
                         backgroundClip: 'text'
                       }}
                     >
-                      Teléfonos Móviles
+                      Celulares
                     </h2>
                     <p className="mt-2 text-sm text-gray-600 max-w-xl">{HOME_SECTION_SUBTITLES.celulares}</p>
                     <div 

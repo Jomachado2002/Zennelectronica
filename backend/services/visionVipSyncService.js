@@ -202,6 +202,98 @@ function inferCategoryFromUrl(productUrl) {
     }
 }
 
+function nodeTextHaystack(node) {
+    return [
+        String(node?.label || ''),
+        String(node?.subcategoryLabel || ''),
+        String(node?.subcategoryValue || ''),
+        String(node?.listingUrl || '')
+    ]
+        .join(' ')
+        .toLowerCase();
+}
+
+function buildNavigationIndexFromCategories(categories) {
+    const bySegment = new Map();
+    for (const cat of categories || []) {
+        const rootValue = String(cat?.value || '').trim();
+        const rootLabel = String(cat?.label || cat?.name || rootValue || '').trim();
+        const rootNode = cat?.visaoNavigationTree;
+        if (!rootValue || !rootNode || typeof rootNode !== 'object') continue;
+        const stack = [rootNode];
+        while (stack.length) {
+            const node = stack.pop();
+            if (!node || typeof node !== 'object') continue;
+            const hay = nodeTextHaystack(node);
+            const candidate = {
+                category: rootValue,
+                categoryLabel: rootLabel,
+                subcategory: String(node.subcategoryValue || '').trim(),
+                subcategoryLabel: String(node.subcategoryLabel || node.label || '').trim()
+            };
+            if (candidate.subcategory) {
+                const tokens = new Set();
+                for (const src of [candidate.subcategory, candidate.subcategoryLabel, node.listingUrl || '']) {
+                    String(src || '')
+                        .toLowerCase()
+                        .split(/[^a-z0-9]+/i)
+                        .filter((x) => x && x.length >= 3)
+                        .forEach((t) => tokens.add(t));
+                }
+                for (const t of tokens) {
+                    if (!bySegment.has(t)) bySegment.set(t, []);
+                    bySegment.get(t).push({ ...candidate, haystack: hay });
+                }
+            }
+            for (const child of Object.values(node.children || {})) stack.push(child);
+        }
+    }
+    return { bySegment };
+}
+
+async function getNavigationIndexCache(ctx) {
+    if (ctx && ctx.navigationIndexCache) return ctx.navigationIndexCache;
+    const cats = await Category.find({})
+        .select('value label name visaoNavigationTree')
+        .lean();
+    const built = buildNavigationIndexFromCategories(cats);
+    if (ctx) ctx.navigationIndexCache = built;
+    return built;
+}
+
+async function inferCategoryFromUrlWithTreeFallback(productUrl, ctx) {
+    const raw = inferCategoryFromUrl(productUrl);
+    const segment = extractVisaoProdSegment(productUrl);
+    if (!segment) return raw;
+    try {
+        const idx = await getNavigationIndexCache(ctx);
+        const tokens = new Set(
+            String(segment)
+                .toLowerCase()
+                .split(/[^a-z0-9]+/i)
+                .filter((x) => x && x.length >= 3)
+        );
+        tokens.add(String(segment).toLowerCase().replace(/-/g, '_'));
+        tokens.add(String(segment).toLowerCase().replace(/_/g, '-'));
+        for (const t of tokens) {
+            const candidates = idx.bySegment.get(t) || [];
+            if (!candidates.length) continue;
+            const pick = candidates.find((c) => c.haystack.includes(String(segment).toLowerCase())) || candidates[0];
+            if (pick && pick.category && pick.subcategory) {
+                return {
+                    category: pick.category,
+                    subcategory: pick.subcategory,
+                    categoryLabel: pick.categoryLabel,
+                    subcategoryLabel: pick.subcategoryLabel
+                };
+            }
+        }
+    } catch {
+        /* ignore and keep raw fallback */
+    }
+    return raw;
+}
+
 function buildSyncSummary(persistResults, startedAt, imageFailureCount) {
     const skippedByReason = persistResults.reduce((acc, result) => {
         if (result.action !== 'skipped') return acc;
@@ -308,42 +400,105 @@ async function mapPool(items, limit, mapper) {
     return results;
 }
 
-/** Etiquetas de ruta bajo la categoría raíz (sin duplicar el nombre de la categoría si ya es el 1.er crumb). */
-function pathLabelsForMenuNavigationRow(row) {
-    const raw = String(row.subcategoryLabel || '').trim();
-    const parts = raw
-        ? raw.split(' › ').map((s) => s.trim()).filter(Boolean)
+/**
+ * Ramas relativas al árbol de navegación (evita duplicar la primera etiqueta igual a la categoría raíz Visão).
+ * Devuelve labels + values paralelos por nivel.
+ */
+function trimmedTaxonomyBranchesForTree(row) {
+    const explicit = Array.isArray(row.taxonomyPathLabels)
+        ? row.taxonomyPathLabels.map((s) => String(s || '').trim()).filter(Boolean)
         : [];
+    const rawTrail = String(row.breadcrumbTrail || row.subcategoryLabel || '').trim();
+    let parts =
+        explicit.length > 0
+            ? explicit
+            : rawTrail
+              ? rawTrail.split(' › ').map((s) => s.trim()).filter(Boolean)
+              : [];
+    const valsIn = Array.isArray(row.taxonomyPathValues)
+        ? row.taxonomyPathValues.map((s) => String(s || '').trim())
+        : [];
+
+    const vals = [];
+    for (let i = 0; i < parts.length; i++) {
+        vals[i] = valsIn[i] != null && String(valsIn[i]).trim() !== '' ? String(valsIn[i]).trim() : '';
+    }
+
     const cl = String(row.categoryLabel || row.categoryValue || '').trim().toLowerCase();
-    let out = parts;
-    if (out.length > 1 && out[0].toLowerCase() === cl) {
-        out = out.slice(1);
+    let outLabs = [...parts];
+    let outVals = vals.slice(0, outLabs.length);
+    if (outLabs.length > 1 && String(outLabs[0] || '').trim().toLowerCase() === cl) {
+        outLabs = outLabs.slice(1);
+        outVals = outVals.slice(1);
     }
-    if (!out.length && raw) {
-        out = parts;
+    if (!outLabs.length && parts.length) {
+        outLabs = [...parts];
+        outVals = vals.slice(0, outLabs.length);
     }
-    return out;
+    return {
+        labels: outLabs,
+        values: outVals.map((v, idx) => (v ? v : `${slugifyKey(outLabs[idx] || `lvl_${idx}`)}__d${idx}`))
+    };
+}
+
+/** @deprecated usar trimmedTaxonomyBranchesForTree cuando haga falta values */
+function pathLabelsForMenuNavigationRow(row) {
+    return trimmedTaxonomyBranchesForTree(row).labels;
 }
 
 function insertMenuRowIntoNavigationTree(root, row) {
-    const labels = pathLabelsForMenuNavigationRow(row);
+    const { labels, values } = trimmedTaxonomyBranchesForTree(row);
     if (!labels.length) return;
-    let node = root;
-    for (let depth = 0; depth < labels.length; depth++) {
-        const lab = labels[depth];
-        const key = `${depth}_${slugifyKey(lab)}`;
-        if (!node.children) node.children = {};
-        if (!node.children[key]) {
-            node.children[key] = { label: lab, depth, children: {} };
+    const chain = labels.map((label, depth) => ({
+        label,
+        depth,
+        value: values[depth] || `${slugifyKey(label)}__d${depth}`,
+        isLeaf: depth === labels.length - 1
+    }));
+
+    let branch = null;
+    for (let i = chain.length - 1; i >= 0; i--) {
+        const item = chain[i];
+        const key = `${item.depth}_${item.value}`;
+        const node = {
+            key,
+            label: item.label,
+            depth: item.depth,
+            value: item.value,
+            isLeaf: item.isLeaf,
+            /** Compat navegadores / reportes antiguos */
+            isTarget: item.isLeaf,
+            children: {}
+        };
+        if (i === chain.length - 1) {
+            node.listingUrl = row.listingUrl;
+            node.subcategoryValue = row.subcategoryValue;
+            node.subcategoryLabel = row.subcategoryLabel;
+            node.isLeaf = true;
+            node.isTarget = true;
         }
-        const child = node.children[key];
-        if (depth === labels.length - 1) {
-            child.listingUrl = row.listingUrl;
-            child.subcategoryValue = row.subcategoryValue;
-            child.subcategoryLabel = row.subcategoryLabel;
-        }
-        node = child;
+        if (branch) node.children[branch.key] = branch;
+        branch = node;
     }
+    if (!branch) return;
+    if (!root.children) root.children = {};
+    function mergeNode(dst, src) {
+        dst.label = dst.label || src.label;
+        dst.value = dst.value || src.value;
+        dst.depth = Number.isFinite(dst.depth) ? dst.depth : src.depth;
+        if (src.listingUrl) dst.listingUrl = src.listingUrl;
+        if (src.subcategoryValue) dst.subcategoryValue = src.subcategoryValue;
+        if (src.subcategoryLabel) dst.subcategoryLabel = src.subcategoryLabel;
+        dst.isLeaf = !!src.isLeaf || !!dst.isLeaf;
+        if (src.isTarget != null) dst.isTarget = !!src.isTarget || !!dst.isTarget;
+        if (!dst.children) dst.children = {};
+        for (const [k, childSrc] of Object.entries(src.children || {})) {
+            if (!dst.children[k]) dst.children[k] = childSrc;
+            else mergeNode(dst.children[k], childSrc);
+        }
+    }
+    if (!root.children[branch.key]) root.children[branch.key] = branch;
+    else mergeNode(root.children[branch.key], branch);
 }
 
 /**
@@ -377,29 +532,75 @@ async function rebuildVisaoNavigationTrees(menuRows) {
     return { categoriesWithTree: updated, rootsBuilt: grouped.size };
 }
 
+async function ensureNavigationNodeForOrphanRow(row) {
+    if (!row || !row.categoryValue || !row.subcategoryValue) return;
+    const cat = await Category.findOne({ value: row.categoryValue }).select('label value visaoNavigationTree').lean();
+    const root = cat?.visaoNavigationTree && typeof cat.visaoNavigationTree === 'object'
+        ? { ...cat.visaoNavigationTree }
+        : {
+              label: row.categoryLabel || cat?.label || row.categoryValue,
+              value: row.categoryValue,
+              builtAt: new Date().toISOString(),
+              source: SYNC_SOURCE,
+              children: {}
+          };
+    insertMenuRowIntoNavigationTree(root, row);
+    await Category.updateOne({ value: row.categoryValue }, { $set: { visaoNavigationTree: root } });
+}
+
 function buildVisaoTaxonomyForProduct(scraped) {
     const listing = scraped._listingUrl || scraped.listingUrl || '';
-    const fullLab = String(scraped._subcategoryLabel || scraped.subcategoryLabel || '').trim();
-    const parts = fullLab ? fullLab.split(' › ').map((s) => s.trim()).filter(Boolean) : [];
+
+    /** Primero migas PDP; si no vinieron por timeout/DOM raro → menú espejo. */
+    const pdpBread = (scraped._pdpBreadcrumbLabels || scraped.pdpBreadcrumbLabels || [])
+        .map((s) => String(s || '').trim())
+        .filter(Boolean);
+    const menuLabs = (scraped._taxonomyPathLabels || [])
+        .map((s) => String(s || '').trim())
+        .filter(Boolean);
+    const trailFromSub = String(scraped._subcategoryLabel || scraped.subcategoryLabel || '')
+        .trim()
+        .split(' › ')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    /** Array completo texto (prioridad PDP). */
+    let hierarchy =
+        pdpBread.length > 0 ? [...pdpBread] : menuLabs.length > 0 ? [...menuLabs] : trailFromSub.length ? [...trailFromSub] : [];
+
     const rootLab = String(scraped._categoryLabel || scraped.categoryLabel || '').trim();
     const rootVal = String(scraped._categoryValue || scraped.categoryValue || '').trim();
     const leafSv = String(scraped._subcategoryValue || scraped.subcategoryValue || '').trim();
 
-    let segments = parts.map((label, idx) => ({
+    const pathValues = Array.isArray(scraped._taxonomyPathValues)
+        ? scraped._taxonomyPathValues.map((s) => String(s || '').trim()).filter(Boolean)
+        : [];
+    let segments = hierarchy.map((label, idx) => ({
         depth: idx,
         label,
-        slug: slugifyKey(label)
+        slug: slugifyKey(label),
+        value: pathValues[idx] || undefined
     }));
     const cl = rootLab.toLowerCase();
     if (segments.length > 1 && String(segments[0].label || '').toLowerCase() === cl) {
+        hierarchy = hierarchy.slice(1);
         segments = segments.slice(1).map((s, idx) => ({ ...s, depth: idx }));
     }
 
+    const leafLabelHuman =
+        (hierarchy.length ? hierarchy[hierarchy.length - 1] : '') ||
+        String(scraped._subcategoryLabel || scraped.subcategoryLabel || '').trim();
+
     return {
         root: { label: rootLab, value: rootVal },
+        hierarchy,
+        breadcrumbs: hierarchy,
+        path: hierarchy,
         segments,
         listingUrl: listing || undefined,
-        leafSubcategoryValue: leafSv || undefined
+        leafSubcategoryValue: leafSv || undefined,
+        leafLabel: leafLabelHuman || undefined,
+        isLeaf: scraped._isTargetCategoryNode === true || scraped._isLeafCategoryNode === true
     };
 }
 
@@ -412,13 +613,17 @@ async function ensureCategoryTreeFromMenuRows(menuRows) {
     const byCat = new Map();
     for (const r of menuRows) {
         if (!r.categoryValue || !r.subcategoryValue) continue;
+        /** En Mongo sólo nombre de la hoja donde cae el producto (label subcategoría). */
+        const resolvedSubLabel = String(r.subcategoryLabel || '').trim()
+            ? String(r.subcategoryLabel || '').trim()
+            : String(r.subcategoryValue || '').trim();
         if (!byCat.has(r.categoryValue)) {
             byCat.set(r.categoryValue, {
                 categoryLabel: r.categoryLabel || r.categoryValue,
                 subs: new Map()
             });
         }
-        byCat.get(r.categoryValue).subs.set(r.subcategoryValue, r.subcategoryLabel || r.subcategoryValue);
+        byCat.get(r.categoryValue).subs.set(r.subcategoryValue, resolvedSubLabel);
     }
 
     let orderBase =
@@ -602,17 +807,31 @@ async function persistOneVisaoProduct(scraped, ctx) {
             return;
         }
 
-        let categoryValue =
-            scraped._categoryValue ||
-            scraped.categoryValue ||
-            inferCategoryFromUrl(scraped.url || '').category;
-        let subcategoryValue =
-            scraped._subcategoryValue ||
-            scraped.subcategoryValue ||
-            inferCategoryFromUrl(scraped.url || '').subcategory;
+        let categoryValue = scraped._categoryValue || scraped.categoryValue;
+        let subcategoryValue = scraped._subcategoryValue || scraped.subcategoryValue;
+        let inferredFallback = null;
+        if (!categoryValue || !subcategoryValue) {
+            inferredFallback = await inferCategoryFromUrlWithTreeFallback(scraped.url || '', ctx);
+            categoryValue = categoryValue || inferredFallback.category;
+            subcategoryValue = subcategoryValue || inferredFallback.subcategory;
+        }
 
-        const categoryLabel = scraped._categoryLabel || scraped.categoryLabel;
-        const subcategoryLabel = scraped._subcategoryLabel || scraped.subcategoryLabel;
+        const categoryLabel =
+            scraped._categoryLabel || scraped.categoryLabel || inferredFallback?.categoryLabel;
+
+        const pdpBreadForLabel = (scraped._pdpBreadcrumbLabels || scraped.pdpBreadcrumbLabels || [])
+            .map((s) => String(s || '').trim())
+            .filter(Boolean);
+        const menuLeaf =
+            Array.isArray(scraped._taxonomyPathLabels) && scraped._taxonomyPathLabels.length
+                ? String(scraped._taxonomyPathLabels[scraped._taxonomyPathLabels.length - 1] || '').trim()
+                : '';
+        /** Texto mostrado en subcategoría Mongo: último nivel visible (PDP > menú > inferido). */
+        const subcategoryLabel =
+            (pdpBreadForLabel.length ? pdpBreadForLabel[pdpBreadForLabel.length - 1] : '') ||
+            menuLeaf ||
+            String(scraped._subcategoryLabel || scraped.subcategoryLabel || '').trim() ||
+            inferredFallback?.subcategoryLabel;
 
         const pdpSeg = extractVisaoProdSegment(scraped.url || '');
         const rowCheck = {
@@ -656,6 +875,23 @@ async function persistOneVisaoProduct(scraped, ctx) {
                 labelByName
             })
         );
+
+        if (!scraped._subcategoryValue && subcategoryValue) {
+            const orphanRow = {
+                categoryValue,
+                categoryLabel: categoryLabel || categoryValue,
+                subcategoryValue,
+                subcategoryLabel: subcategoryLabel || subcategoryValue,
+                listingUrl: scraped._listingUrl || scraped.listingUrl || '',
+                isTarget: true,
+                isLeaf: true,
+                taxonomyPathLabels: Array.isArray(scraped._taxonomyPathLabels)
+                    ? scraped._taxonomyPathLabels
+                    : String(subcategoryLabel || subcategoryValue).split(' › ').map((s) => s.trim()).filter(Boolean),
+                taxonomyPathValues: Array.isArray(scraped._taxonomyPathValues) ? scraped._taxonomyPathValues : []
+            };
+            await ensureNavigationNodeForOrphanRow(orphanRow).catch(() => {});
+        }
 
         if (!categoryId || !subcategoryId) {
             console.warn(
@@ -851,6 +1087,18 @@ async function persistOneVisaoProduct(scraped, ctx) {
  */
 async function pruneMirrorTaxonomyAgainstVisao(bundle) {
     const menuRows = bundle.menuRows || [];
+    const minMenuRowsForPrune = Math.max(1, Number(bundle.minMenuRowsForPrune) || 20);
+    if (menuRows.length < minMenuRowsForPrune) {
+        console.warn(
+            `[PRUNA] Menú incompleto (${menuRows.length} filas < mínimo ${minMenuRowsForPrune}) → se aborta poda de seguridad.`
+        );
+        return {
+            skipped: true,
+            reason: 'menu_rows_below_safety_threshold',
+            menuRows: menuRows.length,
+            minMenuRowsForPrune
+        };
+    }
     const allowedCategories = new Set();
     const allowedSubsByCat = new Map();
 
@@ -989,6 +1237,10 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
     const maxImagesPerProduct =
         opts.maxImagesPerProduct != null ? Math.min(20, Math.max(1, opts.maxImagesPerProduct)) : 8;
     const mirrorPrune = opts.mirrorPrune !== false;
+    const minMenuRowsForPrune =
+        opts.minMenuRowsForPrune != null
+            ? Math.max(1, Number(opts.minMenuRowsForPrune))
+            : 20;
     const exportFrontendProductCategoryJs = opts.exportFrontendProductCategoryJs !== false;
 
     if (resetCatalog) {
@@ -1067,7 +1319,10 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
     let pruneReport = null;
     if (mirrorPrune) {
         console.log('[PRUNA] Alineando taxonomía y filtros locales con el último scrape Visão…');
-        pruneReport = await pruneMirrorTaxonomyAgainstVisao(bundle);
+        pruneReport = await pruneMirrorTaxonomyAgainstVisao({
+            ...bundle,
+            minMenuRowsForPrune
+        });
         console.log('[PRUNA] Resultado:', pruneReport);
     }
 
@@ -1104,6 +1359,7 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         mirrorStrict,
         resetCatalog,
         mirrorPrune,
+        minMenuRowsForPrune,
         exportFrontendProductCategoryJs,
         exchangeRate,
         menuRowCount: bundle.menuRows?.length || 0,
@@ -1178,18 +1434,13 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
             ? Math.min(24, Math.max(1, opts.persistConcurrency))
             : 8;
 
-    const enriched = (scrapeData.products || []).map((p) => {
-        const cat = inferCategoryFromUrl(p.url || '');
-        return {
-            ...p,
-            technicalSpecifications:
-                p.especificaciones && typeof p.especificaciones === 'object'
-                    ? { ...p.especificaciones }
-                    : {},
-            _categoryValue: cat.category,
-            _subcategoryValue: cat.subcategory
-        };
-    });
+    const enriched = (scrapeData.products || []).map((p) => ({
+        ...p,
+        technicalSpecifications:
+            p.especificaciones && typeof p.especificaciones === 'object'
+                ? { ...p.especificaciones }
+                : {}
+    }));
 
     const total = enriched.length;
     await mapPool(enriched, persistConcurrency, async (p, idx) => {
@@ -1244,5 +1495,7 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
 module.exports = {
     syncVisionVipCatalogToMongo,
     syncVisionVipMirrorToMongo,
-    SYNC_SOURCE
+    SYNC_SOURCE,
+    /** Diagnóstico / scripts de muestra (`scripts/debug-mirror-taxonomy-sample.js`). */
+    buildVisaoTaxonomyForProduct
 };
