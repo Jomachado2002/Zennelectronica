@@ -1,13 +1,19 @@
 // frontend/src/components/BannerProduct.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getCelularesListingHref } from '../config/homeSlotRoutes';
+import scrollTop from '../helpers/scrollTop';
 
 const BannerProduct = () => {
+  const navigate = useNavigate();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const celularesHref = useMemo(() => getCelularesListingHref(), []);
+  const lastSwipeAtRef = useRef(0);
 
   // Hook para detectar si es móvil
   useEffect(() => {
@@ -107,16 +113,27 @@ const BannerProduct = () => {
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
     if (isLeftSwipe) {
+      lastSwipeAtRef.current = Date.now();
       nextSlide();
     } else if (isRightSwipe) {
+      lastSwipeAtRef.current = Date.now();
       prevSlide();
     }
+  };
+
+  /** En móvil, tocar el banner (fuera de flechas) lleva al listado de celulares configurado en home slots. */
+  const handleBannerClick = (e) => {
+    if (!isMobile) return;
+    if (e.target.closest('button')) return;
+    if (Date.now() - lastSwipeAtRef.current < 450) return;
+    navigate(celularesHref);
+    scrollTop();
   };
 
   // ✅ PRECARGAR TODAS LAS IMÁGENES DEL BANNER INMEDIATAMENTE
@@ -176,6 +193,9 @@ const BannerProduct = () => {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onClick={handleBannerClick}
+            role={isMobile ? 'link' : undefined}
+            aria-label={isMobile ? 'Ver celulares y tablets' : undefined}
           >
             {banners.map((banner, index) => (
               <div

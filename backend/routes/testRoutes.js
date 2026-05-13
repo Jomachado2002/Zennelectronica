@@ -13,7 +13,7 @@ router.get('/ping', (_req, res) => {
         ok: true,
         service: 'test-routes',
         hintVisaovipPreview:
-            'Mirror Visão espejo: /visaovip-catalog?persist=1&mirrorSync=1&full=1 (cleanup SKU ausentes ON por defecto; mirrorStrict=OFF con mirrorStrict=false). Legado: /visaovip-sync.'
+            'Mirror Visão espejo: /visaovip-catalog?persist=1&mirrorSync=1&full=1 (cleanup SKU ausentes ON por defecto; mirrorStrict=OFF con mirrorStrict=false). Legado: /visaovip-sync. Respuesta incluye timing.wallClockMs y logs [Visão API][mirror]. Sync automático al levantar backend: VISAO_MIRROR_SCHEDULE_ENABLED=1 en .env.'
     });
 });
 

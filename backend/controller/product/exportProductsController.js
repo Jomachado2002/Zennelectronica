@@ -9,6 +9,58 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 
+const EXPORT_CONTACTO =
+    'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
+
+/** Clave canónica (slug) → texto legible para copiar en redes */
+function humanizeSpecKey(key) {
+    if (!key || typeof key !== 'string') return '';
+    const s = key.replace(/_/g, ' ').trim();
+    return s ? s.replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+}
+
+/** Mapa unificado: technicalSpecifications pisa claves repetidas de specifications */
+function mergedSpecifications(product) {
+    const a = product.specifications && typeof product.specifications === 'object' ? product.specifications : {};
+    const b =
+        product.technicalSpecifications && typeof product.technicalSpecifications === 'object'
+            ? product.technicalSpecifications
+            : {};
+    return { ...a, ...b };
+}
+
+/**
+ * Una línea por especificación: Etiqueta<TAB>valor (útil al pegar en Facebook).
+ */
+function buildSpecsLinesTabbed(product) {
+    const raw = mergedSpecifications(product);
+    if (!raw || typeof raw !== 'object') return '';
+    return Object.entries(raw)
+        .filter(([k, v]) => k && v != null && String(v).trim() !== '')
+        .map(([k, v]) => `${humanizeSpecKey(k)}\t${String(v).trim()}`)
+        .join('\n');
+}
+
+/**
+ * Descripción larga: texto PDP, bloque de specs, pie de contacto (saltos de línea reales).
+ */
+function buildExportDescription(product) {
+    const parts = [];
+    const desc = (product.description || '').trim();
+    if (desc) parts.push(desc);
+
+    const specsBlock = buildSpecsLinesTabbed(product);
+    if (specsBlock) {
+        if (parts.length) parts.push('');
+        parts.push(specsBlock);
+    }
+
+    if (parts.length) parts.push('');
+    parts.push(EXPORT_CONTACTO);
+
+    return parts.join('\n');
+}
+
 /**
  * GET /api/export-products
  * Obtiene productos filtrados por categoría y subcategoría para exportación
@@ -64,6 +116,7 @@ async function getExportProductsController(req, res) {
             productName: 1,
             description: 1,
             specifications: 1,
+            technicalSpecifications: 1,
             sellingPrice: 1,
             productImage: 1,
             codigo: 1,
@@ -83,28 +136,12 @@ async function getExportProductsController(req, res) {
 
         // Formatear datos para la respuesta
         const formattedProducts = filteredProducts.map(product => {
-            // Convertir especificaciones de objeto a string si es necesario
-            let especificaciones = '';
-            if (product.specifications) {
-                if (typeof product.specifications === 'object') {
-                    especificaciones = Object.entries(product.specifications)
-                        .filter(([key, value]) => value && value !== '')
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(' / ');
-                } else {
-                    especificaciones = product.specifications;
-                }
-            }
+            const tabbed = buildSpecsLinesTabbed(product);
+            const especificaciones = tabbed
+                ? tabbed.split('\n').map((line) => line.replace(/\t+/, ': ')).join(' / ')
+                : '';
 
-            // Generar descripción con mensaje de contacto
-            let descripcionCompleta = '';
-            const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
-            
-            if (product.description && product.description.trim() !== '') {
-                descripcionCompleta = `${product.description} ${mensajeContacto}`;
-            } else {
-                descripcionCompleta = mensajeContacto;
-            }
+            const descripcionCompleta = buildExportDescription(product);
 
             return {
                 id: product._id,
@@ -202,6 +239,7 @@ async function downloadProductImagesController(req, res) {
             productName: 1,
             description: 1,
             specifications: 1,
+            technicalSpecifications: 1,
             sellingPrice: 1,
             productImage: 1,
             codigo: 1,
@@ -274,27 +312,22 @@ async function downloadProductImagesController(req, res) {
         fs.mkdirSync(subcategoryDir, { recursive: true });
 
         // Generar Excel
-        const excelData = filteredProducts.map((product, index) => {
-            // Generar descripción con mensaje de contacto
-            let descripcionCompleta = '';
-            const mensajeContacto = 'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
-            
-            if (product.description && product.description.trim() !== '') {
-                descripcionCompleta = `${product.description} ${mensajeContacto}`;
-            } else {
-                descripcionCompleta = mensajeContacto;
-            }
-
-            return {
-                'N°': index + 1,
-                'Título del producto': product.productName,
-                'Descripción': descripcionCompleta,
-                'Precio de venta': product.sellingPrice,
-                'Stock': product.stock
-            };
-        });
+        const excelData = filteredProducts.map((product, index) => ({
+            'N°': index + 1,
+            'Título del producto': product.productName,
+            'Descripción': buildExportDescription(product),
+            'Precio de venta': product.sellingPrice,
+            'Stock': product.stock
+        }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
+        worksheet['!cols'] = [
+            { wch: 5 },
+            { wch: 48 },
+            { wch: 90 },
+            { wch: 14 },
+            { wch: 8 }
+        ];
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos');
 

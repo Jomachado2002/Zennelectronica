@@ -302,6 +302,14 @@ function buildSyncSummary(persistResults, startedAt, imageFailureCount) {
         return acc;
     }, {});
 
+    const updatesByChangedField = {};
+    for (const r of persistResults) {
+        if (r.action !== 'updated' || !Array.isArray(r.changedFields)) continue;
+        for (const f of r.changedFields) {
+            updatesByChangedField[f] = (updatesByChangedField[f] || 0) + 1;
+        }
+    }
+
     return {
         durationMs: Date.now() - startedAt,
         productsCreated: persistResults.filter((r) => r.action === 'created').length,
@@ -309,7 +317,8 @@ function buildSyncSummary(persistResults, startedAt, imageFailureCount) {
         productsSkipped: persistResults.filter((r) => r.action === 'skipped').length,
         productsErrors: persistResults.filter((r) => r.action === 'error').length,
         imageImportFailures: imageFailureCount,
-        skippedByReason
+        skippedByReason,
+        updatesByChangedField
     };
 }
 
@@ -1020,7 +1029,8 @@ async function persistOneVisaoProduct(scraped, ctx) {
             persistResults.push({
                 codigo: code,
                 action: 'updated',
-                productId: String(existing._id)
+                productId: String(existing._id),
+                changedFields: drifted
             });
             return;
         }
@@ -1066,7 +1076,8 @@ async function persistOneVisaoProduct(scraped, ctx) {
         persistResults.push({
             codigo: code,
             action: 'created',
-            productId: String(created._id)
+            productId: String(created._id),
+            changedFields: ['__created__']
         });
     } catch (err) {
         const out = {
@@ -1301,6 +1312,9 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
     const scrapedCodigosPersistidos = [...scrapedCodigosSet];
     let stockCleanupCount = 0;
 
+    /** SKUs que entraron al catálogo del scrape pero no terminaron en created/updated (errores, skip PDP, precio, etc.) */
+    const catalogSkusNotPersisted = [...catalogCodigosSet].filter((c) => !scrapedCodigosSet.has(c));
+
     if (
         cleanupMissingStock &&
         catalogCodigosSet.size > 0 &&
@@ -1370,6 +1384,18 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         navigationBootstrap: navReport,
         scrapedCodigosEnCatalog: catalogCodigos,
         scrapedCodigosPersistidos,
+        reconciliation: {
+            catalogSkuCount: catalogCodigosSet.size,
+            persistedSkuCount: scrapedCodigosSet.size,
+            catalogSkusNotPersistedCount: catalogSkusNotPersisted.length,
+            catalogSkusNotPersistedSample: catalogSkusNotPersisted.slice(0, 40),
+            cleanupApplied:
+                cleanupMissingStock &&
+                catalogCodigosSet.size > 0 &&
+                (bundle.productsReturned || 0) > 0,
+            cleanupFilter:
+                'syncSource=visao_vip y codigo no está en el conjunto de SKU del último scrape completo'
+        },
         cleanupMissingStock,
         stockCleanupCount,
         persistResults,
@@ -1460,6 +1486,7 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
     });
 
     const scrapedCodigosPersistidos = [...scrapedCodigosSet];
+    const catalogSkusNotPersisted = [...catalogCodigosSet].filter((c) => !scrapedCodigosSet.has(c));
     let stockCleanupCount = 0;
     const productsReturnedLegacy = scrapeData.productsReturned || 0;
     if (cleanupMissingStock && catalogCodigosSet.size > 0 && productsReturnedLegacy > 0) {
@@ -1487,6 +1514,16 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
         stockCleanupCount,
         scrapedCodigosEnCatalog: catalogCodigos,
         scrapedCodigosPersistidos,
+        reconciliation: {
+            catalogSkuCount: catalogCodigosSet.size,
+            persistedSkuCount: scrapedCodigosSet.size,
+            catalogSkusNotPersistedCount: catalogSkusNotPersisted.length,
+            catalogSkusNotPersistedSample: catalogSkusNotPersisted.slice(0, 40),
+            cleanupApplied:
+                cleanupMissingStock && catalogCodigosSet.size > 0 && productsReturnedLegacy > 0,
+            cleanupFilter:
+                'syncSource=visao_vip y codigo no está en el conjunto de SKU del último scrape (legado)'
+        },
         persistResults,
         mirrorSummary
     };

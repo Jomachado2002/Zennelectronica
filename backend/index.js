@@ -138,6 +138,13 @@ const startServer = async () => {
     // console.log removed for production
     await connectDB();
     // console.log removed for production
+
+    try {
+      const { startVisaoMirrorScheduleIfEnabled } = require('./services/visaoMirrorScheduleService');
+      startVisaoMirrorScheduleIfEnabled();
+    } catch (e) {
+      console.warn('[Visão schedule] No se pudo inicializar:', e.message || e);
+    }
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {

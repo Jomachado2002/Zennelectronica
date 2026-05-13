@@ -1,5 +1,5 @@
 // frontend/src/helpers/productCategory.js
-// Categorías generadas desde MongoDB (2026-05-09T08:52:48.479Z), solo isActive=true
+// Categorías generadas desde MongoDB (2026-05-13T12:14:08.910Z), solo isActive=true
 // Total de categorías: 15
 //
 const productCategory = [

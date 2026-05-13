@@ -235,29 +235,16 @@ userSchema.pre('save', async function(next) {
     if (this.isNew && !this.permissions) {
         this.permissions = this.constructor.getDefaultPermissions(this.role);
     }
-    
-    // Si el rol cambió, actualizar permisos por defecto
-    if (this.isModified('role') && this.permissions) {
-        const defaultPermissions = this.constructor.getDefaultPermissions(this.role);
-        // Solo actualizar si el usuario no tiene permisos personalizados
-        if (this.role === 'ROOT') {
-            this.permissions = defaultPermissions; // ROOT siempre tiene todos los permisos
-        } else {
-            // Para ADMIN y GENERAL, mantener permisos existentes pero agregar nuevos si no existen
-            Object.keys(defaultPermissions).forEach(key => {
-                if (typeof defaultPermissions[key] === 'object') {
-                    if (!this.permissions[key]) {
-                        this.permissions[key] = defaultPermissions[key];
-                    }
-                } else {
-                    if (this.permissions[key] === undefined) {
-                        this.permissions[key] = defaultPermissions[key];
-                    }
-                }
-            });
-        }
+
+    // Si cambió el rol, alinear permisos con la plantilla del nuevo rol (clon profundo).
+    // Importante: antes se "fusionaba" solo lo faltante; un GENERAL ya tenía `products: { view:false,... }`
+    // y al subir a ADMIN ese objeto existía → no se pisaba y quedaba todo en false → "permiso denegado".
+    if (this.isModified('role')) {
+        const defaults = this.constructor.getDefaultPermissions(this.role);
+        this.permissions = JSON.parse(JSON.stringify(defaults));
+        this.markModified('permissions');
     }
-    
+
     next();
 });
 

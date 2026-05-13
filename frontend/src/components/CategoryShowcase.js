@@ -10,7 +10,7 @@ import {
   collectLeafSubcategoryValues
 } from '../helpers/visaoNavigationTree';
 import { useSubcategoryPreviewMap, useSubcategoryPreviewMapFromValues } from '../hooks/useSubcategoryPreviewMap';
-import { categoriaProductoHref } from '../config/homeSlotRoutes';
+import { categoriaProductoHref, HOME_SLOT_ROUTES } from '../config/homeSlotRoutes';
 
 const scrollTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -44,9 +44,15 @@ const CategoryShowcase = () => {
 
   useEffect(() => {
     if (!categories.length) return;
-    if (!selectedCategory || !categories.some((c) => c.value === selectedCategory)) {
-      setSelectedCategory(categories[0].value);
-    }
+    const invalid = !selectedCategory || !categories.some((c) => c.value === selectedCategory);
+    if (!invalid) return;
+    const mobile =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 767px)').matches;
+    const celValue = HOME_SLOT_ROUTES.celulares.category;
+    const preferMobile =
+      mobile && categories.some((c) => c.value === celValue) ? celValue : null;
+    setSelectedCategory(preferMobile || categories[0].value);
   }, [categories, selectedCategory]);
 
   // Subcategorías de la selección actual

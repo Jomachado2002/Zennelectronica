@@ -3,7 +3,8 @@
  * Rutas `HOME_SLOT_ROUTES`: generadas desde backend/config/homeFeaturedSlots.js
  * → `homeSlotNavRoutes.generated.js` (mirror con export frontend o `npm run generate-home-slot-routes`).
  */
-export { HOME_SLOT_ROUTES } from './homeSlotNavRoutes.generated';
+import { HOME_SLOT_ROUTES } from './homeSlotNavRoutes.generated';
+export { HOME_SLOT_ROUTES };
 
 /**
  * Subtítulos del home (mismo tono tipo “lista corta con comas” que Apple).
@@ -27,4 +28,9 @@ export function categoriaProductoHref(categoryValue, subcategoryValue) {
   p.set('category', categoryValue);
   if (subcategoryValue) p.set('subcategory', subcategoryValue);
   return `/categoria-producto?${p.toString()}`;
+}
+
+/** Listado principal de celulares (mismo par que `HOME_SLOT_ROUTES.celulares` / backend homeFeaturedSlots). */
+export function getCelularesListingHref() {
+  return categoriaProductoHref(HOME_SLOT_ROUTES.celulares.category, HOME_SLOT_ROUTES.celulares.subcategory);
 }

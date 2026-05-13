@@ -17,7 +17,12 @@ import '../styles/global.css';
 // Importar la función scrollTop mejorada
 import scrollTop from '../helpers/scrollTop';
 import { showPerformanceReport } from '../utils/performanceMonitor';
-import { HOME_SLOT_ROUTES, HOME_SECTION_SUBTITLES, categoriaProductoHref } from '../config/homeSlotRoutes';
+import {
+  HOME_SLOT_ROUTES,
+  HOME_SECTION_SUBTITLES,
+  categoriaProductoHref,
+  getCelularesListingHref
+} from '../config/homeSlotRoutes';
 
 // Animaciones simplificadas para mejor performance
 const fadeIn = {
@@ -33,6 +38,17 @@ const Home = () => {
   const slots = homeData?.data?.slots;
   const slotProducts = (slotKey) =>
     Array.isArray(slots?.[slotKey]) ? slots[slotKey] : [];
+
+  /** En viewport estrecho, «Ver todos» (novedades) lleva a celulares/tablets como listado principal móvil. */
+  const [novedadesVerTodosHref, setNovedadesVerTodosHref] = useState('/categoria-producto');
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () =>
+      setNovedadesVerTodosHref(mq.matches ? getCelularesListingHref() : '/categoria-producto');
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   // Optimizaciones de carga
   useEffect(() => {
@@ -769,7 +785,7 @@ const Home = () => {
                   ></div>
                 </div>
                 <Link 
-                  to="/categoria-producto"
+                  to={novedadesVerTodosHref}
                   className="text-sm font-semibold transition-all duration-300 flex items-center group/link"
                   style={{
                     background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
