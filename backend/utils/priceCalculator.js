@@ -109,10 +109,78 @@ function convertUSDtoPYG(priceUSD, exchangeRate = 7300) {
     return parseFloat(priceUSD) * parseFloat(exchangeRate);
 }
 
+/** Visão Vip: margen vía divisor (ej. 0,83) + envío fijo en Gs. */
+const VISAO_VIP_MARGIN_DIVISOR =
+    Number(process.env.VISAO_VIP_MARGIN_DIVISOR) > 0 && Number(process.env.VISAO_VIP_MARGIN_DIVISOR) < 1
+        ? Number(process.env.VISAO_VIP_MARGIN_DIVISOR)
+        : 0.83;
+
+const VISAO_VIP_DELIVERY_PYG =
+    Number(process.env.VISAO_VIP_DELIVERY_PYG) >= 0 && Number.isFinite(Number(process.env.VISAO_VIP_DELIVERY_PYG))
+        ? Number(process.env.VISAO_VIP_DELIVERY_PYG)
+        : 30000;
+
+/**
+ * Precio de venta Visão Vip:
+ * - Si el PDP viene en USD: basePyg = usd × cotización (Mongo) → ((basePyg / 0,83) + 30000)
+ * - Si el PDP viene en Gs.: ((montoGs / 0,83) + 30000) sin pasar por USD para el cálculo
+ */
+function calculateVisaoVipPrices(opts = {}) {
+    const { precioFuente, precioUsd, precioPygRaw, exchangeRate } = opts;
+    const rate = Number(exchangeRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+        throw new Error('El tipo de cambio debe ser mayor a 0');
+    }
+
+    const divisor = VISAO_VIP_MARGIN_DIVISOR;
+    const delivery = VISAO_VIP_DELIVERY_PYG;
+    let basePyg;
+    let purchasePriceUSD;
+    const fuente = String(precioFuente || '').toUpperCase();
+
+    if (fuente === 'PYG') {
+        const pyg = Math.round(Number(precioPygRaw));
+        if (!Number.isFinite(pyg) || pyg <= 0) {
+            throw new Error('Precio en guaraníes inválido');
+        }
+        basePyg = pyg;
+        purchasePriceUSD = Math.round((basePyg / rate) * 100) / 100;
+    } else {
+        const usd = Number(precioUsd);
+        if (!Number.isFinite(usd) || usd <= 0) {
+            throw new Error('Precio en USD inválido');
+        }
+        purchasePriceUSD = usd;
+        basePyg = Math.round(usd * rate);
+    }
+
+    const sellingPrice = Math.round(basePyg / divisor + delivery);
+    const purchasePrice = basePyg;
+    const profitAmount = sellingPrice - purchasePrice - delivery;
+
+    return {
+        purchasePriceUSD,
+        exchangeRate: rate,
+        purchasePrice,
+        deliveryCost: delivery,
+        profitMargin: Math.round((1 - divisor) * 100),
+        profitAmount: Math.round(profitAmount),
+        sellingPrice,
+        totalCost: purchasePrice + delivery,
+        price: 0,
+        precioFuente: fuente === 'PYG' ? 'PYG' : 'USD',
+        precioBasePyg: basePyg,
+        visaoMarginDivisor: divisor
+    };
+}
+
 module.exports = {
     calculatePrices,
+    calculateVisaoVipPrices,
     isValidPriceUSD,
     formatPrice,
     convertPYGtoUSD,
-    convertUSDtoPYG
+    convertUSDtoPYG,
+    VISAO_VIP_MARGIN_DIVISOR,
+    VISAO_VIP_DELIVERY_PYG
 };

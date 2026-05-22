@@ -12,7 +12,7 @@ const ExchangeRateModel = require('../models/exchangeRateModel');
 const Category = require('../models/categoryModel');
 const productModel = require('../models/productModel');
 const { importImageFromUrlWithRetries } = require('./imageImportService');
-const { calculatePrices } = require('../utils/priceCalculator');
+const { calculateVisaoVipPrices } = require('../utils/priceCalculator');
 const { generateUniqueSlug } = require('../utils/slugGenerator');
 const { scrapeVisionVipCatalog } = require('./visionVipScraperService');
 const {
@@ -120,6 +120,40 @@ function parseVisaoPrecioUsd(raw) {
     }
     const n = parseFloat(s);
     return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseVisaoPrecioPyg(raw) {
+    if (raw == null || raw === '') return null;
+    if (typeof raw === 'number') {
+        return Number.isFinite(raw) && raw > 0 ? Math.round(raw) : null;
+    }
+    let s = String(raw).trim();
+    if (!/\d/.test(s)) return null;
+    s = s.replace(/[^\d.,-]/g, '');
+    if (!s) return null;
+    if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+        s = s.replace(/\./g, '');
+    } else {
+        s = s.replace(/,/g, '');
+    }
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Precio nativo del scrape (USD o Gs.) para la fórmula Visão. */
+function resolveVisaoPriceFromScraped(scraped) {
+    const fuente = String(scraped.precioFuente || '').toUpperCase();
+    if (fuente === 'PYG') {
+        const pyg = parseVisaoPrecioPyg(scraped.precioPygRaw);
+        if (pyg != null) {
+            return { precioFuente: 'PYG', precioPygRaw: pyg, precioUsd: null };
+        }
+    }
+    const usd = parseVisaoPrecioUsd(scraped.precioUsd);
+    if (usd != null) {
+        return { precioFuente: 'USD', precioUsd: usd, precioPygRaw: null };
+    }
+    return null;
 }
 
 /** Códigos SKU presentes en el scrape (todas las PDP), no sólo persistidos bien */
@@ -805,12 +839,12 @@ async function persistOneVisaoProduct(scraped, ctx) {
     }
 
     try {
-        const precioUsdParsed = parseVisaoPrecioUsd(scraped.precioUsd);
-        if (precioUsdParsed == null) {
+        const priceInput = resolveVisaoPriceFromScraped(scraped);
+        if (priceInput == null) {
             persistResults.push({
                 codigo: code,
                 action: 'skipped',
-                reason: 'missing_price_usd',
+                reason: 'missing_price',
                 url: scraped.url
             });
             return;
@@ -910,7 +944,10 @@ async function persistOneVisaoProduct(scraped, ctx) {
 
         let prices;
         try {
-            prices = calculatePrices(precioUsdParsed, exchangeRate, deliveryCost, profitMargin);
+            prices = calculateVisaoVipPrices({
+                ...priceInput,
+                exchangeRate
+            });
         } catch (calcErr) {
             persistResults.push({
                 codigo: code,
@@ -1011,6 +1048,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             existing.profitMargin = prices.profitMargin;
             existing.profitAmount = prices.profitAmount;
             existing.sellingPrice = prices.sellingPrice;
+            existing.visaoPrecioFuente = prices.precioFuente;
             existing.stock = 1;
             existing.stockStatus = 'in_stock';
             existing.visaoTaxonomy = visaoTaxonomy;
@@ -1064,6 +1102,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             profitMargin: prices.profitMargin,
             profitAmount: prices.profitAmount,
             sellingPrice: prices.sellingPrice,
+            visaoPrecioFuente: prices.precioFuente,
             stock: 1,
             stockStatus: 'in_stock',
             lastUpdatedFinance: new Date(),

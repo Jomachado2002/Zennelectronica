@@ -1,4 +1,7 @@
 const ProductModel = require('../../models/productModel');
+const { calculateVisaoVipPrices } = require('../../utils/priceCalculator');
+
+const VISAO_SYNC_SOURCE = 'visao_vip';
 
 // Función para recalcular precios de productos basado en nuevo tipo de cambio
 const recalculateProductPrices = async (newExchangeRate, options = {}) => {
@@ -48,12 +51,29 @@ const recalculateProductPrices = async (newExchangeRate, options = {}) => {
 
     for (const product of products) {
       try {
-        // Calcular nuevo precio usando la fórmula
-        const purchasePricePYG = product.purchasePriceUSD * newExchangeRate;
-        const interestAmount = (purchasePricePYG * product.loanInterest) / 100;
-        const costBeforeProfit = purchasePricePYG + interestAmount;
-        const sellingPriceBeforeDelivery = costBeforeProfit / (1 - (product.profitMargin / 100));
-        const newSellingPrice = sellingPriceBeforeDelivery + (product.deliveryCost || 0);
+        let newSellingPrice;
+        let purchasePricePYG;
+        let visaoPrices = null;
+
+        if (product.syncSource === VISAO_SYNC_SOURCE) {
+          const fuente = String(product.visaoPrecioFuente || '').toUpperCase();
+          const visaoInput =
+            fuente === 'PYG' && product.purchasePrice > 0
+              ? { precioFuente: 'PYG', precioPygRaw: Math.round(product.purchasePrice) }
+              : { precioFuente: 'USD', precioUsd: product.purchasePriceUSD };
+          visaoPrices = calculateVisaoVipPrices({
+            ...visaoInput,
+            exchangeRate: newExchangeRate
+          });
+          newSellingPrice = visaoPrices.sellingPrice;
+          purchasePricePYG = visaoPrices.purchasePrice;
+        } else {
+          purchasePricePYG = product.purchasePriceUSD * newExchangeRate;
+          const interestAmount = (purchasePricePYG * product.loanInterest) / 100;
+          const costBeforeProfit = purchasePricePYG + interestAmount;
+          const sellingPriceBeforeDelivery = costBeforeProfit / (1 - (product.profitMargin / 100));
+          newSellingPrice = sellingPriceBeforeDelivery + (product.deliveryCost || 0);
+        }
 
         const oldSellingPrice = product.sellingPrice || 0;
         const priceChange = newSellingPrice - oldSellingPrice;
@@ -94,13 +114,25 @@ const recalculateProductPrices = async (newExchangeRate, options = {}) => {
 
         // Actualizar producto si no es dry run y se debe actualizar
         if (updateProducts && !dryRun) {
-          await ProductModel.findByIdAndUpdate(product._id, {
+          const updatePayload = {
             sellingPrice: Math.round(newSellingPrice),
             exchangeRate: newExchangeRate,
             lastUpdatedFinance: new Date(),
-            purchasePrice: Math.round(purchasePricePYG),
-            profitAmount: Math.round(newSellingPrice - costBeforeProfit - (product.deliveryCost || 0))
-          });
+            purchasePrice: Math.round(purchasePricePYG)
+          };
+          if (visaoPrices) {
+            updatePayload.purchasePriceUSD = visaoPrices.purchasePriceUSD;
+            updatePayload.deliveryCost = visaoPrices.deliveryCost;
+            updatePayload.profitMargin = visaoPrices.profitMargin;
+            updatePayload.profitAmount = visaoPrices.profitAmount;
+          } else {
+            const interestAmount = (purchasePricePYG * product.loanInterest) / 100;
+            const costBeforeProfit = purchasePricePYG + interestAmount;
+            updatePayload.profitAmount = Math.round(
+              newSellingPrice - costBeforeProfit - (product.deliveryCost || 0)
+            );
+          }
+          await ProductModel.findByIdAndUpdate(product._id, updatePayload);
 
           results.updatedProducts++;
         } else {

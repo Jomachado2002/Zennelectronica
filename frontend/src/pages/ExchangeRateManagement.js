@@ -28,11 +28,19 @@ const ExchangeRateManagement = () => {
   const fetchCurrentRate = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(SummaryApi.exchangeRate.current.url);
+      const response = await fetch(SummaryApi.exchangeRate.current.url, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       const data = await response.json();
       
       if (data.success) {
         setCurrentRate(data.data);
+        if (data.data.isFallback) {
+          toast.warn(
+            'No hay tipo de cambio activo en la base de datos; se muestra el valor por defecto (7300).'
+          );
+        }
       } else {
         toast.error('Error al cargar el tipo de cambio actual');
       }
@@ -206,6 +214,8 @@ const ExchangeRateManagement = () => {
                         </p>
                         <p className="text-xs text-gray-400">
                           Fuente: {currentRate.source}
+                          {currentRate.id ? ` · ID ${currentRate.id.slice(-8)}` : ''}
+                          {currentRate.isFallback ? ' · (valor por defecto, sin registro activo)' : ''}
                         </p>
                       </div>
                     ) : (

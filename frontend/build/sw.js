@@ -18,8 +18,11 @@ const STATIC_ASSETS = [
 const API_ENDPOINTS = [
   '/api/obtener-productos-home',
   '/api/categorias',
-  '/api/exchange-rate',
 ];
+
+function isExchangeRateRequest(url) {
+  return url.pathname.startsWith('/api/exchange-rate');
+}
 
 // Cache strategies
 const CACHE_STRATEGIES = {
@@ -94,6 +97,8 @@ self.addEventListener('fetch', (event) => {
   // Handle different types of requests
   if (isStaticAsset(request)) {
     event.respondWith(handleStaticAsset(request));
+  } else if (isExchangeRateRequest(url)) {
+    event.respondWith(fetch(request));
   } else if (isAPIRequest(request)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isHTMLRequest(request)) {

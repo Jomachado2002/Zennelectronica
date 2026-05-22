@@ -443,6 +443,77 @@ function pickUsdFromTextUsdList(usdPrices) {
     return null;
 }
 
+/**
+ * Precio nativo del PDP para sync: USD explícito o Gs. explícito (sin convertir Gs.→USD para la fórmula de venta).
+ * @returns {{ precioFuente: 'USD'|'PYG', precioUsd: number|null, precioPygRaw: number|null }|null}
+ */
+function resolveVisaoPrecioForSync(domRaw) {
+    const hay =
+        domRaw.priceHaystack || domRaw.rawTextSnippet || domRaw.descripcionFull || '';
+    const hints = domRaw.structuredPriceHints || [];
+    const maxUsd = getMaxReasonableUsd();
+    const pygLikelyAbove = getAssumePygAbove();
+
+    for (let i = 0; i < hints.length; i++) {
+        const h = hints[i];
+        let cur = String(h.currency ?? '')
+            .toUpperCase()
+            .replace(/\s+/g, '')
+            .replace(/\./g, '');
+        const rawPrice = String(h.price ?? '')
+            .trim()
+            .replace(/^["']+|["']+$/g, '');
+        const num = parseMoneyTokenToFloat(rawPrice);
+        if (!Number.isFinite(num) || num <= 0) continue;
+        if (cur === 'GS' || cur === 'GUARANI' || cur === 'GUARANIES') cur = 'PYG';
+        if (cur === 'USD' || cur === 'US$' || cur === 'DÓLARES') {
+            if (num <= maxUsd) {
+                return { precioFuente: 'USD', precioUsd: roundUsd2(num), precioPygRaw: null };
+            }
+            continue;
+        }
+        if (cur === 'PYG') {
+            return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(num) };
+        }
+    }
+
+    const fragText = Array.isArray(domRaw.mainPriceFragments)
+        ? domRaw.mainPriceFragments.filter(Boolean).join('\n')
+        : '';
+    if (fragText) {
+        const uFrag = pickUsdFromTextUsdList(parseUsdPrices(fragText));
+        if (uFrag != null) {
+            return { precioFuente: 'USD', precioUsd: uFrag, precioPygRaw: null };
+        }
+        const gsFrag = parseHeroGsAmount(fragText);
+        if (gsFrag != null && gsFrag >= pygLikelyAbove) {
+            return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsFrag) };
+        }
+    }
+
+    const heroTrim = trimHeroBlock(hay, HERO_CUT_MARKERS);
+    const uHero = pickUsdFromTextUsdList(parseUsdPrices(heroTrim));
+    if (uHero != null) {
+        return { precioFuente: 'USD', precioUsd: uHero, precioPygRaw: null };
+    }
+    const gsHero = parseHeroGsAmount(heroTrim);
+    if (gsHero != null && gsHero >= pygLikelyAbove) {
+        return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsHero) };
+    }
+
+    const early = hay.slice(0, Math.min(hay.length, 7200));
+    const uEarly = pickUsdFromTextUsdList(parseUsdPrices(early));
+    if (uEarly != null) {
+        return { precioFuente: 'USD', precioUsd: uEarly, precioPygRaw: null };
+    }
+    const gsEarly = parseHeroGsAmount(early);
+    if (gsEarly != null && gsEarly >= pygLikelyAbove) {
+        return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsEarly) };
+    }
+
+    return null;
+}
+
 /** PYG→USD usando VISAO_PYG_PER_USD o 7300 (alineado con sync por defecto). */
 function deriveUsdFromGuaranies(gsAmount) {
     if (gsAmount == null || gsAmount <= 0) return null;
@@ -832,46 +903,10 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         .catch(() => {});
     await delay(preview ? 550 : 300);
 
-    function resolvePrecioUsd(domRaw) {
-        const hay =
-            domRaw.priceHaystack ||
-            domRaw.rawTextSnippet ||
-            domRaw.descripcionFull ||
-            '';
-
-        const hinted = resolveUsdFromStructuredHints(domRaw.structuredPriceHints || []);
-        if (hinted != null) return hinted;
-
-        const fragText = Array.isArray(domRaw.mainPriceFragments)
-            ? domRaw.mainPriceFragments.filter(Boolean).join('\n')
-            : '';
-        if (fragText) {
-            const uFrag = pickUsdFromTextUsdList(parseUsdPrices(fragText));
-            if (uFrag != null) return uFrag;
-            const fromGsFrag = deriveUsdFromGuaranies(parseHeroGsAmount(fragText));
-            if (fromGsFrag != null) return fromGsFrag;
-        }
-
-        const heroTrim = trimHeroBlock(hay, HERO_CUT_MARKERS);
-
-        let u = pickUsdFromTextUsdList(parseUsdPrices(heroTrim));
-        if (u != null) return u;
-
-        const fromGsHay = deriveUsdFromGuaranies(parseHeroGsAmount(hay));
-        if (fromGsHay != null) return fromGsHay;
-
-        /** Zona alta del PDP (precio antes de bloques relacionados cuando el marcador corta tarde). */
-        const early = hay.slice(0, Math.min(hay.length, 7200));
-        u = pickUsdFromTextUsdList(parseUsdPrices(early));
-        if (u != null) return u;
-
-        return deriveUsdFromGuaranies(parseHeroGsAmount(early));
-    }
-
     let raw = await snapshotDom(productUrl);
-    let precioUsd = resolvePrecioUsd(raw);
+    let precioResolved = resolveVisaoPrecioForSync(raw);
 
-    if (precioUsd == null) {
+    if (precioResolved == null) {
         await delay(preview ? 900 : 500);
         await page.evaluate(() => {
             window.scrollTo(0, 0);
@@ -881,10 +916,10 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
             .catch(() => {});
         await delay(preview ? 400 : 200);
         raw = await snapshotDom(productUrl);
-        precioUsd = resolvePrecioUsd(raw);
+        precioResolved = resolveVisaoPrecioForSync(raw);
     }
 
-    if (precioUsd == null) {
+    if (precioResolved == null) {
         await page
             .evaluate(() => {
                 const mainEl = document.querySelector('main') || document.body;
@@ -893,10 +928,10 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
             .catch(() => {});
         await delay(preview ? 550 : 400);
         raw = await snapshotDom(productUrl);
-        precioUsd = resolvePrecioUsd(raw);
+        precioResolved = resolveVisaoPrecioForSync(raw);
     }
 
-    if (precioUsd == null && !preview) {
+    if (precioResolved == null && !preview) {
         await page
             .reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
             .catch(() => null);
@@ -906,8 +941,11 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
             .catch(() => {});
         await delay(450);
         raw = await snapshotDom(productUrl);
-        precioUsd = resolvePrecioUsd(raw);
+        precioResolved = resolveVisaoPrecioForSync(raw);
     }
+
+    const precioUsd =
+        precioResolved && precioResolved.precioFuente === 'USD' ? precioResolved.precioUsd : null;
 
     let descripcion = raw.descripcion;
     const lineNoise =
@@ -937,6 +975,8 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         url: productUrl,
         supplierCode: raw.supplierCodeStr ? parseInt(raw.supplierCodeStr, 10) || raw.supplierCodeStr : null,
         titulo: raw.titulo || '',
+        precioFuente: precioResolved ? precioResolved.precioFuente : null,
+        precioPygRaw: precioResolved ? precioResolved.precioPygRaw : null,
         precioUsd,
         descripcion,
         especificaciones: raw.especificaciones,

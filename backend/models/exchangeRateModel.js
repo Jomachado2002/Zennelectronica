@@ -92,10 +92,12 @@ exchangeRateSchema.pre('save', async function(next) {
 // Método estático para obtener el tipo de cambio actual
 exchangeRateSchema.statics.getCurrentRate = async function(currency = 'USD') {
   try {
-    const currentRate = await this.findOne({ 
-      currency: currency.toUpperCase(), 
-      isActive: true 
-    }).sort({ effectiveDate: -1 });
+    const currentRate = await this.findOne({
+      currency: currency.toUpperCase(),
+      isActive: true
+    })
+        .sort({ createdAt: -1, effectiveDate: -1 })
+        .lean();
     
     if (currentRate) {
       return currentRate;

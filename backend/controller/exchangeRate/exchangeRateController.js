@@ -10,6 +10,8 @@ const getCurrentExchangeRate = async (req, res) => {
     
     const currentRate = await ExchangeRateModel.getCurrentRate(currency);
     
+    const isFallback = !currentRate._id;
+
     res.json({
       success: true,
       data: {
@@ -17,7 +19,9 @@ const getCurrentExchangeRate = async (req, res) => {
         currency: currentRate.currency,
         effectiveDate: currentRate.effectiveDate,
         source: currentRate.source,
-        isActive: currentRate.isActive
+        isActive: currentRate.isActive,
+        id: currentRate._id ? String(currentRate._id) : null,
+        isFallback
       }
     });
   } catch (error) {
@@ -69,12 +73,14 @@ const updateExchangeRate = async (req, res) => {
     
     // Si se solicita actualizar productos
     if (updateProducts) {
-      // console.log removed for production
-      updateResults = await recalculateProductPrices(newRate, {
+      const raw = await recalculateProductPrices(newRate, {
         updateProducts: true,
         dryRun: false
       });
-      // console.log removed for production
+      updateResults = {
+        ...raw,
+        affectedProducts: raw.updatedProducts ?? 0
+      };
     }
     
     // Desactivar tipo de cambio anterior
@@ -102,7 +108,7 @@ const updateExchangeRate = async (req, res) => {
     
     console.log(`✅ Exchange rate updated: ${currency} ${previousRate} -> ${newRate}`, {
       userId,
-      affectedProducts: updateResults.affectedProducts,
+      affectedProducts: updateResults.affectedProducts ?? updateResults.updatedProducts ?? 0,
       updateDuration: newExchangeRate.updateMetadata.updateDuration
     });
     
