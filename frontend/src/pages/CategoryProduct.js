@@ -11,6 +11,7 @@ import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
 import VerticalCardGrid from '../components/VerticalCardGrid';
+import { siteUrl } from '../config/siteUrl';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -438,32 +439,46 @@ const CategoryProductContent = () => {
         ? `Promociones · ${getSeoTitle(location, categories)}`
         : 'Promociones')
     : getSeoTitle(location, categories);
-  
-  // Configurar metadatos de SEO
-  useEffect(() => {
-    if (onlyDiscounted) {
-      document.title = 'Promociones y Ofertas | Zenn';
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute(
-          'content',
-          'Productos en promoción en Zenn Paraguay. Filtrá por categoría, subcategoría y especificaciones. Precios con descuento real.'
-        );
-      }
-      return;
-    }
 
-    const seoTitle = getSeoTitle(location, categories);
-    document.title = `${seoTitle} | Zenn`;
-    
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', `Compra online ${seoTitle.toLowerCase()} con garantía oficial. Envío a todo Paraguay. Precios competitivos y atención personalizada.`);
+  const seoTitle = onlyDiscounted
+    ? (filterCategoryList[0] || filterSubcategoryList[0]
+        ? `${pageHeading} | Zenn`
+        : 'Promociones y Ofertas | Zenn Paraguay')
+    : `${pageHeading} | Zenn Paraguay`;
+
+  const seoDescription = onlyDiscounted
+    ? 'Productos en promoción en Zenn Paraguay. Filtrá por categoría y subcategoría. Descuentos reales y envío a todo el país.'
+    : `Comprá ${pageHeading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`;
+
+  const canonicalPath = (() => {
+    if (onlyDiscounted) {
+      const p = new URLSearchParams();
+      if (filterCategoryList[0]) p.set('category', filterCategoryList[0]);
+      if (filterSubcategoryList[0]) p.set('subcategory', filterSubcategoryList[0]);
+      const q = p.toString();
+      return q ? `/promociones?${q}` : '/promociones';
     }
-  }, [location, categories, onlyDiscounted]);
+    const p = new URLSearchParams();
+    if (filterCategoryList[0]) p.set('category', filterCategoryList[0]);
+    if (filterSubcategoryList[0]) p.set('subcategory', filterSubcategoryList[0]);
+    const q = p.toString();
+    return q ? `/categoria-producto?${q}` : '/categoria-producto';
+  })();
 
   return (
     <>
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={siteUrl(canonicalPath)} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={siteUrl(canonicalPath)} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Zenn" />
+        <meta property="og:locale" content="es_PY" />
+      </Helmet>
+
       {/* Barra de filtros con auto-hide */}
       <div 
         className={`sticky top-12 z-22 bg-white shadow-sm border-b border-gray-200 px-4 py-2 transition-transform duration-300 ${

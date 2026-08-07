@@ -1,42 +1,48 @@
 // src/utils/getSeoTitle.js
+import { leafLabelFromStoredLabel } from '../helpers/visaoNavigationTree';
 
 const getSeoTitle = (location, categories = []) => {
   const urlSearch = new URLSearchParams(location.search);
-  const selectedCategory = urlSearch.get("category") || "";
-  const selectedSubcategory = urlSearch.get("subcategory") || "";
-  
-  // Títulos específicos para casos particulares
-  if (selectedSubcategory === "notebooks") 
-    return "Las mejores notebooks para estudiantes y profesionales en Paraguay";
-  if (selectedSubcategory === "placasMadre") 
-    return "Placas madre de alto rendimiento para gaming y diseño";
-  if (selectedSubcategory === "procesador")
-    return "Procesadores de última generación para tu PC";
-  if (selectedSubcategory === "tarjeta_grafica")
-    return "Tarjetas gráficas para gaming y diseño profesional";
-  if (selectedSubcategory === "computadoras_ensambladas")
-    return "Computadoras ensambladas de alto rendimiento";
-  
-  // Buscar en las categorías dinámicas
-  if (categories.length > 0) {
-    // Buscar la categoría
-    const categoryObj = categories.find(cat => cat.value === selectedCategory);
-    if (categoryObj) {
-      return `Productos de ${categoryObj.label} al mejor precio en Paraguay`;
-    }
-    
-    // Buscar la subcategoría
-    if (selectedSubcategory) {
-      for (const category of categories) {
-        const subcategoryObj = category.subcategories?.find(sub => sub.value === selectedSubcategory);
-        if (subcategoryObj) {
-          return `${subcategoryObj.label} con envío gratis y garantía oficial`;
-        }
+  const selectedCategory = urlSearch.get('category') || '';
+  const selectedSubcategory = urlSearch.get('subcategory') || '';
+
+  // Subcategoría primero (más específica)
+  if (selectedSubcategory && categories.length > 0) {
+    for (const category of categories) {
+      const subcategoryObj = category.subcategories?.find(
+        (sub) => sub.value === selectedSubcategory
+      );
+      if (subcategoryObj) {
+        const label = leafLabelFromStoredLabel(subcategoryObj.label || subcategoryObj.name);
+        return `${label} al mejor precio en Paraguay`;
       }
+      // Hojas Visão viven en el árbol; si el menú plano no tiene el sub, usar value legible
+    }
+    const human = selectedSubcategory
+      .replace(/__/g, ' ')
+      .replace(/_/g, ' ')
+      .replace(/\d+/g, '')
+      .trim();
+    if (human.length > 2) {
+      return `${human.charAt(0).toUpperCase()}${human.slice(1)} en Paraguay`;
     }
   }
-  
-  // Título por defecto
+
+  if (selectedCategory && categories.length > 0) {
+    const categoryObj = categories.find((cat) => cat.value === selectedCategory);
+    if (categoryObj) {
+      return `${categoryObj.label || categoryObj.name} al mejor precio en Paraguay`;
+    }
+  }
+
+  // Fallbacks legacy
+  if (selectedSubcategory === 'notebooks' || selectedSubcategory.includes('notebook')) {
+    return 'Notebooks para estudio, oficina y gaming en Paraguay';
+  }
+  if (selectedSubcategory.includes('celular') || selectedSubcategory.includes('smartphone')) {
+    return 'Celulares y smartphones en Paraguay';
+  }
+
   return 'Equipos de tecnología al mejor precio en Paraguay';
 };
 
