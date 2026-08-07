@@ -93,8 +93,8 @@ const AllUsers = () => {
 
     return {
       total: users.length,
-      admins: users.filter(u => u.role === 'ADMIN').length,
-      users: users.filter(u => u.role === 'USER').length,
+      admins: users.filter(u => u.role === 'ADMIN' || u.role === 'ROOT').length,
+      users: users.filter(u => u.role === 'GENERAL' || u.role === 'USER').length,
       withPhone: users.filter(u => u.phone).length,
       withCard: users.filter(u => u.hasBancardCard).length,
       recentActivity: users.filter(u => moment(u.lastLogin).isAfter(lastWeek)).length

@@ -99,16 +99,19 @@ const getProductController = async(req, res)=>{
     }
 }
 
+/** Listados generales: stock disponible. */
 const STOCK_OR = [
     { stock: { $exists: false } },
     { stock: null },
     { stock: { $gt: 0 } }
 ];
 
-/** Home / vitrinas: incluye catálogo con stock 0 (sync Visão suele llegar así hasta actualizar margen/stock real). */
+/**
+ * Home / vitrinas: solo con stock (>= 1).
+ * Visão marca disponibles casi siempre con stock=1; stock>1 dejaría el home vacío.
+ */
 const HOME_STOCK_OR = [
-    ...STOCK_OR,
-    { stock: 0 }
+    { stock: { $gte: 1 } }
 ];
 
 function queryForPairs(pairs, stockClause = STOCK_OR) {

@@ -1,5 +1,6 @@
 /**
  * Sincronización Visão Vip → MongoDB + Firebase Storage.
+ * - Imágenes de producto: solo Firebase (nunca se persiste CDN Visão en productImage).
  * - Modo legado: scrapeVisionVipCatalog (preview / parcial).
  * - Modo espejo: scrapeVisionVipMirror (menú + catálogo alineado al proveedor).
  *
@@ -11,7 +12,7 @@
 const ExchangeRateModel = require('../models/exchangeRateModel');
 const Category = require('../models/categoryModel');
 const productModel = require('../models/productModel');
-const { importImageFromUrlWithRetries } = require('./imageImportService');
+const { importImageFromUrlWithRetries, deleteFirebaseImages, isFirebaseStorageUrl } = require('./imageImportService');
 const { calculateVisaoVipPrices } = require('../utils/priceCalculator');
 const { generateUniqueSlug } = require('../utils/slugGenerator');
 const { scrapeVisionVipCatalog } = require('./visionVipScraperService');
@@ -143,17 +144,39 @@ function parseVisaoPrecioPyg(raw) {
 /** Precio nativo del scrape (USD o Gs.) para la fórmula Visão. */
 function resolveVisaoPriceFromScraped(scraped) {
     const fuente = String(scraped.precioFuente || '').toUpperCase();
+    /** @type {{ precioFuente: string, precioPygRaw: number|null, precioUsd: number|null, precioListaFuente?: string, precioListaUsd?: number|null, precioListaPygRaw?: number|null }|null} */
+    let base = null;
     if (fuente === 'PYG') {
         const pyg = parseVisaoPrecioPyg(scraped.precioPygRaw);
         if (pyg != null) {
-            return { precioFuente: 'PYG', precioPygRaw: pyg, precioUsd: null };
+            base = { precioFuente: 'PYG', precioPygRaw: pyg, precioUsd: null };
         }
     }
-    const usd = parseVisaoPrecioUsd(scraped.precioUsd);
-    if (usd != null) {
-        return { precioFuente: 'USD', precioUsd: usd, precioPygRaw: null };
+    if (base == null) {
+        const usd = parseVisaoPrecioUsd(scraped.precioUsd);
+        if (usd != null) {
+            base = { precioFuente: 'USD', precioUsd: usd, precioPygRaw: null };
+        }
     }
-    return null;
+    if (base == null) return null;
+
+    const listaFuente = String(scraped.precioListaFuente || '').toUpperCase();
+    if (listaFuente === 'PYG') {
+        const listPyg = parseVisaoPrecioPyg(scraped.precioListaPygRaw);
+        if (listPyg != null) {
+            base.precioListaFuente = 'PYG';
+            base.precioListaPygRaw = listPyg;
+            base.precioListaUsd = null;
+        }
+    } else if (listaFuente === 'USD' || scraped.precioListaUsd != null) {
+        const listUsd = parseVisaoPrecioUsd(scraped.precioListaUsd);
+        if (listUsd != null) {
+            base.precioListaFuente = 'USD';
+            base.precioListaUsd = listUsd;
+            base.precioListaPygRaw = null;
+        }
+    }
+    return base;
 }
 
 /** Códigos SKU presentes en el scrape (todas las PDP), no sólo persistidos bien */
@@ -647,8 +670,127 @@ function buildVisaoTaxonomyForProduct(scraped) {
     };
 }
 
+function isMongoDupKeyError(err) {
+    return !!(err && (err.code === 11000 || err.code === 11001));
+}
+
+async function findCategoryOwningSubValue(subValue) {
+    const sv = String(subValue || '').trim();
+    if (!sv) return null;
+    return Category.findOne({ 'subcategories.value': sv });
+}
+
+/**
+ * Asegura una categoría raíz por value (reutiliza si ya existe; tolera E11000 de name/value).
+ */
+async function ensureRootCategoryDoc(categoryValue, categoryLabel) {
+    const cv = String(categoryValue || '').trim();
+    const catLabel = String(categoryLabel || cv || 'Catálogo').trim();
+    if (!cv) return null;
+
+    let cat = await Category.findOne({ value: cv });
+    if (cat) return cat;
+
+    let orderMax =
+        (await Category.findOne().sort({ order: -1 }).select('order').lean())?.order || 0;
+    orderMax += 1;
+    cat = new Category({
+        name: catLabel,
+        label: catLabel,
+        value: cv,
+        order: orderMax,
+        isActive: true,
+        color: DEFAULT_CATEGORY_COLOR,
+        icon: DEFAULT_CATEGORY_ICON,
+        subcategories: []
+    });
+    try {
+        await cat.save();
+        console.log(`[ESTRUCTURA] Creada nueva categoría: ${catLabel}`);
+        return cat;
+    } catch (err) {
+        if (!isMongoDupKeyError(err)) throw err;
+        cat =
+            (await Category.findOne({ value: cv })) ||
+            (await Category.findOne({ name: catLabel })) ||
+            (await Category.findOne({ label: catLabel }));
+        if (!cat) throw err;
+        console.warn(
+            `[ESTRUCTURA] E11000 al crear categoría ${cv}; reutilizo ${cat.value || cat._id}`
+        );
+        return cat;
+    }
+}
+
+/**
+ * Índice único global `subcategories.value`: si ya existe → reutilizar; si no → crear.
+ * Nunca duplica el mismo value en otro documento (evita tumbar el sync diario).
+ */
+async function ensureSubcategoryOnCategoryDoc(preferredCat, subcategoryValue, subcategoryLabel) {
+    const sv = String(subcategoryValue || '').trim();
+    const slabel = String(subcategoryLabel || sv).trim() || sv;
+    if (!sv || !preferredCat) return { cat: preferredCat, sub: null, created: false };
+
+    let sub = (preferredCat.subcategories || []).find((s) => s.value === sv);
+    if (sub) {
+        if (sub.isActive === false) {
+            sub.isActive = true;
+            await preferredCat.save();
+        }
+        return { cat: preferredCat, sub, created: false };
+    }
+
+    const owner = await findCategoryOwningSubValue(sv);
+    if (owner) {
+        sub = (owner.subcategories || []).find((s) => s.value === sv);
+        if (sub && sub.isActive === false) {
+            sub.isActive = true;
+            await owner.save();
+        }
+        console.log(
+            `[ESTRUCTURA] Reutilizo subcategoría value=${sv} (ya en categoría ${owner.label || owner.value})`
+        );
+        return { cat: owner, sub, created: false, reused: true };
+    }
+
+    preferredCat.subcategories.push({
+        name: slabel,
+        label: slabel,
+        value: sv,
+        isActive: true,
+        order: preferredCat.subcategories.length + 1,
+        specifications: []
+    });
+    try {
+        await preferredCat.save();
+        sub = preferredCat.subcategories.find((s) => s.value === sv);
+        console.log(
+            `[ESTRUCTURA] Creada nueva subcategoría: ${slabel} (categoría ${preferredCat.label || preferredCat.value})`
+        );
+        return { cat: preferredCat, sub, created: true };
+    } catch (err) {
+        if (!isMongoDupKeyError(err)) throw err;
+        // Carrera / índice: otro doc ya tiene el value → descartar push local y reutilizar.
+        const freshPreferred = await Category.findById(preferredCat._id);
+        const again = await findCategoryOwningSubValue(sv);
+        if (!again) throw err;
+        sub = (again.subcategories || []).find((s) => s.value === sv);
+        console.warn(
+            `[ESTRUCTURA] E11000 al crear sub ${sv}; reutilizo existente en ${again.value}`
+        );
+        return {
+            cat: again,
+            sub,
+            created: false,
+            reused: true,
+            preferredCat: freshPreferred || preferredCat
+        };
+    }
+}
+
 /**
  * Crea categoría / subcategorías en Mongo según filas del menú Visão (prep masivo).
+ * Si la sub ya existe en cualquier categoría → se reutiliza (índice único global).
  */
 async function ensureCategoryTreeFromMenuRows(menuRows) {
     if (!menuRows || !menuRows.length) return { categoriesTouched: 0 };
@@ -669,55 +811,49 @@ async function ensureCategoryTreeFromMenuRows(menuRows) {
         byCat.get(r.categoryValue).subs.set(r.subcategoryValue, resolvedSubLabel);
     }
 
-    let orderBase =
-        (await Category.findOne().sort({ order: -1 }).select('order').lean())?.order || 0;
-
     let touched = 0;
+    let reusedSubs = 0;
+    let createdSubs = 0;
     for (const [cv, info] of byCat) {
-        let cat = await Category.findOne({ value: cv });
-        if (!cat) {
-            orderBase += 1;
-            cat = new Category({
-                name: info.categoryLabel,
-                label: info.categoryLabel,
-                value: cv,
-                order: orderBase,
-                isActive: true,
-                color: DEFAULT_CATEGORY_COLOR,
-                icon: DEFAULT_CATEGORY_ICON,
-                subcategories: []
-            });
-            await cat.save();
-            console.log(`[ESTRUCTURA] Creada nueva categoría: ${info.categoryLabel}`);
-        }
+        try {
+            const cat = await ensureRootCategoryDoc(cv, info.categoryLabel);
+            if (!cat) continue;
 
-        let changed = false;
-        for (const [sv, slabel] of info.subs) {
-            const exists = cat.subcategories.some((s) => s.value === sv);
-            if (!exists) {
-                cat.subcategories.push({
-                    name: slabel,
-                    label: slabel,
-                    value: sv,
-                    isActive: true,
-                    order: cat.subcategories.length + 1,
-                    specifications: []
-                });
-                changed = true;
-                console.log(`[ESTRUCTURA] Creada nueva subcategoría: ${slabel} (categoría ${info.categoryLabel})`);
+            let changedHere = false;
+            for (const [sv, slabel] of info.subs) {
+                const ensured = await ensureSubcategoryOnCategoryDoc(cat, sv, slabel);
+                if (ensured.created) {
+                    createdSubs += 1;
+                    changedHere = true;
+                } else if (ensured.reused) {
+                    reusedSubs += 1;
+                }
             }
-        }
-        if (changed) {
-            await cat.save();
-            touched++;
+            if (changedHere) touched += 1;
+        } catch (err) {
+            console.warn(
+                `[ESTRUCTURA] Continúo tras error en categoría ${cv}: ${err && err.message ? err.message : err}`
+            );
         }
     }
 
-    return { categoriesTouched: touched, uniqueCategories: byCat.size };
+    if (reusedSubs || createdSubs) {
+        console.log(
+            `[ESTRUCTURA] Menú: categorías tocadas=${touched} subs nuevas=${createdSubs} subs reutilizadas=${reusedSubs}`
+        );
+    }
+
+    return {
+        categoriesTouched: touched,
+        uniqueCategories: byCat.size,
+        createdSubs,
+        reusedSubs
+    };
 }
 
 /**
  * Por cada producto: asegura Category + Subcategoría y añade specs faltantes en subcategorías.specifications.
+ * Reutiliza subcategoría existente (índice único) en lugar de fallar con E11000.
  */
 async function prepareCategorySpecInfrastructure({
     categoryValue,
@@ -730,43 +866,23 @@ async function prepareCategorySpecInfrastructure({
     const catLabel = (categoryLabel || categoryValue || 'Catálogo').trim();
     const subLab = (subcategoryLabel || subcategoryValue).trim();
 
-    let cat = await Category.findOne({ value: categoryValue });
+    let cat = await ensureRootCategoryDoc(categoryValue, catLabel);
     if (!cat) {
-        let orderMax =
-            (await Category.findOne().sort({ order: -1 }).select('order').lean())?.order || 0;
-        orderMax += 1;
-        cat = new Category({
-            name: catLabel,
-            label: catLabel,
-            value: categoryValue,
-            order: orderMax,
-            isActive: true,
-            color: DEFAULT_CATEGORY_COLOR,
-            icon: DEFAULT_CATEGORY_ICON,
-            subcategories: []
-        });
-        await cat.save();
-        console.log(`[ESTRUCTURA] Creada nueva categoría: ${catLabel}`);
+        return { categoryId: undefined, subcategoryId: undefined };
     }
 
-    let sub = cat.subcategories.find((s) => s.value === subcategoryValue);
+    const ensured = await ensureSubcategoryOnCategoryDoc(cat, subcategoryValue, subLab);
+    cat = ensured.cat || cat;
+    let sub = ensured.sub;
     if (!sub) {
-        cat.subcategories.push({
-            name: subLab,
-            label: subLab,
-            value: subcategoryValue,
-            isActive: true,
-            order: cat.subcategories.length + 1,
-            specifications: []
-        });
-        sub = cat.subcategories[cat.subcategories.length - 1];
-        console.log(`[ESTRUCTURA] Creada nueva subcategoría: ${subLab} (categoría ${catLabel})`);
+        return { categoryId: cat._id, subcategoryId: undefined };
     }
 
-    let orderBase = sub.specifications.length;
-    for (const name of Object.keys(standardizedSpecs)) {
+    let orderBase = Array.isArray(sub.specifications) ? sub.specifications.length : 0;
+    let specsChanged = false;
+    for (const name of Object.keys(standardizedSpecs || {})) {
         const label = labelByName[name] || name;
-        const exists = sub.specifications.some(
+        const exists = (sub.specifications || []).some(
             (sp) =>
                 sp.name === name ||
                 (sp.label && sp.label.toLowerCase() === String(label).toLowerCase())
@@ -781,18 +897,94 @@ async function prepareCategorySpecInfrastructure({
                 required: false,
                 order: orderBase
             });
+            specsChanged = true;
             console.log(
                 `[ESTRUCTURA] Añadida nueva especificación: ${label} → subcategoría ${subLab}`
             );
         }
     }
 
-    await cat.save();
+    if (specsChanged) {
+        try {
+            await cat.save();
+        } catch (err) {
+            if (!isMongoDupKeyError(err)) throw err;
+            console.warn(
+                `[ESTRUCTURA] E11000 al guardar specs sub=${subcategoryValue}; reintento con doc fresco`
+            );
+            const owner = await findCategoryOwningSubValue(subcategoryValue);
+            if (owner) {
+                cat = owner;
+                sub = (owner.subcategories || []).find((s) => s.value === subcategoryValue);
+            }
+        }
+    }
 
-    sub = cat.subcategories.find((s) => s.value === subcategoryValue);
+    sub = (cat.subcategories || []).find((s) => s.value === subcategoryValue) || sub;
     return {
         categoryId: cat._id,
         subcategoryId: sub ? sub._id : undefined
+    };
+}
+
+/**
+ * Productos Visão que ya no están en el scrape: stock 0 + borrar imágenes de Firebase
+ * (libera cuota). Deja en Mongo solo URLs no-Firebase (p. ej. CDN Visão) si las hubiera.
+ */
+async function markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos) {
+    const filter = {
+        syncSource: SYNC_SOURCE,
+        codigo: { $nin: catalogCodigos }
+    };
+
+    const toClean = await productModel
+        .find(filter)
+        .select('_id codigo productImage stock stockStatus')
+        .lean();
+
+    let firebaseDeleted = 0;
+    let firebaseFailed = 0;
+    let productsWithFirebaseCleanup = 0;
+
+    const BATCH = 25;
+    for (let i = 0; i < toClean.length; i += BATCH) {
+        const batch = toClean.slice(i, i + BATCH);
+        await Promise.all(
+            batch.map(async (doc) => {
+                const urls = Array.isArray(doc.productImage) ? doc.productImage : [];
+                const firebaseUrls = urls.filter(isFirebaseStorageUrl);
+                if (firebaseUrls.length === 0) return;
+
+                const del = await deleteFirebaseImages(firebaseUrls, { maxConcurrent: 6 });
+                firebaseDeleted += del.deleted;
+                firebaseFailed += del.failed;
+                productsWithFirebaseCleanup += 1;
+
+                const kept = urls.filter((u) => !isFirebaseStorageUrl(u));
+                await productModel.updateOne(
+                    { _id: doc._id },
+                    {
+                        $set: {
+                            stock: 0,
+                            stockStatus: 'out_of_stock',
+                            productImage: kept
+                        }
+                    }
+                );
+            })
+        );
+    }
+
+    const resMongo = await productModel.updateMany(filter, {
+        $set: { stock: 0, stockStatus: 'out_of_stock' }
+    });
+
+    return {
+        stockCleanupCount: resMongo.modifiedCount ?? 0,
+        productsScanned: toClean.length,
+        productsWithFirebaseCleanup,
+        firebaseDeleted,
+        firebaseFailed
     };
 }
 
@@ -983,28 +1175,63 @@ async function persistOneVisaoProduct(scraped, ctx) {
                 : String(scraped.descripcion)
             : scraped.descripcion || '';
 
-        const firebaseImageUrls = [];
-        const altUrls = Array.isArray(scraped.imagenes) ? scraped.imagenes : [];
-        for (let i = 0; i < Math.min(altUrls.length, maxImagesPerProduct); i++) {
-            try {
-                const imgRes = await importImageFromUrlWithRetries(
-                    altUrls[i],
-                    `${code}_${i}`,
-                    {},
-                    2
-                );
-                firebaseImageUrls.push(imgRes.publicUrl);
-            } catch {
-                if (imageFailureCounter && typeof imageFailureCounter.count === 'number') {
-                    imageFailureCounter.count += 1;
+        /** Solo Firebase en productImage (nunca se escribe CDN Visão). Reutiliza URLs Firebase si ya existen. */
+        const existing = await productModel.findOne({ codigo: code });
+        const previousImages = Array.isArray(existing?.productImage)
+            ? existing.productImage.slice()
+            : [];
+        const existingFirebaseUrls = previousImages.filter(isFirebaseStorageUrl);
+        const forceReimportImages = !!ctx.forceReimportImages;
+
+        /** null = no tocar productImage (p. ej. aún tiene CDN viejo hasta que la subida a Firebase funcione) */
+        let productImageUrls = null;
+        if (existingFirebaseUrls.length > 0 && !forceReimportImages) {
+            productImageUrls = existingFirebaseUrls;
+        } else {
+            const firebaseImageUrls = [];
+            const altUrls = Array.isArray(scraped.imagenes) ? scraped.imagenes : [];
+            for (let i = 0; i < Math.min(altUrls.length, maxImagesPerProduct); i++) {
+                try {
+                    const imgRes = await importImageFromUrlWithRetries(
+                        altUrls[i],
+                        `${code}_${i}`,
+                        {},
+                        2
+                    );
+                    if (imgRes && imgRes.publicUrl && isFirebaseStorageUrl(imgRes.publicUrl)) {
+                        firebaseImageUrls.push(imgRes.publicUrl);
+                    }
+                } catch (imgErr) {
+                    if (imageFailureCounter && typeof imageFailureCounter.count === 'number') {
+                        imageFailureCounter.count += 1;
+                        if (imageFailureCounter.count <= 8) {
+                            const msg =
+                                (imgErr && (imgErr.code || imgErr.message)) || String(imgErr || '');
+                            console.warn(
+                                `[IMAGE] fallo upload codigo=${code} idx=${i}: ${String(msg).slice(0, 180)}`
+                            );
+                        }
+                    }
                 }
             }
+            if (firebaseImageUrls.length > 0) {
+                productImageUrls = firebaseImageUrls;
+            } else if (existingFirebaseUrls.length > 0) {
+                productImageUrls = existingFirebaseUrls;
+            }
         }
-        const fallbackImageUrls = altUrls
-            .map((u) => (u == null ? '' : String(u).trim()))
-            .filter(Boolean);
-        const productImageUrls =
-            firebaseImageUrls.length > 0 ? firebaseImageUrls : fallbackImageUrls;
+
+        if (!existing && !(productImageUrls && productImageUrls.length)) {
+            persistResults.push({
+                codigo: code,
+                action: 'skipped',
+                reason: 'firebase_images_required',
+                detail:
+                    'Alta nueva sin URL Firebase (subida fallida/cuota). No se usa CDN Visão. Liberá Storage o activá Blaze y re-sincronizá.',
+                url: scraped.url
+            });
+            return;
+        }
 
         const visaoTaxonomy = buildVisaoTaxonomyForProduct(scraped);
 
@@ -1019,9 +1246,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             console.log(`[PROGRESO] Procesado producto ${productIndex} de ${productTotal}...`);
         }
 
-        const existing = await productModel.findOne({ codigo: code });
-
-        /** Espejo completo Visão: cada corrida revalida y sobrescribe PDP → Mongo (imágenes, precios, taxonomía, texto, stock listado). */
+        /** Espejo completo Visão: cada corrida revalida y sobrescribe PDP → Mongo (imágenes Firebase, precios, taxonomía, texto, stock listado). */
         if (existing) {
             const beforeSnap = snapshotForMirrorCompare(existing);
 
@@ -1031,7 +1256,9 @@ async function persistOneVisaoProduct(scraped, ctx) {
             existing.subcategory = subcategoryValue;
             if (categoryId) existing.categoryId = categoryId;
             if (subcategoryId) existing.subcategoryId = subcategoryId;
-            existing.productImage = productImageUrls;
+            if (productImageUrls && productImageUrls.length > 0) {
+                existing.productImage = productImageUrls;
+            }
             existing.documentationLink = scraped.url;
             existing.description = mirrorStrict
                 ? descriptionNew
@@ -1040,7 +1267,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             existing.technicalSpecifications = specCanonical;
             existing.specifications = { ...specCanonical };
             applyCanonicalSpecsToDocument(existing, specCanonical);
-            existing.price = 0;
+            existing.price = Number.isFinite(prices.price) && prices.price > 0 ? prices.price : 0;
             existing.purchasePriceUSD = prices.purchasePriceUSD;
             existing.exchangeRate = prices.exchangeRate;
             existing.purchasePrice = prices.purchasePrice;
@@ -1063,12 +1290,28 @@ async function persistOneVisaoProduct(scraped, ctx) {
 
             existing.lastUpdatedFinance = new Date();
             await existing.save();
+
+            if (productImageUrls && productImageUrls.length > 0) {
+                const newSet = new Set(productImageUrls.filter(Boolean));
+                const orphanedFirebase = previousImages.filter(
+                    (u) => isFirebaseStorageUrl(u) && !newSet.has(u)
+                );
+                if (orphanedFirebase.length > 0) {
+                    try {
+                        await deleteFirebaseImages(orphanedFirebase, { maxConcurrent: 6 });
+                    } catch {
+                        /* no bloquear el sync si falla el borrado */
+                    }
+                }
+            }
+
             scrapedCodigosSet.add(code);
             persistResults.push({
                 codigo: code,
                 action: 'updated',
                 productId: String(existing._id),
-                changedFields: drifted
+                changedFields: drifted,
+                imagesFirebaseOnly: !!(productImageUrls && productImageUrls.length)
             });
             return;
         }
@@ -1091,7 +1334,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             description: descriptionNew,
             technicalSpecifications: specCanonical,
             specifications: { ...specCanonical },
-            price: 0,
+            price: Number.isFinite(prices.price) && prices.price > 0 ? prices.price : 0,
             codigo: code,
             slug: uniqueSlug,
             syncSource: SYNC_SOURCE,
@@ -1292,6 +1535,7 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
             ? Math.max(1, Number(opts.minMenuRowsForPrune))
             : 20;
     const exportFrontendProductCategoryJs = opts.exportFrontendProductCategoryJs !== false;
+    const forceReimportImages = !!opts.forceReimportImages;
 
     if (resetCatalog) {
         const resAll = await productModel.updateMany(
@@ -1316,11 +1560,27 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         `[Visão mirror] Scrape terminó: ${bundle.productsReturned} PDP, ${bundle.menuRows?.length || 0} filas menú.`
     );
 
-    const catReport = await ensureCategoryTreeFromMenuRows(bundle.menuRows || []);
-    console.log('[Visão mirror] Prep árbol categorías:', catReport);
+    let catReport = { categoriesTouched: 0 };
+    try {
+        catReport = await ensureCategoryTreeFromMenuRows(bundle.menuRows || []);
+        console.log('[Visão mirror] Prep árbol categorías:', catReport);
+    } catch (err) {
+        console.warn(
+            '[Visão mirror] Prep árbol categorías falló (continúo a PERSIST):',
+            err && err.message ? err.message : err
+        );
+    }
 
-    const navReport = await rebuildVisaoNavigationTrees(bundle.menuRows || []);
-    console.log('[Visão mirror] Árbol navegación Visão (visaoNavigationTree):', navReport);
+    let navReport = { categoriesWithTree: 0 };
+    try {
+        navReport = await rebuildVisaoNavigationTrees(bundle.menuRows || []);
+        console.log('[Visão mirror] Árbol navegación Visão (visaoNavigationTree):', navReport);
+    } catch (err) {
+        console.warn(
+            '[Visão mirror] Árbol navegación falló (continúo):',
+            err && err.message ? err.message : err
+        );
+    }
 
     const rateDoc = await ExchangeRateModel.getCurrentRate('USD');
     const exchangeRate = Number(rateDoc.toPYG) > 0 ? Number(rateDoc.toPYG) : 7300;
@@ -1344,12 +1604,14 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
             productIndex: idx + 1,
             productTotal: total,
             verboseProgressEvery: total <= 100 ? 10 : 50,
-            mirrorStrict
+            mirrorStrict,
+            forceReimportImages
         });
     });
 
     const scrapedCodigosPersistidos = [...scrapedCodigosSet];
     let stockCleanupCount = 0;
+    let firebaseImageCleanup = null;
 
     /** SKUs que entraron al catálogo del scrape pero no terminaron en created/updated (errores, skip PDP, precio, etc.) */
     const catalogSkusNotPersisted = [...catalogCodigosSet].filter((c) => !scrapedCodigosSet.has(c));
@@ -1359,13 +1621,10 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         catalogCodigosSet.size > 0 &&
         (bundle.productsReturned || 0) > 0
     ) {
-        const resMongo = await productModel.updateMany(
-            { syncSource: SYNC_SOURCE, codigo: { $nin: catalogCodigos } },
-            { $set: { stock: 0, stockStatus: 'out_of_stock' } }
-        );
-        stockCleanupCount = resMongo.modifiedCount ?? 0;
+        firebaseImageCleanup = await markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos);
+        stockCleanupCount = firebaseImageCleanup.stockCleanupCount;
         console.log(
-            `[Visão mirror] cleanupMissingStock codigos PDP=${catalogCodigosSet.size}: visao_vip sin SKU en último scrape → stock 0 (${stockCleanupCount} docs)`
+            `[Visão mirror] cleanupMissingStock codigos PDP=${catalogCodigosSet.size}: visao_vip sin SKU en último scrape → stock 0 (${stockCleanupCount} docs); firebase borradas=${firebaseImageCleanup.firebaseDeleted} fallidas=${firebaseImageCleanup.firebaseFailed}`
         );
     }
 
@@ -1437,6 +1696,7 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         },
         cleanupMissingStock,
         stockCleanupCount,
+        firebaseImageCleanup,
         persistResults,
         mirrorSummary
     };
@@ -1527,13 +1787,14 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
     const scrapedCodigosPersistidos = [...scrapedCodigosSet];
     const catalogSkusNotPersisted = [...catalogCodigosSet].filter((c) => !scrapedCodigosSet.has(c));
     let stockCleanupCount = 0;
+    let firebaseImageCleanup = null;
     const productsReturnedLegacy = scrapeData.productsReturned || 0;
     if (cleanupMissingStock && catalogCodigosSet.size > 0 && productsReturnedLegacy > 0) {
-        const resMongo = await productModel.updateMany(
-            { syncSource: SYNC_SOURCE, codigo: { $nin: catalogCodigos } },
-            { $set: { stock: 0, stockStatus: 'out_of_stock' } }
+        firebaseImageCleanup = await markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos);
+        stockCleanupCount = firebaseImageCleanup.stockCleanupCount;
+        console.log(
+            `[Visão sync] cleanupMissingStock → stock 0 (${stockCleanupCount}); firebase borradas=${firebaseImageCleanup.firebaseDeleted}`
         );
-        stockCleanupCount = resMongo.modifiedCount ?? 0;
     }
 
     const mirrorSummary = buildSyncSummary(persistResults, startedAt, imageFailureCounter.count);
@@ -1551,6 +1812,7 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
         exchangeRate,
         cleanupMissingStock,
         stockCleanupCount,
+        firebaseImageCleanup,
         scrapedCodigosEnCatalog: catalogCodigos,
         scrapedCodigosPersistidos,
         reconciliation: {

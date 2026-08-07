@@ -57,6 +57,14 @@ async function updateUser(req, res) {
             ...(role && {role : role}),
         }
 
+        // Al cambiar rol, aplicar permisos por defecto (adminPanel, etc.)
+        if (role) {
+            const targetBefore = await userModel.findById(userId).select('role');
+            if (targetBefore && targetBefore.role !== role) {
+                payload.permissions = userModel.getDefaultPermissions(role);
+            }
+        }
+
         // ✅ ACTUALIZAR USUARIO Y DEVOLVER DATOS ACTUALIZADOS
         const updatedUser = await userModel.findByIdAndUpdate(
             userId, 

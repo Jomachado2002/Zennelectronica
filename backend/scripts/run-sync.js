@@ -16,7 +16,8 @@
  *   --quick               Topes muy bajos (validación rápida; similar a visaovip-mirror-quick).
  *   --full                Sin topes por defecto / crawl muy grande (puede tardar horas).
  *   --reset-catalog       Pon stock 0 a TODOS los productos antes del sync.
- *   --cleanup-missing     Tras sync, stock 0 en visao_vip no aparecidos en el run.
+ *   --cleanup-missing     Tras sync, stock 0 en visao_vip no aparecidos + borra sus imágenes de Firebase.
+ *   --force-reimport-images  Vuelve a subir imágenes a Firebase (WebP) aunque ya existan.
  *   --persist-concurrency=N
  *   --detail-concurrency=N
  *   --listing-concurrency=N
@@ -30,6 +31,25 @@
  */
 
 const path = require('path');
+const fs = require('fs');
+
+// Si stdout va a archivo (nohup), Node bufferiza y parece “colgado/muerto”. Forzar línea a línea.
+function syncWrite(fd, args) {
+    const util = require('util');
+    fs.writeSync(fd, util.format(...args) + '\n');
+}
+console.log = (...args) => syncWrite(1, args);
+console.warn = (...args) => syncWrite(2, args);
+console.error = (...args) => syncWrite(2, args);
+
+process.on('uncaughtException', (err) => {
+    console.error('[run-sync] uncaughtException', err && err.stack ? err.stack : err);
+    process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+    console.error('[run-sync] unhandledRejection', err && err.stack ? err.stack : err);
+    process.exit(1);
+});
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -159,7 +179,8 @@ async function main() {
             mirrorScrapeOpts,
             maxImagesPerProduct: Math.round(numArg('--max-images-per-product', 8)),
             mirrorPrune: !has('--no-prune'),
-            exportFrontendProductCategoryJs: !has('--no-export-frontend')
+            exportFrontendProductCategoryJs: !has('--no-export-frontend'),
+            forceReimportImages: has('--force-reimport-images')
         });
 
         console.log('[run-sync] Reporte mirror:', JSON.stringify(report, null, 2));

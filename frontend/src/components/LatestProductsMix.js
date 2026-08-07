@@ -48,13 +48,13 @@ const LatestProductsMix = ({ limit = 5 }) => {
 const queryClient = useQueryClient();
 
 useEffect(() => {
-    const homeCache = queryClient.getQueryData(['category-products', 'home', 'slots-v2']);
+    const homeCache = queryClient.getQueryData(['category-products', 'home', 'slots-v4']);
 
     const slots = homeCache?.data?.slots;
     if (homeCache?.data && Array.isArray(slots?.recientes) && slots.recientes.length > 0) {
         const filteredProducts = slots.recientes.filter(product => {
             const s = product?.stock;
-            return s === undefined || s === null || s > 0 || s === 0;
+            return typeof s === 'number' && s >= 1;
         });
         const uniqueProducts = filteredProducts.filter((product, index, self) =>
             index === self.findIndex(p => p._id === product._id)
@@ -105,8 +105,7 @@ const fetchDataFromServer = async () => {
 
         if (responseData.success && responseData.data?.slots?.recientes?.length) {
             const filteredProducts = responseData.data.slots.recientes.filter(product => {
-                const hasStock = product?.stock === undefined || product?.stock === null || product?.stock > 0;
-                return hasStock;
+                return typeof product?.stock === 'number' && product.stock >= 1;
             });
             const uniqueProducts = filteredProducts.filter((product, index, self) =>
                 index === self.findIndex(p => p._id === product._id)
@@ -139,9 +138,7 @@ const fetchDataFromServer = async () => {
             
             // ✅ FILTRAR PRODUCTOS CON STOCK Y ELIMINAR DUPLICADOS
             const filteredProducts = allProducts.filter(product => {
-                // Filtrar por stock
-                const hasStock = product?.stock === undefined || product?.stock === null || product?.stock > 0;
-                return hasStock;
+                return typeof product?.stock === 'number' && product.stock >= 1;
             });
             
             // ✅ ELIMINAR DUPLICADOS POR ID

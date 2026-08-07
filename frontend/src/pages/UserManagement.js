@@ -162,7 +162,7 @@ const UserManagement = () => {
     try {
       setLoading(true);
       
-      // Obtener permisos por defecto para el nuevo rol
+      // Actualizar rol + permisos por defecto del nuevo rol
       const newPermissions = defaultPermissions[newRole];
       
       const response = await fetch(`${SummaryApi.baseURL}/api/admin/users/${userId}/permissions`, {
@@ -172,6 +172,7 @@ const UserManagement = () => {
         },
         credentials: 'include',
         body: JSON.stringify({
+          role: newRole,
           permissions: newPermissions
         })
       });
@@ -180,7 +181,7 @@ const UserManagement = () => {
 
       if (data.success) {
         toast.success(`Rol actualizado a ${newRole}`);
-        fetchUsers(); // Recargar usuarios
+        fetchUsers();
       } else {
         toast.error(data.message || 'Error al actualizar rol');
       }
@@ -430,7 +431,14 @@ const UserManagement = () => {
                         {getRoleIcon(user.role)}
                         <select
                           value={user.role}
-                          onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                          onChange={(e) => {
+                            const nextRole = e.target.value;
+                            if (nextRole === 'ROOT' && !window.confirm('¿Asignar rol ROOT? Tendrá control total del sistema.')) {
+                              e.target.value = user.role;
+                              return;
+                            }
+                            handleRoleChange(user._id, nextRole);
+                          }}
                           disabled={!canEditUsers}
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(user.role)} ${
                             canEditUsers ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'

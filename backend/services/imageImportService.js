@@ -1,17 +1,59 @@
 // backend/services/imageImportService.js
-// Servicio para importar imágenes desde URLs del proveedor a Firebase Storage
+// Servicio para importar imágenes desde URLs del proveedor a R2 (CDN) o Firebase Storage
 
 const axios = require('axios');
+const sharp = require('sharp');
 const { initializeApp } = require('firebase/app');
-const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+const { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } = require('firebase/storage');
 const { v4: uuidv4 } = require('uuid');
+const {
+    isR2Configured,
+    uploadBufferToR2,
+    deleteObjectFromR2,
+    isR2PublicUrl,
+    r2KeyFromPublicUrl
+} = require('./r2StorageService');
+
+function useR2Storage() {
+    const mode = (process.env.IMAGE_STORAGE || 'r2').toLowerCase();
+    return mode === 'r2' && isR2Configured();
+}
+
+/** Misma política que scripts/webp-conversion-config.js */
+const WEBP_OPTS = {
+    quality: 85,
+    effort: 6,
+    maxWidth: 1920,
+    maxHeight: 1080
+};
+
+/**
+ * Convierte cualquier imagen soportada a WebP (único formato que subimos a Firebase).
+ */
+async function convertBufferToWebP(imageBuffer, options = {}) {
+    const quality = options.quality != null ? options.quality : WEBP_OPTS.quality;
+    const effort = options.effort != null ? options.effort : WEBP_OPTS.effort;
+    const maxWidth = options.maxWidth != null ? options.maxWidth : WEBP_OPTS.maxWidth;
+    const maxHeight = options.maxHeight != null ? options.maxHeight : WEBP_OPTS.maxHeight;
+
+    const webpBuffer = await sharp(imageBuffer, { animated: false })
+        .rotate()
+        .resize(maxWidth, maxHeight, {
+            fit: 'inside',
+            withoutEnlargement: true
+        })
+        .webp({ quality, effort })
+        .toBuffer();
+
+    return webpBuffer;
+}
 
 // Configuración de Firebase - usando la misma configuración que funciona en uploadProduct
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "eccomerce-jmcomputer.firebasestorage.app",
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "eccomerce-bluetec-saopaulo",
     messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.REACT_APP_FIREBASE_APP_ID,
     measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
@@ -97,8 +139,8 @@ async function downloadImage(imageUrl, timeout = 30000) {
 }
 
 /**
- * Sube una imagen a Firebase Storage
- * @param {Buffer} imageBuffer - Buffer de la imagen
+ * Sube una imagen (siempre WebP) a R2 CDN o Firebase según IMAGE_STORAGE.
+ * @param {Buffer} imageBuffer - Buffer de la imagen (cualquier formato; se convierte)
  * @param {string} providerCode - Código del producto del proveedor
  * @param {string} originalUrl - URL original de la imagen
  * @returns {Promise<string>} URL pública de la imagen subida
@@ -113,113 +155,109 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
             throw new Error('Código del proveedor requerido');
         }
 
-        // Generar nombre único para el archivo
+        const webpBuffer = await convertBufferToWebP(imageBuffer);
         const uniqueId = uuidv4();
-        const fileName = `${uniqueId}_${providerCode}.jpg`;
+        const safeCode = String(providerCode).replace(/\s+/g, '_');
+        const fileName = `${uniqueId}_${safeCode}.webp`;
         const fullPath = `products/${fileName}`;
 
-        // console.log removed for production
+        if (useR2Storage()) {
+            return await uploadBufferToR2(webpBuffer, fullPath, {
+                contentType: 'image/webp',
+                metadata: {
+                    providercode: String(providerCode).slice(0, 128),
+                    source: 'inventory_sync',
+                    format: 'webp'
+                }
+            });
+        }
 
-        // Inicializar Firebase de forma lazy
         const { storage: firebaseStorage } = initializeFirebase();
-
-        // Crear referencia en Firebase Storage
         const storageRef = ref(firebaseStorage, fullPath);
 
-        // Subir archivo
-        const snapshot = await uploadBytes(storageRef, imageBuffer, {
+        const snapshot = await uploadBytes(storageRef, webpBuffer, {
+            contentType: 'image/webp',
             customMetadata: {
-                providerCode: providerCode,
-                originalUrl: originalUrl,
+                providerCode: String(providerCode),
+                originalUrl: originalUrl || '',
                 uploadedAt: new Date().toISOString(),
-                source: 'inventory_sync'
+                source: 'inventory_sync',
+                format: 'webp'
             }
         });
 
-        // Obtener URL pública
-        const publicUrl = await getDownloadURL(snapshot.ref);
-
-        // console.log removed for production
-        return publicUrl;
-
+        return await getDownloadURL(snapshot.ref);
     } catch (error) {
-        // console.error removed for production
         throw error;
     }
 }
 
 /**
- * Importa una imagen completa: descarga desde URL del proveedor y sube a Firebase
+ * Importa una imagen completa: descarga desde URL del proveedor, convierte a WebP y sube a Firebase
  * @param {string} imageUrl - URL de la imagen del proveedor
  * @param {string} providerCode - Código del producto del proveedor
- * @param {Object} options - Opciones adicionales
+ * @param {Object} options - Opciones adicionales (quality, maxWidth, maxHeight, effort)
  * @returns {Promise<Object>} Resultado de la importación
  */
 async function importImageFromUrl(imageUrl, providerCode, options = {}) {
     try {
-        // console.log removed for production
-        
-        // 1. Descargar imagen
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             timeout: 15000,
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        
-        // console.log removed for production
-        
-        // 2. Convertir arraybuffer a File/Blob simulado para uploadImage
-        const buffer = Buffer.from(response.data);
-        const contentType = response.headers['content-type'] || 'image/jpeg';
-        
-        // Crear un objeto similar a un archivo File del navegador
-        const fakeFile = {
-            buffer: buffer,
-            originalname: `${providerCode}.jpg`,
-            mimetype: contentType,
-            size: buffer.length,
-            name: `${providerCode}.jpg` // Agregar name para compatibilidad
-        };
-        
-        // console.log removed for production
-        
-        // 3. Inicializar Firebase de forma lazy
-        const { storage: firebaseStorage } = initializeFirebase();
-        
+
+        const originalBuffer = Buffer.from(response.data);
+        if (!originalBuffer.length) {
+            throw new Error('Imagen vacía');
+        }
+
+        const webpBuffer = await convertBufferToWebP(originalBuffer, options);
+
         const uniqueId = uuidv4();
-        const fileName = `${uniqueId}_${fakeFile.name.replace(/\s+/g, '_')}`;
+        const safeCode = String(providerCode).replace(/\s+/g, '_');
+        const fileName = `${uniqueId}_${safeCode}.webp`;
         const fullPath = `products/${fileName}`;
-        
-        // console.log removed for production
-        
-        // Crear referencia en Firebase Storage
-        const storageRef = ref(firebaseStorage, fullPath);
-        
-        // Subir archivo
-        const snapshot = await uploadBytes(storageRef, buffer, {
-            customMetadata: {
-                providerCode: providerCode,
-                originalUrl: imageUrl,
-                uploadedAt: new Date().toISOString(),
-                source: 'inventory_sync'
-            }
-        });
-        
-        // Obtener URL pública
-        const publicUrl = await getDownloadURL(snapshot.ref);
-        
-        // console.log removed for production
-        
+
+        let publicUrl;
+        if (useR2Storage()) {
+            publicUrl = await uploadBufferToR2(webpBuffer, fullPath, {
+                contentType: 'image/webp',
+                metadata: {
+                    providercode: String(providerCode).slice(0, 128),
+                    source: 'inventory_sync',
+                    format: 'webp'
+                }
+            });
+        } else {
+            const { storage: firebaseStorage } = initializeFirebase();
+            const storageRef = ref(firebaseStorage, fullPath);
+            const snapshot = await uploadBytes(storageRef, webpBuffer, {
+                contentType: 'image/webp',
+                customMetadata: {
+                    providerCode: String(providerCode),
+                    originalUrl: imageUrl,
+                    uploadedAt: new Date().toISOString(),
+                    source: 'inventory_sync',
+                    format: 'webp',
+                    originalBytes: String(originalBuffer.length),
+                    webpBytes: String(webpBuffer.length)
+                }
+            });
+            publicUrl = await getDownloadURL(snapshot.ref);
+        }
+
         return {
             success: true,
             providerCode,
             originalUrl: imageUrl,
             publicUrl,
-            fileSize: buffer.length
+            fileSize: webpBuffer.length,
+            originalFileSize: originalBuffer.length,
+            format: 'webp',
+            storage: useR2Storage() ? 'r2' : 'firebase'
         };
-        
     } catch (error) {
-        // console.error removed for production
         throw error;
     }
 }
@@ -313,6 +351,125 @@ async function importMultipleImages(imageData, options = {}) {
 }
 
 /**
+ * True si la URL es de nuestro storage (R2 CDN o Firebase), no CDN Visão.
+ */
+function isFirebaseStorageUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    if (isR2PublicUrl(url)) return true;
+    return (
+        url.includes('firebasestorage.googleapis.com') ||
+        url.includes('firebasestorage.app') ||
+        url.includes('storage.googleapis.com')
+    );
+}
+
+/**
+ * Extrae la ruta del objeto a partir de una URL pública (R2 o Firebase/GCS).
+ * @returns {string|null}
+ */
+function storagePathFromPublicUrl(url) {
+    const r2Key = r2KeyFromPublicUrl(url);
+    if (r2Key) return r2Key;
+
+    if (!url || typeof url !== 'string') return null;
+    if (
+        !url.includes('firebasestorage.googleapis.com') &&
+        !url.includes('firebasestorage.app') &&
+        !url.includes('storage.googleapis.com')
+    ) {
+        return null;
+    }
+    try {
+        const encoded = url.match(/\/o\/([^?&#]+)/);
+        if (encoded) return decodeURIComponent(encoded[1]);
+
+        const gcs = url.match(/storage\.googleapis\.com\/[^/]+\/(.+?)(?:\?|$)/);
+        if (gcs) return decodeURIComponent(gcs[1]);
+
+        const appHost = url.match(/firebasestorage\.app\/(.+?)(?:\?|$)/);
+        if (appHost) return decodeURIComponent(appHost[1]);
+    } catch {
+        return null;
+    }
+    return null;
+}
+
+/**
+ * Borra un archivo de R2 o Firebase a partir de su URL pública.
+ * Ignora URLs ajenas (p. ej. cdn.visaovip.com).
+ */
+async function deleteFirebaseImageByUrl(imageUrl) {
+    if (isR2PublicUrl(imageUrl) && isR2Configured()) {
+        const key = r2KeyFromPublicUrl(imageUrl);
+        if (!key) {
+            return { deleted: false, skipped: true, reason: 'not_r2_url' };
+        }
+        try {
+            await deleteObjectFromR2(key);
+            return { deleted: true, path: key, storage: 'r2' };
+        } catch (error) {
+            const code = error && (error.name || error.Code || error.message);
+            if (code === 'NoSuchKey' || code === 'NotFound') {
+                return { deleted: false, skipped: true, reason: 'already_gone', path: key };
+            }
+            return {
+                deleted: false,
+                error: error.message || String(error),
+                path: key
+            };
+        }
+    }
+
+    const fullPath = storagePathFromPublicUrl(imageUrl);
+    if (!fullPath || isR2PublicUrl(imageUrl)) {
+        return { deleted: false, skipped: true, reason: 'not_firebase_url' };
+    }
+    try {
+        const { storage: firebaseStorage } = initializeFirebase();
+        const storageRef = ref(firebaseStorage, fullPath);
+        await deleteObject(storageRef);
+        return { deleted: true, path: fullPath, storage: 'firebase' };
+    } catch (error) {
+        const code = error && (error.code || error.message);
+        if (
+            code === 'storage/object-not-found' ||
+            (typeof code === 'string' && code.includes('object-not-found'))
+        ) {
+            return { deleted: false, skipped: true, reason: 'already_gone', path: fullPath };
+        }
+        return {
+            deleted: false,
+            error: error.message || String(error),
+            path: fullPath
+        };
+    }
+}
+
+/**
+ * Borra en paralelo (con tope) todas las URLs de Firebase de una lista.
+ */
+async function deleteFirebaseImages(urls, options = {}) {
+    const list = Array.isArray(urls) ? urls.filter(Boolean) : [];
+    const maxConcurrent = options.maxConcurrent != null ? Math.max(1, options.maxConcurrent) : 8;
+    const firebaseUrls = list.filter(isFirebaseStorageUrl);
+    const results = [];
+
+    for (let i = 0; i < firebaseUrls.length; i += maxConcurrent) {
+        const chunk = firebaseUrls.slice(i, i + maxConcurrent);
+        const chunkRes = await Promise.all(chunk.map((u) => deleteFirebaseImageByUrl(u)));
+        results.push(...chunkRes);
+    }
+
+    return {
+        attempted: firebaseUrls.length,
+        deleted: results.filter((r) => r.deleted).length,
+        skipped: results.filter((r) => r.skipped).length,
+        failed: results.filter((r) => r.error).length,
+        results
+    };
+}
+
+/**
  * Valida si una URL de imagen es accesible
  * @param {string} imageUrl - URL a validar
  * @returns {Promise<boolean>} True si es accesible
@@ -348,5 +505,11 @@ module.exports = {
     importImageFromUrl,
     importImageFromUrlWithRetries,
     importMultipleImages,
-    validateImageUrl
+    validateImageUrl,
+    isFirebaseStorageUrl,
+    storagePathFromPublicUrl,
+    deleteFirebaseImageByUrl,
+    deleteFirebaseImages,
+    convertBufferToWebP,
+    WEBP_OPTS
 };

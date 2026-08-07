@@ -59,7 +59,7 @@ const updateUserPermissionsController = async (req, res) => {
         }
         
         const { userId } = req.params;
-        const { permissions } = req.body;
+        const { permissions, role } = req.body;
         
         // Verificar que el usuario objetivo existe
         const targetUser = await userModel.findById(userId);
@@ -70,25 +70,89 @@ const updateUserPermissionsController = async (req, res) => {
                 error: true
             });
         }
-        
-        // No permitir modificar permisos de ROOT
-        if (targetUser.role === 'ROOT') {
+
+        const allowedRoles = ['GENERAL', 'ADMIN', 'ROOT'];
+        if (role && !allowedRoles.includes(role)) {
+            return res.status(400).json({
+                message: 'Rol inválido',
+                success: false,
+                error: true
+            });
+        }
+
+        const isSelf = String(targetUser._id) === String(currentUser._id);
+        const isDemotingRoot = targetUser.role === 'ROOT' && role && role !== 'ROOT';
+        const isEditingOtherRootPermissions =
+            targetUser.role === 'ROOT' &&
+            !role &&
+            permissions &&
+            !isSelf;
+
+        // Un ROOT puede cambiar el rol de otro ROOT (ej. a ADMIN),
+        // pero no editar solo permisos de otro ROOT sin cambiar rol.
+        if (isEditingOtherRootPermissions) {
             return res.status(403).json({
-                message: 'No se pueden modificar los permisos de un usuario ROOT',
+                message: 'Para modificar un usuario ROOT, cambiá primero su rol (ADMIN/GENERAL)',
+                success: false,
+                error: true
+            });
+        }
+
+        // Evitar que el último ROOT se quite el rol ROOT
+        if (isDemotingRoot) {
+            const rootCount = await userModel.countDocuments({ role: 'ROOT' });
+            if (rootCount <= 1) {
+                return res.status(403).json({
+                    message: 'No se puede quitar el rol ROOT al único usuario ROOT del sistema',
+                    success: false,
+                    error: true
+                });
+            }
+        }
+
+        // Evitar auto-bloqueo: no podés quitarte ROOT a vos mismo si sos el único
+        if (isSelf && isDemotingRoot) {
+            const rootCount = await userModel.countDocuments({ role: 'ROOT' });
+            if (rootCount <= 1) {
+                return res.status(403).json({
+                    message: 'No podés quitarte el rol ROOT siendo el único ROOT',
+                    success: false,
+                    error: true
+                });
+            }
+        }
+
+        const updatePayload = {};
+        if (permissions && typeof permissions === 'object') {
+            // No persistir el campo "role" dentro de permissions si viene del getUserPermissions
+            const { role: _ignoreRole, ...cleanPermissions } = permissions;
+            updatePayload.permissions = cleanPermissions;
+        }
+        if (role) {
+            updatePayload.role = role;
+            if (!updatePayload.permissions) {
+                updatePayload.permissions = userModel.getDefaultPermissions(role);
+            }
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+            return res.status(400).json({
+                message: 'No hay cambios para aplicar',
                 success: false,
                 error: true
             });
         }
         
-        // Actualizar permisos
         const updatedUser = await userModel.findByIdAndUpdate(
             userId,
-            { permissions: permissions },
+            updatePayload,
             { new: true, runValidators: true }
         ).select('-password');
         
         res.json({
-            message: 'Permisos actualizados exitosamente',
+            message: role
+                ? `Usuario actualizado a rol ${role}`
+                : 'Permisos actualizados exitosamente',
             success: true,
             error: false,
             data: {

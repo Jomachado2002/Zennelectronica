@@ -124,9 +124,18 @@ const VISAO_VIP_DELIVERY_PYG =
  * Precio de venta Visão Vip:
  * - Si el PDP viene en USD: basePyg = usd × cotización (Mongo) → ((basePyg / 0,83) + 30000)
  * - Si el PDP viene en Gs.: ((montoGs / 0,83) + 30000) sin pasar por USD para el cálculo
+ * - Si hay precio lista (tachado): `price` usa la misma fórmula; si no, `price` = 0
  */
 function calculateVisaoVipPrices(opts = {}) {
-    const { precioFuente, precioUsd, precioPygRaw, exchangeRate } = opts;
+    const {
+        precioFuente,
+        precioUsd,
+        precioPygRaw,
+        exchangeRate,
+        precioListaFuente,
+        precioListaUsd,
+        precioListaPygRaw
+    } = opts;
     const rate = Number(exchangeRate);
     if (!Number.isFinite(rate) || rate <= 0) {
         throw new Error('El tipo de cambio debe ser mayor a 0');
@@ -134,32 +143,56 @@ function calculateVisaoVipPrices(opts = {}) {
 
     const divisor = VISAO_VIP_MARGIN_DIVISOR;
     const delivery = VISAO_VIP_DELIVERY_PYG;
-    let basePyg;
-    let purchasePriceUSD;
-    const fuente = String(precioFuente || '').toUpperCase();
 
-    if (fuente === 'PYG') {
-        const pyg = Math.round(Number(precioPygRaw));
-        if (!Number.isFinite(pyg) || pyg <= 0) {
-            throw new Error('Precio en guaraníes inválido');
+    function resolveBase(fuenteIn, usdIn, pygIn) {
+        const fuente = String(fuenteIn || '').toUpperCase();
+        if (fuente === 'PYG') {
+            const pyg = Math.round(Number(pygIn));
+            if (!Number.isFinite(pyg) || pyg <= 0) {
+                throw new Error('Precio en guaraníes inválido');
+            }
+            return {
+                fuente: 'PYG',
+                basePyg: pyg,
+                purchasePriceUSD: Math.round((pyg / rate) * 100) / 100
+            };
         }
-        basePyg = pyg;
-        purchasePriceUSD = Math.round((basePyg / rate) * 100) / 100;
-    } else {
-        const usd = Number(precioUsd);
+        const usd = Number(usdIn);
         if (!Number.isFinite(usd) || usd <= 0) {
             throw new Error('Precio en USD inválido');
         }
-        purchasePriceUSD = usd;
-        basePyg = Math.round(usd * rate);
+        return {
+            fuente: 'USD',
+            basePyg: Math.round(usd * rate),
+            purchasePriceUSD: usd
+        };
     }
 
-    const sellingPrice = Math.round(basePyg / divisor + delivery);
-    const purchasePrice = basePyg;
+    const sale = resolveBase(precioFuente, precioUsd, precioPygRaw);
+    const sellingPrice = Math.round(sale.basePyg / divisor + delivery);
+    const purchasePrice = sale.basePyg;
     const profitAmount = sellingPrice - purchasePrice - delivery;
 
+    let listPrice = 0;
+    const listaFuente = String(precioListaFuente || '').toUpperCase();
+    if (
+        (listaFuente === 'USD' && Number(precioListaUsd) > 0) ||
+        (listaFuente === 'PYG' && Number(precioListaPygRaw) > 0)
+    ) {
+        try {
+            const list = resolveBase(listaFuente, precioListaUsd, precioListaPygRaw);
+            const computedList = Math.round(list.basePyg / divisor + delivery);
+            // Solo tachar si el precio lista (ya transformado) queda por encima del de oferta
+            if (computedList > sellingPrice) {
+                listPrice = computedList;
+            }
+        } catch {
+            listPrice = 0;
+        }
+    }
+
     return {
-        purchasePriceUSD,
+        purchasePriceUSD: sale.purchasePriceUSD,
         exchangeRate: rate,
         purchasePrice,
         deliveryCost: delivery,
@@ -167,9 +200,9 @@ function calculateVisaoVipPrices(opts = {}) {
         profitAmount: Math.round(profitAmount),
         sellingPrice,
         totalCost: purchasePrice + delivery,
-        price: 0,
-        precioFuente: fuente === 'PYG' ? 'PYG' : 'USD',
-        precioBasePyg: basePyg,
+        price: listPrice,
+        precioFuente: sale.fuente,
+        precioBasePyg: sale.basePyg,
         visaoMarginDivisor: divisor
     };
 }

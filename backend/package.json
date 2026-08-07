@@ -15,14 +15,19 @@
     "test-brevo": "node test-brevo.js",
     "test-meta": "node scripts/test-meta-conversions-api.js",
     "run-sync": "node scripts/run-sync.js",
+    "watch-visao-sync": "node scripts/watch-visao-sync.js",
+    "daemon-visao-full": "node scripts/daemon-visao-full-mirror.js --restart",
     "visao-purge-full": "node scripts/visao-purge-and-full-mirror.js --confirm-purge",
     "generate-home-slot-routes": "node scripts/generate-home-slot-nav-routes.js",
-    "validate-home-slots": "node scripts/validate-home-featured-slots.js"
+    "validate-home-slots": "node scripts/validate-home-featured-slots.js",
+    "restore-business-dry-run": "node scripts/restore-business-data-from-backup.js --dry-run",
+    "restore-business": "node scripts/restore-business-data-from-backup.js --confirm"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1103.0",
     "@google-cloud/storage": "^7.16.0",
     "archiver": "^7.0.1",
     "axios": "^1.8.1",

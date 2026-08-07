@@ -1,2 +1,0 @@
-Imagen 3 no disponible: https://firebasestorage.googleapis.com/v0/b/eccomerce-jmcomputer.firebasestorage.app/o/products%2F1fcefbd4-38eb-4c0e-bc5f-efaa86674a42_vd8m91mtbd8mp4n62elf.webp?alt=media&token=758d9fe4-4acc-43e8-85da-de9fffcae9e2
-Error: timeout of 30000ms exceeded

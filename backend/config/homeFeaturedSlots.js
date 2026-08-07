@@ -5,6 +5,7 @@
  * Tras cada full mirror/export de categorías, se valida contra Mongo y se regenera
  * `frontend/src/config/homeSlotNavRoutes.generated.js` (primer par de cada slot = navegación).
  *
+ * Pares = category/subcategory **activos** en productos con stock (Visão renombra values).
  * Si Visão cambia `value`: actualizar aquí; el validador (`npm run validate-home-slots`)
  * y el mensaje tras export te avisan si algo no existe.
  */
@@ -19,7 +20,8 @@ const HOME_SLOT_DEFS = [
         key: 'celulares',
         limit: 20,
         pairs: [
-            { category: 'celulares_y_tablets', subcategory: 'celulares__32_01' },
+            { category: 'celulares_y_tablets', subcategory: 'smartphones_y_celulares__32_01' },
+            { category: 'celulares_y_tablets', subcategory: 'tablets__32_02' },
             { category: 'celulares_y_tablets', subcategory: 'telefonos__32_03' }
         ]
     },
@@ -27,8 +29,8 @@ const HOME_SLOT_DEFS = [
         key: 'placas_madre',
         limit: 20,
         pairs: [
-            { category: 'placas_madres', subcategory: 'mb_intel__22_01' },
-            { category: 'placas_madres', subcategory: 'mb_amd__22_02' }
+            { category: 'placas_madre', subcategory: 'mb_intel__22_01' },
+            { category: 'placas_madre', subcategory: 'mb_amd__22_02' }
         ]
     },
     {
@@ -53,9 +55,9 @@ const HOME_SLOT_DEFS = [
         key: 'discos',
         limit: 20,
         pairs: [
-            { category: 'almacenamiento', subcategory: 'ssd_m_2_nvme__21_03_03' },
-            { category: 'almacenamiento', subcategory: 'hd_interno__21_02_01' },
-            { category: 'almacenamiento', subcategory: 'ssd_2_5__21_03_02' },
+            { category: 'almacenamiento', subcategory: 'ssd__21_03' },
+            { category: 'almacenamiento', subcategory: 'disco_duro_interno__21_02_01' },
+            { category: 'almacenamiento', subcategory: 'disco_duro_externo__21_02_02' },
             { category: 'almacenamiento', subcategory: 'pendrive__21_04' }
         ]
     },

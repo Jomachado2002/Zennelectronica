@@ -12,15 +12,79 @@ function delay(ms) {
 /**
  * PDP en paralelo comparten disco de caché HTTP del browser → respuestas de documento mezcladas
  * (mismo síntoma que 6/20 sin precio). `page.setCacheEnabled` no existe en Puppeteer ≥24; usar CDP.
+ * También corta imágenes/fuentes/CSS/analytics para que goto no quede colgado en recursos eternos.
  */
+async function installScraperRequestInterception(page) {
+    if (!page || page.__visaoInterceptInstalled) return;
+    page.__visaoInterceptInstalled = true;
+    try {
+        await page.setRequestInterception(true);
+    } catch {
+        page.__visaoInterceptInstalled = false;
+        return;
+    }
+    page.on('request', (req) => {
+        try {
+            const type = req.resourceType();
+            // No abortar stylesheet/script: Next.js/PrimeReact necesita CSS+JS para hidratar el grid.
+            if (type === 'image' || type === 'font' || type === 'media' || type === 'ping' || type === 'manifest') {
+                req.abort().catch(() => {});
+                return;
+            }
+            const url = req.url();
+            if (
+                /google-analytics|googletagmanager|facebook\.net|hotjar|clarity\.ms|doubleclick|adservice|scorecardresearch/i.test(
+                    url
+                )
+            ) {
+                req.abort().catch(() => {});
+                return;
+            }
+            req.continue().catch(() => {});
+        } catch {
+            try {
+                req.continue().catch(() => {});
+            } catch {
+                /* ignore */
+            }
+        }
+    });
+}
+
 async function configureScraperPage(page) {
     await page.setViewport({ width: 1366, height: 900 });
+    await page
+        .setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        )
+        .catch(() => {});
+    await page
+        .evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        })
+        .catch(() => {});
     try {
         const client = await page.createCDPSession();
         await client.send('Network.setCacheDisabled', { cacheDisabled: true });
     } catch {
         /* ignore */
     }
+    await installScraperRequestInterception(page);
+}
+
+function pdpFailureResult(productUrl, error, reason) {
+    let supplierCode = null;
+    try {
+        supplierCode = extractSupplierCodeFromPath(new URL(String(productUrl || '')).pathname);
+    } catch {
+        supplierCode = null;
+    }
+    return {
+        url: productUrl,
+        error: error || true,
+        scrapeRejectReason: reason ? String(reason).slice(0, 560) : '',
+        supplierCode
+    };
 }
 
 /** Compartido con mirror PDP: errores típicos de Chromium muerto/desconectado */
@@ -63,12 +127,15 @@ function getProtocolTimeoutMs() {
 function getPdpHardTimeoutMs() {
     const v = Number(process.env.VISAO_PDP_HARD_TIMEOUT_MS);
     if (Number.isFinite(v) && v > 0) return Math.min(Math.max(v, 30_000), 3_600_000);
-    return 180_000;
+    // Antes 180s: con esperas internas malas + 3 reintentos = corridas de días.
+    // Con waits cortos, 55s alcanza para PDP lento o CF suave.
+    return 55_000;
 }
 
 /** Mismas opciones que backend/scripts/test-puppeteer.js */
 function getLaunchOptions() {
-    return {
+    const fs = require('fs');
+    const options = {
         headless: 'new',
         protocolTimeout: getProtocolTimeoutMs(),
         args: [
@@ -78,6 +145,25 @@ function getLaunchOptions() {
             '--disable-gpu'
         ]
     };
+    // Solo path de Chrome (mac/linux). No cambia lógica de scrape.
+    const fromEnv = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
+    const candidates = [
+        fromEnv,
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/google-chrome'
+    ].filter(Boolean);
+    for (const p of candidates) {
+        try {
+            if (fs.existsSync(p)) {
+                options.executablePath = p;
+                break;
+            }
+        } catch {
+            /* ignore */
+        }
+    }
+    return options;
 }
 
 function absolutize(base, href) {
@@ -141,24 +227,66 @@ function isListingNextDisabled(nextHandle) {
 const PRODUCT_PATH_RE_STR = '^/es/prod/[^/]+/.+/\\d+/?$';
 
 /**
- * Recolecta URLs de productos en una página de categoría; pagina con .p-paginator-next.
- * El grid no usa siempre `.product-card`; se espera enlaces `/es/prod/.../<id>/`.
+ * Hidrata el grid Next.js/PrimeReact: scroll lazy + espera de anchors de producto.
+ * Evita networkidle2 largo (analytics/websockets lo cuelgan en Visão).
+ */
+async function waitForListingProductGrid(page, opts = {}) {
+    const timeout = opts.timeout != null ? opts.timeout : 25000;
+    // Scroll corto: basta para lazy-load del primer viewport + siguientes filas.
+    await page
+        .evaluate(async () => {
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            for (const y of [0, 500, 1100, 1800, 500, 0]) {
+                window.scrollTo(0, y);
+                await sleep(140);
+            }
+        })
+        .catch(() => {});
+
+    try {
+        await page.waitForFunction(
+            () => document.querySelectorAll('a[href*="/es/prod/"]').length > 0,
+            { timeout }
+        );
+    } catch {
+        /* vacío o lento */
+    }
+
+    await page.waitForNetworkIdle({ idleTime: 350, timeout: 4500 }).catch(() => {});
+    await delay(250);
+}
+
+/**
+ * Recolecta URLs de productos en una página de categoría.
+ * Pagina con ?page=N (Next.js RSC) en lugar de click .p-paginator-next:
+ * el click dispara Cloudflare/challenge y cortaba listados (~3 págs → 72 notebooks vs ~180 reales).
  */
 async function collectProductUrlsForCategory(page, categoryUrl, opts = {}) {
     const { urlBudget, singlePageOnly } = opts;
-    await page.goto(categoryUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await installScraperRequestInterception(page);
+
+    let baseHref;
     try {
-        await page.waitForSelector('a[href*="/es/prod/"]', { timeout: singlePageOnly ? 8000 : 5000 });
+        const u = new URL(categoryUrl);
+        u.search = '';
+        u.hash = '';
+        baseHref = u.href.replace(/\/?$/, '/');
     } catch {
-        return [];
+        baseHref = String(categoryUrl || '').split('?')[0].replace(/\/?$/, '/');
     }
 
     const seen = new Set();
-    let safetyPages = 0;
     const maxPages = 200;
 
-    while (safetyPages < maxPages) {
-        await page.waitForSelector('a[href*="/es/prod/"]', { timeout: 8000 }).catch(() => null);
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        if (urlBudget != null && seen.size >= urlBudget) break;
+        if (singlePageOnly && pageNum > 1) break;
+
+        const pageUrl = `${baseHref}?page=${pageNum}`;
+        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await waitForListingProductGrid(page, {
+            timeout: singlePageOnly || pageNum === 1 ? 25000 : 18000
+        });
 
         const batch = await page.evaluate((reSource) => {
             const pathReInner = new RegExp(reSource, 'i');
@@ -174,29 +302,24 @@ async function collectProductUrlsForCategory(page, categoryUrl, opts = {}) {
             return urls;
         }, PRODUCT_PATH_RE_STR);
 
+        let newOnPage = 0;
         for (const u of batch) {
-            const abs = absolutize(categoryUrl, u);
-            if (abs) seen.add(abs.split('?')[0]);
+            const abs = absolutize(baseHref, u);
+            if (!abs) continue;
+            const clean = abs.split('?')[0];
+            if (!seen.has(clean)) {
+                seen.add(clean);
+                newOnPage += 1;
+            }
             if (urlBudget != null && seen.size >= urlBudget) break;
         }
 
-        if (urlBudget != null && seen.size >= urlBudget) break;
+        // Vacío real, o fuera de rango (Visão suele repetir la última página → 0 nuevos).
+        if (batch.length === 0 || (pageNum > 1 && newOnPage === 0)) break;
         if (singlePageOnly) break;
+        if (urlBudget != null && seen.size >= urlBudget) break;
 
-        const nextSel = '.p-paginator-next:not(.p-disabled)';
-        let nextBtn = await page.$(nextSel);
-        if (!nextBtn) {
-            nextBtn = await page.$('.p-paginator-next');
-            if (!nextBtn) break;
-            const disabled = await isListingNextDisabled(nextBtn);
-            if (disabled) break;
-        } else if (await isListingNextDisabled(nextBtn)) break;
-
-        safetyPages++;
-        await Promise.all([
-            nextBtn.click(),
-            page.waitForNetworkIdle({ idleTime: 500, timeout: 30000 }).catch(() => delay(1200))
-        ]);
+        await delay(200);
     }
 
     return [...seen];
@@ -444,8 +567,35 @@ function pickUsdFromTextUsdList(usdPrices) {
 }
 
 /**
- * Precio nativo del PDP para sync: USD explícito o Gs. explícito (sin convertir Gs.→USD para la fórmula de venta).
+ * Parsea un fragmento de texto de precio (hero) a USD o PYG.
  * @returns {{ precioFuente: 'USD'|'PYG', precioUsd: number|null, precioPygRaw: number|null }|null}
+ */
+function resolveMoneyFromPriceText(text) {
+    if (!text || typeof text !== 'string') return null;
+    const maxUsd = getMaxReasonableUsd();
+    const pygLikelyAbove = getAssumePygAbove();
+    const u = pickUsdFromTextUsdList(parseUsdPrices(text));
+    if (u != null && u <= maxUsd) {
+        return { precioFuente: 'USD', precioUsd: u, precioPygRaw: null };
+    }
+    const gs = parseHeroGsAmount(text);
+    if (gs != null && gs >= pygLikelyAbove) {
+        return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gs) };
+    }
+    return null;
+}
+
+/**
+ * Precio nativo del PDP para sync: USD explícito o Gs. explícito (sin convertir Gs.→USD para la fórmula de venta).
+ * Incluye precio lista (tachado) cuando Visão muestra descuento.
+ * @returns {{
+ *   precioFuente: 'USD'|'PYG',
+ *   precioUsd: number|null,
+ *   precioPygRaw: number|null,
+ *   precioListaFuente?: 'USD'|'PYG',
+ *   precioListaUsd?: number|null,
+ *   precioListaPygRaw?: number|null
+ * }|null}
  */
 function resolveVisaoPrecioForSync(domRaw) {
     const hay =
@@ -454,64 +604,132 @@ function resolveVisaoPrecioForSync(domRaw) {
     const maxUsd = getMaxReasonableUsd();
     const pygLikelyAbove = getAssumePygAbove();
 
-    for (let i = 0; i < hints.length; i++) {
-        const h = hints[i];
-        let cur = String(h.currency ?? '')
-            .toUpperCase()
-            .replace(/\s+/g, '')
-            .replace(/\./g, '');
-        const rawPrice = String(h.price ?? '')
-            .trim()
-            .replace(/^["']+|["']+$/g, '');
-        const num = parseMoneyTokenToFloat(rawPrice);
-        if (!Number.isFinite(num) || num <= 0) continue;
-        if (cur === 'GS' || cur === 'GUARANI' || cur === 'GUARANIES') cur = 'PYG';
-        if (cur === 'USD' || cur === 'US$' || cur === 'DÓLARES') {
-            if (num <= maxUsd) {
-                return { precioFuente: 'USD', precioUsd: roundUsd2(num), precioPygRaw: null };
-            }
-            continue;
-        }
-        if (cur === 'PYG') {
-            return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(num) };
-        }
-    }
+    /** @type {{ precioFuente: 'USD'|'PYG', precioUsd: number|null, precioPygRaw: number|null }|null} */
+    let sale = null;
 
-    const fragText = Array.isArray(domRaw.mainPriceFragments)
-        ? domRaw.mainPriceFragments.filter(Boolean).join('\n')
+    // Preferir nodos de precio oferta (text-vip / PrecoDestacado) sobre JSON-LD genérico
+    const saleFragText = Array.isArray(domRaw.salePriceFragments)
+        ? domRaw.salePriceFragments.filter(Boolean).join('\n')
         : '';
-    if (fragText) {
-        const uFrag = pickUsdFromTextUsdList(parseUsdPrices(fragText));
-        if (uFrag != null) {
-            return { precioFuente: 'USD', precioUsd: uFrag, precioPygRaw: null };
+    if (saleFragText) {
+        sale = resolveMoneyFromPriceText(saleFragText);
+    }
+
+    if (sale == null) {
+        for (let i = 0; i < hints.length; i++) {
+            const h = hints[i];
+            let cur = String(h.currency ?? '')
+                .toUpperCase()
+                .replace(/\s+/g, '')
+                .replace(/\./g, '');
+            const rawPrice = String(h.price ?? '')
+                .trim()
+                .replace(/^["']+|["']+$/g, '');
+            const num = parseMoneyTokenToFloat(rawPrice);
+            if (!Number.isFinite(num) || num <= 0) continue;
+            if (cur === 'GS' || cur === 'GUARANI' || cur === 'GUARANIES') cur = 'PYG';
+            if (cur === 'USD' || cur === 'US$' || cur === 'DÓLARES') {
+                if (num <= maxUsd) {
+                    sale = { precioFuente: 'USD', precioUsd: roundUsd2(num), precioPygRaw: null };
+                    break;
+                }
+                continue;
+            }
+            if (cur === 'PYG') {
+                sale = { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(num) };
+                break;
+            }
         }
-        const gsFrag = parseHeroGsAmount(fragText);
-        if (gsFrag != null && gsFrag >= pygLikelyAbove) {
-            return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsFrag) };
+    }
+
+    if (sale == null) {
+        const fragText = Array.isArray(domRaw.mainPriceFragments)
+            ? domRaw.mainPriceFragments.filter(Boolean).join('\n')
+            : '';
+        if (fragText) {
+            sale = resolveMoneyFromPriceText(fragText);
         }
     }
 
-    const heroTrim = trimHeroBlock(hay, HERO_CUT_MARKERS);
-    const uHero = pickUsdFromTextUsdList(parseUsdPrices(heroTrim));
-    if (uHero != null) {
-        return { precioFuente: 'USD', precioUsd: uHero, precioPygRaw: null };
-    }
-    const gsHero = parseHeroGsAmount(heroTrim);
-    if (gsHero != null && gsHero >= pygLikelyAbove) {
-        return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsHero) };
-    }
-
-    const early = hay.slice(0, Math.min(hay.length, 7200));
-    const uEarly = pickUsdFromTextUsdList(parseUsdPrices(early));
-    if (uEarly != null) {
-        return { precioFuente: 'USD', precioUsd: uEarly, precioPygRaw: null };
-    }
-    const gsEarly = parseHeroGsAmount(early);
-    if (gsEarly != null && gsEarly >= pygLikelyAbove) {
-        return { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsEarly) };
+    if (sale == null) {
+        const heroTrim = trimHeroBlock(hay, HERO_CUT_MARKERS);
+        const uHero = pickUsdFromTextUsdList(parseUsdPrices(heroTrim));
+        if (uHero != null) {
+            sale = { precioFuente: 'USD', precioUsd: uHero, precioPygRaw: null };
+        } else {
+            const gsHero = parseHeroGsAmount(heroTrim);
+            if (gsHero != null && gsHero >= pygLikelyAbove) {
+                sale = { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsHero) };
+            }
+        }
     }
 
-    return null;
+    if (sale == null) {
+        const early = hay.slice(0, Math.min(hay.length, 7200));
+        const uEarly = pickUsdFromTextUsdList(parseUsdPrices(early));
+        if (uEarly != null) {
+            sale = { precioFuente: 'USD', precioUsd: uEarly, precioPygRaw: null };
+        } else {
+            const gsEarly = parseHeroGsAmount(early);
+            if (gsEarly != null && gsEarly >= pygLikelyAbove) {
+                sale = { precioFuente: 'PYG', precioUsd: null, precioPygRaw: Math.round(gsEarly) };
+            }
+        }
+    }
+
+    if (sale == null) return null;
+
+    /** Precio tachado (lista) — solo si es mayor al de oferta en la misma moneda. */
+    const listFragText = Array.isArray(domRaw.listPriceFragments)
+        ? domRaw.listPriceFragments.filter(Boolean).join('\n')
+        : '';
+    let list = listFragText ? resolveMoneyFromPriceText(listFragText) : null;
+
+    /**
+     * Fallback: en el hero suelen aparecer U$ lista + U$ oferta (p.ej. 1499 y 1419).
+     * Si no hubo nodos tachados, inferir lista = mayor y oferta = menor.
+     */
+    if (!list && sale.precioFuente === 'USD') {
+        const heroTrim = trimHeroBlock(hay, HERO_CUT_MARKERS);
+        const usdAll = parseUsdPrices(heroTrim)
+            .map((n) => roundUsd2(n))
+            .filter((n) => Number.isFinite(n) && n > 0 && n <= maxUsd);
+        const unique = [...new Set(usdAll)];
+        if (unique.length >= 2) {
+            const lo = Math.min(...unique);
+            const hi = Math.max(...unique);
+            if (hi > lo * 1.005) {
+                // Si el "sale" actual es el mayor (JSON-LD a veces trae lista), corregir
+                if (Number(sale.precioUsd) >= hi * 0.999) {
+                    sale = { precioFuente: 'USD', precioUsd: lo, precioPygRaw: null };
+                }
+                list = { precioFuente: 'USD', precioUsd: hi, precioPygRaw: null };
+            }
+        }
+    }
+
+    if (list && sale.precioFuente === list.precioFuente) {
+        const saleAmt =
+            sale.precioFuente === 'USD' ? Number(sale.precioUsd) : Number(sale.precioPygRaw);
+        const listAmt =
+            list.precioFuente === 'USD' ? Number(list.precioUsd) : Number(list.precioPygRaw);
+        if (!(Number.isFinite(listAmt) && Number.isFinite(saleAmt) && listAmt > saleAmt)) {
+            list = null;
+        }
+    } else if (list && sale.precioFuente !== list.precioFuente) {
+        list = null;
+    }
+
+    if (!list) {
+        return sale;
+    }
+
+    return {
+        ...sale,
+        precioListaFuente: list.precioFuente,
+        precioListaUsd: list.precioFuente === 'USD' ? list.precioUsd : null,
+        precioListaPygRaw: list.precioFuente === 'PYG' ? list.precioPygRaw : null
+    };
 }
 
 /** PYG→USD usando VISAO_PYG_PER_USD o 7300 (alineado con sync por defecto). */
@@ -571,90 +789,127 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                     : imgsBase;
 
             const especificaciones = {};
+            function isNoiseSpecKey(key) {
+                return /^(especificaciones|especificacoes|comparte|compartir|categor[ií]a|c[oó]digo|inicio|home|descripci[oó]n|descricao)$/i.test(
+                    key
+                );
+            }
+            function isNoiseSpecVal(val) {
+                return (
+                    /^\d{1,2}:\d{2}\s*a\s*\d{1,2}:\d{2}/i.test(val) ||
+                    /iva\s+incluido|confirme\s+la\s+cotizaci|lista\s+de\s+deseos/i.test(val)
+                );
+            }
             function putSpec(key, val) {
                 const k = (key || '').trim().replace(/\s*:\s*$/, '').replace(/\s+/g, ' ');
                 const v = (val || '').trim().replace(/\s+/g, ' ');
-                if (k && v) especificaciones[k] = v;
+                if (!k || !v) return;
+                if (k.length > 120 || v.length > 320) return;
+                if (isNoiseSpecKey(k) || isNoiseSpecVal(v)) return;
+                if (/^https?:\/\//i.test(v)) return;
+                especificaciones[k] = v;
             }
-            const specRoots = [
-                ...document.querySelectorAll(
-                    '.p-panel-content, [class*="spec"], [id*="spec"], article, main section, main'
-                )
-            ];
-            specRoots.forEach((panel) => {
+
+            /**
+             * Visão PDP (PrimeReact Panel): título "Especificaciones" + filas
+             * <div class="... md:flex ..."><p>MARCA</p><span>Apple</span></div>
+             */
+            function findEspecificacionesContentRoot() {
+                const panels = [
+                    ...document.querySelectorAll('[data-pc-name="panel"], .p-panel, .p-panel-toggleable')
+                ];
+                for (const panel of panels) {
+                    const titleEl = panel.querySelector(
+                        '.p-panel-title, [data-pc-section="title"], .p-panel-header'
+                    );
+                    const titleTxt = (titleEl && titleEl.textContent ? titleEl.textContent : '')
+                        .trim()
+                        .replace(/\s+/g, ' ');
+                    if (!/especificaciones|especificacoes/i.test(titleTxt)) continue;
+                    return (
+                        panel.querySelector(
+                            '.p-panel-content, [data-pc-section="content"], .p-toggleable-content'
+                        ) || panel
+                    );
+                }
+                // Respaldo: sección que ya muestra filas tipo MARCA / REFERENCIA
+                const sections = [...document.querySelectorAll('section, .p-panel-content')];
+                for (const sec of sections) {
+                    const sample = (sec.innerText || '').slice(0, 800);
+                    if (/MARCA[\s\S]{0,40}REFERENCIA|REFERENCIA[\s\S]{0,40}COLOR/i.test(sample)) {
+                        return sec;
+                    }
+                }
+                return null;
+            }
+
+            function extractFlexSpecRows(root) {
+                if (!root) return;
+                const rows = [
+                    ...root.querySelectorAll(
+                        'div[class*="flex"], div[class*="align-items-center"], div.md\\:flex'
+                    )
+                ];
+                // Incluir también padres directos de <p.font-bold> + <span>
+                root.querySelectorAll('p').forEach((pEl) => {
+                    const parent = pEl.parentElement;
+                    if (parent && !rows.includes(parent)) rows.push(parent);
+                });
+
+                for (const row of rows) {
+                    const kids = [...row.children];
+                    const pEl =
+                        kids.find((c) => c.tagName === 'P') ||
+                        row.querySelector(':scope > p');
+                    const spanEl =
+                        kids.find((c) => c.tagName === 'SPAN') ||
+                        row.querySelector(':scope > span.text-color-secondary, :scope > span');
+                    if (!pEl || !spanEl) continue;
+                    // Evitar filas anidadas que capturan el panel entero
+                    if (pEl.querySelector('span') || spanEl.querySelector('p')) continue;
+                    const key = String(pEl.textContent || '').trim();
+                    const val = String(spanEl.textContent || '').trim();
+                    // Claves de specs Visão suelen ser cortas y en mayúsculas / título
+                    if (key.length < 2 || key.length > 80) continue;
+                    if (val.length < 1) continue;
+                    putSpec(key, val);
+                }
+            }
+
+            const specContentRoot = findEspecificacionesContentRoot();
+            extractFlexSpecRows(specContentRoot);
+
+            // Tablas / dl solo dentro del panel de specs (si existe) o en article
+            const tableRoots = specContentRoot
+                ? [specContentRoot]
+                : [...document.querySelectorAll('article, main section')];
+            tableRoots.forEach((panel) => {
+                if (!panel) return;
                 panel.querySelectorAll('table tr').forEach((row) => {
                     const cells = row.querySelectorAll('th, td');
-                    const keyEl = cells[0];
-                    const valEl = cells[1];
-                    if (!keyEl || !valEl) return;
-                    putSpec(keyEl.textContent, valEl.textContent);
+                    if (cells.length < 2) return;
+                    putSpec(cells[0].textContent, cells[1].textContent);
                 });
                 panel.querySelectorAll('dl dt').forEach((dt) => {
                     const dd = dt.nextElementSibling;
-                    const key = dt.textContent.trim().replace(/\s*:\s*$/, '');
-                    if (dd && dd.tagName === 'DD') putSpec(key, dd.textContent);
-                });
-                /**
-                 * Next.js + PrimeReact (2025+): "Especificaciones" en filas flex con <p> (clave) + <span> (valor).
-                 * Ej: https://www.visaovip.com/es/prod/.../54489/
-                 */
-                panel.querySelectorAll('div[class*="flex"]').forEach((row) => {
-                    const kids = [...row.children];
-                    const pEl = kids.find((c) => c.tagName === 'P');
-                    const spanEl = kids.find((c) => c.tagName === 'SPAN');
-                    if (!pEl || !spanEl) return;
-                    const key = String(pEl.textContent || '').trim().replace(/\s*:\s*$/, '');
-                    const val = String(spanEl.textContent || '').trim().replace(/\s+/g, ' ');
-                    if (!key || !val || key.length > 140) return;
-                    if (/^especificaciones$/i.test(key)) return;
-                    if (/comparte|lista de deseos|agregar a lista/i.test(key)) return;
-                    putSpec(key, val);
-                });
-                panel.querySelectorAll('li').forEach((li) => {
-                    const pEl = li.querySelector('p');
-                    const spanEl = li.querySelector('span');
-                    if (!pEl || !spanEl) return;
-                    putSpec(pEl.textContent, spanEl.textContent);
-                });
-                panel.querySelectorAll('div, li').forEach((row) => {
-                    const children = [...row.children];
-                    if (children.length !== 2) return;
-                    const [left, right] = children;
-                    const leftText = (left.textContent || '').trim();
-                    const rightText = (right.textContent || '').trim();
-                    if (!leftText || !rightText) return;
-                    if (leftText.length > 120 || rightText.length > 240) return;
-                    if (/comparte|lista de deseos|agregar a lista/i.test(leftText)) return;
-                    putSpec(leftText, rightText);
+                    if (dd && dd.tagName === 'DD') putSpec(dt.textContent, dd.textContent);
                 });
             });
-            // PDP alternativas / tablas fuera del panel → mismo objeto para technicalSpecifications en Mongo (strict: false)
-            document.querySelectorAll('article table tr, main section table tr').forEach((row) => {
-                const cells = row.querySelectorAll('th, td');
-                if (cells.length < 2) return;
-                const key = cells[0].textContent.trim().replace(/\s*:\s*$/, '').replace(/\s+/g, ' ');
-                const val = cells[1].textContent.trim().replace(/\s+/g, ' ');
-                if (key && val && especificaciones[key] === undefined) putSpec(key, val);
-            });
-            if (Object.keys(especificaciones).length === 0) {
-                const textPool = [
-                    document.querySelector('main')?.innerText || '',
-                    document.body?.innerText || ''
-                ]
-                    .join('\n')
+
+            // Último recurso: líneas "CLAVE: valor" SOLO si el panel no dio nada
+            // (antes contaminaba con horarios "06:30 a 15:00 hs" y basura del footer)
+            if (Object.keys(especificaciones).length === 0 && specContentRoot) {
+                const lines = String(specContentRoot.innerText || '')
                     .split('\n')
                     .map((l) => l.trim())
                     .filter(Boolean);
-                for (const line of textPool) {
-                    if (!/:/.test(line)) continue;
-                    const parts = line.split(':');
-                    if (parts.length < 2) continue;
-                    const key = parts[0];
-                    const val = parts.slice(1).join(':');
-                    if (!key || !val) continue;
-                    if (key.length > 100 || val.length > 260) continue;
-                    if (/c[oó]digo|categor[ií]a|comparte|lista de deseos/i.test(key)) continue;
-                    putSpec(key, val);
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const key = lines[i];
+                    const val = lines[i + 1];
+                    if (/^[A-ZÁÉÍÓÚÑ0-9][A-ZÁÉÍÓÚÑ0-9 /|_-]{1,60}$/.test(key) && val && !/^[A-ZÁÉÍÓÚÑ]{3,}$/.test(val)) {
+                        putSpec(key, val);
+                        i += 1;
+                    }
                 }
             }
 
@@ -775,6 +1030,61 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 if (/U\s*\$\s*|G\$\s*[\d]/i.test(txt)) mainPrices.push(txt);
             });
 
+            /**
+             * Precio lista (tachado) vs precio oferta en el hero del PDP.
+             * Visão: <div class="texto-cinza-50" style="text-decoration: line-through">U$ 1.499,00</div>
+             *         <div class="text-vip">U$ 1.419,00</div>
+             * No usar font-sora / texto-cinza-50 como señal de oferta (aparecen en ambos).
+             */
+            const listPriceFragments = [];
+            const salePriceFragments = [];
+            const priceRoot = document.querySelector('main') || document.body;
+            const priceNodes = priceRoot ? priceRoot.querySelectorAll('div, span, p, h1, h2, h3, strong, b') : [];
+            for (let i = 0; i < priceNodes.length && i < 900; i++) {
+                const el = priceNodes[i];
+                if (!(el instanceof HTMLElement)) continue;
+                const direct = [...el.childNodes]
+                    .filter((n) => n.nodeType === Node.TEXT_NODE)
+                    .map((n) => String(n.textContent || '').trim())
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim();
+                const t =
+                    direct ||
+                    (el.children.length === 0 ? String(el.textContent || '').trim().replace(/\s+/g, ' ') : '');
+                if (!t || t.length > 42) continue;
+                if (!/U\s*\$\s*[\d.,]+/i.test(t) && !/G\$\s*[\d.\s,]+/.test(t)) continue;
+
+                const styleAttr = String(el.getAttribute('style') || '');
+                const cls = String(el.className || '');
+                let struck = /line-through/i.test(styleAttr) || /line-through|text-line-through/i.test(cls);
+                if (!struck) {
+                    try {
+                        const dec = (window.getComputedStyle(el).textDecorationLine || '').toLowerCase();
+                        struck = dec.includes('line-through');
+                    } catch {
+                        /* ignore */
+                    }
+                }
+
+                if (struck) {
+                    listPriceFragments.push(t);
+                } else if (/text-vip|PrecoDestacado/i.test(cls)) {
+                    salePriceFragments.push(t);
+                }
+            }
+            if (listPriceFragments.length === 0) {
+                priceRoot.querySelectorAll('[class*="line-through"], [style*="line-through"]').forEach((el) => {
+                    const t = String(el.textContent || '')
+                        .trim()
+                        .replace(/\s+/g, ' ')
+                        .slice(0, 42);
+                    if (/U\s*\$\s*[\d.,]+/i.test(t) || /G\$\s*[\d.\s,]+/.test(t)) {
+                        listPriceFragments.push(t);
+                    }
+                });
+            }
+
             /** Migas de categoría desde la PDP (no el menú lateral). */
             function extractPdpBreadcrumbLabelsPDP() {
                 const norm = (s) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, 200);
@@ -835,6 +1145,8 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 titulo,
                 priceHaystack,
                 mainPriceFragments: mainPrices.slice(0, 8),
+                listPriceFragments: listPriceFragments.slice(0, 8),
+                salePriceFragments: salePriceFragments.slice(0, 8),
                 structuredPriceHints: structuredHints.slice(0, 24),
                 rawTextSnippet: bodyText.slice(0, 12000),
                 imagenes: [...new Set(imgs)],
@@ -846,75 +1158,144 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         }, urlParam);
     }
 
+    await installScraperRequestInterception(page);
     await page.goto(productUrl, {
         waitUntil: 'domcontentloaded',
-        timeout: preview ? 45000 : 60000
+        timeout: preview ? 35000 : 45000
     });
-    await page.waitForSelector('h2', { timeout: preview ? 12000 : 12000 }).catch(() => null);
-    await page
-        .waitForSelector('.p-panel-content, [class*="price"], [data-pc-name="product"]', {
-            timeout: preview ? 4000 : 6000
-        })
-        .catch(() => {});
+    await page.waitForSelector('h2', { timeout: preview ? 8000 : 10000 }).catch(() => null);
+
     /**
-     * No usar flex genérico en todo el documento: el menú/header suele tener <p>+<span>
-     * y hace que esta espera se cumpla antes de hidratar el PDP → timeouts en señal de precio.
+     * Señal real de PDP listo: Código + precio de producto (U$ / US$ / U$S).
+     * NO usar G$ del header (cotización) — eso daba falso positivo y luego
+     * la espera de specs (tabla/flex) timeoutaba 18s en casi todos los PDPs.
      */
-    await page
-        .waitForFunction(
-            () => {
-                const b = document.body?.innerText || '';
-                if (!/(?:c[oó]digo|código)\s*:\s*\d+/i.test(b)) return false;
-                const productRoot =
-                    document.querySelector('[data-pc-name="product"]') ||
-                    document.querySelector('article') ||
-                    document.querySelector('main') ||
-                    document.body;
-                if (!productRoot) return false;
-                if (productRoot.querySelector('table tr td, dl dt')) return true;
-                if (productRoot.querySelector('[class*="spec"], [id*="spec"]')) return true;
-                return [...productRoot.querySelectorAll('div[class*="flex"], li')].some((row) => {
-                    const kids = [...row.children];
-                    return kids.some((c) => c.tagName === 'P') && kids.some((c) => c.tagName === 'SPAN');
-                });
-            },
-            { timeout: preview ? 8000 : 18000 }
-        )
-        .catch(() => {});
+    const pdpContentReadyJs = () => {
+        /* eslint-env browser */
+        const mainEl = document.querySelector('main') || document.body;
+        const t = `${mainEl?.innerText || ''}\n${document.body?.innerText || ''}`;
+        const hasCodigo = /(?:c[oó]digo|código)\s*:\s*\d+/i.test(t);
+        const hasProductUsd =
+            /U\s*\$\s*[\d.,]+/i.test(t) ||
+            /US\s*\$\s*[\d.,]+/i.test(t) ||
+            /U\$S\s*[\d.,]+/i.test(t) ||
+            /\bUSD\s*[:\.]?\s*[\d.,]+/i.test(t);
+        return hasCodigo && hasProductUsd;
+    };
     const priceSignalsReadyJs = () => {
         /* eslint-env browser */
-        const b = document.body?.innerText || '';
-        const m = document.querySelector('main')?.innerText || '';
-        const t = `${m}\n${b}`;
+        const mainEl = document.querySelector('main') || document.body;
+        const t = `${mainEl?.innerText || ''}\n${document.body?.innerText || ''}`;
         const html = document.documentElement?.innerHTML || '';
+        // Evitar G$ del header (ej. "G$ 6500 • R$ 5.18"): exigir U$ de producto o itemprop.
         return (
-            /U\s*\$\s*[\d]/i.test(t) ||
-            /US\s*\$\s*[\d]/i.test(t) ||
-            /U\$S\s*[\d]/i.test(t) ||
-            /\bGs\.?\s*[\d]/i.test(t) ||
-            /\bUSD\s*[:\.]?\s*[\d]/i.test(t) ||
-            /G\s*\$\s*[\d]/i.test(t) ||
+            /U\s*\$\s*[\d.,]+/i.test(t) ||
+            /US\s*\$\s*[\d.,]+/i.test(t) ||
+            /U\$S\s*[\d.,]+/i.test(t) ||
+            /\bUSD\s*[:\.]?\s*[\d.,]+/i.test(t) ||
             /itemprop\s*=\s*"price"/i.test(html) ||
-            /"priceCurrency"/i.test(html)
+            /"priceCurrency"\s*:\s*"USD"/i.test(html)
         );
     };
+
     await page
-        .waitForFunction(priceSignalsReadyJs, { timeout: preview ? 18000 : 32000 })
+        .waitForFunction(pdpContentReadyJs, { timeout: preview ? 12000 : 20000 })
         .catch(() => {});
-    await delay(preview ? 550 : 300);
+
+    /**
+     * Panel "Especificaciones" (PrimeReact toggleable): si está colapsado no hay filas p+span.
+     * Expandir y esperar MARCA / REFERENCIA antes del snapshot.
+     */
+    async function expandEspecificacionesPanel() {
+        await page
+            .evaluate(() => {
+                const panels = [
+                    ...document.querySelectorAll(
+                        '[data-pc-name="panel"], .p-panel, .p-panel-toggleable'
+                    )
+                ];
+                for (const panel of panels) {
+                    const titleEl = panel.querySelector(
+                        '.p-panel-title, [data-pc-section="title"], .p-panel-header'
+                    );
+                    const titleTxt = (titleEl && titleEl.textContent
+                        ? titleEl.textContent
+                        : ''
+                    ).trim();
+                    if (!/especificaciones|especificacoes/i.test(titleTxt)) continue;
+
+                    const toggler = panel.querySelector(
+                        '.p-panel-toggler, [data-pc-section="toggler"], button[aria-controls]'
+                    );
+                    const expanded =
+                        !!toggler && String(toggler.getAttribute('aria-expanded')) === 'true';
+                    if (toggler && !expanded) toggler.click();
+                    else if (!expanded && titleEl) titleEl.click();
+
+                    try {
+                        panel.scrollIntoView({ block: 'center', inline: 'nearest' });
+                    } catch (_) {
+                        /* ignore */
+                    }
+                    return true;
+                }
+                return false;
+            })
+            .catch(() => false);
+
+        await page
+            .waitForFunction(
+                () => {
+                    const panels = [
+                        ...document.querySelectorAll(
+                            '[data-pc-name="panel"], .p-panel, .p-panel-toggleable'
+                        )
+                    ];
+                    for (const panel of panels) {
+                        const titleEl = panel.querySelector(
+                            '.p-panel-title, [data-pc-section="title"]'
+                        );
+                        if (
+                            !titleEl ||
+                            !/especificaciones|especificacoes/i.test(titleEl.textContent || '')
+                        ) {
+                            continue;
+                        }
+                        const content =
+                            panel.querySelector(
+                                '.p-panel-content, [data-pc-section="content"]'
+                            ) || panel;
+                        if (
+                            content.querySelectorAll('div[class*="flex"] > p, p.font-bold')
+                                .length >= 2
+                        ) {
+                            return true;
+                        }
+                        const txt = content.innerText || '';
+                        if (/MARCA/i.test(txt) && /REFERENCIA|COLOR|PESO|INTERFAZ/i.test(txt)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                { timeout: preview ? 4000 : 8000 }
+            )
+            .catch(() => {});
+    }
+
+    await expandEspecificacionesPanel();
+    await delay(preview ? 200 : 150);
 
     let raw = await snapshotDom(productUrl);
     let precioResolved = resolveVisaoPrecioForSync(raw);
 
     if (precioResolved == null) {
-        await delay(preview ? 900 : 500);
-        await page.evaluate(() => {
-            window.scrollTo(0, 0);
-        }).catch(() => {});
+        await delay(preview ? 500 : 350);
         await page
-            .waitForFunction(priceSignalsReadyJs, { timeout: preview ? 16000 : 28000 })
+            .waitForFunction(priceSignalsReadyJs, { timeout: preview ? 8000 : 12000 })
             .catch(() => {});
-        await delay(preview ? 400 : 200);
+        await delay(150);
+        await expandEspecificacionesPanel();
         raw = await snapshotDom(productUrl);
         precioResolved = resolveVisaoPrecioForSync(raw);
     }
@@ -923,29 +1304,39 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         await page
             .evaluate(() => {
                 const mainEl = document.querySelector('main') || document.body;
-                window.scrollTo(0, Math.min((mainEl && mainEl.offsetTop) ? mainEl.offsetTop + 280 : 360, 900));
+                window.scrollTo(
+                    0,
+                    Math.min(mainEl && mainEl.offsetTop ? mainEl.offsetTop + 280 : 360, 900)
+                );
             })
             .catch(() => {});
-        await delay(preview ? 550 : 400);
+        await delay(preview ? 400 : 300);
+        await expandEspecificacionesPanel();
         raw = await snapshotDom(productUrl);
         precioResolved = resolveVisaoPrecioForSync(raw);
     }
 
+    // Reload solo si aún no hay precio (caro); evita el path de ~60s+ en PDPs sanos.
     if (precioResolved == null && !preview) {
-        await page
-            .reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
-            .catch(() => null);
-        await page.waitForSelector('h2', { timeout: 12000 }).catch(() => null);
-        await page
-            .waitForFunction(priceSignalsReadyJs, { timeout: 28000 })
-            .catch(() => {});
-        await delay(450);
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(() => null);
+        await page.waitForSelector('h2', { timeout: 8000 }).catch(() => null);
+        await page.waitForFunction(pdpContentReadyJs, { timeout: 15000 }).catch(() => {});
+        await expandEspecificacionesPanel();
+        await delay(250);
         raw = await snapshotDom(productUrl);
         precioResolved = resolveVisaoPrecioForSync(raw);
     }
 
     const precioUsd =
         precioResolved && precioResolved.precioFuente === 'USD' ? precioResolved.precioUsd : null;
+    const precioListaUsd =
+        precioResolved && precioResolved.precioListaFuente === 'USD'
+            ? precioResolved.precioListaUsd
+            : null;
+    const precioListaPygRaw =
+        precioResolved && precioResolved.precioListaFuente === 'PYG'
+            ? precioResolved.precioListaPygRaw
+            : null;
 
     let descripcion = raw.descripcion;
     const lineNoise =
@@ -978,6 +1369,9 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         precioFuente: precioResolved ? precioResolved.precioFuente : null,
         precioPygRaw: precioResolved ? precioResolved.precioPygRaw : null,
         precioUsd,
+        precioListaFuente: precioResolved ? precioResolved.precioListaFuente || null : null,
+        precioListaUsd,
+        precioListaPygRaw,
         descripcion,
         especificaciones: raw.especificaciones,
         imagenes: raw.imagenes,
@@ -1056,9 +1450,17 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
         const ws = { bctx: null, page: null, boundGen: -1 };
         let localPdpDone = 0;
 
+        async function killWorkerContext() {
+            const ctx = ws.bctx;
+            ws.bctx = null;
+            ws.page = null;
+            ws.boundGen = -1;
+            if (ctx) await ctx.close().catch(() => {});
+        }
+
         async function recreateWorkerSession(reason) {
             const br = getBrowser();
-            await ws.bctx?.close()?.catch(() => {});
+            await killWorkerContext();
             ws.bctx = await br.createBrowserContext();
             ws.page = await ws.bctx.newPage();
             await configureScraperPage(ws.page);
@@ -1088,10 +1490,10 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
                 const u = urls[i];
                 let hardTimer;
 
-                /** Hasta 3 intentos PDP: errores Puppeteer blandos ⇒ nuevo contexto; desconectado ⇒ relaunch global */
+                /** 2 intentos: timeout mata el BrowserContext de raíz (no await de CDP colgado). */
                 let scrapeOk = false;
                 let lastErrCatched = null;
-                const maxPdpAttempts = 3;
+                const maxPdpAttempts = 2;
 
                 for (let attempt = 0; attempt < maxPdpAttempts && !scrapeOk; attempt++) {
                     await ensureSession(attempt === 0 ? '' : `reintento ${attempt}`);
@@ -1100,19 +1502,19 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
                      * No dejar que `scrapeProductDetail` rechace salvo errores “browser muerto”: el rechazo compite mal
                      * con `Promise.race` ante timeouts CDP. El resto ⇒ objeto `{ error, scrapeRejectReason }`.
                      */
+                    const pageRef = ws.page;
                     const innerDetail = (async () => {
                         try {
-                            return await scrapeProductDetail(ws.page, u, { preview });
+                            return await scrapeProductDetail(pageRef, u, { preview });
                         } catch (e) {
                             if (mutableBrowserCtx && isDisconnectedOrDeadBrowserError(e)) {
                                 throw e;
                             }
-                            return {
-                                url: u,
-                                supplierCode: extractSupplierCodeFromPath(new URL(u).pathname),
-                                error: 'detail_exception',
-                                scrapeRejectReason: e && e.message ? String(e.message).slice(0, 560) : String(e || '')
-                            };
+                            return pdpFailureResult(
+                                u,
+                                'detail_exception',
+                                e && e.message ? e.message : e
+                            );
                         }
                     })();
 
@@ -1121,61 +1523,65 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
                     });
 
                     try {
-                        results[i] = await Promise.race([innerDetail, timeoutPromise]);
-                        await innerDetail.catch(() => {});
+                        const raced = await Promise.race([innerDetail, timeoutPromise]);
+                        if (hardTimer != null) {
+                            clearTimeout(hardTimer);
+                            hardTimer = null;
+                        }
+                        results[i] = raced;
 
                         if (results[i] && results[i].error && attempt < maxPdpAttempts - 1) {
-                            const softBackoff =
-                                Number.isFinite(Number(process.env.VISAO_PDP_SOFT_RETRY_MS)) &&
-                                Number(process.env.VISAO_PDP_SOFT_RETRY_MS) >= 0
-                                    ? Math.min(5000, Number(process.env.VISAO_PDP_SOFT_RETRY_MS))
-                                    : 450;
-                            await delay(softBackoff);
-                            await ws.bctx?.close?.().catch(() => {});
-                            ws.bctx = null;
-                            ws.page = null;
-                            ws.boundGen = -1;
+                            // Soft fail: matar contexto y reintentar (no esperar navigations colgadas).
+                            innerDetail.catch(() => {});
+                            await killWorkerContext();
                             const rj = String(results[i].scrapeRejectReason || '');
                             if (mutableBrowserCtx && isDisconnectedOrDeadBrowserError({ message: rj })) {
-                                console.warn(`[Visão mirror][PDP] error tipo desconexión — relanzando Chromium\n  ${u}`);
+                                console.warn(
+                                    `[Visão mirror][PDP] error tipo desconexión — relanzando Chromium\n  ${u}`
+                                );
                                 await runSerialized(async () => {
                                     await relaunchMutableBrowserHolder(mutableBrowserCtx);
                                     browserGeneration++;
                                 });
                             }
+                            await delay(350);
                             continue;
                         }
 
                         scrapeOk = true;
                     } catch (e) {
                         lastErrCatched = e;
-                        await innerDetail.catch(() => {});
+                        if (hardTimer != null) {
+                            clearTimeout(hardTimer);
+                            hardTimer = null;
+                        }
                         const isHardTimeout = e && String(e.message) === 'pdp_hard_timeout';
                         const disconnected = mutableBrowserCtx && isDisconnectedOrDeadBrowserError(e);
-                        results[i] = {
-                            url: u,
-                            error: isHardTimeout ? 'pdp_hard_timeout' : 'fallback_detail_failed',
-                            scrapeRejectReason: e && e.message ? String(e.message).slice(0, 560) : String(e || ''),
-                            supplierCode: extractSupplierCodeFromPath(new URL(u).pathname)
-                        };
+
+                        // KILL SWITCH: destruir BrowserContext YA — aborta goto/CDP colgado.
+                        // NO await innerDetail (eso era el zombie que bloqueaba el worker).
+                        await killWorkerContext();
+                        innerDetail.catch(() => {});
+
+                        results[i] = pdpFailureResult(
+                            u,
+                            isHardTimeout ? 'pdp_hard_timeout' : 'fallback_detail_failed',
+                            e && e.message ? e.message : e
+                        );
 
                         if (disconnected && mutableBrowserCtx) {
-                            console.warn(`[Visão mirror][PDP] desconectado — relanzando Chromium e reintentando\n  ${u}`);
+                            console.warn(
+                                `[Visão mirror][PDP] desconectado — relanzando Chromium e reintentando\n  ${u}`
+                            );
                             await runSerialized(async () => {
                                 await relaunchMutableBrowserHolder(mutableBrowserCtx);
                                 browserGeneration++;
                             });
-                            await ws.bctx?.close?.().catch(() => {});
-                            ws.bctx = null;
-                            ws.page = null;
-                            ws.boundGen = -1;
                             if (attempt < maxPdpAttempts - 1) continue;
                         } else if (isHardTimeout) {
-                            console.warn(`[Visão mirror][PDP] timeout ${pdpHardMs}ms — nuevo contexto local\n  ${u}`);
-                            await ws.bctx?.close?.().catch(() => {});
-                            ws.bctx = null;
-                            ws.page = null;
-                            ws.boundGen = -1;
+                            console.warn(
+                                `[Visão mirror][PDP] timeout ${pdpHardMs}ms — kill switch BrowserContext\n  ${u}`
+                            );
                             if (attempt < maxPdpAttempts - 1) continue;
                         }
                         break;
@@ -1187,24 +1593,20 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
                     }
                 }
 
-                if (!scrapeOk && !results[i]) {
-                    results[i] = {
-                        url: u,
-                        error: 'fallback_detail_failed',
-                        scrapeRejectReason:
-                            lastErrCatched && lastErrCatched.message
-                                ? String(lastErrCatched.message).slice(0, 560)
-                                : String(lastErrCatched || ''),
-                        supplierCode: extractSupplierCodeFromPath(new URL(u).pathname)
-                    };
+                if (!results[i]) {
+                    results[i] = pdpFailureResult(
+                        u,
+                        'fallback_detail_failed',
+                        lastErrCatched && lastErrCatched.message
+                            ? lastErrCatched.message
+                            : lastErrCatched || 'missing_result'
+                    );
                 }
 
                 pdpCompleted += 1;
                 localPdpDone += 1;
                 if (recycleContextEvery > 0 && localPdpDone % recycleContextEvery === 0) {
-                    await ws.bctx?.close?.().catch(() => {});
-                    ws.bctx = null;
-                    ws.page = null;
+                    await killWorkerContext();
                 }
 
                 const remaining = n - pdpCompleted;
@@ -1219,13 +1621,24 @@ async function scrapeProductDetailsParallel(browserParam, urls, detailOpts = {})
                 }
             }
         } finally {
-            await ws.bctx?.close?.().catch(() => {});
+            await killWorkerContext();
         }
     }
 
     if (n === 0) return [];
 
-    await Promise.all(Array.from({ length: workers }, () => worker()));
+    await Promise.all(Array.from({ length: workers }, () => worker().catch((err) => {
+        console.warn(
+            `[Visão mirror][PDP] worker caído (no rompe pipeline): ${err && err.message ? err.message : err}`
+        );
+    })));
+
+    // Garantía: cada URL tiene objeto consistente para persist (nunca huecos/undefined).
+    for (let i = 0; i < n; i++) {
+        if (!results[i] || typeof results[i] !== 'object') {
+            results[i] = pdpFailureResult(urls[i], 'missing_result', 'worker_gap');
+        }
+    }
 
     let scrapeRejected = 0;
     let nullPriceOk = 0;
@@ -1382,6 +1795,7 @@ module.exports = {
     scrapeProductDetailsParallel,
     /** Diagnóstico / pruebas unitarias manuales (`scripts/debug-pdp-sample.js`). */
     scrapeProductDetail,
+    configureScraperPage,
     puppeteerBrowserResponsive,
     relaunchMutableBrowserHolder,
     isDisconnectedOrDeadBrowserError

@@ -12,10 +12,10 @@ export const HOME_SLOT_ROUTES = {
   },
   celulares: {
     category: 'celulares_y_tablets',
-    subcategory: 'celulares__32_01'
+    subcategory: 'smartphones_y_celulares__32_01'
   },
   placas_madre: {
-    category: 'placas_madres',
+    category: 'placas_madre',
     subcategory: 'mb_intel__22_01'
   },
   mouses: {
@@ -32,7 +32,7 @@ export const HOME_SLOT_ROUTES = {
   },
   discos: {
     category: 'almacenamiento',
-    subcategory: 'ssd_m_2_nvme__21_03_03'
+    subcategory: 'ssd__21_03'
   },
   tarjetas_graficas: {
     category: 'tarjetas_graficas',

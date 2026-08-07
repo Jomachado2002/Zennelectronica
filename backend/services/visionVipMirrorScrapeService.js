@@ -209,16 +209,21 @@ function resolveFirstAndLastNodes(pathNodes, listingUrl) {
 }
 
 /**
- * Jerarquía desde el sidebar Visão (recursiva, sin techo de profundidad).
- * `isTarget === true`: nodo hoja observado (sin submenú con más enlaces `/busca/categoria/`).
- * Importante: incluso si un nodo tiene hijos, su URL de listado se conserva para no perder categorías
- * que venden productos directamente y además exponen subfiltros.
- * @returns {Promise<Array<{categoryLabel, categoryValue, subcategoryLabel, subcategoryValue, listingUrl, isTarget, taxonomyPathLabels, taxonomyPathValues}>>}
+ * Jerarquía desde el sidebar Visão (recursiva).
+ * Regla espejo (igual resolveFirstAndLastNodes):
+ *   - categoría = primer nodo (raíz)
+ *   - subcategoría = último nodo hoja (donde están los productos)
+ *   - si un solo nivel: categoría = subcategoría
+ * Productos se scrapean SOLO en las URLs hoja.
+ * @param {import('puppeteer').Page} initialPage
+ * @param {{ browserHolder?: { browser: import('puppeteer').Browser|null } }} [opts]
  */
-async function collectMenuHierarchy(page) {
+async function collectMenuHierarchy(initialPage, opts = {}) {
     /** @type {Map<string, object>} */
     const merged = new Map();
     const noiseRx = /^(categor[ií]as|links [uú]tiles|buscar productos\.{0,3}|categor[ií]as m[aá]s buscadas|volver a categor[ií]as|inicio|buscar)$/i;
+    const browserHolder = opts.browserHolder || { browser: initialPage.browser() };
+    const holder = { page: initialPage };
 
     function normalizeLabel(s) {
         return String(s || '').replace(/\s+/g, ' ').trim();
@@ -228,20 +233,78 @@ async function collectMenuHierarchy(page) {
         return noiseRx.test(normalizeLabel(s).toLowerCase());
     }
 
-    async function openHeaderCategories() {
-        await page.goto(HOME_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
-        await delay(900);
-        await page.evaluate(() => {
-            const btn = [...document.querySelectorAll('button,a,div,span')].find((el) =>
-                /categor[ií]as/i.test(String(el.textContent || '').trim())
-            );
-            if (btn) btn.click();
+    function isDeadPageError(err) {
+        const msg = err && err.message ? String(err.message) : String(err || '');
+        return /detached Frame|Session closed|Target closed|Protocol error|Connection closed|Most likely the page has been closed|browser has disconnected/i.test(
+            msg
+        );
+    }
+
+    async function preparePage(p) {
+        await p.setViewport({ width: 1366, height: 900 });
+        await p.setUserAgent(
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        );
+        await p.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         });
-        await delay(750);
+    }
+
+    // Anti-bot + viewport en la page inicial (antes no se aplicaba y el menú salía vacío).
+    await preparePage(holder.page);
+
+    /** Recrea page; si Chromium murió, relanza el browser del holder. */
+    async function revivePage(reason) {
+        console.warn(`[Visão mirror][MENU] Recreando page (${reason})`);
+        try {
+            await holder.page.close();
+        } catch {
+            /* ignore */
+        }
+        if (!(await puppeteerBrowserResponsive(browserHolder.browser))) {
+            await relaunchMutableBrowserHolder(browserHolder);
+        }
+        holder.page = await browserHolder.browser.newPage();
+        await preparePage(holder.page);
+    }
+
+    async function openHeaderCategories() {
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            await holder.page.goto(HOME_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await delay(1200);
+            // Cloudflare a veces tarda: esperar menú o botón Categorías.
+            try {
+                await holder.page.waitForFunction(
+                    () =>
+                        !!document.querySelector('aside .menu-list > li a[href]') ||
+                        [...document.querySelectorAll('button,a,div,span')].some((el) =>
+                            /categor[ií]as/i.test(String(el.textContent || '').trim())
+                        ),
+                    { timeout: 25000 }
+                );
+            } catch {
+                /* retry abajo */
+            }
+            await holder.page.evaluate(() => {
+                const btn = [...document.querySelectorAll('button,a,div,span')].find((el) =>
+                    /categor[ií]as/i.test(String(el.textContent || '').trim())
+                );
+                if (btn) btn.click();
+            });
+            try {
+                await holder.page.waitForSelector('aside .menu-list > li a[href]', { timeout: 20000 });
+                return;
+            } catch {
+                console.warn(
+                    `[Visão mirror][MENU] menú lateral no listo (intento ${attempt}/3)`
+                );
+                await delay(1500 * attempt);
+            }
+        }
     }
 
     async function extractTopCategoriesFromHeader() {
-        const rows = await page.evaluate(() => {
+        const rows = await holder.page.evaluate(() => {
             function txt(el) {
                 return String((el && el.textContent) || '')
                     .replace(/\s+/g, ' ')
@@ -272,23 +335,59 @@ async function collectMenuHierarchy(page) {
         return clean;
     }
 
+    /**
+     * Espera tiles de subcategoría O productos (SPA Visão).
+     * Importante: muchas raíces muestran productos Y tiles; si los productos
+     * llegan primero hay que dar margen a que pinten las cards de subcategoría,
+     * si no el árbol se corta (ej. Celulares y Tablets → 1 hoja falsa).
+     */
     async function extractListingTilesByUrl(listingUrl) {
-        await page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-        await delay(950);
-        const rows = await page.evaluate(() => {
+        await holder.page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+        await delay(500);
+        try {
+            await holder.page.waitForFunction(
+                () => {
+                    const tiles = document.querySelectorAll(
+                        'a.flex.flex-1.h-full.no-underline.text-inherit[href*="/busca/categoria/"]'
+                    );
+                    const prods = document.querySelectorAll('a[href*="/es/prod/"]');
+                    return tiles.length > 0 || prods.length > 0;
+                },
+                { timeout: 12000 }
+            );
+        } catch {
+            /* categoría vacía o bloqueada: se trata como hoja */
+        }
+        // Margen SPA: tiles de subcategoría a veces llegan después de los productos.
+        try {
+            await holder.page.waitForFunction(
+                () =>
+                    document.querySelectorAll(
+                        'a.flex.flex-1.h-full.no-underline.text-inherit[href*="/busca/categoria/"]'
+                    ).length > 0,
+                { timeout: 2500 }
+            );
+        } catch {
+            /* hoja real sin subcategorías */
+        }
+        await delay(300);
+        const rows = await holder.page.evaluate(() => {
             function txt(el) {
                 return String((el && el.textContent) || '')
                     .replace(/\s+/g, ' ')
                     .trim();
             }
             const out = [];
-            const anchors = document.querySelectorAll('a.flex.flex-1.h-full.no-underline.text-inherit');
+            const anchors = document.querySelectorAll(
+                'a.flex.flex-1.h-full.no-underline.text-inherit'
+            );
             for (const a of anchors) {
                 const href = a.getAttribute('href') || a.href || '';
                 if (!/\/es\/busca\/categoria\//i.test(href)) continue;
                 const label = txt(a);
                 if (!label || label.length > 70) continue;
                 const rect = a.getBoundingClientRect();
+                // Tiles reales de subcategoría son cards grandes; evita links basura del layout.
                 if (rect.width < 120 || rect.height < 80) continue;
                 out.push({ label, href });
             }
@@ -300,6 +399,7 @@ async function collectMenuHierarchy(page) {
             const label = normalizeLabel(r.label);
             const u = canonCategoryUrl(absolutizeListingUrl(r.href));
             if (!label || !u || isNoiseLabel(label)) continue;
+            if (u === canonCategoryUrl(listingUrl)) continue;
             const k = `${label.toLowerCase()}|${u}`;
             if (seen.has(k)) continue;
             seen.add(k);
@@ -312,7 +412,7 @@ async function collectMenuHierarchy(page) {
         const leaves = [];
         const stack = [{ node: top, path: [top] }];
         const visited = new Set();
-        const maxDepth = 4;
+        const maxDepth = 5;
 
         while (stack.length) {
             const { node, path } = stack.pop();
@@ -320,18 +420,29 @@ async function collectMenuHierarchy(page) {
             if (visited.has(key)) continue;
             visited.add(key);
 
+            console.log(
+                `[Visão mirror][MENU] visitando "${node.label}" (depth=${path.length}, stack=${stack.length}) → ${node.url}`
+            );
+
             let children = [];
-            for (let attempt = 1; attempt <= 3; attempt++) {
+            // Solo reintentar ante errores de página/browser. 0 tiles tras espera = hoja (o vacía).
+            for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     children = await extractListingTilesByUrl(node.url);
                     break;
                 } catch (err) {
-                    if (attempt === 3) {
-                        console.warn(
-                            `[Visão mirror][NAV_RETRY] fallo nodo "${node.label}" (${node.url}) tras 3 intentos: ${err.message || String(err)}`
-                        );
+                    const msg = err && err.message ? err.message : String(err);
+                    if (isDeadPageError(err) || isDisconnectedOrDeadBrowserError(err)) {
+                        await revivePage(msg);
                     }
-                    await delay(450);
+                    if (attempt === 2) {
+                        console.warn(
+                            `[Visão mirror][NAV_RETRY] fallo nodo "${node.label}" (${node.url}): ${msg}`
+                        );
+                        children = [];
+                    } else {
+                        await delay(600);
+                    }
                 }
             }
 
@@ -347,12 +458,23 @@ async function collectMenuHierarchy(page) {
                 filtered.push(c);
             }
 
+            // Hoja = sin más subcategorías (o tope profundidad). Ahí van los productos.
             if (!filtered.length || path.length >= maxDepth) {
                 leaves.push(path);
                 continue;
             }
 
-            for (const child of filtered) {
+            console.log(
+                `[Visão mirror][MENU]   "${node.label}" → ${filtered.length} sub(s): ${filtered
+                    .map((c) => c.label)
+                    .join(', ')}`
+            );
+
+            for (let ci = 0; ci < filtered.length; ci++) {
+                const child = filtered[ci];
+                console.log(
+                    `[Visão mirror][MENU]     → (${ci + 1}/${filtered.length}) explorando "${child.label}" bajo "${node.label}"`
+                );
                 stack.push({ node: child, path: [...path, child] });
             }
         }
@@ -362,11 +484,27 @@ async function collectMenuHierarchy(page) {
 
     await openHeaderCategories();
     const tops = await extractTopCategoriesFromHeader();
-    for (const top of tops) {
-        const leafPaths = await collectLeafPathsForTop(top);
-        if (!leafPaths.length) {
-            leafPaths.push([top]);
+    console.log(`[Visão mirror][MENU] Categorías raíz detectadas: ${tops.length}`);
+    for (let ti = 0; ti < tops.length; ti++) {
+        const top = tops[ti];
+        console.log(
+            `[Visão mirror][MENU] (${ti + 1}/${tops.length}) expandiendo "${top.label}" → ${top.url}`
+        );
+        let leafPaths;
+        try {
+            leafPaths = await collectLeafPathsForTop(top);
+        } catch (err) {
+            if (isDeadPageError(err) || isDisconnectedOrDeadBrowserError(err)) {
+                await revivePage(err.message || 'detached');
+                leafPaths = await collectLeafPathsForTop(top);
+            } else {
+                throw err;
+            }
         }
+        if (!leafPaths.length) leafPaths.push([top]);
+        console.log(
+            `[Visão mirror][MENU] "${top.label}": ${leafPaths.length} hoja(s) → categoría="${top.label}" / sub=última hoja`
+        );
         for (const p of leafPaths) {
             const leaf = p[p.length - 1];
             const pathNodes = p.map((n) => ({
@@ -395,12 +533,12 @@ async function collectMenuHierarchy(page) {
         }
     }
 
-    return [...merged.values()]
-        .sort((a, b) => {
-            const c = String(a.categoryValue).localeCompare(String(b.categoryValue));
-            if (c !== 0) return c;
-            return String(a.subcategoryValue).localeCompare(String(b.subcategoryValue));
-        });
+    console.log(`[Visão mirror][MENU] Total listados hoja únicos: ${merged.size}`);
+    return [...merged.values()].sort((a, b) => {
+        const c = String(a.categoryValue).localeCompare(String(b.categoryValue));
+        if (c !== 0) return c;
+        return String(a.subcategoryValue).localeCompare(String(b.subcategoryValue));
+    });
 }
 
 async function mapPool(items, limit, mapper) {
@@ -424,7 +562,7 @@ async function mapPool(items, limit, mapper) {
 }
 
 async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
-    const attempts = Math.max(1, Number(opts.attempts) || 3);
+    const attempts = Math.max(1, Number(opts.attempts) || 5);
     const targetListingUrl = absolutizeListingUrl(row && row.listingUrl);
     if (!targetListingUrl) {
         console.warn(
@@ -445,11 +583,21 @@ async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
         try {
             pg = await ctx.browser.newPage();
             await pg.setViewport({ width: 1366, height: 900 });
+            await pg.setUserAgent(
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            );
+            await pg.evaluateOnNewDocument(() => {
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            });
             const urls = await collectProductUrlsForCategory(pg, targetListingUrl, {
                 urlBudget: opts.urlBudget,
                 singlePageOnly: opts.singlePageOnly
             });
-            return urls;
+            if (urls.length > 0) return urls;
+            console.warn(
+                `[Visão mirror][LISTING_RETRY] intento ${attempt}/${attempts} → 0 URLs en ${row.listingUrl}`
+            );
+            await delay(700 * attempt);
         } catch (err) {
             lastErr = err;
             const msg = err && err.message ? err.message : String(err);
@@ -463,12 +611,13 @@ async function collectProductUrlsForCategoryWithRetries(ctx, row, opts = {}) {
                     await relaunchMutableBrowserHolder(ctx);
                 }
             }
+            await delay(500 * attempt);
         } finally {
             if (pg) await pg.close().catch(() => {});
         }
     }
 
-    const finalMsg = lastErr && lastErr.message ? lastErr.message : String(lastErr);
+    const finalMsg = lastErr && lastErr.message ? lastErr.message : `0 URLs tras ${attempts} intentos`;
     console.warn(
         `[Visão mirror][LISTING_SKIP] listado omitido tras ${attempts} intentos: ${row.listingUrl} | motivo=${finalMsg}`
     );
@@ -512,7 +661,7 @@ async function scrapeVisionVipMirror(opts = {}) {
         console.log(
             '[Visão mirror] Fase menú: recorriendo el sitio (collectMenuHierarchy). Puede ir varios minutos sin más líneas; es normal.'
         );
-        let menuRows = await collectMenuHierarchy(menuPage);
+        let menuRows = await collectMenuHierarchy(menuPage, { browserHolder: ctx });
         console.log(`[Visão mirror] Fase menú terminada: ${menuRows.length} filas brutas.`);
         await menuPage.close().catch(() => {});
 

@@ -172,7 +172,8 @@ const AdminPanel = () => {
         { path: "sucursales", label: "Sucursales", icon: <FaBuilding className="w-5 h-5" />, description: "Gestionar sucursales", color: "text-indigo-600 bg-indigo-50" },
         { path: "tipos-venta", label: "Tipos de Venta", icon: <FaFileInvoiceDollar className="w-5 h-5" />, description: "Configurar tipos de venta", color: "text-blue-600 bg-blue-50" },
         { path: "vendedores", label: "Vendedores", icon: <FaUserFriends className="w-5 h-5" />, description: "Gestionar vendedores", color: "text-purple-600 bg-purple-50" },
-        { path: "gestion-usuarios", label: "Usuarios", icon: <FaUsers className="w-5 h-5" />, description: "Gestionar usuarios", color: "text-gray-600 bg-gray-50" },
+        { path: "todos-usuarios", label: "Lista de usuarios", icon: <FaUsers className="w-5 h-5" />, description: "Ver perfiles y cambiar roles", color: "text-gray-600 bg-gray-50", rootOnly: true },
+        { path: "gestion-usuarios", label: "Roles y permisos", icon: <FaUserCog className="w-5 h-5" />, description: "ROOT: roles y permisos granulares", color: "text-slate-600 bg-slate-50", rootOnly: true },
         { path: "proveedores", label: "Proveedores", icon: <FaTruck className="w-5 h-5" />, description: "Gestionar proveedores", color: "text-orange-600 bg-orange-50" },
         { path: "tipo-cambio", label: "Tipo de Cambio", icon: <FaDollarSign className="w-5 h-5" />, description: "Actualizar TC", color: "text-green-600 bg-green-50" }
       ]
@@ -198,6 +199,10 @@ const AdminPanel = () => {
   ];
 
   const renderNavItem = (item) => {
+    if (item.rootOnly && user?.role !== ROLE.ROOT) {
+      return null;
+    }
+
     const isActive = location.pathname === `/panel-admin/${item.path}`;
     
     return (
@@ -222,7 +227,13 @@ const AdminPanel = () => {
     );
   };
 
-  const renderCategory = (category) => (
+  const renderCategory = (category) => {
+    const visibleItems = category.items.filter(
+      (item) => !item.rootOnly || user?.role === ROLE.ROOT
+    );
+    if (visibleItems.length === 0) return null;
+
+    return (
     <div key={category.category} className="mb-6">
       {(!sidebarCollapsed || isMobile) && (
         <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -230,10 +241,11 @@ const AdminPanel = () => {
         </h3>
       )}
       <div className="space-y-1">
-        {category.items.map(renderNavItem)}
+        {visibleItems.map(renderNavItem)}
       </div>
     </div>
-  );
+    );
+  };
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
