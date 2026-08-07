@@ -241,8 +241,8 @@ const CategoryShowcase = () => {
                           alt={leafLabelFromStoredLabel(subcategory.label)}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
                           sizes="(max-width: 640px) 160px, (max-width: 1024px) 176px, 192px"
-                          loading={slideIndex < 12 ? 'eager' : 'lazy'}
-                          fetchPriority={slideIndex < 5 ? 'high' : slideIndex < 14 ? 'auto' : 'low'}
+                          loading={slideIndex < 4 ? 'eager' : 'lazy'}
+                          fetchPriority={slideIndex < 2 ? 'high' : slideIndex < 4 ? 'auto' : 'low'}
                           decoding="async"
                           onError={(e) => {
                             const t = e.currentTarget;

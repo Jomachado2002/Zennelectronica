@@ -167,10 +167,12 @@ export const useHomeProducts = () => {
         throw error;
       }
     },
-    staleTime: 30 * 1000, // 30s — vitrinas admin deben reflejarse al navegar/recargar
-    gcTime: 5 * 60 * 1000,
+    // Cache-first (estilo Spotify): al volver al home se pinta al instante;
+    // el admin invalida esta query al guardar vitrinas.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     retry: 1,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };

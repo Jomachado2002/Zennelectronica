@@ -181,7 +181,8 @@ const getHomeProductsController = async(req, res) => {
             brandName: 1,
             category: 1,
             subcategory: 1,
-            productImage: { $slice: 2 },
+            // 1 imagen en home: menos payload + menos contención de red en móvil
+            productImage: { $slice: 1 },
             price: 1,
             sellingPrice: 1,
             slug: 1,

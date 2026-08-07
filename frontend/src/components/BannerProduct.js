@@ -136,27 +136,18 @@ const BannerProduct = () => {
     scrollTop();
   };
 
-  // ✅ PRECARGAR TODAS LAS IMÁGENES DEL BANNER INMEDIATAMENTE
+  // Solo calienta slide actual + siguiente (no las 10 banners × 2 breakpoints)
   useEffect(() => {
-    const preloadBannerImages = () => {
-      // Precargar imágenes del dispositivo actual
-      banners.forEach((banner, index) => {
-        const img = new Image();
-        img.fetchPriority = 'high';
-        img.src = banner.image;
-      });
-      
-      // También precargar las imágenes del otro dispositivo para cambio rápido
-      const otherBanners = isMobile ? bannersDesktop : bannersMobile;
-      otherBanners.forEach((banner) => {
-        const img = new Image();
-        img.fetchPriority = 'low';
-        img.src = banner.image;
-      });
+    if (!banners.length) return;
+    const warm = (src, priority = 'low') => {
+      if (!src) return;
+      const img = new Image();
+      if ('fetchPriority' in img) img.fetchPriority = priority;
+      img.src = src;
     };
-
-    preloadBannerImages();
-  }, [banners, bannersDesktop, bannersMobile, isMobile]);
+    warm(banners[activeSlide]?.image, 'high');
+    warm(banners[(activeSlide + 1) % banners.length]?.image, 'low');
+  }, [banners, activeSlide]);
 
   // Resetear slide cuando cambie el dispositivo
   useEffect(() => {

@@ -206,11 +206,14 @@ const VerticalCardProductOptimized = ({
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
                 const hasImageError = imageErrors.has(product._id);
                 const isHovered = hoveredProductId === product?._id;
-                const secondImage = product.productImage?.[1];
+                const secondImage = !isMobile ? product.productImage?.[1] : null;
                 const showSecondImage = isHovered && secondImage;
+                // Solo las 2–3 primeras del carrusel compiten por el ancho de banda (above-fold).
+                const isAboveFold = index < (isMobile ? 2 : 3);
                 
                 // Funciones para manejar hover con delay
                 const handleMouseEnter = () => {
+                  if (isMobile) return;
                   if (hoverTimeout) {
                     clearTimeout(hoverTimeout);
                   }
@@ -245,33 +248,32 @@ const VerticalCardProductOptimized = ({
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {/* ✅ IMAGEN DEL PRODUCTO - CARGA INMEDIATA */}
                     <div className='h-32 sm:h-36 rounded-t-xl flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-50 to-gray-100'>
                       {!hasImageError ? (
                         <>
-                          {/* ✅ IMAGEN PRINCIPAL - CARGA INMEDIATA */}
                           <img
                             src={product.productImage[0]}
                             alt={product.productName}
                             className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
                               showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                             }`}
-                            loading="eager"
-                            fetchpriority="high"
+                            loading={isAboveFold ? 'eager' : 'lazy'}
+                            fetchPriority={index === 0 ? 'high' : isAboveFold ? 'auto' : 'low'}
+                            sizes="(max-width: 640px) 150px, 210px"
                             onError={() => handleImageError(product._id)}
                             decoding="async"
                           />
                           
-                          {/* ✅ IMAGEN DE HOVER - CARGA INMEDIATA */}
-                          {secondImage && (
+                          {/* 2ª imagen solo en desktop y solo tras hover (no satura móvil) */}
+                          {secondImage && isHovered && (
                             <img
                               src={secondImage}
                               alt={product.productName}
                               className={`absolute inset-0 object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                 showSecondImage ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                               }`}
-                              loading="eager"
-                              fetchpriority="high"
+                              loading="lazy"
+                              fetchPriority="low"
                               decoding="async"
                             />
                           )}

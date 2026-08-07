@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import VerticalCardProductOptimized from '../VerticalCardProductOptimized';
 import NotebookBanner from '../NotebookBanner';
+import LazyWhenVisible from '../LazyWhenVisible';
 import scrollTop from '../../helpers/scrollTop';
 import { categoriaProductoHref } from '../../config/homeSlotRoutes';
 
@@ -51,7 +52,7 @@ function groupSections(sections) {
   return groups;
 }
 
-function HeroSection({ section, products, loading }) {
+function HeroSection({ section, products, loading, eager }) {
   return (
     <motion.section
       initial="hidden"
@@ -101,14 +102,16 @@ function HeroSection({ section, products, loading }) {
                 </button>
               </Link>
             </div>
-            <VerticalCardProductOptimized
-              category={section.verMas?.category || section.pairs?.[0]?.category}
-              subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
-              carouselKey={section.key}
-              heading=""
-              products={products}
-              loading={loading}
-            />
+            <LazyWhenVisible eager={eager} minHeight={300}>
+              <VerticalCardProductOptimized
+                category={section.verMas?.category || section.pairs?.[0]?.category}
+                subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
+                carouselKey={section.key}
+                heading=""
+                products={products}
+                loading={loading}
+              />
+            </LazyWhenVisible>
           </div>
         </motion.div>
       </div>
@@ -116,7 +119,7 @@ function HeroSection({ section, products, loading }) {
   );
 }
 
-function FullSection({ section, products, loading }) {
+function FullSection({ section, products, loading, eager }) {
   return (
     <motion.section
       initial="hidden"
@@ -150,14 +153,16 @@ function FullSection({ section, products, loading }) {
             </Link>
           </div>
           <div className="mt-6">
-            <VerticalCardProductOptimized
-              category={section.verMas?.category || section.pairs?.[0]?.category}
-              subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
-              carouselKey={section.key}
-              heading=""
-              products={products}
-              loading={loading}
-            />
+            <LazyWhenVisible eager={eager} minHeight={300}>
+              <VerticalCardProductOptimized
+                category={section.verMas?.category || section.pairs?.[0]?.category}
+                subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
+                carouselKey={section.key}
+                heading=""
+                products={products}
+                loading={loading}
+              />
+            </LazyWhenVisible>
           </div>
         </div>
       </div>
@@ -165,7 +170,7 @@ function FullSection({ section, products, loading }) {
   );
 }
 
-function GridCard({ section, products, loading }) {
+function GridCard({ section, products, loading, eager }) {
   return (
     <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
       <div className="p-6 text-white" style={gradientBtn}>
@@ -176,14 +181,16 @@ function GridCard({ section, products, loading }) {
         <div className="h-1 w-24 bg-white/30 mt-2 mb-4 rounded-full" />
       </div>
       <div className="p-4">
-        <VerticalCardProductOptimized
-          category={section.verMas?.category || section.pairs?.[0]?.category}
-          subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
-          carouselKey={section.key}
-          heading=""
-          products={products}
-          loading={loading}
-        />
+        <LazyWhenVisible eager={eager} minHeight={280}>
+          <VerticalCardProductOptimized
+            category={section.verMas?.category || section.pairs?.[0]?.category}
+            subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
+            carouselKey={section.key}
+            heading=""
+            products={products}
+            loading={loading}
+          />
+        </LazyWhenVisible>
       </div>
       <div className="p-4 pt-0 text-center">
         <Link to={verMasHref(section)} onClick={() => scrollTop()}>
@@ -206,6 +213,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
   if (!sections.length) return null;
 
   const groups = groupSections(sections);
+  let sectionIndex = 0;
 
   return (
     <>
@@ -213,6 +221,8 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
         if (group.type === 'single') {
           const { section } = group;
           const products = slotProducts(section.key);
+          const eager = sectionIndex < 2;
+          sectionIndex += 1;
           if (section.layout === 'hero') {
             return (
               <HeroSection
@@ -220,6 +230,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
                 section={section}
                 products={products}
                 loading={loading}
+                eager={eager}
               />
             );
           }
@@ -229,6 +240,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
               section={section}
               products={products}
               loading={loading}
+              eager={eager}
             />
           );
         }
@@ -243,14 +255,19 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
             className="w-full"
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {group.sections.map((section) => (
-                <GridCard
-                  key={section.key}
-                  section={section}
-                  products={slotProducts(section.key)}
-                  loading={loading}
-                />
-              ))}
+              {group.sections.map((section) => {
+                const eager = sectionIndex < 2;
+                sectionIndex += 1;
+                return (
+                  <GridCard
+                    key={section.key}
+                    section={section}
+                    products={slotProducts(section.key)}
+                    loading={loading}
+                    eager={eager}
+                  />
+                );
+              })}
             </div>
           </motion.section>
         );

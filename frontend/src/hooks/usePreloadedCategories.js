@@ -34,7 +34,7 @@ const usePreloadedCategories = () => {
     if (globalCache) {
       setData(globalCache);
       setLoading(false);
-      prefetchCategoryShowcasePreviews(queryClient, globalCache, 5);
+      prefetchCategoryShowcasePreviews(queryClient, globalCache, 1);
       return;
     }
 
@@ -57,7 +57,7 @@ const usePreloadedCategories = () => {
         globalCache = structuredData;
         setData(structuredData);
         setError(null);
-        prefetchCategoryShowcasePreviews(queryClient, structuredData, 5);
+        prefetchCategoryShowcasePreviews(queryClient, structuredData, 1);
       } else {
         throw new Error('Respuesta no exitosa del servidor');
       }
