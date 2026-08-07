@@ -1,8 +1,19 @@
 /**
  * Thumbs vía Cloudflare Image Resizing en cdn.zenn.com.py.
- * Si CF no está activo, el <img onError> debe volver a la URL original.
+ *
+ * IMPORTANTE: hoy /cdn-cgi/image/... en cdn.zenn.com.py responde 404
+ * (Image Resizing no activo en ese host). Si forzamos thumbs, el browser
+ * falla y recién en onError pide la URL full → ~2 round-trips por imagen
+ * y sensación de 5–6s en el home.
+ *
+ * Activar solo cuando CF Image Resizing esté habilitado:
+ *   REACT_APP_CF_IMAGE_RESIZING=true
  */
 const CDN_HOST = 'cdn.zenn.com.py';
+
+const CF_RESIZE_ENABLED =
+  typeof process !== 'undefined' &&
+  String(process.env.REACT_APP_CF_IMAGE_RESIZING || '').toLowerCase() === 'true';
 
 export function isCdnZennUrl(url) {
   if (!url || typeof url !== 'string') return false;
@@ -20,6 +31,8 @@ export function isCdnZennUrl(url) {
  */
 export function cdnThumbUrl(url, opts = {}) {
   if (!url || typeof url !== 'string') return url;
+  if (!CF_RESIZE_ENABLED) return url;
+
   const width = opts.width || 360;
   const quality = opts.quality || 70;
   const fit = opts.fit || 'cover';
@@ -44,7 +57,7 @@ export function warmImageUrls(urls, limit = 8) {
   urls.slice(0, limit).forEach((src) => {
     if (!src) return;
     const img = new Image();
-    if ('fetchPriority' in img) img.fetchPriority = 'high';
+    if ('fetchPriority' in img) img.fetchPriority = 'low';
     img.decoding = 'async';
     img.src = src;
   });

@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 import SummaryApi from '../common';
 import useCategories from '../hooks/useCategories';
+import { clearHomeLocalCache } from '../hooks/useProducts';
 
 const emptyForm = () => ({
   key: '',
@@ -240,6 +241,7 @@ const HomeVitrinasManagement = () => {
   const invalidateHomeCache = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['category-products', 'home'] });
     queryClient.removeQueries({ queryKey: ['category-products', 'home'] });
+    clearHomeLocalCache();
   }, [queryClient]);
 
   const fetchSections = useCallback(async () => {

@@ -1,0 +1,33 @@
+==========================================
+Visão: migrar CDN Zenn + mirror full
+Inicio: 2026-08-07T18:47:18.869Z
+dryRun= false migrateOnly= false syncOnly= false
+==========================================
+[stats] Antes: {
+  "totalProducts": 7218,
+  "withImages": 6504,
+  "hosts": [
+    {
+      "_id": "firebasestorage.googleapis.com",
+      "n": 9770
+    },
+    {
+      "_id": "cdn.visaovip.com",
+      "n": 9054
+    },
+    {
+      "_id": "cdn.zenn.com.py",
+      "n": 3530
+    }
+  ]
+}
+[migrate] Candidatos con ≥1 imagen fuera de CDN Zenn: 5329. Procesando: 5329. concurrency=5 dryRun=false
+(node:67065) Warning: NodeVersionSupportWarning: The AWS SDK for JavaScript (v3)
+versions published after the first week of January 2027
+will require node >=22. You are running node v20.19.5.
+
+To continue receiving updates to AWS services, bug fixes,
+and security updates please upgrade to node >=22.
+
+More information can be found at: https://a.co/c895JFp
+(Use `node --trace-warnings ...` to show where the warning was created)

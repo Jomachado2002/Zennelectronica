@@ -7,6 +7,11 @@ const {
     getActiveHomeBanners,
     getActiveHomeCategoryTiles
 } = require("../../services/homeMediaService")
+const {
+    getHomePayloadCache,
+    setHomePayloadCache,
+    homeCacheMeta
+} = require("../../services/homePayloadCache")
 
 const getProductController = async(req, res)=>{
     try{
@@ -181,18 +186,28 @@ function shuffleInPlace(arr) {
 
 const getHomeProductsController = async(req, res) => {
     try {
+        const bypassCache = String(req.query.refresh || '') === '1';
+        if (!bypassCache) {
+            const cached = getHomePayloadCache();
+            if (cached) {
+                const meta = homeCacheMeta();
+                res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
+                res.set('X-Home-Cache', `HIT age=${meta.ageMs || 0}`);
+                return res.json(cached);
+            }
+        }
+
         const homeProjection = {
             productName: 1,
             brandName: 1,
             category: 1,
             subcategory: 1,
-            // 1 imagen en home: menos payload + menos contención de red en móvil
             productImage: { $slice: 1 },
             price: 1,
             sellingPrice: 1,
             slug: 1,
-            stock: 1,
-            createdAt: 1
+            stock: 1
+            // sin createdAt: menos bytes; el sort sigue usando el índice
         };
 
         let sections = [];
@@ -213,47 +228,56 @@ const getHomeProductsController = async(req, res) => {
             }));
         }
 
-        const slotPromises = sections.map((section) =>
-            fetchSlot(
+        // Caps agresivos: móvil/desktop ven 5–10; no hace falta 20+ por slot
+        const slotPromises = sections.map((section) => {
+            const lim = Math.min(Number(section.limit) || 12, 12);
+            return fetchSlot(
                 section.pairs,
-                section.limit,
+                lim,
                 homeProjection,
                 section.filters || {}
-            ).then((products) => ({ key: section.key, products }))
-        );
+            ).then((products) => ({ key: section.key, products }));
+        });
 
-        const recentPool = await productModel
-            .find({ $or: HOME_STOCK_OR }, homeProjection)
-            .sort({ createdAt: -1 })
-            .limit(150)
-            .lean();
+        // Todo en paralelo (antes recientes bloqueaba el resto)
+        const [slotResults, showcaseBundle, homeBanners, homeCategoryTiles, recentPool] =
+            await Promise.all([
+                Promise.all(slotPromises),
+                buildHomeShowcaseWithPreviews(buildShowcasePreviewsByCategory).catch(() => ({
+                    showcasePreviewsByCategory: {},
+                    homeShowcase: { categories: [], carousels: {} }
+                })),
+                getActiveHomeBanners().catch(() => []),
+                getActiveHomeCategoryTiles().catch(() => []),
+                productModel
+                    .find({ $or: HOME_STOCK_OR }, homeProjection)
+                    .sort({ createdAt: -1 })
+                    .limit(40)
+                    .lean()
+            ]);
 
-        const recientes = shuffleInPlace([...recentPool]).slice(0, 20);
-
-        // Showcase de subcategorías listo en el mismo payload que las vitrinas
-        // (categorías + label + image por slide → pinta al abrir, sin esperar el menú).
-        const [slotResults, showcaseBundle, homeBanners, homeCategoryTiles] = await Promise.all([
-            Promise.all(slotPromises),
-            buildHomeShowcaseWithPreviews(buildShowcasePreviewsByCategory).catch(() => ({
-                showcasePreviewsByCategory: {},
-                homeShowcase: { categories: [], carousels: {} }
-            })),
-            getActiveHomeBanners().catch(() => []),
-            getActiveHomeCategoryTiles().catch(() => [])
-        ]);
+        const recientes = shuffleInPlace([...recentPool]).slice(0, 12);
 
         const slots = { recientes };
         slotResults.forEach(({ key, products }) => {
             slots[key] = products;
         });
 
-        const {
+        let {
             showcasePreviewsByCategory = {},
             homeShowcase = { categories: [], carousels: {} }
         } = showcaseBundle || {};
 
-        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-        res.json({
+        // Recortar carruseles: 24 slides bastan para el home (menos JSON)
+        if (homeShowcase?.carousels && typeof homeShowcase.carousels === 'object') {
+            const trimmed = {};
+            for (const [k, arr] of Object.entries(homeShowcase.carousels)) {
+                trimmed[k] = Array.isArray(arr) ? arr.slice(0, 24) : [];
+            }
+            homeShowcase = { ...homeShowcase, carousels: trimmed };
+        }
+
+        const body = {
             message: "Productos para home obtenidos",
             success: true,
             error: false,
@@ -265,16 +289,22 @@ const getHomeProductsController = async(req, res) => {
                     subtitle: s.subtitle,
                     layout: s.layout,
                     order: s.order,
-                    limit: s.limit,
+                    limit: Math.min(Number(s.limit) || 12, 12),
                     verMas: s.verMas,
                     pairs: s.pairs
                 })),
+                // Mapa plano opcional (compat); homeShowcase ya trae image por slide
                 showcasePreviewsByCategory,
                 homeShowcase,
                 homeBanners,
                 homeCategoryTiles
             }
-        });
+        };
+
+        setHomePayloadCache(body, 90 * 1000);
+        res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
+        res.set('X-Home-Cache', 'MISS');
+        res.json(body);
     } catch (err) {
         res.status(400).json({
             message: err.message || err,

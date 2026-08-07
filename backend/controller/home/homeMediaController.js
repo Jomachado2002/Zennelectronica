@@ -12,6 +12,7 @@ const {
   seedHomeCategoryTiles
 } = require('../../services/homeMediaService');
 const { uploadBufferToR2, isR2Configured } = require('../../services/r2StorageService');
+const { invalidateHomePayloadCache } = require('../../services/homePayloadCache');
 
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
@@ -152,6 +153,7 @@ const createBannerController = async (req, res) => {
       body.desktopHeight = body.mobileHeight;
     }
     const b = await HomeBanner.create(body);
+    invalidateHomePayloadCache();
     res.status(201).json({ success: true, error: false, data: b });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });
@@ -165,6 +167,7 @@ const updateBannerController = async (req, res) => {
       runValidators: true
     });
     if (!b) return res.status(404).json({ success: false, error: true, message: 'No encontrado' });
+    invalidateHomePayloadCache();
     res.json({ success: true, error: false, data: b });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });
@@ -175,6 +178,7 @@ const deleteBannerController = async (req, res) => {
   try {
     const b = await HomeBanner.findByIdAndDelete(req.params.id);
     if (!b) return res.status(404).json({ success: false, error: true, message: 'No encontrado' });
+    invalidateHomePayloadCache();
     res.json({ success: true, error: false, data: b });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });
@@ -195,6 +199,7 @@ const listTilesController = async (req, res) => {
 const seedTilesController = async (req, res) => {
   try {
     const data = await seedHomeCategoryTiles();
+    invalidateHomePayloadCache();
     res.json({ success: true, error: false, data });
   } catch (err) {
     res.status(500).json({ success: false, error: true, message: err.message });
@@ -204,6 +209,7 @@ const seedTilesController = async (req, res) => {
 const createTileController = async (req, res) => {
   try {
     const t = await HomeCategoryTile.create(req.body);
+    invalidateHomePayloadCache();
     res.status(201).json({ success: true, error: false, data: t });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });
@@ -217,6 +223,7 @@ const updateTileController = async (req, res) => {
       runValidators: true
     });
     if (!t) return res.status(404).json({ success: false, error: true, message: 'No encontrado' });
+    invalidateHomePayloadCache();
     res.json({ success: true, error: false, data: t });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });
@@ -227,6 +234,7 @@ const deleteTileController = async (req, res) => {
   try {
     const t = await HomeCategoryTile.findByIdAndDelete(req.params.id);
     if (!t) return res.status(404).json({ success: false, error: true, message: 'No encontrado' });
+    invalidateHomePayloadCache();
     res.json({ success: true, error: false, data: t });
   } catch (err) {
     res.status(400).json({ success: false, error: true, message: err.message });

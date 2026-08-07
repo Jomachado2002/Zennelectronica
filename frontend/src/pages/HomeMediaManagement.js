@@ -10,6 +10,7 @@ import {
   FaUpload
 } from 'react-icons/fa';
 import SummaryApi from '../common';
+import { clearHomeLocalCache } from '../hooks/useProducts';
 
 const emptyBanner = () => ({
   title: '',
@@ -92,6 +93,7 @@ const HomeMediaManagement = () => {
   }, [loadAll]);
 
   const invalidateHome = () => {
+    clearHomeLocalCache();
     queryClient.removeQueries({ queryKey: ['category-products', 'home'] });
     queryClient.invalidateQueries({ queryKey: ['category-products', 'home'] });
   };

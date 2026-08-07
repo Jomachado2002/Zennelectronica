@@ -417,6 +417,10 @@ productSchema.set('strict', false);
 
 // Creamos un índice para el slug para búsquedas más rápidas
 productSchema.index({ slug: 1 }, { unique: true, sparse: true });
+/** Home / listados por cat+sub con stock */
+productSchema.index({ category: 1, subcategory: 1, stock: 1, createdAt: -1 });
+productSchema.index({ category: 1, stock: 1, createdAt: -1 });
+productSchema.index({ stock: 1, createdAt: -1 });
 
 const productModel = mongoose.model("product", productSchema);
 

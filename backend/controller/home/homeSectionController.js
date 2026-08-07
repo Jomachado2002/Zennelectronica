@@ -6,6 +6,7 @@ const {
     ensureHomeSectionsSeeded,
     normalizeSection
 } = require('../../services/homeSectionService');
+const { invalidateHomePayloadCache } = require('../../services/homePayloadCache');
 
 function sanitizePairs(pairs) {
     if (!Array.isArray(pairs)) return [];
@@ -154,6 +155,7 @@ const createHomeSectionController = async (req, res) => {
         }
 
         const created = await HomeSection.create(payload);
+        invalidateHomePayloadCache();
         res.status(201).json({
             message: 'Sección creada',
             success: true,
@@ -198,6 +200,7 @@ const updateHomeSectionController = async (req, res) => {
                 error: true
             });
         }
+        invalidateHomePayloadCache();
         res.json({
             message: 'Sección actualizada',
             success: true,
@@ -223,6 +226,7 @@ const deleteHomeSectionController = async (req, res) => {
                 error: true
             });
         }
+        invalidateHomePayloadCache();
         res.json({
             message: 'Sección eliminada',
             success: true,
@@ -256,6 +260,7 @@ const reorderHomeSectionsController = async (req, res) => {
             )
         );
         const sections = await listAllHomeSections();
+        invalidateHomePayloadCache();
         res.json({
             message: 'Orden actualizado',
             success: true,
@@ -279,6 +284,7 @@ const seedHomeSectionsController = async (req, res) => {
         }
         const result = await ensureHomeSectionsSeeded();
         const sections = await listAllHomeSections();
+        invalidateHomePayloadCache();
         res.json({
             message: result.seeded
                 ? 'Secciones sembradas desde defaults'

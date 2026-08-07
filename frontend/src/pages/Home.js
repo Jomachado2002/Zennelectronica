@@ -78,8 +78,8 @@ function buildFallbackSections() {
 const Home = () => {
   const { data: homeData, isLoading: homeLoading, isFetching } = useHomeProducts();
   const [, setImagesPreloaded] = useState(false);
-  // Sin datos aún: no pintar títulos/banners viejos (evita flash de "Notebooks de Alto…")
-  const homePending = !homeData && (homeLoading || isFetching);
+  // Sin datos aún (ni cache local): skeleton. Si hay initialData, pintar ya.
+  const homePending = !homeData?.data?.slots && (homeLoading || isFetching);
 
   const homeBanners = homeData?.data?.homeBanners;
   const showcasePreviewsByCategory = homeData?.data?.showcasePreviewsByCategory || null;
