@@ -1,6 +1,7 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
+import { SITE_ORIGIN, siteUrl } from '../config/siteUrl';
 import SummaryApi from '../common';
 import displayINRCurrency from '../helpers/displayCurrency';
 import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
@@ -281,7 +282,7 @@ ${productUrl}
         <meta property="og:title" content={data.productName || 'Producto'} />
         <meta property="og:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={`https://zenn.com.py/producto/${data.slug || params.id}`} />
+        <meta property="og:url" content={siteUrl(`/producto/${data.slug || params.id}`)} />
         <meta property="og:site_name" content="Zenn" />
         {data.productImage && data.productImage[0] && (
           <meta property="og:image" content={getAbsoluteImageUrl(data.productImage[0])} />
@@ -304,7 +305,7 @@ ${productUrl}
           <meta name="twitter:image" content={getAbsoluteImageUrl(data.productImage[0])} />
         )}
         
-        <link rel="canonical" href={`https://zenn.com.py/producto/${data.slug || params.id}`} />
+        <link rel="canonical" href={siteUrl(`/producto/${data.slug || params.id}`)} />
         
         {/* BreadcrumbList Schema.org para navegación */}
         <script type="application/ld+json">
@@ -316,37 +317,39 @@ ${productUrl}
                 "@type": "ListItem",
                 "position": 1,
                 "name": "Inicio",
-                "item": "https://zenn.com.py"
+                "item": SITE_ORIGIN
               },
               {
                 "@type": "ListItem",
                 "position": 2,
                 "name": data.category ? (data.category.charAt(0).toUpperCase() + data.category.slice(1)) : "Categoría",
-                "item": `https://zenn.com.py/categoria-producto?category=${data.category}`
+                "item": siteUrl(`/categoria-producto?category=${data.category}`)
               },
               {
                 "@type": "ListItem",
                 "position": 3,
                 "name": data.subcategory ? (data.subcategory.charAt(0).toUpperCase() + data.subcategory.slice(1)) : "Subcategoría",
-                "item": `https://zenn.com.py/categoria-producto?category=${data.category}&subcategory=${data.subcategory}`
+                "item": siteUrl(`/categoria-producto?category=${data.category}&subcategory=${data.subcategory}`)
               },
               {
                 "@type": "ListItem",
                 "position": 4,
                 "name": data.productName,
-                "item": `https://zenn.com.py/producto/${data.slug || params.id}`
+                "item": siteUrl(`/producto/${data.slug || params.id}`)
               }
             ]
           })}
         </script>
         
-        {/* Product Schema.org optimizado para Google Merchant */}
+        {/* Product Schema.org — sin ratings inventados */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
             "name": data.productName,
-            "image": data.productImage,
+            "image": (data.productImage || []).map((img) =>
+              typeof img === 'string' && img.startsWith('http') ? img : getAbsoluteImageUrl(img)
+            ),
             "description": data.description,
             "sku": data._id,
             "mpn": data._id,
@@ -357,7 +360,7 @@ ${productUrl}
             },
             "offers": {
               "@type": "Offer",
-              "url": `https://zenn.com.py/producto/${data.slug || params.id}`,
+              "url": siteUrl(`/producto/${data.slug || params.id}`),
               "priceCurrency": "PYG",
               "price": data.sellingPrice,
               "priceValidUntil": getOneYearFromNow(),
@@ -365,34 +368,14 @@ ${productUrl}
               "availability": isInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
               "seller": {
                 "@type": "Organization",
-                "name": "Zenn Electronicos"
+                "name": "Zenn"
               }
             },
             "additionalProperty": Object.entries(getProductSpecifications()).map(([name, value]) => ({
               "@type": "PropertyValue",
               "name": name,
               "value": value
-            })),
-            "aggregateRating": {
-              "@type": "AggregateRating",
-              "ratingValue": "4.8",
-              "reviewCount": "27"
-            },
-            "review": [
-              {
-                "@type": "Review",
-                "reviewRating": {
-                  "@type": "Rating",
-                  "ratingValue": "5",
-                  "bestRating": "5"
-                },
-                "author": {
-                  "@type": "Person",
-                  "name": "Cliente Satisfecho"
-                },
-                "reviewBody": "Excelente producto, llegó antes de lo esperado y con todas las características prometidas."
-              }
-            ]
+            }))
           })}
         </script>
       </Helmet>

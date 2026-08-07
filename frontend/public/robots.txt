@@ -1,16 +1,26 @@
+# www.zenn.com.py — canónico único para Google
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://zennelectronica02.vercel.app/sitemap.xml
-
-# Disallow admin panels
+# No indexar flujos privados / thin
 Disallow: /panel-admin/
 Disallow: /admin/
+Disallow: /carrito
+Disallow: /finalizar-compra
+Disallow: /iniciar-sesion
+Disallow: /registro
+Disallow: /recuperar-contrasena
+Disallow: /restablecer-contrasena
+Disallow: /mi-perfil
+Disallow: /buscar
+Disallow: /search
 
-# Allow important pages
+# Páginas públicas importantes
 Allow: /
 Allow: /categoria-producto
 Allow: /producto/
-Allow: /buscar
-Allow: /search
+Allow: /promociones
+Allow: /nosotros
+
+# Sitemap dinámico (productos + categorías)
+Sitemap: https://www.zenn.com.py/api/sitemap.xml

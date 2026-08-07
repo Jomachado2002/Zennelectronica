@@ -21,6 +21,7 @@ import {
 } from '../config/homeSlotRoutes';
 import { useSeedHomeShowcasePreviews } from '../hooks/useSubcategoryPreviewMap';
 import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
+import { SITE_ORIGIN } from '../config/siteUrl';
 
 const fadeIn = {
   hidden: { opacity: 0 },
@@ -158,6 +159,8 @@ const Home = () => {
           content="informática, notebooks, placas madre, computadoras, monitores, Paraguay, tecnología, ofertas"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href={`${SITE_ORIGIN}/`} />
+        <meta property="og:url" content={`${SITE_ORIGIN}/`} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link rel="preconnect" href="https://cdn.zenn.com.py" crossOrigin="true" />

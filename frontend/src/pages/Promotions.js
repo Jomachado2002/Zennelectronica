@@ -2,6 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 import { FilterProvider } from '../context/FilterContext';
 import { CategoryProductContent } from './CategoryProduct';
+import { SITE_ORIGIN } from '../config/siteUrl';
 
 /**
  * /promociones — mismos filtros que categoria-producto
@@ -17,7 +18,7 @@ const Promotions = () => {
           name="description"
           content="Productos en promoción en Zenn Paraguay. Filtrá por categoría, subcategoría y especificaciones."
         />
-        <link rel="canonical" href="https://www.zenn.com.py/promociones" />
+        <link rel="canonical" href={`${SITE_ORIGIN}/promociones`} />
         <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16909859875" />
         <script>
           {`

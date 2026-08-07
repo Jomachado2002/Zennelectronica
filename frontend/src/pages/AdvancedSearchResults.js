@@ -12,6 +12,7 @@ import MobileSearchFilters from '../components/filters/MobileSearchFilters';
 import { FaSearch, FaFilter, FaTimes, FaSortAmountDown } from 'react-icons/fa';
 import { BiGridAlt, BiListUl } from 'react-icons/bi';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
+import { Helmet } from 'react-helmet';
 
 // Componente principal de resultados de búsqueda
 const SearchResultsContent = () => {
@@ -152,6 +153,11 @@ const SearchResultsContent = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Helmet>
+        <title>{searchTerm ? `Buscar: ${searchTerm} | Zenn` : 'Buscar productos | Zenn'}</title>
+        <meta name="robots" content="noindex, follow" />
+        <meta name="googlebot" content="noindex, follow" />
+      </Helmet>
       {/* Header responsive - Desktop y Mobile separados */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         {/* Desktop Header */}

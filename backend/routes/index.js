@@ -25,6 +25,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const getProductDetails = require('../controller/product/getProductDetails');
     const { updateAllPricesController } = require('../controller/product/updateAllPrices');
     const channableFeedController = require('../controller/product/channableFeedController');
+    const { sitemapController } = require('../controller/seo/sitemapController');
     const searchProduct = require('../controller/product/searchProduct');
     const advancedSearchProduct = require('../controller/product/advancedSearchProduct');
     const filterProductController = require('../controller/product/filterProduct');
@@ -980,6 +981,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
     router.get("/channable/feed.xml", channableFeedController);
+    router.get("/sitemap.xml", sitemapController);
 
 
     // ===========================================

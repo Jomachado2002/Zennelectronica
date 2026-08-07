@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { Helmet } from 'react-helmet'
 import SummaryApi from '../common'
 import VerticalCardGrid from '../components/VerticalCardGrid'
 
@@ -57,6 +58,11 @@ const SearchProduct = () => {
 
     return (
         <div className={`container mx-auto p-4 content-wrapper ${showMobileSearch ? 'mt-16' : ''}`}>
+            <Helmet>
+              <title>Búsqueda | Zenn</title>
+              <meta name="robots" content="noindex, follow" />
+              <meta name="googlebot" content="noindex, follow" />
+            </Helmet>
             {/* Filtro de ordenamiento */}
             <div className='mb-4 flex justify-end items-center'>
                 <label htmlFor='sort-select' className='mr-2'>Ordenar por:</label>
