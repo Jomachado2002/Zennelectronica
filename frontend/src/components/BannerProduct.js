@@ -1,144 +1,113 @@
 // frontend/src/components/BannerProduct.js
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCelularesListingHref } from '../config/homeSlotRoutes';
 import scrollTop from '../helpers/scrollTop';
 
-const BannerProduct = () => {
+/** Proporciones fijas del home */
+const DESKTOP_ASPECT = '1374 / 438';
+/** Mobile: 1545 × 1329 */
+const MOBILE_ASPECT = '1545 / 1329';
+
+const bannerBoxStyle = (isMobile) =>
+  isMobile
+    ? {
+        aspectRatio: MOBILE_ASPECT,
+        width: '100%',
+        height: 'auto'
+      }
+    : {
+        aspectRatio: DESKTOP_ASPECT,
+        width: '100%',
+        minHeight: '180px',
+        maxHeight: '60vh'
+      };
+
+/**
+ * Solo banners del CMS (Admin → Home Media).
+ * Contenedor fijo: desktop 1374×438 | mobile 1545×1329.
+ */
+const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   const navigate = useNavigate();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-  const celularesHref = useMemo(() => getCelularesListingHref(), []);
   const lastSwipeAtRef = useRef(0);
 
-  // Hook para detectar si es móvil
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 640);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
-    
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // ✅ IMÁGENES ESPECÍFICAS PARA MÓVIL Y DESKTOP
-  const bannersDesktop = React.useMemo(() => [
-    {
-      id: 1,
-      image: '/banners/banner1.webp',
-      alt: 'Banner 1 Desktop'
-    },
-    {
-      id: 2,
-      image: '/banners/banner2.webp',
-      alt: 'Banner 2 Desktop'
-    },
-    {
-      id: 3,
-      image: '/banners/banner3.webp',
-      alt: 'Banner 3 Desktop'
-    },
-    {
-      id: 4,
-      image: '/banners/banner4.webp',
-      alt: 'Banner 4 Desktop'
-    },
-    {
-      id: 5,
-      image: '/banners/banner5.webp',
-      alt: 'Banner 5 Desktop'
-    }
-  ], []);
+  const banners = useMemo(() => {
+    if (!Array.isArray(bannersProp)) return [];
+    return bannersProp
+      .filter((b) => b && (b.imageDesktop || b.imageMobile || b.image))
+      .map((b, i) => ({
+        id: b._id || `api-${i}`,
+        image: isMobile
+          ? b.imageMobile || b.imageDesktop || b.image
+          : b.imageDesktop || b.image || b.imageMobile,
+        alt: b.alt || b.title || `Banner ${i + 1}`,
+        href: b.href || ''
+      }));
+  }, [bannersProp, isMobile]);
 
-  const bannersMobile = React.useMemo(() => [
-    {
-      id: 1,
-      image: '/banners/banner1mob.webp', // Dimensiones 466x700
-      alt: 'Banner 1 Mobile'
-    },
-    {
-      id: 2,
-      image: '/banners/banner2mob.webp',
-      alt: 'Banner 2 Mobile'
-    },
-    {
-      id: 3,
-      image: '/banners/banner3mob.webp',
-      alt: 'Banner 3 Mobile'
-    },
-    {
-      id: 4,
-      image: '/banners/banner4mob.webp',
-      alt: 'Banner 4 Mobile'
-    },
-    {
-      id: 5,
-      image: '/banners/banner5mob.webp',
-      alt: 'Banner 5 Mobile'
-    }
-  ], []);
+  useEffect(() => {
+    setActiveSlide(0);
+  }, [isMobile, banners.length]);
 
-  // Seleccionar banners según el dispositivo
-  const banners = isMobile ? bannersMobile : bannersDesktop;
-
-  const nextSlide = React.useCallback(() => {
-    if (isAnimating) return;
+  const nextSlide = useCallback(() => {
+    if (isAnimating || banners.length < 2) return;
     setIsAnimating(true);
     setActiveSlide((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
     setTimeout(() => setIsAnimating(false), 500);
   }, [isAnimating, banners.length]);
 
-  const prevSlide = React.useCallback(() => {
-    if (isAnimating) return;
+  const prevSlide = useCallback(() => {
+    if (isAnimating || banners.length < 2) return;
     setIsAnimating(true);
     setActiveSlide((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
     setTimeout(() => setIsAnimating(false), 500);
   }, [isAnimating, banners.length]);
 
-  // ✅ GESTOS TÁCTILES PARA MÓVILES
-  const handleTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
+  const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
+  const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
+    if (!touchStart || touchEnd == null) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) {
+    if (Math.abs(distance) > 50) {
       lastSwipeAtRef.current = Date.now();
-      nextSlide();
-    } else if (isRightSwipe) {
-      lastSwipeAtRef.current = Date.now();
-      prevSlide();
+      if (distance > 0) nextSlide();
+      else prevSlide();
     }
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
-  /** En móvil, tocar el banner (fuera de flechas) lleva al listado de celulares configurado en home slots. */
-  const handleBannerClick = (e) => {
-    if (!isMobile) return;
-    if (e.target.closest('button')) return;
-    if (Date.now() - lastSwipeAtRef.current < 450) return;
-    navigate(celularesHref);
+  const goToHref = (href) => {
+    if (!href) return;
+    if (/^https?:\/\//i.test(href)) {
+      window.location.href = href;
+      return;
+    }
+    navigate(href.startsWith('/') ? href : `/${href}`);
     scrollTop();
   };
 
-  // Solo calienta slide actual + siguiente (no las 10 banners × 2 breakpoints)
+  const handleBannerClick = (e, banner) => {
+    if (e.target.closest('button')) return;
+    if (Date.now() - lastSwipeAtRef.current < 450) return;
+    if (!banner?.href) return;
+    goToHref(banner.href);
+  };
+
   useEffect(() => {
-    if (!banners.length) return;
+    if (!banners.length) return undefined;
     const warm = (src, priority = 'low') => {
       if (!src) return;
       const img = new Image();
@@ -146,103 +115,103 @@ const BannerProduct = () => {
       img.src = src;
     };
     warm(banners[activeSlide]?.image, 'high');
-    warm(banners[(activeSlide + 1) % banners.length]?.image, 'low');
+    if (banners.length > 1) {
+      warm(banners[(activeSlide + 1) % banners.length]?.image, 'low');
+    }
   }, [banners, activeSlide]);
 
-  // Resetear slide cuando cambie el dispositivo
   useEffect(() => {
-    setActiveSlide(0);
-  }, [isMobile]);
-
-  // Auto-play cada 5 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      nextSlide();
-    }, 5000);
+    if (banners.length < 2) return undefined;
+    const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
-  }, [activeSlide, nextSlide]);
+  }, [activeSlide, nextSlide, banners.length]);
+
+  if (!banners.length) {
+    if (!pending) return null;
+    return (
+      <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
+        <div
+          className="w-full animate-pulse bg-gray-200 rounded-none sm:rounded-xl"
+          style={bannerBoxStyle(isMobile)}
+          aria-hidden
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
-      {/* Contenedor principal con aspect-ratio responsivo */}
-      <div 
+      <div
         className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
-        style={{
-          // Aspect-ratio optimizado para evitar espacios en blanco
-          // Móvil: usar proporción más ancha para llenar mejor la pantalla
-          // Desktop: mantener proporción original
-          aspectRatio: isMobile ? '4/5' : '1374/438',
-          minHeight: isMobile ? '200px' : '180px',
-          maxHeight: isMobile ? '50vh' : '60vh',
-          // Asegurar que en móviles no haya espacios en blanco
-          width: '100%'
-        }}
+        style={bannerBoxStyle(isMobile)}
       >
-          {/* Imágenes del carrusel - Con soporte táctil */}
-          <div 
-            className="relative w-full h-full touch-pan-y"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onClick={handleBannerClick}
-            role={isMobile ? 'link' : undefined}
-            aria-label={isMobile ? 'Ver celulares y tablets' : undefined}
-          >
-            {banners.map((banner, index) => (
-              <div
-                key={banner.id}
-                className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                  index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                }`}
-              >
-                <img
-                  src={banner.image}
-                  alt={banner.alt}
-                  className="w-full h-full object-cover"
-                  style={{
-                    // Posicionamiento optimizado para móvil y desktop
-                    objectPosition: isMobile ? 'center center' : 'center center',
-                    width: '100%',
-                    height: '100%',
-                    // Asegurar que la imagen llene completamente el contenedor
-                    minWidth: '100%',
-                    minHeight: '100%'
-                  }}
-                  loading={index === activeSlide ? "eager" : "lazy"}
-                  fetchpriority={index === activeSlide ? "high" : "low"}
-                  onError={(e) => {
-                    // Imagen por defecto si no existe
-                    if (e && e.target) {
-                      e.target.src = '/banners/default.jpg';
-                    }
-                  }}
-                />
-                {/* Overlay sutil para mejor contraste con los controles */}
-                <div className="absolute inset-0 bg-black/5"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Botones de navegación - Optimizados para táctil */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg touch-manipulation"
-            style={{ minWidth: '44px', minHeight: '44px' }} // Tamaño mínimo táctil
-            aria-label="Anterior"
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
-          </button>
-          
-          <button
-            onClick={nextSlide}
-            className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all duration-300 z-20 hover:scale-110 active:scale-95 shadow-lg touch-manipulation"
-            style={{ minWidth: '44px', minHeight: '44px' }} // Tamaño mínimo táctil
-            aria-label="Siguiente"
-          >
-            <ChevronRight className="w-5 h-5 sm:w-5 sm:h-5 text-gray-800" />
-          </button>
-
+        <div
+          className={`relative w-full h-full touch-pan-y ${
+            banners[activeSlide]?.href ? 'cursor-pointer' : ''
+          }`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={(e) => handleBannerClick(e, banners[activeSlide])}
+          role={banners[activeSlide]?.href ? 'link' : undefined}
+          aria-label={banners[activeSlide]?.alt || 'Banner'}
+        >
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+            >
+              <img
+                src={banner.image}
+                alt={banner.alt}
+                className="w-full h-full object-cover"
+                style={{ objectPosition: 'center center', width: '100%', height: '100%' }}
+                loading={index === activeSlide ? 'eager' : 'lazy'}
+                fetchPriority={index === activeSlide ? 'high' : 'low'}
+              />
+              <div className="absolute inset-0 bg-black/5" />
+            </div>
+          ))}
         </div>
+
+        {banners.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={prevSlide}
+              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all z-20 shadow-lg"
+              style={{ minWidth: '44px', minHeight: '44px' }}
+              aria-label="Anterior"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-800" />
+            </button>
+            <button
+              type="button"
+              onClick={nextSlide}
+              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 sm:p-2.5 transition-all z-20 shadow-lg"
+              style={{ minWidth: '44px', minHeight: '44px' }}
+              aria-label="Siguiente"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-800" />
+            </button>
+            <div className="absolute bottom-3 left-0 right-0 z-20 flex justify-center gap-1.5">
+              {banners.map((b, i) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-label={`Ir al banner ${i + 1}`}
+                  onClick={() => setActiveSlide(i)}
+                  className={`h-2 rounded-full transition-all ${
+                    i === activeSlide ? 'w-6 bg-[#00B5D8]' : 'w-2 bg-white/70'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

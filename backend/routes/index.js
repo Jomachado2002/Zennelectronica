@@ -943,6 +943,31 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     router.put("/admin/home-sections/:id", authToken, updateHomeSectionController);
     router.delete("/admin/home-sections/:id", authToken, deleteHomeSectionController);
 
+    // HOME MEDIA (banners + tiles categoría)
+    const {
+        uploadHomeMediaController,
+        listBannersController,
+        createBannerController,
+        updateBannerController,
+        deleteBannerController,
+        listTilesController,
+        seedTilesController,
+        createTileController,
+        updateTileController,
+        deleteTileController
+    } = require('../controller/home/homeMediaController');
+
+    router.post("/admin/home-media/upload", authToken, uploadHomeMediaController);
+    router.get("/admin/home-banners", authToken, listBannersController);
+    router.post("/admin/home-banners", authToken, createBannerController);
+    router.put("/admin/home-banners/:id", authToken, updateBannerController);
+    router.delete("/admin/home-banners/:id", authToken, deleteBannerController);
+    router.get("/admin/home-category-tiles", authToken, listTilesController);
+    router.post("/admin/home-category-tiles/seed", authToken, seedTilesController);
+    router.post("/admin/home-category-tiles", authToken, createTileController);
+    router.put("/admin/home-category-tiles/:id", authToken, updateTileController);
+    router.delete("/admin/home-category-tiles/:id", authToken, deleteTileController);
+
 router.get("/obtener-productos-admin", cookieDebug, authToken, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });

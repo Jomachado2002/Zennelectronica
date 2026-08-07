@@ -76,14 +76,17 @@ function buildFallbackSections() {
 }
 
 const Home = () => {
-  const { data: homeData, isLoading: homeLoading } = useHomeProducts();
+  const { data: homeData, isLoading: homeLoading, isFetching } = useHomeProducts();
   const [, setImagesPreloaded] = useState(false);
+  // Sin datos aún: no pintar títulos/banners viejos (evita flash de "Notebooks de Alto…")
+  const homePending = !homeData && (homeLoading || isFetching);
 
+  const homeBanners = homeData?.data?.homeBanners;
   const showcasePreviewsByCategory = homeData?.data?.showcasePreviewsByCategory || null;
   const homeShowcase = homeData?.data?.homeShowcase || null;
   useSeedHomeShowcasePreviews(showcasePreviewsByCategory);
 
-  // Calienta thumbs del showcase bootstrap (misma ventana que productos del home)
+  // Calienta thumbs del showcase (CDN) apenas llega el home
   useEffect(() => {
     const urls = [];
     const carousels = homeShowcase?.carousels;
@@ -114,6 +117,9 @@ const Home = () => {
   const sections = useMemo(() => {
     const fromApi = homeData?.data?.sections;
     if (Array.isArray(fromApi) && fromApi.length > 0) return fromApi;
+    // Solo fallback si el API ya respondió sin sections (backend viejo).
+    // Nunca mientras carga → evita texto hardcodeado incorrecto.
+    if (!homeData) return [];
     return buildFallbackSections();
   }, [homeData]);
 
@@ -193,12 +199,30 @@ const Home = () => {
           className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4"
         >
           <div className="w-full -mt-2 sm:mt-0">
-            <BannerProduct />
+            <BannerProduct banners={homeBanners} pending={homePending} />
           </div>
-          <CategoryShowcase
-            showcasePreviewsByCategory={showcasePreviewsByCategory}
-            homeShowcase={homeShowcase}
-          />
+          {homePending ? (
+            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4" aria-hidden>
+              <div className="flex gap-2 mb-4 overflow-hidden">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-gray-200 animate-pulse" />
+                ))}
+              </div>
+              <div className="flex gap-3 overflow-hidden">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="shrink-0 w-28 space-y-2">
+                    <div className="h-24 w-28 rounded-xl bg-gray-200 animate-pulse" />
+                    <div className="h-3 w-20 mx-auto rounded bg-gray-100 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <CategoryShowcase
+              showcasePreviewsByCategory={showcasePreviewsByCategory}
+              homeShowcase={homeShowcase}
+            />
+          )}
         </motion.div>
 
         <div className="sr-only">
@@ -214,7 +238,7 @@ const Home = () => {
           <HomeDynamicSections
             sections={sections}
             slotProducts={slotProducts}
-            loading={homeLoading}
+            loading={homePending || (homeLoading && !sections.length)}
           />
 
           <motion.section

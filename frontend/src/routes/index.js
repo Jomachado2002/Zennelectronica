@@ -47,6 +47,7 @@ import CategoriesManagement from "../components/admin/CategoriesManagement"
 // Importar página de gestión de tipo de cambio
 import ExchangeRateManagement from "../pages/ExchangeRateManagement"
 import HomeVitrinasManagement from "../pages/HomeVitrinasManagement"
+import HomeMediaManagement from "../pages/HomeMediaManagement"
 
 // Importar páginas financieras
 import FinancialReports from "../pages/FinancialReports"
@@ -233,6 +234,10 @@ const router = createBrowserRouter([
                     {
                         path: "home-vitrinas",
                         element: <HomeVitrinasManagement />
+                    },
+                    {
+                        path: "home-media",
+                        element: <HomeMediaManagement />
                     },
                     
                     

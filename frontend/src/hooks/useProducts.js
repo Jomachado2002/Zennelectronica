@@ -5,7 +5,7 @@ import SummaryApi from '../common';
 // ✅ HOOK PARA PRODUCTOS DEL HOME - CORREGIDO
 export const useHomeProducts = () => {
   return useQuery({
-    queryKey: ['category-products', 'home', 'slots-v6'],
+    queryKey: ['category-products', 'home', 'slots-v7-cms-banners'],
     queryFn: async () => {
       try {
         const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos', {

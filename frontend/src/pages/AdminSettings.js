@@ -10,6 +10,7 @@ function AdminSettings() {
     { title: 'Usuarios', desc: 'Gestiona usuarios y permisos', to: '/panel-admin/gestion-usuarios' },
     { title: 'Tipo de Cambio', desc: 'Actualiza tipos de cambio', to: '/panel-admin/tipo-cambio' },
     { title: 'Home / Vitrinas', desc: 'Títulos, categorías y límites del home', to: '/panel-admin/home-vitrinas' },
+    { title: 'Home Media', desc: 'Banners y tiles (Notebooks, Games…)', to: '/panel-admin/home-media' },
     // Placeholder para futuro
     { title: 'Tipos de Compras', desc: 'Configura categorías de compras (pronto)', to: '/panel-admin/tipos-compra' }
   ]

@@ -3,6 +3,10 @@ const productModel = require("../../models/productModel")
 const { HOME_SLOT_DEFS } = require("../../config/homeFeaturedSlots")
 const { getActiveHomeSections } = require("../../services/homeSectionService")
 const { buildHomeShowcaseWithPreviews } = require("../../services/homeShowcaseService")
+const {
+    getActiveHomeBanners,
+    getActiveHomeCategoryTiles
+} = require("../../services/homeMediaService")
 
 const getProductController = async(req, res)=>{
     try{
@@ -228,12 +232,14 @@ const getHomeProductsController = async(req, res) => {
 
         // Showcase de subcategorías listo en el mismo payload que las vitrinas
         // (categorías + label + image por slide → pinta al abrir, sin esperar el menú).
-        const [slotResults, showcaseBundle] = await Promise.all([
+        const [slotResults, showcaseBundle, homeBanners, homeCategoryTiles] = await Promise.all([
             Promise.all(slotPromises),
             buildHomeShowcaseWithPreviews(buildShowcasePreviewsByCategory).catch(() => ({
                 showcasePreviewsByCategory: {},
                 homeShowcase: { categories: [], carousels: {} }
-            }))
+            })),
+            getActiveHomeBanners().catch(() => []),
+            getActiveHomeCategoryTiles().catch(() => [])
         ]);
 
         const slots = { recientes };
@@ -264,7 +270,9 @@ const getHomeProductsController = async(req, res) => {
                     pairs: s.pairs
                 })),
                 showcasePreviewsByCategory,
-                homeShowcase
+                homeShowcase,
+                homeBanners,
+                homeCategoryTiles
             }
         });
     } catch (err) {

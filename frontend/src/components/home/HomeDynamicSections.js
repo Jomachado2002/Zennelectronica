@@ -206,11 +206,28 @@ function GridCard({ section, products, loading, eager }) {
   );
 }
 
+function SectionsSkeleton() {
+  return (
+    <div className="w-full space-y-8" aria-hidden>
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-1/3 h-64 rounded-2xl bg-gray-200 animate-pulse" />
+        <div className="w-full lg:w-2/3 space-y-4">
+          <div className="h-8 w-2/3 max-w-md rounded bg-gray-200 animate-pulse" />
+          <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
+          <div className="h-48 rounded-xl bg-gray-100 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Renderiza vitrinas del home desde `sections` (Mongo / CMS).
  */
 const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
-  if (!sections.length) return null;
+  if (!sections.length) {
+    return loading ? <SectionsSkeleton /> : null;
+  }
 
   const groups = groupSections(sections);
   let sectionIndex = 0;
