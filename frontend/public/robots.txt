@@ -22,5 +22,7 @@ Allow: /producto/
 Allow: /promociones
 Allow: /nosotros
 
-# Sitemap dinámico (productos + categorías)
+# Sitemap XML dinámico (vía rewrite Vercel → backend).
+# Tras el deploy debe abrir XML, no HTML.
+Sitemap: https://www.zenn.com.py/sitemap.xml
 Sitemap: https://www.zenn.com.py/api/sitemap.xml
