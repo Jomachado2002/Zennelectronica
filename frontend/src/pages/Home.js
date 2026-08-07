@@ -19,6 +19,8 @@ import {
   categoriaProductoHref,
   getCelularesListingHref
 } from '../config/homeSlotRoutes';
+import { useSeedHomeShowcasePreviews } from '../hooks/useSubcategoryPreviewMap';
+import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
 
 const fadeIn = {
   hidden: { opacity: 0 },
@@ -75,6 +77,22 @@ function buildFallbackSections() {
 const Home = () => {
   const { data: homeData, isLoading: homeLoading } = useHomeProducts();
   const [, setImagesPreloaded] = useState(false);
+
+  const showcasePreviewsByCategory = homeData?.data?.showcasePreviewsByCategory || null;
+  useSeedHomeShowcasePreviews(showcasePreviewsByCategory);
+
+  // Calienta thumbs de subcategorías apenas llega el home (antes/mientras monta el carrusel)
+  useEffect(() => {
+    if (!showcasePreviewsByCategory) return;
+    const urls = [];
+    Object.values(showcasePreviewsByCategory).forEach((map) => {
+      if (!map || typeof map !== 'object') return;
+      Object.values(map).forEach((u) => {
+        if (u) urls.push(cdnThumbUrl(u, { width: 384, quality: 70 }));
+      });
+    });
+    warmImageUrls(urls, 12);
+  }, [showcasePreviewsByCategory]);
 
   const slots = homeData?.data?.slots;
   const slotProducts = (slotKey) =>
@@ -162,7 +180,7 @@ const Home = () => {
           <div className="w-full -mt-2 sm:mt-0">
             <BannerProduct />
           </div>
-          <CategoryShowcase />
+          <CategoryShowcase showcasePreviewsByCategory={showcasePreviewsByCategory} />
         </motion.div>
 
         <div className="sr-only">

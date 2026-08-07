@@ -225,12 +225,25 @@ const getHomeProductsController = async(req, res) => {
 
         const recientes = shuffleInPlace([...recentPool]).slice(0, 20);
 
-        const slotResults = await Promise.all(slotPromises);
+        // Previews del showcase "Explora por categorías" en el mismo payload del home
+        // (evita cascada menú → API previews → imágenes).
+        const showcaseCats = [
+            ...new Set(
+                HOME_SLOT_DEFS.flatMap((d) => (d.pairs || []).map((p) => p.category)).filter(Boolean)
+            )
+        ].slice(0, 8);
+
+        const [slotResults, showcasePreviewsByCategory] = await Promise.all([
+            Promise.all(slotPromises),
+            buildShowcasePreviewsByCategory(showcaseCats).catch(() => ({}))
+        ]);
+
         const slots = { recientes };
         slotResults.forEach(({ key, products }) => {
             slots[key] = products;
         });
 
+        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
         res.json({
             message: "Productos para home obtenidos",
             success: true,
@@ -246,7 +259,8 @@ const getHomeProductsController = async(req, res) => {
                     limit: s.limit,
                     verMas: s.verMas,
                     pairs: s.pairs
-                }))
+                })),
+                showcasePreviewsByCategory
             }
         });
     } catch (err) {
@@ -261,6 +275,67 @@ const getHomeProductsController = async(req, res) => {
 /**
  * Mapa subcategoryValue -> URL primera imagen de producto (más reciente con stock).
  */
+async function buildSubcategoryPreviewMap(values) {
+    const list = [...new Set((values || []).map(String).filter(Boolean))].slice(0, 150);
+    if (!list.length) return {};
+
+    const rows = await productModel.aggregate([
+        {
+            $match: {
+                subcategory: { $in: list },
+                $or: HOME_STOCK_OR,
+                productImage: { $exists: true, $ne: [] }
+            }
+        },
+        { $sort: { createdAt: -1 } },
+        {
+            $group: {
+                _id: '$subcategory',
+                img: { $first: { $arrayElemAt: ['$productImage', 0] } }
+            }
+        }
+    ]);
+
+    const data = {};
+    rows.forEach((r) => {
+        if (r._id && r.img) data[r._id] = r.img;
+    });
+    return data;
+}
+
+/** Previews de todas las subcategorías con stock para una o más categorías (home showcase). */
+async function buildShowcasePreviewsByCategory(categoryValues) {
+    const cats = [...new Set((categoryValues || []).map(String).filter(Boolean))];
+    if (!cats.length) return {};
+
+    const rows = await productModel.aggregate([
+        {
+            $match: {
+                category: { $in: cats },
+                $or: HOME_STOCK_OR,
+                productImage: { $exists: true, $ne: [] }
+            }
+        },
+        { $sort: { createdAt: -1 } },
+        {
+            $group: {
+                _id: { category: '$category', subcategory: '$subcategory' },
+                img: { $first: { $arrayElemAt: ['$productImage', 0] } }
+            }
+        }
+    ]);
+
+    const byCat = {};
+    rows.forEach((r) => {
+        const cat = r._id?.category;
+        const sub = r._id?.subcategory;
+        if (!cat || !sub || !r.img) return;
+        if (!byCat[cat]) byCat[cat] = {};
+        byCat[cat][sub] = r.img;
+    });
+    return byCat;
+}
+
 const getSubcategoryPreviewImagesController = async (req, res) => {
     try {
         const raw = req.query.values || '';
@@ -270,38 +345,9 @@ const getSubcategoryPreviewImagesController = async (req, res) => {
             .filter(Boolean)
             .slice(0, 150);
 
-        if (!values.length) {
-            return res.json({
-                message: "OK",
-                success: true,
-                error: false,
-                data: {}
-            });
-        }
+        const data = await buildSubcategoryPreviewMap(values);
 
-        const pipeline = [
-            {
-                $match: {
-                    subcategory: { $in: values },
-                    $or: HOME_STOCK_OR,
-                    productImage: { $exists: true, $ne: [] }
-                }
-            },
-            { $sort: { createdAt: -1 } },
-            {
-                $group: {
-                    _id: '$subcategory',
-                    img: { $first: { $arrayElemAt: ['$productImage', 0] } }
-                }
-            }
-        ];
-
-        const rows = await productModel.aggregate(pipeline);
-        const data = {};
-        rows.forEach((r) => {
-            if (r._id && r.img) data[r._id] = r.img;
-        });
-
+        res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
         res.json({
             message: "Previews obtenidos",
             success: true,

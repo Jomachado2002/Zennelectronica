@@ -9,19 +9,22 @@ import {
   usableVisaoTree,
   collectLeafSubcategoryValues
 } from '../helpers/visaoNavigationTree';
-import { useSubcategoryPreviewMap, useSubcategoryPreviewMapFromValues } from '../hooks/useSubcategoryPreviewMap';
+import { useSubcategoryPreviewMap, useSubcategoryPreviewMapFromValues, useHomeShowcasePreviewFlat } from '../hooks/useSubcategoryPreviewMap';
 import { categoriaProductoHref, HOME_SLOT_ROUTES } from '../config/homeSlotRoutes';
+import { cdnThumbUrl } from '../helpers/cdnImageUrl';
 
 const scrollTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-const CategoryShowcase = () => {
+const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
   const navigate = useNavigate();
   const scrollElement = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(false);
+
+  const homePreviewFlat = useHomeShowcasePreviewFlat(showcasePreviewsByCategory);
 
   const { data: menuFromApi } = usePreloadedCategories();
 
@@ -100,7 +103,8 @@ const CategoryShowcase = () => {
 
   const previewByVisaoLeaf = useSubcategoryPreviewMap(
     currentCategory?.visaoNavigationTree,
-    visaoReady
+    visaoReady,
+    homePreviewFlat
   );
 
   const flatSubValues = useMemo(
@@ -109,10 +113,15 @@ const CategoryShowcase = () => {
   );
   const legacyPreviewBySub = useSubcategoryPreviewMapFromValues(
     flatSubValues,
-    !!(currentCategory && !visaoReady && flatSubValues.length > 0)
+    !!(currentCategory && !visaoReady && flatSubValues.length > 0),
+    homePreviewFlat
   );
 
-  const activePreviewMap = visaoReady ? previewByVisaoLeaf : legacyPreviewBySub;
+  // Home payload primero (instantáneo); React Query completa / refresca
+  const activePreviewMap = useMemo(() => {
+    const fromQuery = visaoReady ? previewByVisaoLeaf : legacyPreviewBySub;
+    return { ...homePreviewFlat, ...fromQuery };
+  }, [visaoReady, previewByVisaoLeaf, legacyPreviewBySub, homePreviewFlat]);
 
   const checkScrollPosition = () => {
     if (scrollElement.current) {
@@ -221,7 +230,12 @@ const CategoryShowcase = () => {
                     const staticSubImg = subcategory.value
                       ? `/images/subcategories/${encodeURIComponent(subcategory.value)}.jpg`
                       : '';
-                    const initialImgSrc = previewUrl || staticSubImg;
+                    // Producto del home/API con thumb CDN; estático solo como fallback
+                    const productThumb = previewUrl
+                      ? cdnThumbUrl(previewUrl, { width: 384, quality: 70, fit: 'cover' })
+                      : '';
+                    const initialImgSrc = productThumb || staticSubImg;
+                    const eagerCount = 8;
                     return (
                     <button
                       key={subcategory.id || subcategory.value}
@@ -241,25 +255,31 @@ const CategoryShowcase = () => {
                           alt={leafLabelFromStoredLabel(subcategory.label)}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
                           sizes="(max-width: 640px) 160px, (max-width: 1024px) 176px, 192px"
-                          loading={slideIndex < 4 ? 'eager' : 'lazy'}
-                          fetchPriority={slideIndex < 2 ? 'high' : slideIndex < 4 ? 'auto' : 'low'}
+                          loading={slideIndex < eagerCount ? 'eager' : 'lazy'}
+                          fetchPriority={slideIndex < 4 ? 'high' : slideIndex < eagerCount ? 'auto' : 'low'}
                           decoding="async"
+                          data-full={previewUrl || ''}
                           onError={(e) => {
                             const t = e.currentTarget;
                             const def = '/images/subcategories/default.jpg';
                             const a = Number(t.dataset.fb || 0) + 1;
                             t.dataset.fb = String(a);
+                            // 1) Si falló thumb CF → original full
+                            if (a === 1 && t.dataset.full && t.src !== t.dataset.full) {
+                              t.src = t.dataset.full;
+                              return;
+                            }
                             if (previewUrl) {
-                              if (a === 1) {
+                              if (a <= 2) {
                                 t.src = staticSubImg || def;
                                 return;
                               }
-                              if (a === 2 && staticSubImg) {
+                              if (a === 3 && staticSubImg) {
                                 t.src = def;
                                 return;
                               }
                             } else if (staticSubImg) {
-                              if (a === 1) {
+                              if (a === 1 || a === 2) {
                                 t.src = def;
                                 return;
                               }

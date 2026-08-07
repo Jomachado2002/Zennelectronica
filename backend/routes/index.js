@@ -917,7 +917,8 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     // ===========================================
     router.post("/cargar-producto", authToken, requirePermission('products', 'upload'), UploadProductController);
     router.get("/obtener-productos-home", cookieDebug, authToken, getHomeProductsController);
-    router.get("/subcategory-preview-images", cookieDebug, authToken, getSubcategoryPreviewImagesController);
+    // Público (home showcase) + autenticado opcional
+    router.get("/subcategory-preview-images", getSubcategoryPreviewImagesController);
 
     // ===========================================
     // HOME VITRINAS (CMS admin)

@@ -11,10 +11,6 @@ export const useHomeProducts = () => {
         const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos', {
           method: SummaryApi.allProduct.method,
           credentials: 'include',
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
         });
                 
         if (!response.ok) {
