@@ -11,13 +11,20 @@ import {
 } from '../helpers/visaoNavigationTree';
 import { useSubcategoryPreviewMap, useSubcategoryPreviewMapFromValues, useHomeShowcasePreviewFlat } from '../hooks/useSubcategoryPreviewMap';
 import { categoriaProductoHref, HOME_SLOT_ROUTES } from '../config/homeSlotRoutes';
-import { cdnThumbUrl } from '../helpers/cdnImageUrl';
+import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
 
 const scrollTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
+/**
+ * homeShowcase: { categories, carousels } viene del mismo API que las vitrinas.
+ * Así el carrusel de subcategorías pinta al abrir, sin esperar complete-structure.
+ */
+const CategoryShowcase = ({
+  showcasePreviewsByCategory = null,
+  homeShowcase = null
+}) => {
   const navigate = useNavigate();
   const scrollElement = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -25,10 +32,31 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
   const [showRightButton, setShowRightButton] = useState(false);
 
   const homePreviewFlat = useHomeShowcasePreviewFlat(showcasePreviewsByCategory);
+  const bootstrapReady = !!(
+    homeShowcase?.categories?.length &&
+    homeShowcase?.carousels &&
+    typeof homeShowcase.carousels === 'object'
+  );
 
   const { data: menuFromApi } = usePreloadedCategories();
 
   const categories = useMemo(() => {
+    // 1) Bootstrap del home (mismo timing que productos)
+    if (bootstrapReady) {
+      return homeShowcase.categories.map((cat) => ({
+        id: cat.id || cat.value,
+        value: cat.value,
+        label: cat.label,
+        visaoNavigationTree: null,
+        subcategories: (homeShowcase.carousels[cat.value] || []).map((s) => ({
+          id: s.id || s.value,
+          value: s.value,
+          label: s.label,
+          image: s.image || null
+        }))
+      }));
+    }
+    // 2) Menú completo (fallback / enriquecido)
     if (menuFromApi && menuFromApi.length > 0) {
       return menuFromApi.map((cat) => ({
         id: cat.id,
@@ -43,7 +71,7 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
       }));
     }
     return productCategory;
-  }, [menuFromApi]);
+  }, [bootstrapReady, homeShowcase, menuFromApi]);
 
   useEffect(() => {
     if (!categories.length) return;
@@ -58,13 +86,11 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
     setSelectedCategory(preferMobile || categories[0].value);
   }, [categories, selectedCategory]);
 
-  // Subcategorías de la selección actual
   const subcategories = useMemo(() => {
-    const category = categories.find(cat => cat.value === selectedCategory);
+    const category = categories.find((cat) => cat.value === selectedCategory);
     return category ? category.subcategories : [];
   }, [selectedCategory, categories]);
 
-  // Funciones de scroll
   const scrollRight = () => {
     if (scrollElement.current) {
       scrollElement.current.scrollBy({ left: 300, behavior: 'smooth' });
@@ -84,26 +110,40 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
 
   const visaoReady = !!(currentCategory && usableVisaoTree(currentCategory.visaoNavigationTree));
 
-  /** Listado único para el carrusel: hojas del árbol Visão o subcategorías planas del API */
+  /** Slides: del bootstrap (con image) o del menú Visão */
   const carouselItems = useMemo(() => {
     if (!currentCategory) return [];
+
+    if (bootstrapReady && homeShowcase?.carousels?.[currentCategory.value]) {
+      return (homeShowcase.carousels[currentCategory.value] || []).map((s, idx) => ({
+        id: s.id || `${s.value}-${idx}`,
+        value: s.value,
+        label: s.label,
+        image: s.image || null
+      }));
+    }
+
     if (usableVisaoTree(currentCategory.visaoNavigationTree)) {
       return collectLeafSubcategoryValues(currentCategory.visaoNavigationTree).map((leaf, idx) => ({
         id: `${leaf.subcategoryValue || 'leaf'}-${idx}`,
         value: leaf.subcategoryValue,
-        label: leaf.label
+        label: leaf.label,
+        image: null
       }));
     }
     return subcategories.map((s) => ({
       id: s.id,
       value: s.value,
-      label: s.label
+      label: s.label,
+      image: s.image || null
     }));
-  }, [currentCategory, subcategories]);
+  }, [currentCategory, subcategories, bootstrapReady, homeShowcase]);
 
+  // Solo pedimos API de previews si NO tenemos bootstrap del home
+  const needPreviewFetch = !bootstrapReady;
   const previewByVisaoLeaf = useSubcategoryPreviewMap(
     currentCategory?.visaoNavigationTree,
-    visaoReady,
+    needPreviewFetch && visaoReady,
     homePreviewFlat
   );
 
@@ -113,15 +153,28 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
   );
   const legacyPreviewBySub = useSubcategoryPreviewMapFromValues(
     flatSubValues,
-    !!(currentCategory && !visaoReady && flatSubValues.length > 0),
+    needPreviewFetch && !!(currentCategory && !visaoReady && flatSubValues.length > 0),
     homePreviewFlat
   );
 
-  // Home payload primero (instantáneo); React Query completa / refresca
   const activePreviewMap = useMemo(() => {
+    const fromItems = {};
+    carouselItems.forEach((it) => {
+      if (it.value && it.image) fromItems[it.value] = it.image;
+    });
     const fromQuery = visaoReady ? previewByVisaoLeaf : legacyPreviewBySub;
-    return { ...homePreviewFlat, ...fromQuery };
-  }, [visaoReady, previewByVisaoLeaf, legacyPreviewBySub, homePreviewFlat]);
+    return { ...homePreviewFlat, ...fromQuery, ...fromItems };
+  }, [carouselItems, visaoReady, previewByVisaoLeaf, legacyPreviewBySub, homePreviewFlat]);
+
+  // Precarga thumbs del carrusel visible (igual espíritu que vitrinas)
+  useEffect(() => {
+    const urls = carouselItems
+      .slice(0, 10)
+      .map((it) => it.image || activePreviewMap[it.value])
+      .filter(Boolean)
+      .map((u) => cdnThumbUrl(u, { width: 384, quality: 70, fit: 'cover' }));
+    warmImageUrls(urls, 10);
+  }, [selectedCategory, carouselItems, activePreviewMap]);
 
   const checkScrollPosition = () => {
     if (scrollElement.current) {
@@ -226,16 +279,15 @@ const CategoryShowcase = ({ showcasePreviewsByCategory = null }) => {
               >
                 <div className="flex gap-3 sm:gap-4 min-w-max py-1">
                   {carouselItems.map((subcategory, slideIndex) => {
-                    const previewUrl = activePreviewMap[subcategory.value];
+                    const previewUrl = subcategory.image || activePreviewMap[subcategory.value];
                     const staticSubImg = subcategory.value
                       ? `/images/subcategories/${encodeURIComponent(subcategory.value)}.jpg`
                       : '';
-                    // Producto del home/API con thumb CDN; estático solo como fallback
                     const productThumb = previewUrl
                       ? cdnThumbUrl(previewUrl, { width: 384, quality: 70, fit: 'cover' })
                       : '';
                     const initialImgSrc = productThumb || staticSubImg;
-                    const eagerCount = 8;
+                    const eagerCount = 10;
                     return (
                     <button
                       key={subcategory.id || subcategory.value}

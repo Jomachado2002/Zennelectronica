@@ -2,6 +2,7 @@
 const productModel = require("../../models/productModel")
 const { HOME_SLOT_DEFS } = require("../../config/homeFeaturedSlots")
 const { getActiveHomeSections } = require("../../services/homeSectionService")
+const { buildHomeShowcaseWithPreviews } = require("../../services/homeShowcaseService")
 
 const getProductController = async(req, res)=>{
     try{
@@ -225,23 +226,25 @@ const getHomeProductsController = async(req, res) => {
 
         const recientes = shuffleInPlace([...recentPool]).slice(0, 20);
 
-        // Previews del showcase "Explora por categorías" en el mismo payload del home
-        // (evita cascada menú → API previews → imágenes).
-        const showcaseCats = [
-            ...new Set(
-                HOME_SLOT_DEFS.flatMap((d) => (d.pairs || []).map((p) => p.category)).filter(Boolean)
-            )
-        ].slice(0, 8);
-
-        const [slotResults, showcasePreviewsByCategory] = await Promise.all([
+        // Showcase de subcategorías listo en el mismo payload que las vitrinas
+        // (categorías + label + image por slide → pinta al abrir, sin esperar el menú).
+        const [slotResults, showcaseBundle] = await Promise.all([
             Promise.all(slotPromises),
-            buildShowcasePreviewsByCategory(showcaseCats).catch(() => ({}))
+            buildHomeShowcaseWithPreviews(buildShowcasePreviewsByCategory).catch(() => ({
+                showcasePreviewsByCategory: {},
+                homeShowcase: { categories: [], carousels: {} }
+            }))
         ]);
 
         const slots = { recientes };
         slotResults.forEach(({ key, products }) => {
             slots[key] = products;
         });
+
+        const {
+            showcasePreviewsByCategory = {},
+            homeShowcase = { categories: [], carousels: {} }
+        } = showcaseBundle || {};
 
         res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
         res.json({
@@ -260,7 +263,8 @@ const getHomeProductsController = async(req, res) => {
                     verMas: s.verMas,
                     pairs: s.pairs
                 })),
-                showcasePreviewsByCategory
+                showcasePreviewsByCategory,
+                homeShowcase
             }
         });
     } catch (err) {

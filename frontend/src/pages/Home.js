@@ -79,20 +79,32 @@ const Home = () => {
   const [, setImagesPreloaded] = useState(false);
 
   const showcasePreviewsByCategory = homeData?.data?.showcasePreviewsByCategory || null;
+  const homeShowcase = homeData?.data?.homeShowcase || null;
   useSeedHomeShowcasePreviews(showcasePreviewsByCategory);
 
-  // Calienta thumbs de subcategorías apenas llega el home (antes/mientras monta el carrusel)
+  // Calienta thumbs del showcase bootstrap (misma ventana que productos del home)
   useEffect(() => {
-    if (!showcasePreviewsByCategory) return;
     const urls = [];
-    Object.values(showcasePreviewsByCategory).forEach((map) => {
-      if (!map || typeof map !== 'object') return;
-      Object.values(map).forEach((u) => {
-        if (u) urls.push(cdnThumbUrl(u, { width: 384, quality: 70 }));
+    const carousels = homeShowcase?.carousels;
+    if (carousels && typeof carousels === 'object') {
+      const preferred =
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+          ? HOME_SLOT_ROUTES.celulares.category
+          : homeShowcase?.categories?.[0]?.value;
+      const first = (preferred && carousels[preferred]) || Object.values(carousels)[0] || [];
+      first.slice(0, 12).forEach((item) => {
+        if (item?.image) urls.push(cdnThumbUrl(item.image, { width: 384, quality: 70 }));
       });
-    });
+    } else if (showcasePreviewsByCategory) {
+      Object.values(showcasePreviewsByCategory).forEach((map) => {
+        if (!map || typeof map !== 'object') return;
+        Object.values(map).forEach((u) => {
+          if (u) urls.push(cdnThumbUrl(u, { width: 384, quality: 70 }));
+        });
+      });
+    }
     warmImageUrls(urls, 12);
-  }, [showcasePreviewsByCategory]);
+  }, [homeShowcase, showcasePreviewsByCategory]);
 
   const slots = homeData?.data?.slots;
   const slotProducts = (slotKey) =>
@@ -180,7 +192,10 @@ const Home = () => {
           <div className="w-full -mt-2 sm:mt-0">
             <BannerProduct />
           </div>
-          <CategoryShowcase showcasePreviewsByCategory={showcasePreviewsByCategory} />
+          <CategoryShowcase
+            showcasePreviewsByCategory={showcasePreviewsByCategory}
+            homeShowcase={homeShowcase}
+          />
         </motion.div>
 
         <div className="sr-only">
