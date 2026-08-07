@@ -31,7 +31,8 @@ import {
   FaDownload,
   FaFilePdf,
   FaImage,
-  FaFileAlt
+  FaFileAlt,
+  FaStore
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -169,6 +170,7 @@ const AdminPanel = () => {
       category: "Configuración",
       items: [
         { path: "configuracion", label: "Panel de Configuración", icon: <FaUserCog className="w-5 h-5" />, description: "Centralizar ajustes", color: "text-gray-700 bg-gray-100" },
+        { path: "home-vitrinas", label: "Home / Vitrinas", icon: <FaStore className="w-5 h-5" />, description: "Secciones del home", color: "text-cyan-600 bg-cyan-50" },
         { path: "sucursales", label: "Sucursales", icon: <FaBuilding className="w-5 h-5" />, description: "Gestionar sucursales", color: "text-indigo-600 bg-indigo-50" },
         { path: "tipos-venta", label: "Tipos de Venta", icon: <FaFileInvoiceDollar className="w-5 h-5" />, description: "Configurar tipos de venta", color: "text-blue-600 bg-blue-50" },
         { path: "vendedores", label: "Vendedores", icon: <FaUserFriends className="w-5 h-5" />, description: "Gestionar vendedores", color: "text-purple-600 bg-purple-50" },

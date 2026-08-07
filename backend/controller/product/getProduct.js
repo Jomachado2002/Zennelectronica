@@ -1,6 +1,7 @@
 // backend/controller/product/getProduct.js - VERSIÓN OPTIMIZADA COMPLETA
 const productModel = require("../../models/productModel")
 const { HOME_SLOT_DEFS } = require("../../config/homeFeaturedSlots")
+const { getActiveHomeSections } = require("../../services/homeSectionService")
 
 const getProductController = async(req, res)=>{
     try{
@@ -114,20 +115,52 @@ const HOME_STOCK_OR = [
     { stock: { $gte: 1 } }
 ];
 
-function queryForPairs(pairs, stockClause = STOCK_OR) {
+function queryForPairs(pairs, stockClause = STOCK_OR, extraFilters = {}) {
     const pairOr = pairs.map(({ category, subcategory }) => ({ category, subcategory }));
-    return {
-        $and: [
-            { $or: pairOr },
-            { $or: stockClause }
-        ]
-    };
+    const and = [
+        { $or: pairOr },
+        { $or: stockClause }
+    ];
+
+    const brands = (extraFilters.brandNames || []).filter(Boolean);
+    if (brands.length) {
+        and.push({ brandName: { $in: brands } });
+    }
+
+    const specs = extraFilters.specifications || {};
+    const specEntries =
+        specs instanceof Map ? [...specs.entries()] : Object.entries(specs || {});
+    for (const [key, values] of specEntries) {
+        if (Array.isArray(values) && values.length > 0) {
+            and.push({ [key]: { $in: values } });
+        }
+    }
+
+    const priceMin = extraFilters.priceMin;
+    const priceMax = extraFilters.priceMax;
+    if (priceMin != null && Number.isFinite(Number(priceMin))) {
+        and.push({ sellingPrice: { $gte: Number(priceMin) } });
+    }
+    if (priceMax != null && Number.isFinite(Number(priceMax))) {
+        and.push({ sellingPrice: { $lte: Number(priceMax) } });
+    }
+
+    return { $and: and };
 }
 
-async function fetchSlot(pairs, limit, projection) {
+function stockClauseForMin(minStock = 1) {
+    const min = Math.max(0, Number(minStock) || 0);
+    if (min <= 0) {
+        return [{ stock: { $exists: false } }, { stock: null }, { stock: { $gte: 0 } }];
+    }
+    return [{ stock: { $gte: min } }];
+}
+
+async function fetchSlot(pairs, limit, projection, filters = {}) {
     if (!pairs.length) return [];
+    const stockClause = stockClauseForMin(filters.minStock ?? 1);
     return productModel
-        .find(queryForPairs(pairs, HOME_STOCK_OR), projection)
+        .find(queryForPairs(pairs, stockClause, filters), projection)
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean();
@@ -156,8 +189,31 @@ const getHomeProductsController = async(req, res) => {
             createdAt: 1
         };
 
-        const slotPromises = HOME_SLOT_DEFS.map(({ key, pairs, limit }) =>
-            fetchSlot(pairs, limit, homeProjection).then((products) => ({ key, products }))
+        let sections = [];
+        try {
+            sections = await getActiveHomeSections();
+        } catch (e) {
+            sections = HOME_SLOT_DEFS.map((def, index) => ({
+                key: def.key,
+                title: def.key,
+                subtitle: '',
+                layout: 'grid',
+                enabled: true,
+                order: (index + 1) * 10,
+                limit: def.limit,
+                pairs: def.pairs,
+                verMas: def.pairs[0],
+                filters: { brandNames: [], priceMin: null, priceMax: null, minStock: 1 }
+            }));
+        }
+
+        const slotPromises = sections.map((section) =>
+            fetchSlot(
+                section.pairs,
+                section.limit,
+                homeProjection,
+                section.filters || {}
+            ).then((products) => ({ key: section.key, products }))
         );
 
         const recentPool = await productModel
@@ -178,7 +234,19 @@ const getHomeProductsController = async(req, res) => {
             message: "Productos para home obtenidos",
             success: true,
             error: false,
-            data: { slots }
+            data: {
+                slots,
+                sections: sections.map((s) => ({
+                    key: s.key,
+                    title: s.title,
+                    subtitle: s.subtitle,
+                    layout: s.layout,
+                    order: s.order,
+                    limit: s.limit,
+                    verMas: s.verMas,
+                    pairs: s.pairs
+                }))
+            }
         });
     } catch (err) {
         res.status(400).json({

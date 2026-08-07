@@ -5,12 +5,16 @@ import SummaryApi from '../common';
 // ✅ HOOK PARA PRODUCTOS DEL HOME - CORREGIDO
 export const useHomeProducts = () => {
   return useQuery({
-    queryKey: ['category-products', 'home', 'slots-v4'],
+    queryKey: ['category-products', 'home', 'slots-v6'],
     queryFn: async () => {
       try {
         const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos', {
           method: SummaryApi.allProduct.method,
-          credentials: 'include'
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
         });
                 
         if (!response.ok) {
@@ -163,10 +167,10 @@ export const useHomeProducts = () => {
         throw error;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutos - datos considerados frescos
-    cacheTime: 10 * 60 * 1000, // 10 minutos - tiempo en caché
-    retry: 1, // Solo 1 reintento
-    refetchOnWindowFocus: false, // No refrescar al cambiar ventana
-    refetchOnMount: false, // No refrescar al montar
+    staleTime: 30 * 1000, // 30s — vitrinas admin deben reflejarse al navegar/recargar
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 };

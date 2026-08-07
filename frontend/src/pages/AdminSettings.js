@@ -9,6 +9,7 @@ function AdminSettings() {
     { title: 'Proveedores', desc: 'Gestiona proveedores', to: '/panel-admin/proveedores' },
     { title: 'Usuarios', desc: 'Gestiona usuarios y permisos', to: '/panel-admin/gestion-usuarios' },
     { title: 'Tipo de Cambio', desc: 'Actualiza tipos de cambio', to: '/panel-admin/tipo-cambio' },
+    { title: 'Home / Vitrinas', desc: 'Títulos, categorías y límites del home', to: '/panel-admin/home-vitrinas' },
     // Placeholder para futuro
     { title: 'Tipos de Compras', desc: 'Configura categorías de compras (pronto)', to: '/panel-admin/tipos-compra' }
   ]

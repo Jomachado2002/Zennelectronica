@@ -45,6 +45,7 @@ import CategoriesManagement from "../components/admin/CategoriesManagement"
 
 // Importar página de gestión de tipo de cambio
 import ExchangeRateManagement from "../pages/ExchangeRateManagement"
+import HomeVitrinasManagement from "../pages/HomeVitrinasManagement"
 
 // Importar páginas financieras
 import FinancialReports from "../pages/FinancialReports"
@@ -223,6 +224,10 @@ const router = createBrowserRouter([
                     {
                         path: "tipo-cambio",
                         element: <ExchangeRateManagement />
+                    },
+                    {
+                        path: "home-vitrinas",
+                        element: <HomeVitrinasManagement />
                     },
                     
                     

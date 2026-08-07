@@ -48,7 +48,7 @@ const LatestProductsMix = ({ limit = 5 }) => {
 const queryClient = useQueryClient();
 
 useEffect(() => {
-    const homeCache = queryClient.getQueryData(['category-products', 'home', 'slots-v4']);
+    const homeCache = queryClient.getQueryData(['category-products', 'home', 'slots-v6']);
 
     const slots = homeCache?.data?.slots;
     if (homeCache?.data && Array.isArray(slots?.recientes) && slots.recientes.length > 0) {

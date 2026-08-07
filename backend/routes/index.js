@@ -918,6 +918,28 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     router.post("/cargar-producto", authToken, requirePermission('products', 'upload'), UploadProductController);
     router.get("/obtener-productos-home", cookieDebug, authToken, getHomeProductsController);
     router.get("/subcategory-preview-images", cookieDebug, authToken, getSubcategoryPreviewImagesController);
+
+    // ===========================================
+    // HOME VITRINAS (CMS admin)
+    // ===========================================
+    const {
+        listHomeSectionsController,
+        getHomeSectionController,
+        createHomeSectionController,
+        updateHomeSectionController,
+        deleteHomeSectionController,
+        reorderHomeSectionsController,
+        seedHomeSectionsController
+    } = require('../controller/home/homeSectionController');
+
+    router.get("/admin/home-sections", authToken, listHomeSectionsController);
+    router.post("/admin/home-sections", authToken, createHomeSectionController);
+    router.post("/admin/home-sections/reorder", authToken, reorderHomeSectionsController);
+    router.post("/admin/home-sections/seed", authToken, seedHomeSectionsController);
+    router.get("/admin/home-sections/:id", authToken, getHomeSectionController);
+    router.put("/admin/home-sections/:id", authToken, updateHomeSectionController);
+    router.delete("/admin/home-sections/:id", authToken, deleteHomeSectionController);
+
 router.get("/obtener-productos-admin", cookieDebug, authToken, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
