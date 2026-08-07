@@ -125,7 +125,7 @@ const { data: productData, isLoading: productLoading } = useQuery({
 useEffect(() => {
   if (productData) {
     setData(productData);
-    setCurrentProductId(productData._id);
+    setCurrentProductId(productData._id ? String(productData._id) : null);
     setLoading(false);
     
     if (productData.productImage && productData.productImage.length > 0) {
@@ -397,13 +397,13 @@ ${productUrl}
         </script>
       </Helmet>
       
-      <div className="container mx-auto p-4 font-roboto">
+      <div className="container mx-auto p-4 font-roboto overflow-x-hidden max-w-full">
         <div className="flex flex-col lg:flex-row gap-8">
-          <div className="flex flex-col lg:flex-row gap-6 flex-1">
+          <div className="flex flex-col lg:flex-row gap-6 flex-1 min-w-0">
             {/** Sección de Imagen Principal y Zoom **/}
-            <div className="relative">
+            <div className="relative w-full max-w-full lg:max-w-[600px]">
               <div
-                className="relative h-auto w-full lg:w-[600px] bg-gray-50 flex justify-center items-center border border-gray-200"
+                className="relative h-auto w-full max-w-full bg-gray-50 flex justify-center items-center border border-gray-200 overflow-hidden"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
@@ -494,21 +494,21 @@ ${productUrl}
                     <p className="capitalize text-sm md:text-lg text-gray-500">{data?.subcategory}</p>
                   </div>
                   
-                  <div className="flex items-center gap-4">
-                    <p className="text-3xl lg:text-4xl font-bold text-[#2A3190]">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 min-w-0">
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#2A3190] break-words">
                       {displayINRCurrency(data.sellingPrice)}
                     </p>
-                    {data.price > 0 && (
-                      <>
-                        <p className="text-xl lg:text-2xl text-gray-400 line-through">
+                    {data.price > 0 && data.price > data.sellingPrice && (
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <p className="text-base sm:text-xl lg:text-2xl text-gray-400 line-through">
                           {displayINRCurrency(data.price)}
                         </p>
                         {discountPercentage > 0 && (
-                          <span className="bg-red-500 text-white text-sm font-semibold px-2 py-1 rounded-md">
+                          <span className="inline-flex items-center justify-center bg-red-500 text-white text-xs sm:text-sm font-semibold px-2.5 py-1 rounded-md shrink-0">
                             {discountPercentage}% OFF
                           </span>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
                   
@@ -572,7 +572,7 @@ ${productUrl}
           </div>
         </div>
         {data.category && data.subcategory && (
-          <div className="mt-12">
+          <div className="mt-12 overflow-x-hidden">
             <CategoryWiseProductDisplay
               key={`related-products-${currentProductId}`}
               category={data?.category} 

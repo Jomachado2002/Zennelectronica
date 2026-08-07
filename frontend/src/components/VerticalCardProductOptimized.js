@@ -179,7 +179,7 @@ const VerticalCardProductOptimized = ({
         {/* ✅ CONTENEDOR DE PRODUCTOS - DISEÑO ORIGINAL */}
         <div
           ref={scrollElement}
-          className='flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-4'
+          className='flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth py-4 overscroll-x-contain touch-pan-x'
         >
           {loading
             ? loadingList.map((_, index) => (
@@ -289,9 +289,9 @@ const VerticalCardProductOptimized = ({
 
                       {/* Badge de descuento */}
                       {discount && (
-                        <div className="absolute top-2 left-2 z-10">
+                        <div className="absolute top-1.5 left-1.5 right-1.5 z-10 pointer-events-none flex justify-start">
                           <span 
-                            className='text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg'
+                            className='text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full shadow-lg max-w-full truncate'
                             style={{
                               background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
                             }}

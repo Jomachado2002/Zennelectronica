@@ -48,24 +48,34 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
 
   // Función para obtener datos
   const fetchData = useCallback(async () => {
+    if (!category) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const categoryProduct = await fetchCategoryWiseProduct(category, subcategory);
-      
-      // Filtrar el producto actual de los resultados si tenemos su ID
-      let filteredProducts = categoryProduct?.data || [];
-      if (currentProductId && filteredProducts.length > 0) {
-        filteredProducts = filteredProducts.filter(product => product._id !== currentProductId);
+      const categoryProduct = await fetchCategoryWiseProduct(category, subcategory, {
+        excludeId: currentProductId || undefined,
+        limit: 24
+      });
+
+      let filteredProducts = Array.isArray(categoryProduct?.data) ? categoryProduct.data : [];
+      const currentId = currentProductId ? String(currentProductId) : null;
+      if (currentId) {
+        filteredProducts = filteredProducts.filter(
+          (product) => String(product._id) !== currentId
+        );
       }
-      
-      // ✅ FILTRAR PRODUCTOS CON STOCK > 0
-      const productsWithStock = filteredProducts.filter(product => 
-        product?.stock === undefined || product?.stock === null || product?.stock > 0
-      );
-      
+
+      const productsWithStock = filteredProducts.filter((product) => {
+        const s = product?.stock;
+        return s === undefined || s === null || s > 0;
+      });
+
       setData(productsWithStock);
     } catch (error) {
-      // console.error removed for production
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -156,7 +166,7 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
         )}
 
         <div
-          className='flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth py-4'
+          className='flex gap-3 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth py-4 overscroll-x-contain touch-pan-x'
           ref={scrollElement}
           tabIndex={0}
           onKeyDown={handleKeyDown}
@@ -233,9 +243,9 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
 
                       {/* Badge de descuento */}
                       {discount && (
-                        <div className="absolute top-2 left-2 z-10">
+                        <div className="absolute top-1.5 left-1.5 right-1.5 z-10 pointer-events-none flex justify-start">
                           <span 
-                            className='text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg'
+                            className='text-white text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full shadow-lg max-w-full truncate'
                             style={{
                               background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
                             }}
