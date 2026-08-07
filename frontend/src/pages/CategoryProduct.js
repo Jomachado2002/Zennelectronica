@@ -416,7 +416,8 @@ const CategoryProductContent = () => {
     filterCount,
     setMobileFilterOpen,
     filterCategoryList,
-    filterSubcategoryList
+    filterSubcategoryList,
+    onlyDiscounted
   } = useFilters();
   
   const location = useLocation();
@@ -431,19 +432,35 @@ const CategoryProductContent = () => {
   } = usePreloadedCategories();
   
   const categories = getCategories();
+
+  const pageHeading = onlyDiscounted
+    ? (filterCategoryList[0] || filterSubcategoryList[0]
+        ? `Promociones · ${getSeoTitle(location, categories)}`
+        : 'Promociones')
+    : getSeoTitle(location, categories);
   
   // Configurar metadatos de SEO
   useEffect(() => {
-    // Cambiar el título del documento para SEO
+    if (onlyDiscounted) {
+      document.title = 'Promociones y Ofertas | Zenn';
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute(
+          'content',
+          'Productos en promoción en Zenn Paraguay. Filtrá por categoría, subcategoría y especificaciones. Precios con descuento real.'
+        );
+      }
+      return;
+    }
+
     const seoTitle = getSeoTitle(location, categories);
     document.title = `${seoTitle} | Zenn`;
     
-    // Actualizar meta description
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
       metaDescription.setAttribute('content', `Compra online ${seoTitle.toLowerCase()} con garantía oficial. Envío a todo Paraguay. Precios competitivos y atención personalizada.`);
     }
-  }, [location, categories]);
+  }, [location, categories, onlyDiscounted]);
 
   return (
     <>
@@ -472,8 +489,20 @@ const CategoryProductContent = () => {
               
               {/* Título de página reducido */}
               <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
-                {getSeoTitle(location, categories)}
+                {pageHeading}
               </h1>
+              {onlyDiscounted && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="hidden sm:inline-flex ml-3 shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full text-white shadow-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
+                  }}
+                >
+                  Ver todo
+                </button>
+              )}
             </div>
             
             {/* Filtros activos - Pasamos categories como prop */}
@@ -555,12 +584,16 @@ const CategoryProductContent = () => {
                 <div className="mb-4 text-gray-400">
                   <BiX size={48} className="mx-auto" />
                 </div>
-                <p className="text-lg text-gray-600 mb-4">No se encontraron productos con los filtros seleccionados</p>
+                <p className="text-lg text-gray-600 mb-4">
+                  {onlyDiscounted
+                    ? 'No hay productos en promoción con estos filtros'
+                    : 'No se encontraron productos con los filtros seleccionados'}
+                </p>
                 <button 
                   onClick={clearAllFilters}
                   className="px-4 py-2 bg-[#002060] text-white rounded-lg hover:bg-[#1565C0] transition-colors"
                 >
-                  Limpiar filtros
+                  {onlyDiscounted ? 'Ver todas las promociones' : 'Limpiar filtros'}
                 </button>
               </div>
             )}
@@ -594,4 +627,5 @@ const CategoryProduct = () => {
   );
 };
 
+export { CategoryProductContent };
 export default CategoryProduct;

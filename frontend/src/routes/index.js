@@ -15,6 +15,7 @@ import ProductDetails from "../pages/ProductDetails"
 import Cart from '../pages/Cart'
 import SearchProduct from "../pages/SearchProduct"
 import AdvancedSearchResults from "../pages/AdvancedSearchResults"
+import Promotions from "../pages/Promotions"
 import MobileCategoriesPage from "../pages/MobileCategoriesPage"
 import ResetPassword from "../pages/ResetPassword"
 import Checkout from "../pages/Checkout"
@@ -128,6 +129,10 @@ const router = createBrowserRouter([
             {
                 path: "categoria-producto",
                 element: <CategoryProduct />
+            },
+            {
+                path: "promociones",
+                element: <Promotions />
             },
             {
                 path: "producto/:id",

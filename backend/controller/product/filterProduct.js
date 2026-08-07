@@ -7,7 +7,8 @@ const filterProductController = async (req, res) => {
       category = [], 
       subcategory = [], 
       brandName = [],
-      specifications = {} 
+      specifications = {},
+      onlyDiscounted = false
     } = req.body;
 
     let query = {};
@@ -23,6 +24,16 @@ const filterProductController = async (req, res) => {
     if (category.length > 0) query.category = { $in: category };
     if (subcategory.length > 0) query.subcategory = { $in: subcategory };
     if (brandName.length > 0) query.brandName = { $in: brandName };
+
+    // Solo productos con precio tachado > precio de venta (promociones / % descuento)
+    if (onlyDiscounted) {
+      query.$expr = {
+        $and: [
+          { $gt: [{ $ifNull: ['$price', 0] }, 0] },
+          { $gt: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$sellingPrice', 0] }] }
+        ]
+      };
+    }
 
     // ✅ OBTENER ESPECIFICACIONES DINÁMICAS DESDE LA BASE DE DATOS
     let dynamicSpecificationMappings = {};
@@ -266,7 +277,20 @@ controles_consola: [
     }
 
     // Buscar productos según el filtro
-    const products = await productModel.find(query);
+    let products = await productModel.find(query).lean();
+
+    if (onlyDiscounted) {
+      products.sort((a, b) => {
+        const da = a.price > 0 ? (a.price - (a.sellingPrice || 0)) / a.price : 0;
+        const db = b.price > 0 ? (b.price - (b.sellingPrice || 0)) / b.price : 0;
+        if (db !== da) return db - da;
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
+      // Sin cat/sub: tope de seguridad (vista "Ver todo")
+      if (category.length === 0 && subcategory.length === 0) {
+        products = products.slice(0, 500);
+      }
+    }
 
     // Preparar filtros disponibles
     const filters = {
@@ -275,7 +299,19 @@ controles_consola: [
     };
 
     if (subcategory.length > 0) {
-      const subcategoryQuery = { subcategory: { $in: subcategory } };
+      const subcategoryQuery = {
+        subcategory: { $in: subcategory },
+        ...(onlyDiscounted
+          ? {
+              $expr: {
+                $and: [
+                  { $gt: [{ $ifNull: ['$price', 0] }, 0] },
+                  { $gt: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$sellingPrice', 0] }] }
+                ]
+              }
+            }
+          : {})
+      };
       
       // Obtener marcas disponibles
       filters.brands = await productModel.distinct("brandName", subcategoryQuery);
@@ -294,6 +330,8 @@ controles_consola: [
           filters.specifications[specKey] = [...new Set(specValues)];
         }
       });
+    } else if (onlyDiscounted) {
+      filters.brands = [...new Set(products.map((p) => p.brandName).filter(Boolean))].sort();
     }
 
     res.json({

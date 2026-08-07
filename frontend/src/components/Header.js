@@ -434,6 +434,19 @@ const Header = () => {
               )}
             </div>
 
+            {/* BOTÓN PROMOCIONES */}
+            <Link
+              to="/promociones"
+              onClick={scrollTop}
+              className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 text-white font-semibold text-sm hover:shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, #FF6B6B 0%, #7B2CBF 100%)'
+              }}
+              aria-label="Ver promociones"
+            >
+              Promociones
+            </Link>
+
             {/* BOTÓN MENÚ CATEGORÍAS */}
             <button 
               onClick={toggleDesktopMenu}
@@ -491,6 +504,16 @@ const Header = () => {
 
             {/* Iconos móviles */}
             <div className="flex items-center gap-3">
+              <Link
+                to="/promociones"
+                onClick={scrollTop}
+                className="px-2.5 py-1 rounded-full text-xs font-bold text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #FF6B6B 0%, #7B2CBF 100%)'
+                }}
+              >
+                Ofertas
+              </Link>
               <button 
                 onClick={toggleMobileSearch}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"

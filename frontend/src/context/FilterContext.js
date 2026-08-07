@@ -6,10 +6,23 @@ import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
 const FilterContext = createContext();
 
-export const FilterProvider = ({ children }) => {
+export const FilterProvider = ({
+  children,
+  mode = 'category',
+  basePath = '/categoria-producto'
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const urlSearch = new URLSearchParams(location.search);
+  const onlyDiscounted = mode === 'promotions';
+
+  const buildListUrl = (category, subcategory) => {
+    const p = new URLSearchParams();
+    if (category) p.set('category', category);
+    if (subcategory) p.set('subcategory', subcategory);
+    const q = p.toString();
+    return q ? `${basePath}?${q}` : basePath;
+  };
   
   // Hook para categorías precargadas
   const { getCategories, getSubcategories } = usePreloadedCategories();
@@ -135,38 +148,53 @@ export const FilterProvider = ({ children }) => {
   }, [location.search]);
   
   // Función para buscar la categoría padre de una subcategoría
-  const findParentCategory = (subcategory) => {
+  const findParentCategoryValue = (subcategory) => {
     const categories = getCategories();
     for (const category of categories) {
       const subcategories = getSubcategories(category.value);
       const found = subcategories.find(sub => sub.value === subcategory);
-      if (found) {
-        setFilterCategoryList([category.value]);
-        break;
-      }
+      if (found) return category.value;
     }
+    return null;
+  };
+
+  const findParentCategory = (subcategory) => {
+    const parent = findParentCategoryValue(subcategory);
+    if (parent) setFilterCategoryList([parent]);
   };
   
 // ✅ REACT QUERY PARA FILTROS - CARGA TODOS LOS PRODUCTOS
 const queryClient = useQueryClient();
 const { data: queryData, isLoading: queryLoading } = useQuery({
-  queryKey: ['filter-products', filterCategoryList, filterSubcategoryList, filterBrands, specFilters],
+  queryKey: [
+    onlyDiscounted ? 'promo-products' : 'filter-products',
+    filterCategoryList,
+    filterSubcategoryList,
+    filterBrands,
+    specFilters,
+    onlyDiscounted
+  ],
   queryFn: async () => {
-    // ✅ PRIMERO: Intentar obtener datos del caché individual
-    if (filterCategoryList.length === 1 && filterSubcategoryList.length === 1 && 
-        filterBrands.length === 0 && Object.keys(specFilters).length === 0) {
-      
-      const cachedData = queryClient.getQueryData(['category-products', filterCategoryList[0], filterSubcategoryList[0]]);
+    // Cache de categoría solo aplica al listado normal (no promociones)
+    if (
+      !onlyDiscounted &&
+      filterCategoryList.length === 1 &&
+      filterSubcategoryList.length === 1 &&
+      filterBrands.length === 0 &&
+      Object.keys(specFilters).length === 0
+    ) {
+      const cachedData = queryClient.getQueryData([
+        'category-products',
+        filterCategoryList[0],
+        filterSubcategoryList[0]
+      ]);
       if (cachedData && cachedData.length > 0) {
-        
         return {
           data: cachedData,
           filters: { brands: [], specifications: {} }
         };
       }
     }
-    
-    // ✅ SI NO ESTÁ EN CACHÉ: Hacer consulta completa con filtros
     
     const response = await fetch(SummaryApi.filterProduct.url, {
       method: SummaryApi.filterProduct.method,
@@ -177,14 +205,22 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
         category: filterCategoryList,
         subcategory: filterSubcategoryList,
         brandName: filterBrands,
-        specifications: specFilters
+        specifications: specFilters,
+        ...(onlyDiscounted ? { onlyDiscounted: true } : {})
       })
     });
 
     const dataResponse = await response.json();
     if (dataResponse.success) {
+      let products = dataResponse.data || [];
+      // Doble seguro en cliente por si el backend aún no tiene onlyDiscounted
+      if (onlyDiscounted) {
+        products = products.filter(
+          (p) => Number(p?.price) > 0 && Number(p.price) > Number(p?.sellingPrice || 0)
+        );
+      }
       return {
-        data: dataResponse.data || [],
+        data: products,
         filters: {
           brands: dataResponse.filters?.brands || [],
           specifications: dataResponse.filters?.specifications || {}
@@ -194,8 +230,8 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
     
     throw new Error('Error al cargar productos');
   },
-  staleTime: 3 * 60 * 1000, // 3 minutos para filtros
-  cacheTime: 10 * 60 * 1000, // 10 minutos
+  staleTime: 3 * 60 * 1000,
+  cacheTime: 10 * 60 * 1000,
   retry: 1,
   refetchOnWindowFocus: false,
 });
@@ -247,32 +283,32 @@ useEffect(() => {
       setSpecFilters({});
       setFilterBrands([]);
       setPriceRange({ min: '', max: '' });
+      navigate(buildListUrl(null, null));
+      return;
+    }
+
+    // Seleccionar esta categoría (solo una a la vez)
+    setFilterCategoryList([category]);
+    
+    let nextSub = null;
+    const categories = getCategories();
+    const categoryObj = categories.find(c => c.value === category);
+    if (categoryObj) {
+      const subcategories = getSubcategories(category);
+      const subcategoryValues = subcategories.map(sub => sub.value);
+      const validSubcats = filterSubcategoryList.filter(sub => 
+        subcategoryValues.includes(sub)
+      );
+      setFilterSubcategoryList(validSubcats);
+      nextSub = validSubcats[0] || null;
     } else {
-      // Seleccionar esta categoría (solo una a la vez)
-      setFilterCategoryList([category]);
-      
-      // Limpiar subcategorías si no son de esta categoría
-      const categories = getCategories();
-      const categoryObj = categories.find(c => c.value === category);
-      if (categoryObj) {
-        const subcategories = getSubcategories(category);
-        const subcategoryValues = subcategories.map(sub => sub.value);
-        const validSubcats = filterSubcategoryList.filter(sub => 
-          subcategoryValues.includes(sub)
-        );
-        setFilterSubcategoryList(validSubcats);
-      } else {
-        setFilterSubcategoryList([]);
-      }
-      
-      // Limpiar filtros de especificaciones y marcas
-      setSpecFilters({});
-      setFilterBrands([]);
-      setPriceRange({ min: '', max: '' });
+      setFilterSubcategoryList([]);
     }
     
-    // Actualizar URL para reflejar la categoría
-    navigate(`/categoria-producto?category=${category}`);
+    setSpecFilters({});
+    setFilterBrands([]);
+    setPriceRange({ min: '', max: '' });
+    navigate(buildListUrl(category, nextSub));
   };
   
   // Manejar selección de subcategoría
@@ -286,24 +322,21 @@ useEffect(() => {
       setFilterBrands([]);
       setPriceRange({ min: '', max: '' });
       
-      // Actualizar URL sin subcategoría
       const category = filterCategoryList[0];
-      navigate(`/categoria-producto${category ? `?category=${category}` : ''}`);
+      navigate(buildListUrl(category || null, null));
     } else {
       // Seleccionar esta subcategoría (solo una a la vez)
       setFilterSubcategoryList([subcategory]);
       
-      // Seleccionar automáticamente la categoría padre
-      findParentCategory(subcategory);
+      const parent = findParentCategoryValue(subcategory);
+      if (parent) setFilterCategoryList([parent]);
       
       // Limpiar filtros de especificaciones al cambiar de subcategoría
       setSpecFilters({});
       setFilterBrands([]);
       setPriceRange({ min: '', max: '' });
       
-      // Actualizar URL para reflejar la subcategoría
-      const category = filterCategoryList[0];
-      navigate(`/categoria-producto?${category ? `category=${category}&` : ''}subcategory=${subcategory}`);
+      navigate(buildListUrl(parent || filterCategoryList[0] || null, subcategory));
     }
   };
   
@@ -366,18 +399,29 @@ useEffect(() => {
   
   // Función para limpiar todos los filtros
   const clearAllFilters = () => {
-    const category = urlSearch.get("category");
-    const subcategory = urlSearch.get("subcategory");
+    if (onlyDiscounted) {
+      // Promociones: "Ver todo" = sin cat/sub
+      setFilterCategoryList([]);
+      setFilterSubcategoryList([]);
+      setFilterBrands([]);
+      setSpecFilters({});
+      setPriceRange({ min: '', max: '' });
+      setTempPriceRange({ min: '', max: '' });
+      setSortBy('');
+      navigate(basePath);
+    } else {
+      const category = urlSearch.get("category");
+      const subcategory = urlSearch.get("subcategory");
+      
+      setFilterCategoryList(category ? [category] : []);
+      setFilterSubcategoryList(subcategory ? [subcategory] : []);
+      setFilterBrands([]);
+      setSpecFilters({});
+      setPriceRange({ min: '', max: '' });
+      setTempPriceRange({ min: '', max: '' });
+      setSortBy('');
+    }
     
-    setFilterCategoryList(category ? [category] : []);
-    setFilterSubcategoryList(subcategory ? [subcategory] : []);
-    setFilterBrands([]);
-    setSpecFilters({});
-    setPriceRange({ min: '', max: '' });
-    setTempPriceRange({ min: '', max: '' });
-    setSortBy('');
-    
-    // Cerrar panel móvil después de limpiar si estamos en dispositivos móviles
     if (window.innerWidth < 1024) {
       setMobileFilterOpen(false);
     }
@@ -430,6 +474,9 @@ useEffect(() => {
     clearAllFilters,
     hasActiveFilters,
     findParentCategory,
+    mode,
+    onlyDiscounted,
+    basePath,
   };
   
   return (
