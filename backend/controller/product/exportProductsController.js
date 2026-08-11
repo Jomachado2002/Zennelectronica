@@ -12,6 +12,77 @@ const axios = require('axios');
 const EXPORT_CONTACTO =
     'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
 
+/** Máx. descargas simultáneas (sin esto el export abre cientos de sockets y el CDN corta/timeout). */
+const IMAGE_DOWNLOAD_CONCURRENCY = 6;
+const IMAGE_DOWNLOAD_TIMEOUT_MS = 45000;
+const IMAGE_DOWNLOAD_RETRIES = 3;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableDownloadError(err) {
+    const code = err?.code || '';
+    const msg = String(err?.message || '');
+    return (
+        code === 'ECONNRESET' ||
+        code === 'ETIMEDOUT' ||
+        code === 'ECONNABORTED' ||
+        code === 'EAI_AGAIN' ||
+        /timeout/i.test(msg) ||
+        /ECONNRESET/i.test(msg) ||
+        /socket hang up/i.test(msg)
+    );
+}
+
+/**
+ * Pool simple: procesa `items` con como máximo `concurrency` trabajos en paralelo.
+ */
+async function mapWithConcurrency(items, concurrency, worker) {
+    const results = new Array(items.length);
+    let next = 0;
+
+    async function run() {
+        while (next < items.length) {
+            const i = next++;
+            results[i] = await worker(items[i], i);
+        }
+    }
+
+    const workers = Array.from({ length: Math.min(concurrency, Math.max(items.length, 1)) }, () => run());
+    await Promise.all(workers);
+    return results;
+}
+
+async function downloadImageToFile(imageUrl, imagePath) {
+    let lastError;
+    for (let attempt = 1; attempt <= IMAGE_DOWNLOAD_RETRIES; attempt++) {
+        try {
+            const response = await axios.get(imageUrl, {
+                responseType: 'arraybuffer',
+                timeout: IMAGE_DOWNLOAD_TIMEOUT_MS,
+                maxRedirects: 5,
+                headers: {
+                    'User-Agent':
+                        'Mozilla/5.0 (compatible; ZennExport/1.0; +https://www.zenn.com.py)',
+                    Accept: 'image/*,*/*;q=0.8'
+                },
+                validateStatus: (s) => s >= 200 && s < 300
+            });
+            fs.writeFileSync(imagePath, Buffer.from(response.data));
+            return;
+        } catch (err) {
+            lastError = err;
+            if (attempt < IMAGE_DOWNLOAD_RETRIES && isRetryableDownloadError(err)) {
+                await sleep(400 * attempt + Math.floor(Math.random() * 300));
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError;
+}
+
 /** Clave canónica (slug) → texto legible para copiar en redes */
 function humanizeSpecKey(key) {
     if (!key || typeof key !== 'string') return '';
@@ -335,57 +406,69 @@ async function downloadProductImagesController(req, res) {
         const excelPath = path.join(subcategoryDir, `productos_${subcategory.toLowerCase()}.xlsx`);
         XLSX.writeFile(workbook, excelPath);
 
-        // Descargar y organizar TODAS las imágenes de cada producto
-        const imagePromises = filteredProducts.map(async (product, index) => {
+        // Cola plana: 1 job por imagen. Antes se abrían cientos de sockets a la vez → ECONNRESET/timeouts.
+        const downloadJobs = [];
+        filteredProducts.forEach((product, index) => {
             const productDir = path.join(subcategoryDir, `${index + 1}`);
             fs.mkdirSync(productDir, { recursive: true });
 
-            if (product.productImage && product.productImage.length > 0) {
-                // Descargar TODAS las imágenes del producto
-                const imageDownloadPromises = product.productImage.map(async (imageUrl, imageIndex) => {
-                    try {
-                        const response = await axios.get(imageUrl, {
-                            responseType: 'stream',
-                            timeout: 30000
-                        });
+            const images = Array.isArray(product.productImage) ? product.productImage : [];
+            if (!images.length) {
+                fs.writeFileSync(
+                    path.join(productDir, 'sin_imagenes.txt'),
+                    'Este producto no tiene imágenes asociadas'
+                );
+                return;
+            }
 
-                        const imageExtension = path.extname(new URL(imageUrl).pathname) || '.jpg';
-                        const imagePath = path.join(productDir, `imagen_${imageIndex + 1}${imageExtension}`);
-                        
-                        const writer = fs.createWriteStream(imagePath);
-                        response.data.pipe(writer);
+            images.forEach((imageUrl, imageIndex) => {
+                downloadJobs.push({ product, productDir, imageUrl, imageIndex });
+            });
+        });
 
-                        return new Promise((resolve, reject) => {
-                            writer.on('finish', () => {
-                                console.log(`✅ Imagen ${imageIndex + 1} descargada para producto ${product.productName}`);
-                                resolve();
-                            });
-                            writer.on('error', reject);
-                        });
-                    } catch (error) {
-                        console.warn(`Error descargando imagen ${imageIndex + 1} para producto ${product.productName}:`, error.message);
-                        // Crear archivo de texto indicando que la imagen no se pudo descargar
-                        const errorPath = path.join(productDir, `imagen_${imageIndex + 1}_error.txt`);
-                        fs.writeFileSync(errorPath, `Imagen ${imageIndex + 1} no disponible: ${imageUrl}\nError: ${error.message}`);
-                    }
-                });
+        console.log(
+            `[export] Descargando ${downloadJobs.length} imágenes (máx ${IMAGE_DOWNLOAD_CONCURRENCY} en paralelo)…`
+        );
 
-                // Esperar a que se descarguen todas las imágenes del producto
-                await Promise.allSettled(imageDownloadPromises);
-            } else {
-                // Crear archivo de texto indicando que no hay imágenes
-                const noImagePath = path.join(productDir, 'sin_imagenes.txt');
-                fs.writeFileSync(noImagePath, 'Este producto no tiene imágenes asociadas');
+        let okCount = 0;
+        let failCount = 0;
+
+        await mapWithConcurrency(downloadJobs, IMAGE_DOWNLOAD_CONCURRENCY, async (job) => {
+            const { product, productDir, imageUrl, imageIndex } = job;
+            let ext = '.jpg';
+            try {
+                ext = path.extname(new URL(imageUrl).pathname) || '.jpg';
+            } catch {
+                /* URL rara: dejar .jpg */
+            }
+            const imagePath = path.join(productDir, `imagen_${imageIndex + 1}${ext}`);
+
+            try {
+                await downloadImageToFile(imageUrl, imagePath);
+                okCount += 1;
+                console.log(
+                    `✅ Imagen ${imageIndex + 1} descargada para producto ${product.productName}`
+                );
+            } catch (error) {
+                failCount += 1;
+                console.warn(
+                    `Error descargando imagen ${imageIndex + 1} para producto ${product.productName}:`,
+                    error.message
+                );
+                const errorPath = path.join(productDir, `imagen_${imageIndex + 1}_error.txt`);
+                fs.writeFileSync(
+                    errorPath,
+                    `Imagen ${imageIndex + 1} no disponible: ${imageUrl}\nError: ${error.message}`
+                );
             }
         });
 
-        // Esperar a que se descarguen todas las imágenes
-        await Promise.allSettled(imagePromises);
+        console.log(`[export] Imágenes OK=${okCount} fallidas=${failCount}`);
 
         // Crear archivo ZIP
         const zipPath = path.join(tempDir, `productos_${subcategory.toLowerCase()}_${Date.now()}.zip`);
         const output = fs.createWriteStream(zipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        const archive = archiver('zip', { zlib: { level: 6 } });
 
         return new Promise((resolve, reject) => {
             output.on('close', () => {
