@@ -4,28 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import scrollTop from '../helpers/scrollTop';
 
-/** Proporciones fijas del home */
-const DESKTOP_ASPECT = '1374 / 438';
-/** Mobile: 1545 × 1329 */
-const MOBILE_ASPECT = '1545 / 1329';
-
-const bannerBoxStyle = (isMobile) =>
-  isMobile
-    ? {
-        aspectRatio: MOBILE_ASPECT,
-        width: '100%',
-        height: 'auto'
-      }
-    : {
-        aspectRatio: DESKTOP_ASPECT,
-        width: '100%',
-        minHeight: '180px',
-        maxHeight: '60vh'
-      };
+/**
+ * Contenedor del banner: proporción fija desde el primer paint vía CSS
+ * (evita CLS al hidratar: no depende de useState(isMobile)).
+ * Mobile &lt;640px: 1545×1329 | Desktop: 1374×438
+ */
+export const BANNER_SHELL_CLASS =
+  'w-full overflow-hidden rounded-none sm:rounded-xl bg-gray-200 ' +
+  '[aspect-ratio:1545/1329] sm:[aspect-ratio:1374/438] sm:min-h-[180px] sm:max-h-[60vh]';
 
 /**
  * Solo banners del CMS (Admin → Home Media).
- * Contenedor fijo: desktop 1374×438 | mobile 1545×1329.
+ * El hueco del banner siempre está reservado → mejor LCP/CLS.
  */
 const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   const navigate = useNavigate();
@@ -33,7 +23,9 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 640
+  );
   const lastSwipeAtRef = useRef(0);
 
   useEffect(() => {
@@ -126,13 +118,13 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
     return () => clearInterval(interval);
   }, [activeSlide, nextSlide, banners.length]);
 
+  // Siempre reservar el hueco mientras carga; si ya cargó y no hay banners, no ocupar espacio
   if (!banners.length) {
-    if (!pending) return null;
+    if (!pending && Array.isArray(bannersProp)) return null;
     return (
       <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
         <div
-          className="w-full animate-pulse bg-gray-200 rounded-none sm:rounded-xl"
-          style={bannerBoxStyle(isMobile)}
+          className={`${BANNER_SHELL_CLASS} animate-pulse`}
           aria-hidden
         />
       </div>
@@ -141,10 +133,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
 
   return (
     <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
-      <div
-        className="relative w-full overflow-hidden rounded-none sm:rounded-xl shadow-lg"
-        style={bannerBoxStyle(isMobile)}
-      >
+      <div className={`relative shadow-lg ${BANNER_SHELL_CLASS} bg-gray-100`}>
         <div
           className={`relative w-full h-full touch-pan-y ${
             banners[activeSlide]?.href ? 'cursor-pointer' : ''
@@ -159,7 +148,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
           {banners.map((banner, index) => (
             <div
               key={banner.id}
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+              className={`absolute inset-0 transition-opacity duration-500 ease-out ${
                 index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
@@ -167,11 +156,13 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
                 src={banner.image}
                 alt={banner.alt}
                 className="w-full h-full object-cover"
-                style={{ objectPosition: 'center center', width: '100%', height: '100%' }}
-                loading={index === activeSlide ? 'eager' : 'lazy'}
+                style={{ objectPosition: 'center center' }}
+                width={isMobile ? 1545 : 1374}
+                height={isMobile ? 1329 : 438}
+                loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === activeSlide ? 'high' : 'low'}
+                decoding={index === 0 ? 'sync' : 'async'}
               />
-              <div className="absolute inset-0 bg-black/5" />
             </div>
           ))}
         </div>

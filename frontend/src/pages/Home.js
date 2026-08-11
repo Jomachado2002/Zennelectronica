@@ -1,18 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
 import CategoryShowcase from '../components/CategoryShowcase';
-import GlobalImagePreloader from '../components/GlobalImagePreloader';
 import HomeDynamicSections from '../components/home/HomeDynamicSections';
 import { useHomeProducts } from '../hooks/useProducts';
-import BrandCarousel from '../components/BrandCarousel';
-import LatestProductsMix from '../components/LatestProductsMix';
 import '../styles/global.css';
 import scrollTop from '../helpers/scrollTop';
-import { showPerformanceReport } from '../utils/performanceMonitor';
 import {
   HOME_SLOT_ROUTES,
   HOME_SECTION_SUBTITLES,
@@ -23,10 +18,12 @@ import { useSeedHomeShowcasePreviews } from '../hooks/useSubcategoryPreviewMap';
 import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
 import { SITE_ORIGIN } from '../config/siteUrl';
 
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3 } }
-};
+const LatestProductsMix = lazy(() => import('../components/LatestProductsMix'));
+const BrandCarousel = lazy(() => import('../components/BrandCarousel'));
+
+const BelowFoldFallback = () => (
+  <div className="w-full h-40 rounded-xl bg-gray-100 animate-pulse" aria-hidden />
+);
 
 /** Fallback si el API aún no envía `sections` (backend viejo). */
 function buildFallbackSections() {
@@ -77,8 +74,6 @@ function buildFallbackSections() {
 
 const Home = () => {
   const { data: homeData, isLoading: homeLoading, isFetching } = useHomeProducts();
-  const [, setImagesPreloaded] = useState(false);
-  // Sin datos aún (ni cache local): skeleton. Si hay initialData, pintar ya.
   const homePending = !homeData?.data?.slots && (homeLoading || isFetching);
 
   const homeBanners = homeData?.data?.homeBanners;
@@ -86,7 +81,17 @@ const Home = () => {
   const homeShowcase = homeData?.data?.homeShowcase || null;
   useSeedHomeShowcasePreviews(showcasePreviewsByCategory);
 
-  // Calienta thumbs del showcase (CDN) apenas llega el home
+  const lcpBannerUrl = useMemo(() => {
+    const list = Array.isArray(homeBanners) ? homeBanners : [];
+    const first = list.find((b) => b && (b.imageMobile || b.imageDesktop || b.image));
+    if (!first) return null;
+    const mobile =
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
+    return mobile
+      ? first.imageMobile || first.imageDesktop || first.image
+      : first.imageDesktop || first.image || first.imageMobile;
+  }, [homeBanners]);
+
   useEffect(() => {
     const urls = [];
     const carousels = homeShowcase?.carousels;
@@ -96,19 +101,12 @@ const Home = () => {
           ? HOME_SLOT_ROUTES.celulares.category
           : homeShowcase?.categories?.[0]?.value;
       const first = (preferred && carousels[preferred]) || Object.values(carousels)[0] || [];
-      first.slice(0, 12).forEach((item) => {
+      first.slice(0, 4).forEach((item) => {
         if (item?.image) urls.push(cdnThumbUrl(item.image, { width: 384, quality: 70 }));
       });
-    } else if (showcasePreviewsByCategory) {
-      Object.values(showcasePreviewsByCategory).forEach((map) => {
-        if (!map || typeof map !== 'object') return;
-        Object.values(map).forEach((u) => {
-          if (u) urls.push(cdnThumbUrl(u, { width: 384, quality: 70 }));
-        });
-      });
     }
-    warmImageUrls(urls, 12);
-  }, [homeShowcase, showcasePreviewsByCategory]);
+    warmImageUrls(urls, 4);
+  }, [homeShowcase]);
 
   const slots = homeData?.data?.slots;
   const slotProducts = (slotKey) =>
@@ -117,8 +115,6 @@ const Home = () => {
   const sections = useMemo(() => {
     const fromApi = homeData?.data?.sections;
     if (Array.isArray(fromApi) && fromApi.length > 0) return fromApi;
-    // Solo fallback si el API ya respondió sin sections (backend viejo).
-    // Nunca mientras carga → evita texto hardcodeado incorrecto.
     if (!homeData) return [];
     return buildFallbackSections();
   }, [homeData]);
@@ -142,7 +138,6 @@ const Home = () => {
 
   useEffect(() => {
     scrollTop();
-    showPerformanceReport();
   }, []);
 
   const openWhatsApp = () => {
@@ -167,52 +162,33 @@ const Home = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href={`${SITE_ORIGIN}/`} />
         <meta property="og:url" content={`${SITE_ORIGIN}/`} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link rel="preconnect" href="https://cdn.zenn.com.py" crossOrigin="true" />
-        <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=AW-16909859875"></script>
-        <script>
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'AW-16909859875');
-          `}
-        </script>
+        <link rel="dns-prefetch" href="https://cdn.zenn.com.py" />
+        {lcpBannerUrl ? (
+          <link rel="preload" as="image" href={lcpBannerUrl} fetchpriority="high" />
+        ) : null}
       </Helmet>
 
-      <GlobalImagePreloader
-        homeData={homeData}
-        onPreloadComplete={() => setImagesPreloaded(true)}
-      />
-
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white font-inter text-gray-800">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeIn}
-          className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4"
-        >
+        <div className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4">
           <div className="w-full -mt-2 sm:mt-0">
-            <BannerProduct banners={homeBanners} pending={homePending} />
+            <BannerProduct
+              banners={homeBanners}
+              pending={homePending || homeBanners == null}
+            />
           </div>
           {homePending ? (
             <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4" aria-hidden>
-              <div className="flex gap-2 mb-4 overflow-hidden">
+              <div className="flex gap-2 mb-4 overflow-hidden min-h-[36px]">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-gray-200 animate-pulse" />
                 ))}
               </div>
-              <div className="flex gap-3 overflow-hidden">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="shrink-0 w-28 space-y-2">
-                    <div className="h-24 w-28 rounded-xl bg-gray-200 animate-pulse" />
-                    <div className="h-3 w-20 mx-auto rounded bg-gray-100 animate-pulse" />
+              <div className="flex gap-3 overflow-hidden min-h-[160px]">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="shrink-0 w-40 space-y-2">
+                    <div className="h-28 w-40 rounded-xl bg-gray-200 animate-pulse" />
+                    <div className="h-8 w-36 rounded bg-gray-100 animate-pulse" />
                   </div>
                 ))}
               </div>
@@ -223,7 +199,7 @@ const Home = () => {
               homeShowcase={homeShowcase}
             />
           )}
-        </motion.div>
+        </div>
 
         <div className="sr-only">
           <h1>Zenn - Especialistas en Computadoras Gamer y Soluciones IT en Paraguay</h1>
@@ -241,13 +217,7 @@ const Home = () => {
             loading={homePending || (homeLoading && !sections.length)}
           />
 
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeIn}
-            className="w-full"
-          >
+          <section className="w-full">
             <div className="text-center mb-10">
               <h2
                 className="inline-block text-3xl font-bold bg-clip-text text-transparent"
@@ -308,17 +278,13 @@ const Home = () => {
                 </Link>
               </div>
 
-              <LatestProductsMix limit={20} />
+              <Suspense fallback={<BelowFoldFallback />}>
+                <LatestProductsMix limit={20} />
+              </Suspense>
             </div>
-          </motion.section>
+          </section>
 
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeIn}
-            className="w-full"
-          >
+          <section className="w-full">
             <div className="bg-white rounded-2xl shadow-lg py-10 px-6">
               <div className="text-center mb-8">
                 <h2
@@ -344,18 +310,14 @@ const Home = () => {
               </div>
 
               <div className="relative py-4">
-                <BrandCarousel />
+                <Suspense fallback={<BelowFoldFallback />}>
+                  <BrandCarousel />
+                </Suspense>
               </div>
             </div>
-          </motion.section>
+          </section>
 
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeIn}
-            className="w-full"
-          >
+          <section className="w-full">
             <div
               className="relative overflow-hidden rounded-2xl shadow-xl"
               style={{
@@ -376,6 +338,7 @@ const Home = () => {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button
+                      type="button"
                       onClick={openWhatsApp}
                       className="px-6 py-3 bg-white text-gray-800 hover:bg-gray-100 rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group/btn"
                     >
@@ -393,7 +356,7 @@ const Home = () => {
                 </div>
               </div>
             </div>
-          </motion.section>
+          </section>
         </div>
       </div>
     </>

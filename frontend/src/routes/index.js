@@ -1,89 +1,94 @@
 // frontend/src/routes/index.js - ACTUALIZADO CON PERFIL DE USUARIO Y RATING PAGE
 import { createBrowserRouter } from "react-router-dom"
+import { lazy, Suspense } from "react"
 import App from "../App"
 import Home from "../pages/Home"
-import Login from "../pages/Login"
-import ForgotPassword from "../pages/ForgotPassword"
-import SignUp from "../pages/SignUp"
-import AdminPanel from "../pages/AdminPanel"
-import AllUsers from "../pages/AllUsers"
-import UserManagement from "../pages/UserManagement"
-import AllProducts from "../pages/AllProducts"
-import NewProductPage from "../pages/NewProductPage"
-import CategoryProduct from "../pages/CategoryProduct"
-import ProductDetails from "../pages/ProductDetails"
-import Cart from '../pages/Cart'
-import SearchProduct from "../pages/SearchProduct"
-import AdvancedSearchResults from "../pages/AdvancedSearchResults"
-import Promotions from "../pages/Promotions"
-import MobileCategoriesPage from "../pages/MobileCategoriesPage"
-import ResetPassword from "../pages/ResetPassword"
-import Checkout from "../pages/Checkout"
-import Nosotros from "../pages/Nosotros"
+import ErrorPage from "../pages/ErrorPage"
+
+const Lazy = ({ children }) => (
+  <Suspense fallback={<div className="min-h-[40vh] animate-pulse bg-gray-50" />}>{children}</Suspense>
+);
+
+const Login = lazy(() => import('../pages/Login'));
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword'));
+const SignUp = lazy(() => import('../pages/SignUp'));
+const AdminPanel = lazy(() => import('../pages/AdminPanel'));
+const AllUsers = lazy(() => import('../pages/AllUsers'));
+const UserManagement = lazy(() => import('../pages/UserManagement'));
+const AllProducts = lazy(() => import('../pages/AllProducts'));
+const NewProductPage = lazy(() => import('../pages/NewProductPage'));
+const CategoryProduct = lazy(() => import('../pages/CategoryProduct'));
+const ProductDetails = lazy(() => import('../pages/ProductDetails'));
+const Cart = lazy(() => import('../pages/Cart'));
+const SearchProduct = lazy(() => import('../pages/SearchProduct'));
+const AdvancedSearchResults = lazy(() => import('../pages/AdvancedSearchResults'));
+const Promotions = lazy(() => import('../pages/Promotions'));
+const MobileCategoriesPage = lazy(() => import('../pages/MobileCategoriesPage'));
+const ResetPassword = lazy(() => import('../pages/ResetPassword'));
+const Checkout = lazy(() => import('../pages/Checkout'));
+const Nosotros = lazy(() => import('../pages/Nosotros'));
 
 // ✅ NUEVA PÁGINA DE PERFIL DE USUARIO
-import UserProfilePage from "../pages/UserProfilePage"
+const UserProfilePage = lazy(() => import('../pages/UserProfilePage'));
 
 // ✅ NUEVA PÁGINA DE CALIFICACIÓN
-import RatingPage from "../pages/RatingPage"
-import OrderDetailsPage from "../pages/OrderDetailsPage"
-
+const RatingPage = lazy(() => import('../pages/RatingPage'));
+const OrderDetailsPage = lazy(() => import('../pages/OrderDetailsPage'));
 
 // ✅ PÁGINAS DE BANCARD
-import PaymentSuccess from "../pages/PaymentSuccess"
-import PaymentCancelled from "../pages/PaymentCancelled"
-import BancardConfirmProxy from "../pages/BancardConfirmProxy"
-import BancardTransactions from "../pages/BancardTransactions"
+const PaymentSuccess = lazy(() => import('../pages/PaymentSuccess'));
+const PaymentCancelled = lazy(() => import('../pages/PaymentCancelled'));
+const BancardConfirmProxy = lazy(() => import('../pages/BancardConfirmProxy'));
+const BancardTransactions = lazy(() => import('../pages/BancardTransactions'));
 
 // Importar el nuevo componente de dashboard
-import AdminDashboard from "../pages/AdminDashboard"
-import AdminSettings from "../pages/AdminSettings"
-import ErrorPage from "../pages/ErrorPage"
-import PurchaseTypesManagement from "../pages/PurchaseTypesManagement"
+const AdminDashboard = lazy(() => import('../pages/AdminDashboard'));
+const AdminSettings = lazy(() => import('../pages/AdminSettings'));
+const PurchaseTypesManagement = lazy(() => import('../pages/PurchaseTypesManagement'));
 
 // Importar componente de gestión de categorías
-import CategoriesManagement from "../components/admin/CategoriesManagement"
+const CategoriesManagement = lazy(() => import('../components/admin/CategoriesManagement'));
 
 // Importar página de gestión de tipo de cambio
-import ExchangeRateManagement from "../pages/ExchangeRateManagement"
-import HomeVitrinasManagement from "../pages/HomeVitrinasManagement"
-import HomeMediaManagement from "../pages/HomeMediaManagement"
+const ExchangeRateManagement = lazy(() => import('../pages/ExchangeRateManagement'));
+const HomeVitrinasManagement = lazy(() => import('../pages/HomeVitrinasManagement'));
+const HomeMediaManagement = lazy(() => import('../pages/HomeMediaManagement'));
 
 // Importar páginas financieras
-import FinancialReports from "../pages/FinancialReports"
-import ClientsList from "../pages/ClientsList"
-import ClientDetails from "../pages/ClientDetails"
-import BudgetsList from "../pages/BudgetsList"
-import BudgetDetails from "../pages/BudgetDetails"
-import NewBudget from "../pages/NewBudget"
-import NewClient from "../pages/NewClient"
-import SuppliersManagement from "../pages/SuppliersManagement"
-import SalesManagement from "../pages/SalesManagement"
-import PurchaseManagement from "../pages/PurchaseManagement"
-import SaleDetails from "../pages/SaleDetails"
-import PurchaseDetails from "../pages/PurchaseDetails"
-import NewPurchase from "../pages/NewPurchase"
-import FinancialDashboard from "../pages/FinancialDashboard"
-import CatastroResult from "../pages/CatastroResult"
-import TestBalance from "../pages/TestBalance"
+const FinancialReports = lazy(() => import('../pages/FinancialReports'));
+const ClientsList = lazy(() => import('../pages/ClientsList'));
+const ClientDetails = lazy(() => import('../pages/ClientDetails'));
+const BudgetsList = lazy(() => import('../pages/BudgetsList'));
+const BudgetDetails = lazy(() => import('../pages/BudgetDetails'));
+const NewBudget = lazy(() => import('../pages/NewBudget'));
+const NewClient = lazy(() => import('../pages/NewClient'));
+const SuppliersManagement = lazy(() => import('../pages/SuppliersManagement'));
+const SalesManagement = lazy(() => import('../pages/SalesManagement'));
+const PurchaseManagement = lazy(() => import('../pages/PurchaseManagement'));
+const SaleDetails = lazy(() => import('../pages/SaleDetails'));
+const PurchaseDetails = lazy(() => import('../pages/PurchaseDetails'));
+const NewPurchase = lazy(() => import('../pages/NewPurchase'));
+const FinancialDashboard = lazy(() => import('../pages/FinancialDashboard'));
+const CatastroResult = lazy(() => import('../pages/CatastroResult'));
+const TestBalance = lazy(() => import('../pages/TestBalance'));
 
 // Importar componentes de configuración de ventas
-import SalesTypesManagement from "../pages/SalesTypesManagement"
-import BranchesManagement from "../pages/BranchesManagement"
-import SalespersonsManagement from "../pages/SalespersonsManagement"
-import EnhancedSalesForm from "../pages/EnhancedSalesForm"
+const SalesTypesManagement = lazy(() => import('../pages/SalesTypesManagement'));
+const BranchesManagement = lazy(() => import('../pages/BranchesManagement'));
+const SalespersonsManagement = lazy(() => import('../pages/SalespersonsManagement'));
+const EnhancedSalesForm = lazy(() => import('../pages/EnhancedSalesForm'));
 
 // Importar página de sincronización de inventario
-import InventorySyncPage from "../pages/admin/InventorySyncPage"
+const InventorySyncPage = lazy(() => import('../pages/admin/InventorySyncPage'));
 
 // Importar página de exportación de productos
-import ExportProductsPage from "../pages/admin/ExportProductsPage"
+const ExportProductsPage = lazy(() => import('../pages/admin/ExportProductsPage'));
 
 // Importar página de catálogo PDF
-import AdminCatalogoPDF from "../pages/admin/AdminCatalogoPDF"
+const AdminCatalogoPDF = lazy(() => import('../pages/admin/AdminCatalogoPDF'));
 
 // Importar página de editor de imágenes
-import ImageEditorPage from "../pages/ImageEditorPage"
+const ImageEditorPage = lazy(() => import('../pages/ImageEditorPage'));
 
 const router = createBrowserRouter([
     {
@@ -97,266 +102,266 @@ const router = createBrowserRouter([
             },
             {
                 path: "iniciar-sesion",
-                element: <Login />
+                element: <Lazy><Login /></Lazy>
             },
             {
                 path: "recuperar-contrasena",
-                element: <ForgotPassword />
+                element: <Lazy><ForgotPassword /></Lazy>
             },
             {
                 path: "restablecer-contrasena/:token",
-                element: <ResetPassword />
+                element: <Lazy><ResetPassword /></Lazy>
             },
             {
                 path: "registro",
-                element: <SignUp />
+                element: <Lazy><SignUp /></Lazy>
             },
             {
                 path: "nosotros",
-                element: <Nosotros />
+                element: <Lazy><Nosotros /></Lazy>
             },
             {
                 path: "categorias-movil",
-                element: <MobileCategoriesPage />
+                element: <Lazy><MobileCategoriesPage /></Lazy>
             },
             {
                  path: "catastro-resultado",
-                 element: <CatastroResult />
+                 element: <Lazy><CatastroResult /></Lazy>
             },
             {
                 path: "test-saldo",
-                element: <TestBalance />
+                element: <Lazy><TestBalance /></Lazy>
             },
             {
                 path: "categoria-producto",
-                element: <CategoryProduct />
+                element: <Lazy><CategoryProduct /></Lazy>
             },
             {
                 path: "promociones",
-                element: <Promotions />
+                element: <Lazy><Promotions /></Lazy>
             },
             {
                 path: "producto/:id",
-                element: <ProductDetails />
+                element: <Lazy><ProductDetails /></Lazy>
             },
             {
                 path: "carrito",
-                element: <Cart />
+                element: <Lazy><Cart /></Lazy>
             },
             {
                 path: "finalizar-compra",
-                element: <Checkout />
+                element: <Lazy><Checkout /></Lazy>
             },
             {
                 path: "buscar",
-                element: <SearchProduct />
+                element: <Lazy><SearchProduct /></Lazy>
             },
             {
                 path: "search",
-                element: <AdvancedSearchResults />
+                element: <Lazy><AdvancedSearchResults /></Lazy>
             },
             
             // ✅ NUEVA RUTA PARA PERFIL DE USUARIO
             {
                 path: "mi-perfil",
-                element: <UserProfilePage />
+                element: <Lazy><UserProfilePage /></Lazy>
             },
             
             // ✅ NUEVA RUTA PARA CALIFICAR PEDIDO
             {
                 path: "calificar-pedido/:shop_process_id",
-                element: <RatingPage />
+                element: <Lazy><RatingPage /></Lazy>
             },
             {
                 path: "pedido/:shop_process_id",
-                element: <OrderDetailsPage />
+                element: <Lazy><OrderDetailsPage /></Lazy>
             },
             
             // ✅ RUTAS PARA BANCARD
             {
                 path: "pago-exitoso",
-                element: <PaymentSuccess />
+                element: <Lazy><PaymentSuccess /></Lazy>
             },
             {
                 path: "pago-cancelado",
-                element: <PaymentCancelled />
+                element: <Lazy><PaymentCancelled /></Lazy>
             },
             
             // ✅ RUTAS PROXY PARA BANCARD - CRÍTICAS
             {
                 path: "api/bancard/confirm",
-                element: <BancardConfirmProxy />
+                element: <Lazy><BancardConfirmProxy /></Lazy>
             },
             {
                 path: "api/bancard/confirm-payment",
-                element: <BancardConfirmProxy />
+                element: <Lazy><BancardConfirmProxy /></Lazy>
             },
             
             // Editor de Imágenes - Página completa (fuera del layout del admin)
             {
                 path: "panel-admin/editar-imagenes",
-                element: <ImageEditorPage />
+                element: <Lazy><ImageEditorPage /></Lazy>
             },
             
             // Panel de admin separado
             {
                 path: "panel-admin",
-                element: <AdminPanel />,
+                element: <Lazy><AdminPanel /></Lazy>,
                 children: [
                     {
                         path: "",
-                        element: <AdminDashboard />
+                        element: <Lazy><AdminDashboard /></Lazy>
                     },
                     {
                         path: "todos-usuarios",
-                        element: <AllUsers />
+                        element: <Lazy><AllUsers /></Lazy>
                     },
                     {
                         path: "gestion-usuarios",
-                        element: <UserManagement />
+                        element: <Lazy><UserManagement /></Lazy>
                     },
                     {
                         path: "productos",
-                        element: <AllProducts />
+                        element: <Lazy><AllProducts /></Lazy>
                     },
                     {
                         path: "productos/nuevo",
-                        element: <NewProductPage />
+                        element: <Lazy><NewProductPage /></Lazy>
                     },
                     {
                         path: "categorias",
-                        element: <CategoriesManagement />
+                        element: <Lazy><CategoriesManagement /></Lazy>
                     },
                     {
                         path: "tipo-cambio",
-                        element: <ExchangeRateManagement />
+                        element: <Lazy><ExchangeRateManagement /></Lazy>
                     },
                     {
                         path: "home-vitrinas",
-                        element: <HomeVitrinasManagement />
+                        element: <Lazy><HomeVitrinasManagement /></Lazy>
                     },
                     {
                         path: "home-media",
-                        element: <HomeMediaManagement />
+                        element: <Lazy><HomeMediaManagement /></Lazy>
                     },
                     
                     
                     // ✅ RUTA PARA TRANSACCIONES BANCARD
                     {
                         path: "transacciones-bancard",
-                        element: <BancardTransactions />
+                        element: <Lazy><BancardTransactions /></Lazy>
                     },
                     
                     // Rutas financieras
                     {
                         path: "dashboard",
-                        element: <FinancialDashboard />
+                        element: <Lazy><FinancialDashboard /></Lazy>
                     },
                     {
                         path: "configuracion",
-                        element: <AdminSettings />
+                        element: <Lazy><AdminSettings /></Lazy>
                     },
                     {
                         path: "tipos-compra",
-                        element: <PurchaseTypesManagement />
+                        element: <Lazy><PurchaseTypesManagement /></Lazy>
                     },
                     {
                         path: "ventas",
-                        element: <SalesManagement />
+                        element: <Lazy><SalesManagement /></Lazy>
                     },
                     {
                         path: "ventas/:saleId",
-                        element: <SaleDetails />
+                        element: <Lazy><SaleDetails /></Lazy>
                     },
                     {
                         path: "nueva-venta",
-                        element: <EnhancedSalesForm />
+                        element: <Lazy><EnhancedSalesForm /></Lazy>
                     },
                     {
                         path: "compras",
-                        element: <PurchaseManagement />
+                        element: <Lazy><PurchaseManagement /></Lazy>
                     },
                     {
                         path: "nueva-compra",
-                        element: <NewPurchase />
+                        element: <Lazy><NewPurchase /></Lazy>
                     },
                     {
                         path: "compras/:purchaseId",
-                        element: <PurchaseDetails />
+                        element: <Lazy><PurchaseDetails /></Lazy>
                     },
                     
                     // Rutas financieras adicionales
                     {
                         path: "reportes",
-                        element: <FinancialReports />
+                        element: <Lazy><FinancialReports /></Lazy>
                     },
                     
                     // Gestión de clientes
                     {
                         path: "clientes",
-                        element: <ClientsList />
+                        element: <Lazy><ClientsList /></Lazy>
                     },
                     {
                         path: "clientes/nuevo",
-                        element: <NewClient />
+                        element: <Lazy><NewClient /></Lazy>
                     },
                     {
                         path: "clientes/:clientId",
-                        element: <ClientDetails />
+                        element: <Lazy><ClientDetails /></Lazy>
                     },
                     
                     // Gestión de presupuestos
                     {
                         path: "presupuestos",
-                        element: <BudgetsList />
+                        element: <Lazy><BudgetsList /></Lazy>
                     },
                     {
                         path: "presupuestos/nuevo",
-                        element: <NewBudget />
+                        element: <Lazy><NewBudget /></Lazy>
                     },
                     {
                         path: "presupuestos/:budgetId",
-                        element: <BudgetDetails />
+                        element: <Lazy><BudgetDetails /></Lazy>
                     },
                     {
                         path: "proveedores",
-                        element: <SuppliersManagement />
+                        element: <Lazy><SuppliersManagement /></Lazy>
                     },
                     {
                         path: "proveedores/:supplierId", 
-                        element: <SuppliersManagement />
+                        element: <Lazy><SuppliersManagement /></Lazy>
                     },
                     
                     // Configuración de Ventas
                     {
                         path: "tipos-venta",
-                        element: <SalesTypesManagement />
+                        element: <Lazy><SalesTypesManagement /></Lazy>
                     },
                     {
                         path: "sucursales",
-                        element: <BranchesManagement />
+                        element: <Lazy><BranchesManagement /></Lazy>
                     },
                     {
                         path: "vendedores",
-                        element: <SalespersonsManagement />
+                        element: <Lazy><SalespersonsManagement /></Lazy>
                     },
                     
                     // Sincronización de Inventario
                     {
                         path: "sincronizacion-inventario",
-                        element: <InventorySyncPage />
+                        element: <Lazy><InventorySyncPage /></Lazy>
                     },
                     
                     // Exportar Productos
                     {
                         path: "exportar-productos",
-                        element: <ExportProductsPage />
+                        element: <Lazy><ExportProductsPage /></Lazy>
                     },
                     
                     // Catálogo PDF
                     {
                         path: "catalogo-pdf",
-                        element: <AdminCatalogoPDF />
+                        element: <Lazy><AdminCatalogoPDF /></Lazy>
                     },
                 
                 ]

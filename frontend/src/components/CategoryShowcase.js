@@ -287,7 +287,7 @@ const CategoryShowcase = ({
                       ? cdnThumbUrl(previewUrl, { width: 384, quality: 70, fit: 'cover' })
                       : '';
                     const initialImgSrc = productThumb || staticSubImg;
-                    const eagerCount = 10;
+                    const eagerCount = 4;
                     return (
                     <button
                       key={subcategory.id || subcategory.value}
@@ -306,9 +306,11 @@ const CategoryShowcase = ({
                           src={initialImgSrc}
                           alt={leafLabelFromStoredLabel(subcategory.label)}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
+                          width={192}
+                          height={144}
                           sizes="(max-width: 640px) 160px, (max-width: 1024px) 176px, 192px"
                           loading={slideIndex < eagerCount ? 'eager' : 'lazy'}
-                          fetchPriority={slideIndex < 4 ? 'high' : slideIndex < eagerCount ? 'auto' : 'low'}
+                          fetchPriority={slideIndex < 2 ? 'high' : 'low'}
                           decoding="async"
                           data-full={previewUrl || ''}
                           onError={(e) => {

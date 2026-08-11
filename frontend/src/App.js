@@ -32,15 +32,7 @@ function App() {
       });
       
       const dataApi = await dataResponse.json();
-      
-      console.log("🔍 App.js - Respuesta del backend:", {
-        success: dataApi.success,
-        data: dataApi.data,
-        userRole: dataApi.data?.role,
-        userEmail: dataApi.data?.email,
-        isAuthenticated: !!dataApi.data
-      });
-      
+
       if (dataApi.success && dataApi.data) {
         dispatch(setUserDetails(dataApi.data));
       } else {

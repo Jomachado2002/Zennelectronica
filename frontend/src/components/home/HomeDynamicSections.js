@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import VerticalCardProductOptimized from '../VerticalCardProductOptimized';
@@ -7,11 +6,6 @@ import NotebookBanner from '../NotebookBanner';
 import LazyWhenVisible from '../LazyWhenVisible';
 import scrollTop from '../../helpers/scrollTop';
 import { categoriaProductoHref } from '../../config/homeSlotRoutes';
-
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3 } }
-};
 
 const gradientText = {
   background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
@@ -54,15 +48,9 @@ function groupSections(sections) {
 
 function HeroSection({ section, products, loading, eager }) {
   return (
-    <motion.section
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: '-100px' }}
-      variants={fadeIn}
-      className="w-full"
-    >
+    <section className="w-full">
       <div className="flex flex-col lg:flex-row items-stretch gap-8">
-        <motion.div variants={fadeIn} className="w-full lg:w-1/3">
+        <div className="w-full lg:w-1/3">
           <div className="h-full relative overflow-hidden rounded-2xl shadow-2xl group">
             <NotebookBanner />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6 transform translate-y-2 group-hover:translate-y-0 transition duration-300 pointer-events-none">
@@ -75,9 +63,9 @@ function HeroSection({ section, products, loading, eager }) {
               </Link>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div variants={fadeIn} className="w-full lg:w-2/3">
+        <div className="w-full lg:w-2/3">
           <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -94,6 +82,7 @@ function HeroSection({ section, products, loading, eager }) {
               </div>
               <Link to={verMasHref(section)} onClick={() => scrollTop()}>
                 <button
+                  type="button"
                   className="px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center group/btn"
                   style={gradientBtn}
                 >
@@ -113,21 +102,15 @@ function HeroSection({ section, products, loading, eager }) {
               />
             </LazyWhenVisible>
           </div>
-        </motion.div>
+        </div>
       </div>
-    </motion.section>
+    </section>
   );
 }
 
 function FullSection({ section, products, loading, eager }) {
   return (
-    <motion.section
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: '-100px' }}
-      variants={fadeIn}
-      className="w-full"
-    >
+    <section className="w-full">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6">
@@ -145,6 +128,7 @@ function FullSection({ section, products, loading, eager }) {
             </div>
             <Link to={verMasHref(section)} onClick={() => scrollTop()}>
               <button
+                type="button"
                 className="mt-4 md:mt-0 px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg"
                 style={gradientBtn}
               >
@@ -166,13 +150,13 @@ function FullSection({ section, products, loading, eager }) {
           </div>
         </div>
       </div>
-    </motion.section>
+    </section>
   );
 }
 
 function GridCard({ section, products, loading, eager }) {
   return (
-    <motion.div variants={fadeIn} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
       <div className="p-6 text-white" style={gradientBtn}>
         <h2 className="text-2xl font-bold flex items-center text-white">{section.title}</h2>
         {section.subtitle ? (
@@ -195,6 +179,7 @@ function GridCard({ section, products, loading, eager }) {
       <div className="p-4 pt-0 text-center">
         <Link to={verMasHref(section)} onClick={() => scrollTop()}>
           <button
+            type="button"
             className="px-6 py-2 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg"
             style={gradientBtn}
           >
@@ -202,7 +187,7 @@ function GridCard({ section, products, loading, eager }) {
           </button>
         </Link>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -263,14 +248,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
         }
 
         return (
-          <motion.section
-            key={`grid-${gi}`}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeIn}
-            className="w-full"
-          >
+          <section key={`grid-${gi}`} className="w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {group.sections.map((section) => {
                 const eager = sectionIndex < 2;
@@ -286,7 +264,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
                 );
               })}
             </div>
-          </motion.section>
+          </section>
         );
       })}
     </>
