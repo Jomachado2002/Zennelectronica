@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   FaPlus, 
   FaEdit, 
@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
+import { authFetch } from '../helpers/authFetch';
 
 const BranchesManagement = () => {
   const [branches, setBranches] = useState([]);
@@ -46,31 +47,30 @@ const BranchesManagement = () => {
     }
   });
 
-  const fetchBranches = async () => {
+  const fetchBranches = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/sucursales?includeInactive=${showInactive}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const response = await authFetch(
+        `${SummaryApi.baseURL}/api/finanzas/sucursales?includeInactive=${showInactive}`,
+        { method: 'GET' }
+      );
 
       const result = await response.json();
       if (result.success) {
-        setBranches(result.data);
+        setBranches(result.data || []);
       } else {
         toast.error(result.message || "Error al cargar las sucursales");
       }
     } catch (error) {
-      // console.error removed for production
       toast.error("Error de conexión");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showInactive]);
 
   useEffect(() => {
     fetchBranches();
-  }, [showInactive, fetchBranches]);
+  }, [fetchBranches]);
 
   useEffect(() => {
     let filtered = branches;
@@ -139,13 +139,18 @@ const BranchesManagement = () => {
       
       const method = editingBranch ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          address: {
+            street: formData.address?.street || '',
+            city: formData.address?.city || 'Asunción',
+            state: formData.address?.state || 'Central',
+            zip: formData.address?.zip || '',
+            country: formData.address?.country || 'Paraguay'
+          }
+        })
       });
 
       const result = await response.json();
@@ -219,9 +224,8 @@ const BranchesManagement = () => {
     }
 
     try {
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/sucursales/${branchId}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await authFetch(`${SummaryApi.baseURL}/api/finanzas/sucursales/${branchId}`, {
+        method: 'DELETE'
       });
 
       const result = await response.json();
@@ -386,7 +390,7 @@ const BranchesManagement = () => {
                     <input
                       type="text"
                       name="address.street"
-                      value={formData.address.street}
+                      value={formData.address?.street || ''}
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Calle y número"
@@ -400,7 +404,7 @@ const BranchesManagement = () => {
                     <input
                       type="text"
                       name="address.city"
-                      value={formData.address.city}
+                      value={formData.address?.city || ''}
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Ciudad"
@@ -414,7 +418,7 @@ const BranchesManagement = () => {
                     <input
                       type="text"
                       name="address.state"
-                      value={formData.address.state}
+                      value={formData.address?.state || ''}
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Estado/Departamento"
@@ -428,7 +432,7 @@ const BranchesManagement = () => {
                     <input
                       type="text"
                       name="address.zip"
-                      value={formData.address.zip}
+                      value={formData.address?.zip || ''}
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="Código postal"
@@ -442,7 +446,7 @@ const BranchesManagement = () => {
                     <input
                       type="text"
                       name="address.country"
-                      value={formData.address.country}
+                      value={formData.address?.country || 'Paraguay'}
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       placeholder="País"
@@ -609,7 +613,7 @@ const BranchesManagement = () => {
                         {branch.address?.street || '-'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {branch.address?.city && branch.address?.state 
+                        {branch.address?.city && branch.address?.state
                           ? `${branch.address.city}, ${branch.address.state}`
                           : branch.address?.city || branch.address?.state || '-'
                         }

@@ -16,22 +16,23 @@ const branchSchema = new mongoose.Schema({
     address: {
         street: {
             type: String,
-            required: true,
-            trim: true
+            trim: true,
+            default: ''
         },
         city: {
             type: String,
-            required: true,
-            trim: true
+            trim: true,
+            default: 'Asunción'
         },
         state: {
             type: String,
-            required: true,
-            trim: true
+            trim: true,
+            default: 'Central'
         },
         zip: {
             type: String,
-            trim: true
+            trim: true,
+            default: ''
         },
         country: {
             type: String,
@@ -64,8 +65,7 @@ const branchSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'user',
-        required: true
+        ref: 'user'
     },
     // Metadata for future use
     metadata: {
@@ -114,11 +114,12 @@ branchSchema.methods.softDelete = function() {
 
 // Instance method to get full address
 branchSchema.methods.getFullAddress = function() {
-    const { street, city, state, zip, country } = this.address;
-    let address = `${street}, ${city}, ${state}`;
-    if (zip) address += ` ${zip}`;
-    if (country && country !== 'Paraguay') address += `, ${country}`;
-    return address;
+    const addr = this.address || {};
+    const parts = [addr.street, addr.city, addr.state].filter(Boolean);
+    let line = parts.join(', ');
+    if (addr.zip) line += ` ${addr.zip}`;
+    if (addr.country && addr.country !== 'Paraguay') line += `, ${addr.country}`;
+    return line || 'Paraguay';
 };
 
 const BranchModel = mongoose.model('Branch', branchSchema);

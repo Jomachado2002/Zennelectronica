@@ -1,6 +1,30 @@
 const BranchModel = require('../../models/branchModel');
 const uploadProductPermission = require('../../helpers/permission');
 
+function isMongoId(id) {
+    return typeof id === 'string' && /^[a-fA-F0-9]{24}$/.test(id);
+}
+
+function normalizeAddress(address = {}) {
+    const src = address && typeof address === 'object' ? address : {};
+    return {
+        street: String(src.street || '').trim(),
+        city: String(src.city || '').trim() || 'Asunción',
+        state: String(src.state || '').trim() || 'Central',
+        zip: String(src.zip || '').trim(),
+        country: String(src.country || '').trim() || 'Paraguay'
+    };
+}
+
+function normalizeContact(contact = {}) {
+    const src = contact && typeof contact === 'object' ? contact : {};
+    return {
+        phone: String(src.phone || '').trim(),
+        email: String(src.email || '').trim(),
+        manager: String(src.manager || '').trim()
+    };
+}
+
 /**
  * Create a new branch
  */
@@ -24,18 +48,19 @@ async function createBranchController(req, res) {
             isMainBranch = false 
         } = req.body;
 
-        if (!name || !code || !address) {
+        if (!name || !String(name).trim() || !code || !String(code).trim()) {
             return res.status(400).json({
-                message: "Nombre, código y dirección son requeridos",
+                message: "Nombre y código son requeridos",
                 error: true,
                 success: false
             });
         }
 
-        // Check if branch code already exists
-        const existingBranch = await BranchModel.findOne({ 
-            code: code.trim().toUpperCase(),
-            isActive: true 
+        const codeNorm = String(code).trim().toUpperCase();
+
+        const existingBranch = await BranchModel.findOne({
+            code: codeNorm,
+            isActive: true
         });
 
         if (existingBranch) {
@@ -54,27 +79,19 @@ async function createBranchController(req, res) {
             );
         }
 
-        const newBranch = new BranchModel({
-            name: name.trim(),
-            code: code.trim().toUpperCase(),
-            address: {
-                street: address.street?.trim() || '',
-                city: address.city?.trim() || '',
-                state: address.state?.trim() || '',
-                zip: address.zip?.trim() || '',
-                country: address.country?.trim() || 'Paraguay'
-            },
-            contact: {
-                phone: contact?.phone?.trim() || '',
-                email: contact?.email?.trim() || '',
-                manager: contact?.manager?.trim() || ''
-            },
-            isMainBranch,
-            metadata: metadata || {},
-            createdBy: req.userId
-        });
+        const payload = {
+            name: String(name).trim(),
+            code: codeNorm,
+            address: normalizeAddress(address),
+            contact: normalizeContact(contact),
+            isMainBranch: !!isMainBranch,
+            metadata: metadata && typeof metadata === 'object' ? metadata : {}
+        };
+        if (isMongoId(String(req.userId || ''))) {
+            payload.createdBy = req.userId;
+        }
 
-        const savedBranch = await newBranch.save();
+        const savedBranch = await BranchModel.create(payload);
 
         res.status(201).json({
             message: "Sucursal creada correctamente",
@@ -241,8 +258,8 @@ async function updateBranchController(req, res) {
         const updateData = {};
         if (name) updateData.name = name.trim();
         if (code) updateData.code = code.trim().toUpperCase();
-        if (address) updateData.address = { ...branch.address, ...address };
-        if (contact) updateData.contact = { ...branch.contact, ...contact };
+        if (address) updateData.address = normalizeAddress({ ...(branch.address?.toObject?.() || branch.address || {}), ...address });
+        if (contact) updateData.contact = normalizeContact({ ...(branch.contact?.toObject?.() || branch.contact || {}), ...contact });
         if (metadata) updateData.metadata = { ...branch.metadata, ...metadata };
         if (isActive !== undefined) updateData.isActive = isActive;
         if (isMainBranch !== undefined) updateData.isMainBranch = isMainBranch;
