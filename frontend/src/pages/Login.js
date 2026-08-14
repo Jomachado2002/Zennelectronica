@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import { persistAuthToken } from '../helpers/getAuthToken';
 import { localCartHelper } from '../helpers/addToCart';
 import axiosInstance from '../config/axiosInstance';
+import Context from '../context';
 
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
