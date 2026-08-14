@@ -338,9 +338,9 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
 
     /**
      * Espera tiles de subcategoría O productos (SPA Visão).
-     * Importante: muchas raíces muestran productos Y tiles; si los productos
-     * llegan primero hay que dar margen a que pinten las cards de subcategoría,
-     * si no el árbol se corta (ej. Celulares y Tablets → 1 hoja falsa).
+     * Las cards no siempre usan `a.flex.flex-1...`; si no se detectan hijas,
+     * Electrónicos se guarda como Electrónicos → Electrónicos en vez de la hoja
+     * (p. ej. Volante para auto).
      */
     async function extractListingTilesByUrl(listingUrl) {
         await holder.page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
@@ -348,52 +348,91 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
         try {
             await holder.page.waitForFunction(
                 () => {
-                    const tiles = document.querySelectorAll(
-                        'a.flex.flex-1.h-full.no-underline.text-inherit[href*="/busca/categoria/"]'
-                    );
+                    const cats = document.querySelectorAll('a[href*="/busca/categoria/"]');
                     const prods = document.querySelectorAll('a[href*="/es/prod/"]');
-                    return tiles.length > 0 || prods.length > 0;
+                    return cats.length > 1 || prods.length > 0;
                 },
-                { timeout: 12000 }
+                { timeout: 14000 }
             );
         } catch {
-            /* categoría vacía o bloqueada: se trata como hoja */
+            /* categoría vacía o bloqueada */
         }
-        // Margen SPA: tiles de subcategoría a veces llegan después de los productos.
         try {
             await holder.page.waitForFunction(
                 () =>
                     document.querySelectorAll(
-                        'a.flex.flex-1.h-full.no-underline.text-inherit[href*="/busca/categoria/"]'
-                    ).length > 0,
-                { timeout: 2500 }
+                        'a.flex.flex-1.h-full.no-underline.text-inherit[href*="/busca/categoria/"], main a[href*="/es/busca/categoria/"]'
+                    ).length > 1,
+                { timeout: 5000 }
             );
         } catch {
             /* hoja real sin subcategorías */
         }
-        await delay(300);
-        const rows = await holder.page.evaluate(() => {
+        await delay(400);
+        const rows = await holder.page.evaluate((currentListing) => {
             function txt(el) {
                 return String((el && el.textContent) || '')
                     .replace(/\s+/g, ' ')
                     .trim();
             }
-            const out = [];
-            const anchors = document.querySelectorAll(
-                'a.flex.flex-1.h-full.no-underline.text-inherit'
-            );
-            for (const a of anchors) {
-                const href = a.getAttribute('href') || a.href || '';
-                if (!/\/es\/busca\/categoria\//i.test(href)) continue;
-                const label = txt(a);
-                if (!label || label.length > 70) continue;
-                const rect = a.getBoundingClientRect();
-                // Tiles reales de subcategoría son cards grandes; evita links basura del layout.
-                if (rect.width < 120 || rect.height < 80) continue;
-                out.push({ label, href });
+            function canon(href) {
+                try {
+                    const u = new URL(href, location.origin);
+                    u.search = '';
+                    u.hash = '';
+                    return u.href.replace(/\/+$/, '');
+                } catch {
+                    return '';
+                }
             }
-            return out;
-        });
+            const current = canon(currentListing);
+            const skipUi =
+                /^(categor[ií]as|links [uú]tiles|inicio|buscar|siguiente|anterior|pr[oó]ximo|pr[oó]xima|\d+)$/i;
+            const firstProd = document.querySelector('a[href*="/es/prod/"]');
+            function isBeforeFirstProduct(el) {
+                if (!firstProd) return true;
+                return !!(firstProd.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING);
+            }
+            function isJunk(a) {
+                if (!a) return true;
+                if (a.closest('[class*="breadcrumb"], nav[aria-label*="readcrumb" i], .p-paginator, [class*="paginator"]')) {
+                    return true;
+                }
+                if (a.closest('header, footer')) return true;
+                return false;
+            }
+            const candidates = [];
+            const roots = [
+                document.querySelector('main'),
+                document.querySelector('aside .menu-list'),
+                document.body
+            ].filter(Boolean);
+            const seenEl = new Set();
+            for (const root of roots) {
+                for (const a of root.querySelectorAll('a[href*="/busca/categoria/"]')) {
+                    if (seenEl.has(a) || isJunk(a)) continue;
+                    seenEl.add(a);
+                    const href = a.getAttribute('href') || a.href || '';
+                    if (!/\/es\/busca\/categoria\//i.test(href)) continue;
+                    const u = canon(href);
+                    if (!u || u === current) continue;
+                    const label = txt(
+                        a.querySelector(':scope > .menu-label, :scope h2, :scope h3, :scope span') || a
+                    );
+                    if (!label || label.length > 80 || skipUi.test(label)) continue;
+                    candidates.push({
+                        label,
+                        href: u,
+                        beforeProducts: isBeforeFirstProduct(a),
+                        inAside: !!a.closest('aside')
+                    });
+                }
+            }
+            const prefer = candidates.filter((c) => c.beforeProducts && !c.inAside);
+            const asideKids = candidates.filter((c) => c.inAside);
+            const pool = prefer.length ? prefer : asideKids.length ? asideKids : candidates;
+            return pool.map((c) => ({ label: c.label, href: c.href }));
+        }, listingUrl);
         const seen = new Set();
         const clean = [];
         for (const r of rows || []) {
@@ -453,6 +492,7 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
                 if (c.url === node.url) continue;
                 if (path.some((p) => p.url === c.url)) continue;
                 if (isNoiseLabel(c.label)) continue;
+                if (c.label.toLowerCase() === String(node.label || '').toLowerCase()) continue;
                 const k = `${c.label.toLowerCase()}|${c.url}`;
                 if (seen.has(k)) continue;
                 seen.add(k);

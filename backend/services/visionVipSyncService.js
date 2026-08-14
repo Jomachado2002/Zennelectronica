@@ -1060,14 +1060,20 @@ async function persistOneVisaoProduct(scraped, ctx) {
         const pdpBreadForLabel = (scraped._pdpBreadcrumbLabels || scraped.pdpBreadcrumbLabels || [])
             .map((s) => String(s || '').trim())
             .filter(Boolean);
-        const menuLeaf =
+        const menuPath =
             Array.isArray(scraped._taxonomyPathLabels) && scraped._taxonomyPathLabels.length
-                ? String(scraped._taxonomyPathLabels[scraped._taxonomyPathLabels.length - 1] || '').trim()
-                : '';
-        /** Texto mostrado en subcategoría Mongo: último nivel visible (PDP > menú > inferido). */
+                ? scraped._taxonomyPathLabels.map((s) => String(s || '').trim()).filter(Boolean)
+                : [];
+        const menuLeaf = menuPath.length ? String(menuPath[menuPath.length - 1] || '').trim() : '';
+        const pdpLeaf = pdpBreadForLabel.length
+            ? String(pdpBreadForLabel[pdpBreadForLabel.length - 1] || '').trim()
+            : '';
+        /** Hoja del menú (último nodo). Si el PDP solo trae la raíz, no pisar la sub real. */
         const subcategoryLabel =
-            (pdpBreadForLabel.length ? pdpBreadForLabel[pdpBreadForLabel.length - 1] : '') ||
+            (menuPath.length >= 2 ? menuLeaf : '') ||
+            (pdpBreadForLabel.length >= 2 ? pdpLeaf : '') ||
             menuLeaf ||
+            pdpLeaf ||
             String(scraped._subcategoryLabel || scraped.subcategoryLabel || '').trim() ||
             inferredFallback?.subcategoryLabel;
 
