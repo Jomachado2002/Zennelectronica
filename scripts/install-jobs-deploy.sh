@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Inserta POST /deploy en jobs-api/server.js del VPS (idempotente).
+# Idempotente: POST /deploy + persistencia de jobs PDF en disco.
 set -euo pipefail
 export JOBS_SERVER="${1:-/root/zenn/jobs-api/server.js}"
 export DEPLOY_SCRIPT="${JOBS_DEPLOY_SCRIPT:-/root/zenn/scripts/vps-deploy.sh}"
@@ -14,21 +14,35 @@ const fs = require('fs');
 const file = process.env.JOBS_SERVER;
 const deployScript = process.env.DEPLOY_SCRIPT;
 let s = fs.readFileSync(file, 'utf8');
-if (s.includes("app.post('/deploy'")) {
-  console.log('OK: /deploy ya existe');
-  process.exit(0);
-}
-if (!s.includes("child_process")) {
-  if (!s.includes("const crypto = require('crypto');")) {
-    console.error('No encontré crypto require en server.js');
-    process.exit(1);
+let changed = false;
+
+if (!s.includes("catalogPdfJobStore")) {
+  if (!s.includes("const pdfJobs = new Map();")) {
+    console.error('No encontré const pdfJobs = new Map() para persistir jobs');
+  } else {
+    s = s.replace(
+      "const pdfJobs = new Map();",
+      "const { catalogPdfJobs: pdfJobs } = fromBackend('services/catalogPdfJobStore');"
+    );
+    changed = true;
+    console.log('OK: pdfJobs persiste en disco');
   }
-  s = s.replace(
-    "const crypto = require('crypto');",
-    "const crypto = require('crypto');\nconst { spawn } = require('child_process');"
-  );
+} else {
+  console.log('OK: pdfJobs ya persiste en disco');
 }
-const hook = `
+
+if (!s.includes("app.post('/deploy'")) {
+  if (!s.includes("child_process")) {
+    if (!s.includes("const crypto = require('crypto');")) {
+      console.error('No encontré crypto require en server.js');
+      process.exit(1);
+    }
+    s = s.replace(
+      "const crypto = require('crypto');",
+      "const crypto = require('crypto');\nconst { spawn } = require('child_process');"
+    );
+  }
+  const hook = `
   app.post('/deploy', requireSecret, (req, res) => {
     const script = process.env.JOBS_DEPLOY_SCRIPT || ${JSON.stringify(deployScript)};
     const fs = require('fs');
@@ -43,12 +57,17 @@ const hook = `
     }, 400);
   });
 `;
-const needle = "  app.get('/', (_req, res) => {";
-if (!s.includes(needle)) {
-  console.error("No encontré app.get('/') en server.js");
-  process.exit(1);
+  const needle = "  app.get('/', (_req, res) => {";
+  if (!s.includes(needle)) {
+    console.error("No encontré app.get('/') en server.js");
+    process.exit(1);
+  }
+  s = s.replace(needle, hook + '\n' + needle);
+  changed = true;
+  console.log('OK: /deploy insertado');
+} else {
+  console.log('OK: /deploy ya existe');
 }
-s = s.replace(needle, hook + '\n' + needle);
-fs.writeFileSync(file, s);
-console.log('OK: /deploy insertado en', file);
+
+if (changed) fs.writeFileSync(file, s);
 NODE

@@ -31,16 +31,12 @@ mkdir -p "$(dirname "$LOG")"
   fi
 
   LOCK="${TMPDIR:-/tmp}/zenn-catalog-pdf.lock"
-  for i in $(seq 1 45); do
-    if [ ! -f "$LOCK" ]; then
-      break
-    fi
-    echo ">> hay un PDF en curso, espero antes de reiniciar ($i)"
-    sleep 2
-  done
-
-  echo ">> pm2 restart zenn-jobs"
-  pm2 restart zenn-jobs --update-env
+  if [ -f "$LOCK" ]; then
+    echo ">> skip pm2 restart: hay un PDF en curso (el job queda en disco)"
+  else
+    echo ">> pm2 restart zenn-jobs"
+    pm2 restart zenn-jobs --update-env
+  fi
   sleep 6
   curl -sS --max-time 10 http://127.0.0.1:8787/health || true
   echo ""
