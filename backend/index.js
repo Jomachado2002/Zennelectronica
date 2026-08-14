@@ -60,8 +60,12 @@ app.use((req, res, next) => {
     // Banner images - long cache
     res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
   } else if (req.path.startsWith('/api/')) {
-    // API responses - shorter cache
-    res.setHeader('Cache-Control', 'private, max-age=300'); // 5 minutes
+    if (/catalog-pdf|jobs-health|generate-catalog-pdf/.test(req.path)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', 'private, max-age=300');
+    }
   }
   next();
 });

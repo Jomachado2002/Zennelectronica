@@ -470,6 +470,8 @@ const getCatalogPdfJobStatus = async (req, res) => {
     }
     const r = await workerFetch(`/catalog-pdf/${encodeURIComponent(req.params.jobId)}`, { method: 'GET' }, 8000);
     const data = await r.json().catch(() => ({}));
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
     if (r.status === 404) {
       return res.status(404).json({
         success: false,

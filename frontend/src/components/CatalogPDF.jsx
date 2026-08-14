@@ -131,7 +131,11 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
         if (!data?.jobId) throw new Error(data?.message || 'El backend no inició el PDF en el VPS');
         jobId = data.jobId;
         poll = async () => {
-          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, reqOpts);
+          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, {
+            ...reqOpts,
+            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+            params: { t: Date.now() },
+          });
           return st.data || {};
         };
         download = async () => {
