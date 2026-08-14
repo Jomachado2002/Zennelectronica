@@ -30,6 +30,15 @@ mkdir -p "$(dirname "$LOG")"
     bash "$ZENN_ROOT/scripts/install-jobs-deploy.sh" || true
   fi
 
+  LOCK="${TMPDIR:-/tmp}/zenn-catalog-pdf.lock"
+  for i in $(seq 1 45); do
+    if [ ! -f "$LOCK" ]; then
+      break
+    fi
+    echo ">> hay un PDF en curso, espero antes de reiniciar ($i)"
+    sleep 2
+  done
+
   echo ">> pm2 restart zenn-jobs"
   pm2 restart zenn-jobs --update-env
   sleep 6

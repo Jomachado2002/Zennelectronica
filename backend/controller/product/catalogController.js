@@ -1,7 +1,11 @@
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const puppeteer = require('puppeteer');
 const Product = require('../../models/productModel');
 const Category = require('../../models/categoryModel');
+
+const PDF_LOCK = path.join(os.tmpdir(), 'zenn-catalog-pdf.lock');
 
 function resolveChromePath() {
   const fromEnv = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
@@ -300,14 +304,32 @@ async function generateCatalogPdfBuffer({
   say(`Armando HTML (${products.length} productos)…`);
   const htmlContent = generateHTMLContent(catalogData, title);
 
-  say('Abriendo Chrome…');
-  const browser = await getSharedBrowser();
-  const page = await browser.newPage();
-  page.setDefaultTimeout(45000);
-  page.setDefaultNavigationTimeout(45000);
+  fs.writeFileSync(PDF_LOCK, String(Date.now()));
+  let page = null;
   try {
-    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    say('Cargando imágenes (máx. 6s)…');
+    say('Abriendo Chrome…');
+    const browser = await getSharedBrowser();
+    page = await browser.newPage();
+    page.setDefaultTimeout(30000);
+    page.setDefaultNavigationTimeout(30000);
+    let allowImages = true;
+    const stopImages = setTimeout(() => {
+      allowImages = false;
+    }, 2500);
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const type = req.resourceType();
+      if (type === 'media' || type === 'websocket' || type === 'font') {
+        return req.abort().catch(() => {});
+      }
+      if (type === 'image' && !allowImages) {
+        return req.abort().catch(() => {});
+      }
+      return req.continue().catch(() => {});
+    });
+
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    say('Cargando fotos (máx. 2.5s)…');
     try {
       await Promise.race([
         page.evaluate(() =>
@@ -316,29 +338,27 @@ async function generateCatalogPdfBuffer({
               (img) =>
                 new Promise((resolve) => {
                   if (img.complete) return resolve();
-                  const timeout = setTimeout(() => resolve(), 2500);
-                  img.onload = img.onerror = () => {
-                    clearTimeout(timeout);
-                    resolve();
-                  };
+                  img.onload = img.onerror = () => resolve();
                 })
             )
           )
         ),
-        new Promise((resolve) => setTimeout(resolve, 6000))
+        new Promise((resolve) => setTimeout(resolve, 2500))
       ]);
     } catch (_) {
       /* seguir igual */
     }
+    clearTimeout(stopImages);
+    allowImages = false;
 
-    say('Renderizando PDF…');
+    say(`Renderizando PDF (${products.length} productos)…`);
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' },
       preferCSSPageSize: true,
       displayHeaderFooter: false,
-      timeout: 90000
+      timeout: 60000
     });
 
     const ms = Date.now() - t0;
@@ -350,23 +370,102 @@ async function generateCatalogPdfBuffer({
       productCount: products.length
     };
   } finally {
-    await page.close().catch(() => {});
+    try {
+      fs.unlinkSync(PDF_LOCK);
+    } catch {
+      /* ignore */
+    }
+    if (page) await page.close().catch(() => {});
+  }
+}
+
+async function workerFetch(path, options = {}, timeoutMs = 8000) {
+  if (!WORKER_API_URL) {
+    const err = new Error('WORKER_API_URL no configurada en el backend');
+    err.statusCode = 503;
+    throw err;
+  }
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${WORKER_API_URL}${path}`, {
+      ...options,
+      signal: ctrl.signal,
+      headers: {
+        'X-Worker-Key': WORKER_SECRET,
+        ...(options.headers || {})
+      }
+    });
+    return res;
+  } catch (err) {
+    const down = new Error(
+      'El servidor de jobs (VPS) no responde. En el VPS: pm2 status zenn-jobs && pm2 restart zenn-jobs'
+    );
+    down.statusCode = 503;
+    down.cause = err;
+    throw down;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function pingJobsHealth(req, res) {
+  try {
+    if (!WORKER_API_URL) {
+      return res.status(503).json({
+        ok: false,
+        jobsUp: false,
+        message: 'WORKER_API_URL no configurada'
+      });
+    }
+    const r = await workerFetch('/health', { method: 'GET' }, 5000);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return res.status(503).json({
+        ok: false,
+        jobsUp: false,
+        message: 'jobs-api respondió con error'
+      });
+    }
+    return res.json({
+      ok: true,
+      jobsUp: true,
+      scrapeRunning: !!data.scrapeRunning,
+      time: data.time || null
+    });
+  } catch (err) {
+    return res.status(503).json({
+      ok: false,
+      jobsUp: false,
+      scrapeRunning: false,
+      message: err.message
+    });
   }
 }
 
 async function proxyPdfJobToWorker(req, res) {
-  const start = await fetch(`${WORKER_API_URL}/catalog-pdf`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Worker-Key': WORKER_SECRET
+  const health = await workerFetch('/health', { method: 'GET' }, 5000);
+  const healthData = await health.json().catch(() => ({}));
+  if (healthData.scrapeRunning) {
+    return res.status(409).json({
+      success: false,
+      message: 'Hay un scrape Visão en curso. Esperá a que termine para generar el PDF.'
+    });
+  }
+
+  const start = await workerFetch(
+    '/catalog-pdf',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: req.body?.category,
+        subcategory: req.body?.subcategory,
+        title: req.body?.title
+      })
     },
-    body: JSON.stringify({
-      category: req.body?.category,
-      subcategory: req.body?.subcategory,
-      title: req.body?.title
-    })
-  });
+    15000
+  );
   const data = await start.json().catch(() => ({}));
   if (!start.ok) {
     return res.status(start.status).json({
@@ -383,36 +482,58 @@ async function proxyPdfJobToWorker(req, res) {
 }
 
 const getCatalogPdfJobStatus = async (req, res) => {
-  if (!WORKER_API_URL || !WORKER_SECRET) {
-    return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
+  try {
+    if (!WORKER_API_URL || !WORKER_SECRET) {
+      return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
+    }
+    const r = await workerFetch(`/catalog-pdf/${encodeURIComponent(req.params.jobId)}`, { method: 'GET' }, 8000);
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 404) {
+      return res.status(404).json({
+        success: false,
+        status: 'error',
+        error: 'El job se perdió (jobs-api se reinició). Volvé a generar el PDF.'
+      });
+    }
+    return res.status(r.status).json(data);
+  } catch (err) {
+    return res.status(err.statusCode || 503).json({
+      success: false,
+      status: 'error',
+      error: err.message
+    });
   }
-  const r = await fetch(`${WORKER_API_URL}/catalog-pdf/${encodeURIComponent(req.params.jobId)}`, {
-    headers: { 'X-Worker-Key': WORKER_SECRET }
-  });
-  const data = await r.json().catch(() => ({}));
-  return res.status(r.status).json(data);
 };
 
 const downloadCatalogPdfJob = async (req, res) => {
-  if (!WORKER_API_URL || !WORKER_SECRET) {
-    return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
-  }
-  const r = await fetch(`${WORKER_API_URL}/catalog-pdf/${encodeURIComponent(req.params.jobId)}/file`, {
-    headers: { 'X-Worker-Key': WORKER_SECRET }
-  });
-  if (!r.ok) {
-    const data = await r.json().catch(() => ({}));
-    return res.status(r.status).json({
+  try {
+    if (!WORKER_API_URL || !WORKER_SECRET) {
+      return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
+    }
+    const r = await workerFetch(
+      `/catalog-pdf/${encodeURIComponent(req.params.jobId)}/file`,
+      { method: 'GET' },
+      30000
+    );
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      return res.status(r.status).json({
+        success: false,
+        message: data.error || data.message || 'PDF no listo'
+      });
+    }
+    const buf = Buffer.from(await r.arrayBuffer());
+    const disposition = r.headers.get('content-disposition') || 'attachment; filename="catalogo.pdf"';
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', disposition);
+    res.setHeader('Content-Length', buf.length);
+    res.end(buf);
+  } catch (err) {
+    return res.status(err.statusCode || 503).json({
       success: false,
-      message: data.error || data.message || 'PDF no listo'
+      message: err.message
     });
   }
-  const buf = Buffer.from(await r.arrayBuffer());
-  const disposition = r.headers.get('content-disposition') || 'attachment; filename="catalogo.pdf"';
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', disposition);
-  res.setHeader('Content-Length', buf.length);
-  res.end(buf);
 };
 
 // Generar catálogo PDF (en Vercel reenvía al VPS para no cortar por timeout)
@@ -439,7 +560,7 @@ const generateCatalogPDF = async (req, res) => {
     if (!res.headersSent) {
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.statusCode === 404 ? error.message : 'Error al generar el catálogo PDF',
+        message: error.message || 'Error al generar el catálogo PDF',
         error: error.message
       });
     }
@@ -831,7 +952,7 @@ function generateHTMLContent(catalogData, title) {
                             <a href="${productUrl}" class="product-image-link" target="_blank">
                                 <div class="product-image-container">
                                     ${producto.imagen_url ? 
-                                      `<img src="${producto.imagen_url}" alt="${producto.titulo}" class="product-image" width="150" height="150" decoding="async" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>';">` :
+                                      `<img src="${producto.imagen_url}" alt="" class="product-image" width="150" height="150" decoding="async" loading="eager" onerror="this.style.display='none'">` :
                                       `<div class="product-image-placeholder">📦</div>`
                                     }
                                 </div>
@@ -874,5 +995,6 @@ module.exports = {
   getCatalogCategories,
   getCatalogProducts,
   getCatalogPdfJobStatus,
-  downloadCatalogPdfJob
+  downloadCatalogPdfJob,
+  pingJobsHealth
 };

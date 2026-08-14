@@ -58,6 +58,8 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       let poll;
       let download;
 
+      const reqOpts = { timeout: 12000 };
+
       if (isLocal) {
         if (!jobs.base) {
           throw new Error('Falta REACT_APP_JOBS_API_URL (URL de jobs-api).');
@@ -66,6 +68,14 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
           'Content-Type': 'application/json',
           'X-Worker-Key': jobs.key,
         };
+        const healthRes = await fetch(`${jobs.base}/health`, { headers: { 'X-Worker-Key': jobs.key } });
+        const health = await healthRes.json().catch(() => ({}));
+        if (!healthRes.ok) {
+          throw new Error('jobs-api no responde. En el VPS: pm2 restart zenn-jobs');
+        }
+        if (health.scrapeRunning) {
+          throw new Error('Hay un scrape Visão en curso. Esperá a que termine y volvé a generar el PDF.');
+        }
         const response = await fetch(`${jobs.base}/catalog-pdf`, {
           method: 'POST',
           headers,
@@ -83,7 +93,11 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
           const st = await fetch(`${jobs.base}/catalog-pdf/${jobId}`, {
             headers: { 'X-Worker-Key': jobs.key },
           });
-          return st.json().catch(() => ({}));
+          const body = await st.json().catch(() => ({}));
+          if (st.status === 404) {
+            throw new Error('El job se perdió (jobs-api se reinició). Volvé a generar el PDF.');
+          }
+          return body;
         };
         download = async () => {
           const fileRes = await fetch(`${jobs.base}/catalog-pdf/${jobId}/file`, {
@@ -93,19 +107,37 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
           return fileRes.blob();
         };
       } else {
-        const { data } = await axiosInstance.post('/api/generate-catalog-pdf', {
-          category: selectedCategory,
-          subcategory: selectedSubcategory,
-          title: `Catálogo - ${companyName}`,
-        });
+        setProgressText('Comprobando servidor de jobs…');
+        const healthRes = await axiosInstance.get('/api/jobs-health', reqOpts);
+        const health = healthRes.data || {};
+        if (!health.jobsUp) {
+          throw new Error(
+            health.message ||
+              'El servidor de jobs (VPS) está caído. En el VPS: pm2 status zenn-jobs && pm2 restart zenn-jobs'
+          );
+        }
+        if (health.scrapeRunning) {
+          throw new Error('Hay un scrape Visão en curso. Esperá a que termine y volvé a generar el PDF.');
+        }
+        const { data } = await axiosInstance.post(
+          '/api/generate-catalog-pdf',
+          {
+            category: selectedCategory,
+            subcategory: selectedSubcategory,
+            title: `Catálogo - ${companyName}`,
+          },
+          reqOpts
+        );
         if (!data?.jobId) throw new Error(data?.message || 'El backend no inició el PDF en el VPS');
         jobId = data.jobId;
         poll = async () => {
-          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`);
+          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, reqOpts);
           return st.data || {};
         };
         download = async () => {
           const fileRes = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}/file`, {
+            ...reqOpts,
+            timeout: 60000,
             responseType: 'blob',
           });
           const blob = fileRes.data;
@@ -120,20 +152,39 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
 
       const started = Date.now();
       setProgressText('Generando en el servidor…');
-      while (Date.now() - started < 6 * 60 * 1000) {
-        const status = await poll();
-        if (status.progress) setProgressText(status.progress);
-        if (status.status === 'ready') {
-          setProgressText('Descargando…');
-          await savePdf(await download());
-          return;
+      let fails = 0;
+      while (Date.now() - started < 4 * 60 * 1000) {
+        try {
+          const status = await poll();
+          fails = 0;
+          if (status.progress) setProgressText(status.progress);
+          if (status.status === 'ready') {
+            setProgressText('Descargando…');
+            await savePdf(await download());
+            return;
+          }
+          if (status.status === 'error') {
+            throw new Error(status.error || 'Error generando PDF');
+          }
+        } catch (pollErr) {
+          fails += 1;
+          const msg =
+            pollErr?.response?.data?.error ||
+            pollErr?.response?.data?.message ||
+            pollErr.message ||
+            '';
+          if (/no responde|caído|se perdió|se reinició|503/i.test(msg) || pollErr?.response?.status === 503) {
+            throw pollErr;
+          }
+          if (fails >= 3) {
+            throw new Error(
+              'El servidor de jobs dejó de responder. En el VPS: pm2 restart zenn-jobs'
+            );
+          }
         }
-        if (status.status === 'error') {
-          throw new Error(status.error || 'Error generando PDF');
-        }
-        await sleep(700);
+        await sleep(800);
       }
-      throw new Error('Tiempo agotado generando el PDF. Reintentá; si persiste, revisá jobs-api en el VPS.');
+      throw new Error('Tiempo agotado generando el PDF. Revisá en el VPS: pm2 logs zenn-jobs');
     } catch (error) {
       const msg =
         error?.response?.data?.message ||

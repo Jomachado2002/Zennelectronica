@@ -1864,7 +1864,8 @@ const {
     getCatalogProducts,
     getCatalogCategories,
     getCatalogPdfJobStatus,
-    downloadCatalogPdfJob
+    downloadCatalogPdfJob,
+    pingJobsHealth
 } = require('../controller/product/catalogController');
 const {
     getWorkerSettingsController,
@@ -1946,6 +1947,7 @@ router.get('/catalog-products', authToken, getCatalogProducts);
 router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 router.get('/catalog-pdf-job/:jobId', authToken, getCatalogPdfJobStatus);
 router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
+router.get('/jobs-health', authToken, pingJobsHealth);
 
 router.get('/worker/settings', adminAuth, getWorkerSettingsController);
 router.put('/worker/settings', adminAuth, putWorkerSettingsController);
