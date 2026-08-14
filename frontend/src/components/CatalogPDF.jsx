@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { jobsConfig } from '../helpers/jobsApi';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCategory = 'all', selectedSubcategory = 'all' }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const jobs = jobsConfig();
 
   if (!catalogData || catalogData.length === 0) {
     return (
@@ -11,52 +15,67 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
     );
   }
 
+  const downloadBlob = (blob, fileName) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  const pdfFileName = () =>
+    `catalogo-${companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
+
   const generatePDF = async () => {
+    if (!jobs.base) {
+      alert('Falta REACT_APP_JOBS_API_URL (URL de jobs-api).');
+      return;
+    }
     setIsGenerating(true);
-    
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Worker-Key': jobs.key,
+    };
+    const startUrl = `${jobs.base}/catalog-pdf`;
+    console.log('[catalog-pdf] POST', startUrl);
     try {
-      // Llamar al endpoint del backend que usa Puppeteer
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 
-        (typeof window !== 'undefined' && window.location.origin) || 
-        '';
-      const response = await fetch(`${backendUrl}/api/generate-catalog-pdf`, {
+      const response = await fetch(startUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+        headers,
         body: JSON.stringify({
           category: selectedCategory,
           subcategory: selectedSubcategory,
-          title: `Catálogo - ${companyName}`
-        })
+          title: `Catálogo - ${companyName}`,
+        }),
       });
-
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Error del servidor:', errorData);
-        throw new Error(`Error al generar el PDF: ${response.status} ${response.statusText}`);
+        throw new Error(data.error || data.message || `jobs-api ${response.status}`);
       }
+      if (!data.jobId) throw new Error('jobs-api no devolvió jobId');
 
-      // Obtener el blob del PDF
-      const blob = await response.blob();
-      console.log('PDF recibido, tamaño:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
-      
-      // Crear un enlace temporal y descargar
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `catalogo-${companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Limpiar
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
+      const started = Date.now();
+      while (Date.now() - started < 8 * 60 * 1000) {
+        const st = await fetch(`${jobs.base}/catalog-pdf/${data.jobId}`, { headers });
+        const status = await st.json();
+        if (status.status === 'ready') {
+          const fileRes = await fetch(`${jobs.base}/catalog-pdf/${data.jobId}/file`, { headers });
+          if (!fileRes.ok) throw new Error('No se pudo descargar el PDF');
+          downloadBlob(await fileRes.blob(), pdfFileName());
+          return;
+        }
+        if (status.status === 'error') {
+          throw new Error(status.error || 'Error generando PDF');
+        }
+        await sleep(2500);
+      }
+      throw new Error('Tiempo agotado generando el PDF');
     } catch (error) {
       console.error('Error generando PDF:', error);
-      alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+      alert(error.message || 'Error al generar el PDF. Por favor, intenta de nuevo.');
     } finally {
       setIsGenerating(false);
     }
@@ -76,7 +95,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       ) : (
         <>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" fill="none" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <span>Descargar Catálogo PDF</span>
         </>

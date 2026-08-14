@@ -22,6 +22,7 @@ const {
     rowMatchesProdSegment
 } = require('./visionVipMirrorScrapeService');
 const { writeProductCategoryJsFromMongo } = require('./exportCategoriesFrontendFile');
+const { throwIfCancelled } = require('./workerLiveLog');
 
 const SYNC_SOURCE = 'visao_vip';
 const VISAO_MARKET_BRAND = 'Visão Vip';
@@ -456,6 +457,7 @@ async function mapPool(items, limit, mapper) {
     const workers = Math.max(1, Math.min(limit, n));
     async function worker() {
         for (;;) {
+            throwIfCancelled();
             const i = next;
             next += 1;
             if (i >= n) break;
@@ -1005,7 +1007,8 @@ async function persistOneVisaoProduct(scraped, ctx) {
     /** Por defecto estricto (texto desde Visão); el sync legado pasa mirrorStrict: false explícitamente. */
     const mirrorStrict = mirrorStrictOpt !== undefined ? !!mirrorStrictOpt : true;
 
-    const code = resolveMirroredSupplierCodigo(scraped);
+        const code = resolveMirroredSupplierCodigo(scraped);
+    throwIfCancelled();
     if (!code) {
         persistResults.push({
             codigo: null,
@@ -1138,7 +1141,9 @@ async function persistOneVisaoProduct(scraped, ctx) {
         try {
             prices = calculateVisaoVipPrices({
                 ...priceInput,
-                exchangeRate
+                exchangeRate,
+                profitMargin,
+                deliveryCost,
             });
         } catch (calcErr) {
             persistResults.push({

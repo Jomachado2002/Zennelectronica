@@ -1,0 +1,24 @@
+{
+  "name": "zenn-jobs-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API externa: worker Visão + catálogo PDF (VPS). No es el e-commerce.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1103.0",
+    "axios": "^1.8.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.1",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.4.0",
+    "mongoose": "^8.7.0",
+    "puppeteer": "^24.30.0",
+    "sharp": "^0.33.5",
+    "sib-api-v3-sdk": "^8.5.0",
+    "uuid": "^11.1.0"
+  }
+}

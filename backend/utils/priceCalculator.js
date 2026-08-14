@@ -141,8 +141,14 @@ function calculateVisaoVipPrices(opts = {}) {
         throw new Error('El tipo de cambio debe ser mayor a 0');
     }
 
-    const divisor = VISAO_VIP_MARGIN_DIVISOR;
-    const delivery = VISAO_VIP_DELIVERY_PYG;
+    const marginPct = Number(opts.profitMargin);
+    const divisor =
+        Number.isFinite(marginPct) && marginPct > 0 && marginPct < 100
+            ? 1 - marginPct / 100
+            : VISAO_VIP_MARGIN_DIVISOR;
+    const deliveryRaw = Number(opts.deliveryCost);
+    const delivery =
+        Number.isFinite(deliveryRaw) && deliveryRaw >= 0 ? deliveryRaw : VISAO_VIP_DELIVERY_PYG;
 
     function resolveBase(fuenteIn, usdIn, pygIn) {
         const fuente = String(fuenteIn || '').toUpperCase();

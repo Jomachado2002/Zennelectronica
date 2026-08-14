@@ -13,6 +13,7 @@ const {
     relaunchMutableBrowserHolder,
     isDisconnectedOrDeadBrowserError
 } = require('./visionVipScraperService');
+const { throwIfCancelled } = require('./workerLiveLog');
 
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -550,6 +551,7 @@ async function mapPool(items, limit, mapper) {
 
     async function worker() {
         for (;;) {
+            throwIfCancelled();
             const i = next;
             next += 1;
             if (i >= n) break;
@@ -651,6 +653,7 @@ async function scrapeVisionVipMirror(opts = {}) {
 
     const ctx = { browser: null };
     try {
+        throwIfCancelled();
         console.log(
             '[Visão mirror] Lanzando Chromium (Puppeteer). La primera ejecución puede tardar más si descarga el navegador.'
         );
@@ -662,6 +665,7 @@ async function scrapeVisionVipMirror(opts = {}) {
             '[Visão mirror] Fase menú: recorriendo el sitio (collectMenuHierarchy). Puede ir varios minutos sin más líneas; es normal.'
         );
         let menuRows = await collectMenuHierarchy(menuPage, { browserHolder: ctx });
+        throwIfCancelled();
         console.log(`[Visão mirror] Fase menú terminada: ${menuRows.length} filas brutas.`);
         await menuPage.close().catch(() => {});
 
@@ -718,6 +722,7 @@ async function scrapeVisionVipMirror(opts = {}) {
         }
         const groupedRows = [...rowsByRootCategory.entries()];
         for (const [rootCategory, rows] of groupedRows) {
+            throwIfCancelled();
             console.log(
                 `[Visão mirror][NAV] Procesando categoría raíz "${rootCategory}" (${rows.length} listados)...`
             );

@@ -1,6 +1,19 @@
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 const Product = require('../../models/productModel');
 const Category = require('../../models/categoryModel');
+
+function resolveChromePath() {
+  const fromEnv = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
+  if (fromEnv) return fromEnv;
+  const candidates = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium-browser',
+  ];
+  return candidates.find((p) => fs.existsSync(p)) || '';
+}
 
 // Obtener categorías para el catálogo
 const getCatalogCategories = async (req, res) => {
@@ -139,240 +152,245 @@ const getCatalogProducts = async (req, res) => {
   }
 };
 
-// Generar catálogo PDF optimizado - 9 productos por página
-const generateCatalogPDF = async (req, res) => {
+const WORKER_API_URL = (process.env.WORKER_API_URL || '').replace(/\/$/, '');
+const WORKER_SECRET = process.env.WORKER_SECRET || '';
+
+async function generateCatalogPdfBuffer({ category, subcategory, title = 'Catálogo de Productos' } = {}) {
   let browser = null;
-  
-  try {
-    const { category, subcategory, title = 'Catálogo de Productos' } = req.body;
-    
-    // Construir filtro de búsqueda
-    let filter = { stock: { $gt: 0 } }; // ✅ SOLO PRODUCTOS CON STOCK
-    
-    if (category && category !== 'all') {
-      filter.category = category;
-    }
-    if (subcategory && subcategory !== 'all') {
-      filter.subcategory = subcategory;
-    }
-    
-    // Obtener productos con filtros y SLUG
-    const products = await Product.find(filter)
-      .select('productName brandName category subcategory productImage price sellingPrice codigo stock slug')
-      .sort({ sellingPrice: 1, price: 1 }) // ✅ ORDENAR POR PRECIO DE MENOR A MAYOR
-      .lean();
-    
-    if (products.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No se encontraron productos con stock disponible'
-      });
-    }
-    
-    console.log(`✅ Encontrados ${products.length} productos con stock`);
-    
-    // Obtener todas las categorías
-    const categories = await Category.find({ isActive: true })
-      .select('name label value subcategories')
-      .sort({ order: 1 })
-      .lean();
-    
-    // Agrupar productos por categoría y subcategoría
-    const catalogData = [];
-    
-    for (const cat of categories) {
-      const categoryProducts = products.filter(p => p.category === cat.value);
-      
-      if (categoryProducts.length === 0) continue;
-      
-      const subcategories = [];
-      const subcategoryMap = new Map();
-      
-      for (const sub of cat.subcategories) {
-        if (sub.isActive) {
-          subcategoryMap.set(sub.value, {
-            name: sub.name,
-            label: sub.label,
-            productos: []
-          });
-        }
-      }
-      
-      for (const product of categoryProducts) {
-        if (subcategoryMap.has(product.subcategory)) {
-          const sub = subcategoryMap.get(product.subcategory);
-          sub.productos.push({
-            titulo: product.productName,
-            marca: product.brandName,
-            precio: product.sellingPrice || product.price,
-            codigo: product.codigo,
-            stock: product.stock,
-            imagen_url: product.productImage && product.productImage.length > 0 
-              ? product.productImage[0] 
-              : null,
-            slug: product.slug,
-            url: product.slug ? `https://zenn.com.py/producto/${product.slug}` : '#'
-          });
-        }
-      }
-      
-      // ✅ ORDENAR PRODUCTOS POR PRECIO DENTRO DE CADA SUBCATEGORÍA
-      for (const sub of subcategoryMap.values()) {
-        if (sub.productos.length > 0) {
-          sub.productos.sort((a, b) => a.precio - b.precio);
-          subcategories.push(sub);
-        }
-      }
-      
-      if (subcategories.length > 0) {
-        catalogData.push({
-          categoria: cat.name,
-          subcategorias: subcategories
+  let filter = { stock: { $gt: 0 } };
+
+  if (category && category !== 'all') {
+    filter.category = category;
+  }
+  if (subcategory && subcategory !== 'all') {
+    filter.subcategory = subcategory;
+  }
+
+  const products = await Product.find(filter)
+    .select('productName brandName category subcategory productImage price sellingPrice codigo stock slug')
+    .sort({ sellingPrice: 1, price: 1 })
+    .lean();
+
+  if (products.length === 0) {
+    const err = new Error('No se encontraron productos con stock disponible');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const categories = await Category.find({ isActive: true })
+    .select('name label value subcategories')
+    .sort({ order: 1 })
+    .lean();
+
+  const catalogData = [];
+
+  for (const cat of categories) {
+    const categoryProducts = products.filter((p) => p.category === cat.value);
+    if (categoryProducts.length === 0) continue;
+
+    const subcategories = [];
+    const subcategoryMap = new Map();
+
+    for (const sub of cat.subcategories) {
+      if (sub.isActive) {
+        subcategoryMap.set(sub.value, {
+          name: sub.name,
+          label: sub.label,
+          productos: []
         });
       }
     }
-    
-    // Generar HTML con estilos mejorados
-    console.log('Generando HTML con', catalogData.length, 'categorías');
-    const htmlContent = generateHTMLContent(catalogData, title);
-    
-    // Iniciar Puppeteer - Configuración para Vercel
-    console.log('Iniciando Puppeteer...');
-    
-    const launchOptions = {
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-software-rasterizer',
-        '--disable-extensions',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ]
-    };
 
-    // En producción (Vercel), usar Chrome del sistema
-    if (process.env.NODE_ENV === 'production') {
-      launchOptions.executablePath = '/usr/bin/google-chrome-stable';
-    } else {
-      // En desarrollo, Puppeteer debería encontrar Chrome automáticamente
-      // Pero si no lo encuentra, intentar usar el Chrome instalado por Puppeteer
-      try {
-        const executablePath = puppeteer.executablePath();
-        if (executablePath) {
-          console.log('✅ Chrome encontrado en:', executablePath);
-        }
-      } catch (err) {
-        console.warn('⚠️ No se pudo encontrar el ejecutable de Chrome, Puppeteer intentará encontrarlo automáticamente');
+    for (const product of categoryProducts) {
+      if (subcategoryMap.has(product.subcategory)) {
+        const sub = subcategoryMap.get(product.subcategory);
+        sub.productos.push({
+          titulo: product.productName,
+          marca: product.brandName,
+          precio: product.sellingPrice || product.price,
+          codigo: product.codigo,
+          stock: product.stock,
+          imagen_url:
+            product.productImage && product.productImage.length > 0
+              ? product.productImage[0]
+              : null,
+          slug: product.slug,
+          url: product.slug ? `https://zenn.com.py/producto/${product.slug}` : '#'
+        });
       }
     }
 
-    console.log('Lanzando Puppeteer con opciones:', JSON.stringify(launchOptions, null, 2));
-    browser = await puppeteer.launch(launchOptions);
-    
-    const page = await browser.newPage();
-    
-    // Configurar timeouts más largos para desarrollo
-    page.setDefaultTimeout(120000); // 2 minutos
-    page.setDefaultNavigationTimeout(120000);
-    
-    // Configurar el contenido HTML
-    console.log('Configurando contenido HTML...');
-    try {
-      await page.setContent(htmlContent, {
-        waitUntil: 'domcontentloaded', // Cambiar a domcontentloaded primero
-        timeout: 120000
-      });
-      console.log('✅ HTML configurado');
-    } catch (contentError) {
-      console.error('Error configurando contenido HTML:', contentError);
-      throw contentError;
+    for (const sub of subcategoryMap.values()) {
+      if (sub.productos.length > 0) {
+        sub.productos.sort((a, b) => a.precio - b.precio);
+        subcategories.push(sub);
+      }
     }
-    
-    // Esperar a que las imágenes se carguen con timeout
-    console.log('Esperando a que carguen las imágenes...');
+
+    if (subcategories.length > 0) {
+      catalogData.push({
+        categoria: cat.name,
+        subcategorias: subcategories
+      });
+    }
+  }
+
+  const htmlContent = generateHTMLContent(catalogData, title);
+  const launchOptions = {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-extensions'
+    ]
+  };
+
+  const chromePath = resolveChromePath();
+  if (chromePath) {
+    launchOptions.executablePath = chromePath;
+  }
+
+  browser = await puppeteer.launch(launchOptions);
+  try {
+    const page = await browser.newPage();
+    page.setDefaultTimeout(120000);
+    page.setDefaultNavigationTimeout(120000);
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 120000 });
     try {
       await Promise.race([
-        page.evaluate(() => {
-          return Promise.all(
+        page.evaluate(() =>
+          Promise.all(
             Array.from(document.images)
-              .filter(img => !img.complete)
-              .map(img => new Promise(resolve => {
-                const timeout = setTimeout(() => resolve(), 5000); // Timeout de 5s por imagen
-                img.onload = img.onerror = () => {
-                  clearTimeout(timeout);
-                  resolve();
-                };
-              }))
-          );
-        }),
-        new Promise((resolve) => setTimeout(resolve, 30000)) // Timeout máximo de 30s para todas las imágenes
+              .filter((img) => !img.complete)
+              .map(
+                (img) =>
+                  new Promise((resolve) => {
+                    const timeout = setTimeout(() => resolve(), 5000);
+                    img.onload = img.onerror = () => {
+                      clearTimeout(timeout);
+                      resolve();
+                    };
+                  })
+              )
+          )
+        ),
+        new Promise((resolve) => setTimeout(resolve, 30000))
       ]);
-      console.log('✅ Imágenes procesadas');
-    } catch (imageError) {
-      console.warn('⚠️ Algunas imágenes no se cargaron, continuando de todas formas:', imageError.message);
-      // Continuar aunque las imágenes no se hayan cargado
+    } catch (_) {
+      /* seguir igual */
     }
-    
-    // Generar PDF con configuración optimizada
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '10mm',
-        right: '8mm',
-        bottom: '10mm',
-        left: '8mm'
-      },
+      margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' },
       preferCSSPageSize: true,
-      displayHeaderFooter: false, // Desactivar footer para reducir complejidad
-      // Sin scale, usar tamaño normal pero con imágenes pequeñas
+      displayHeaderFooter: false
     });
-    
-    await browser.close();
-    browser = null;
-    
-    console.log('✅ PDF generado exitosamente, tamaño:', (pdfBuffer.length / 1024 / 1024).toFixed(2), 'MB');
-    
-    // Configurar headers para descarga
-    const fileName = `catalogo-${category || 'todos'}-${Date.now()}.pdf`;
-    
+
+    return {
+      buffer: Buffer.from(pdfBuffer),
+      fileName: `catalogo-${category || 'todos'}-${new Date().toISOString().split('T')[0]}.pdf`,
+      productCount: products.length
+    };
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+}
+
+async function proxyPdfJobToWorker(req, res) {
+  const start = await fetch(`${WORKER_API_URL}/catalog-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Worker-Key': WORKER_SECRET
+    },
+    body: JSON.stringify({
+      category: req.body?.category,
+      subcategory: req.body?.subcategory,
+      title: req.body?.title
+    })
+  });
+  const data = await start.json().catch(() => ({}));
+  if (!start.ok) {
+    return res.status(start.status).json({
+      success: false,
+      message: data.error || data.message || 'El worker no pudo iniciar el PDF'
+    });
+  }
+  return res.status(202).json({
+    success: true,
+    async: true,
+    jobId: data.jobId,
+    message: 'Generando PDF en el servidor de jobs'
+  });
+}
+
+const getCatalogPdfJobStatus = async (req, res) => {
+  if (!WORKER_API_URL || !WORKER_SECRET) {
+    return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
+  }
+  const r = await fetch(`${WORKER_API_URL}/catalog-pdf/${encodeURIComponent(req.params.jobId)}`, {
+    headers: { 'X-Worker-Key': WORKER_SECRET }
+  });
+  const data = await r.json().catch(() => ({}));
+  return res.status(r.status).json(data);
+};
+
+const downloadCatalogPdfJob = async (req, res) => {
+  if (!WORKER_API_URL || !WORKER_SECRET) {
+    return res.status(400).json({ success: false, message: 'WORKER_API_URL no configurada' });
+  }
+  const r = await fetch(`${WORKER_API_URL}/catalog-pdf/${encodeURIComponent(req.params.jobId)}/file`, {
+    headers: { 'X-Worker-Key': WORKER_SECRET }
+  });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    return res.status(r.status).json({
+      success: false,
+      message: data.error || data.message || 'PDF no listo'
+    });
+  }
+  const buf = Buffer.from(await r.arrayBuffer());
+  const disposition = r.headers.get('content-disposition') || 'attachment; filename="catalogo.pdf"';
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', disposition);
+  res.setHeader('Content-Length', buf.length);
+  res.end(buf);
+};
+
+// Generar catálogo PDF (en Vercel reenvía al VPS para no cortar por timeout)
+const generateCatalogPDF = async (req, res) => {
+  try {
+    if (WORKER_API_URL && WORKER_SECRET) {
+      return proxyPdfJobToWorker(req, res);
+    }
+
+    const { category, subcategory, title = 'Catálogo de Productos' } = req.body;
+    const { buffer, fileName } = await generateCatalogPdfBuffer({
+      category,
+      subcategory,
+      title
+    });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Content-Length', buffer.length);
     res.setHeader('Cache-Control', 'no-cache');
-    
-    // Enviar el buffer directamente
-    res.write(pdfBuffer);
-    res.end();
-    
+    res.end(buffer);
   } catch (error) {
     console.error('❌ Error generando catálogo PDF:', error);
-    console.error('❌ Error stack:', error.stack);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
-    
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (closeError) {
-        console.error('Error cerrando navegador:', closeError);
-      }
-    }
-    
-    // Solo enviar error si la respuesta no se envió aún
     if (!res.headersSent) {
-      res.status(500).json({
+      res.status(error.statusCode || 500).json({
         success: false,
-        message: 'Error al generar el catálogo PDF',
-        error: error.message,
-        errorStack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: error.statusCode === 404 ? error.message : 'Error al generar el catálogo PDF',
+        error: error.message
       });
-    } else {
-      console.error('No se puede enviar error porque la respuesta ya fue enviada');
     }
   }
 };
@@ -801,6 +819,9 @@ function generateHTMLContent(catalogData, title) {
 
 module.exports = {
   generateCatalogPDF,
+  generateCatalogPdfBuffer,
   getCatalogCategories,
-  getCatalogProducts
+  getCatalogProducts,
+  getCatalogPdfJobStatus,
+  downloadCatalogPdfJob
 };

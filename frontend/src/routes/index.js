@@ -86,6 +86,7 @@ const ExportProductsPage = lazy(() => import('../pages/admin/ExportProductsPage'
 
 // Importar página de catálogo PDF
 const AdminCatalogoPDF = lazy(() => import('../pages/admin/AdminCatalogoPDF'));
+const AdminWorkerPage = lazy(() => import('../pages/admin/AdminWorkerPage'));
 
 // Importar página de editor de imágenes
 const ImageEditorPage = lazy(() => import('../pages/ImageEditorPage'));
@@ -362,6 +363,10 @@ const router = createBrowserRouter([
                     {
                         path: "catalogo-pdf",
                         element: <Lazy><AdminCatalogoPDF /></Lazy>
+                    },
+                    {
+                        path: "worker-visao",
+                        element: <Lazy><AdminWorkerPage /></Lazy>
                     },
                 
                 ]

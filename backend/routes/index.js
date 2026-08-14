@@ -1843,8 +1843,17 @@ const {
 const {
     generateCatalogPDF,
     getCatalogProducts,
-    getCatalogCategories
+    getCatalogCategories,
+    getCatalogPdfJobStatus,
+    downloadCatalogPdfJob
 } = require('../controller/product/catalogController');
+const {
+    getWorkerSettingsController,
+    putWorkerSettingsController,
+    getWorkerLogsController,
+    postWorkerRunController,
+    postWorkerCancelController,
+} = require('../controller/product/workerAdminController');
 
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
@@ -1916,6 +1925,14 @@ router.get('/catalog-products', authToken, getCatalogProducts);
  * Genera un catálogo PDF con los productos seleccionados
  */
 router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
+router.get('/catalog-pdf-job/:jobId', authToken, getCatalogPdfJobStatus);
+router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
+
+router.get('/worker/settings', authToken, getWorkerSettingsController);
+router.put('/worker/settings', authToken, putWorkerSettingsController);
+router.get('/worker/logs', authToken, getWorkerLogsController);
+router.post('/worker/run', authToken, postWorkerRunController);
+router.post('/worker/cancel', authToken, postWorkerCancelController);
 
 // ===== RUTAS DE META TRACKING (Conversions API) =====
 const { trackEventController, trackPurchaseController } = require('../controller/meta/metaTrackingController');
