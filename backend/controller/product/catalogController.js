@@ -312,22 +312,6 @@ async function generateCatalogPdfBuffer({
     page = await browser.newPage();
     page.setDefaultTimeout(30000);
     page.setDefaultNavigationTimeout(30000);
-    let allowImages = true;
-    const stopImages = setTimeout(() => {
-      allowImages = false;
-    }, 2500);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const type = req.resourceType();
-      if (type === 'media' || type === 'websocket' || type === 'font') {
-        return req.abort().catch(() => {});
-      }
-      if (type === 'image' && !allowImages) {
-        return req.abort().catch(() => {});
-      }
-      return req.continue().catch(() => {});
-    });
-
     await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 30000 });
     say('Cargando fotos (máx. 2.5s)…');
     try {
@@ -348,8 +332,6 @@ async function generateCatalogPdfBuffer({
     } catch (_) {
       /* seguir igual */
     }
-    clearTimeout(stopImages);
-    allowImages = false;
 
     say(`Renderizando PDF (${products.length} productos)…`);
     const pdfBuffer = await page.pdf({

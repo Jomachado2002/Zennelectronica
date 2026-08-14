@@ -58,7 +58,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       let poll;
       let download;
 
-      const reqOpts = { timeout: 12000 };
+      const reqOpts = { timeout: 25000 };
 
       if (isLocal) {
         if (!jobs.base) {
