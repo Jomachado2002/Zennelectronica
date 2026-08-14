@@ -511,6 +511,8 @@ const downloadCatalogPdfJob = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', disposition);
     res.setHeader('Content-Length', buf.length);
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
     res.end(buf);
   } catch (err) {
     return res.status(err.statusCode || 503).json({

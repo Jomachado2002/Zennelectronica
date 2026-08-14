@@ -90,8 +90,9 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
         if (!data.jobId) throw new Error('jobs-api no devolvió jobId');
         jobId = data.jobId;
         poll = async () => {
-          const st = await fetch(`${jobs.base}/catalog-pdf/${jobId}`, {
+          const st = await fetch(`${jobs.base}/catalog-pdf/${jobId}?t=${Date.now()}`, {
             headers: { 'X-Worker-Key': jobs.key },
+            cache: 'no-store',
           });
           const body = await st.json().catch(() => ({}));
           if (st.status === 404) {
@@ -133,7 +134,6 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
         poll = async () => {
           const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, {
             ...reqOpts,
-            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
             params: { t: Date.now() },
           });
           return st.data || {};
@@ -143,6 +143,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
             ...reqOpts,
             timeout: 60000,
             responseType: 'blob',
+            params: { t: Date.now() },
           });
           const blob = fileRes.data;
           if (blob && blob.type && blob.type.includes('json')) {

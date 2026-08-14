@@ -80,9 +80,11 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL,
     'http://localhost:3000',
-    'https://www.zenn.com.py',  // ✅ AGREGAR ESTE
-    'https://zenn.com.py',      // ✅ AGREGAR ESTE TAMBIÉN (sin www)
-    'https://zenn.vercel.app'   // ✅ AGREGAR ESTE POR SI ACASO
+    'https://www.zenn.com.py',
+    'https://zenn.com.py',
+    'https://zenn.vercel.app',
+    'https://zennelectronica.vercel.app',
+    'https://zennelectronica02.vercel.app',
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
