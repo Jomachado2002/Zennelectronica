@@ -13,11 +13,16 @@ mkdir -p "$(dirname "$LOG")"
   git fetch origin
   git pull --ff-only origin main || git pull --ff-only origin master
 
-  if [ -d "$JOBS_DIR/.git" ]; then
+  # jobs-api es un repo aparte; no hace falta pull para deploy de Zennelectronica.
+  # Para actualizarlo: JOBS_API_PULL=1 en el .env del worker.
+  if [ "${JOBS_API_PULL:-0}" = "1" ] && [ -d "$JOBS_DIR/.git" ]; then
     echo ">> pull jobs-api (repo anidado)"
     cd "$JOBS_DIR"
     git fetch origin || true
     git pull --ff-only origin main || git pull --ff-only origin master || true
+    cd "$ZENN_ROOT"
+  else
+    echo ">> skip pull jobs-api (usa el código local del VPS)"
   fi
 
   if [ -x "$ZENN_ROOT/scripts/install-jobs-deploy.sh" ]; then
