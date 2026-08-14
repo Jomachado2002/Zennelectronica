@@ -6,6 +6,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCategory = 'all', selectedSubcategory = 'all' }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progressText, setProgressText] = useState('');
   const jobs = jobsConfig();
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const isLocal = host === 'localhost' || host === '127.0.0.1';
@@ -51,6 +52,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
 
   const generatePDF = async () => {
     setIsGenerating(true);
+    setProgressText('Iniciando…');
     try {
       let jobId;
       let poll;
@@ -99,14 +101,11 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
         if (!data?.jobId) throw new Error(data?.message || 'El backend no inició el PDF en el VPS');
         jobId = data.jobId;
         poll = async () => {
-          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, {
-            headers: { 'Content-Type': undefined },
-          });
+          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`);
           return st.data || {};
         };
         download = async () => {
           const fileRes = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}/file`, {
-            headers: { 'Content-Type': undefined },
             responseType: 'blob',
           });
           const blob = fileRes.data;
@@ -120,18 +119,21 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       }
 
       const started = Date.now();
-      while (Date.now() - started < 3 * 60 * 1000) {
+      setProgressText('Generando en el servidor…');
+      while (Date.now() - started < 6 * 60 * 1000) {
         const status = await poll();
+        if (status.progress) setProgressText(status.progress);
         if (status.status === 'ready') {
+          setProgressText('Descargando…');
           await savePdf(await download());
           return;
         }
         if (status.status === 'error') {
           throw new Error(status.error || 'Error generando PDF');
         }
-        await sleep(2000);
+        await sleep(700);
       }
-      throw new Error('Tiempo agotado. Si el worker está scrapeando, esperá y reintentá.');
+      throw new Error('Tiempo agotado generando el PDF. Reintentá; si persiste, revisá jobs-api en el VPS.');
     } catch (error) {
       const msg =
         error?.response?.data?.message ||
@@ -142,6 +144,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       alert(msg);
     } finally {
       setIsGenerating(false);
+      setProgressText('');
     }
   };
 
@@ -154,7 +157,7 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       {isGenerating ? (
         <>
           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span>Generando PDF...</span>
+          <span>{progressText || 'Generando PDF...'}</span>
         </>
       ) : (
         <>

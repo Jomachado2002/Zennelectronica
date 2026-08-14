@@ -155,8 +155,69 @@ const getCatalogProducts = async (req, res) => {
 const WORKER_API_URL = (process.env.WORKER_API_URL || '').replace(/\/$/, '');
 const WORKER_SECRET = process.env.WORKER_SECRET || '';
 
-async function generateCatalogPdfBuffer({ category, subcategory, title = 'Catálogo de Productos' } = {}) {
-  let browser = null;
+let sharedBrowser = null;
+let browserLaunch = null;
+
+async function getSharedBrowser() {
+  if (sharedBrowser) {
+    try {
+      if (sharedBrowser.connected !== false) return sharedBrowser;
+    } catch {
+      sharedBrowser = null;
+    }
+  }
+  if (browserLaunch) return browserLaunch;
+
+  const launchOptions = {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-extensions',
+      '--no-first-run',
+      '--disable-background-networking',
+      '--disable-sync',
+      '--disable-translate',
+      '--hide-scrollbars',
+      '--mute-audio'
+    ]
+  };
+  const chromePath = resolveChromePath();
+  if (chromePath) launchOptions.executablePath = chromePath;
+
+  browserLaunch = puppeteer
+    .launch(launchOptions)
+    .then((browser) => {
+      sharedBrowser = browser;
+      browserLaunch = null;
+      browser.on('disconnected', () => {
+        sharedBrowser = null;
+      });
+      return browser;
+    })
+    .catch((err) => {
+      browserLaunch = null;
+      throw err;
+    });
+
+  return browserLaunch;
+}
+
+async function generateCatalogPdfBuffer({
+  category,
+  subcategory,
+  title = 'Catálogo de Productos',
+  onProgress
+} = {}) {
+  const t0 = Date.now();
+  const say = (msg) => {
+    if (typeof onProgress === 'function') onProgress(msg);
+    console.log(`[catalog-pdf] ${msg}`);
+  };
+
   let filter = { stock: { $gt: 0 } };
 
   if (category && category !== 'all') {
@@ -166,6 +227,7 @@ async function generateCatalogPdfBuffer({ category, subcategory, title = 'Catál
     filter.subcategory = subcategory;
   }
 
+  say('Consultando productos con stock…');
   const products = await Product.find(filter)
     .select('productName brandName category subcategory productImage price sellingPrice codigo stock slug')
     .sort({ sellingPrice: 1, price: 1 })
@@ -235,61 +297,52 @@ async function generateCatalogPdfBuffer({ category, subcategory, title = 'Catál
     }
   }
 
+  say(`Armando HTML (${products.length} productos)…`);
   const htmlContent = generateHTMLContent(catalogData, title);
-  const launchOptions = {
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-software-rasterizer',
-      '--disable-extensions'
-    ]
-  };
 
-  const chromePath = resolveChromePath();
-  if (chromePath) {
-    launchOptions.executablePath = chromePath;
-  }
-
-  browser = await puppeteer.launch(launchOptions);
+  say('Abriendo Chrome…');
+  const browser = await getSharedBrowser();
+  const page = await browser.newPage();
+  page.setDefaultTimeout(45000);
+  page.setDefaultNavigationTimeout(45000);
   try {
-    const page = await browser.newPage();
-    page.setDefaultTimeout(120000);
-    page.setDefaultNavigationTimeout(120000);
-    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    say('Cargando imágenes (máx. 6s)…');
     try {
       await Promise.race([
         page.evaluate(() =>
           Promise.all(
-            Array.from(document.images)
-              .filter((img) => !img.complete)
-              .map(
-                (img) =>
-                  new Promise((resolve) => {
-                    const timeout = setTimeout(() => resolve(), 5000);
-                    img.onload = img.onerror = () => {
-                      clearTimeout(timeout);
-                      resolve();
-                    };
-                  })
-              )
+            Array.from(document.images).map(
+              (img) =>
+                new Promise((resolve) => {
+                  if (img.complete) return resolve();
+                  const timeout = setTimeout(() => resolve(), 2500);
+                  img.onload = img.onerror = () => {
+                    clearTimeout(timeout);
+                    resolve();
+                  };
+                })
+            )
           )
         ),
-        new Promise((resolve) => setTimeout(resolve, 30000))
+        new Promise((resolve) => setTimeout(resolve, 6000))
       ]);
     } catch (_) {
       /* seguir igual */
     }
 
+    say('Renderizando PDF…');
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' },
       preferCSSPageSize: true,
-      displayHeaderFooter: false
+      displayHeaderFooter: false,
+      timeout: 90000
     });
+
+    const ms = Date.now() - t0;
+    say(`Listo en ${Math.round(ms / 1000)}s (${products.length} productos)`);
 
     return {
       buffer: Buffer.from(pdfBuffer),
@@ -297,9 +350,7 @@ async function generateCatalogPdfBuffer({ category, subcategory, title = 'Catál
       productCount: products.length
     };
   } finally {
-    if (browser) {
-      await browser.close().catch(() => {});
-    }
+    await page.close().catch(() => {});
   }
 }
 
@@ -780,7 +831,7 @@ function generateHTMLContent(catalogData, title) {
                             <a href="${productUrl}" class="product-image-link" target="_blank">
                                 <div class="product-image-container">
                                     ${producto.imagen_url ? 
-                                      `<img src="${producto.imagen_url}" alt="${producto.titulo}" class="product-image" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>';">` :
+                                      `<img src="${producto.imagen_url}" alt="${producto.titulo}" class="product-image" width="150" height="150" decoding="async" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'product-image-placeholder\\'>📦</div>';">` :
                                       `<div class="product-image-placeholder">📦</div>`
                                     }
                                 </div>
