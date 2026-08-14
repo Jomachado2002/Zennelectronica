@@ -1,0 +1,33 @@
+name: Deploy jobs-api VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'scripts/vps-deploy.sh'
+      - 'scripts/install-jobs-deploy.sh'
+      - '.github/workflows/deploy-jobs-vps.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Avisar al VPS (git pull + pm2 restart)
+        env:
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+          JOBS_URL: ${{ secrets.JOBS_API_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WORKER_SECRET:-}" ]; then
+            echo "Falta el secret WORKER_SECRET en GitHub (Settings → Secrets → Actions)."
+            exit 1
+          fi
+          URL="${JOBS_URL:-https://jobs.zenn.com.py}/deploy"
+          echo "POST $URL"
+          curl -fsS --max-time 20 -X POST \
+            -H "X-Worker-Key: $WORKER_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "$URL"
