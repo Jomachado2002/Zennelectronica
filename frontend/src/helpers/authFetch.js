@@ -7,27 +7,20 @@
  * @param {object} options - Opciones de fetch (method, body, headers, etc.)
  * @returns {Promise<Response>} - Respuesta de la petición
  */
+import { getStoredAuthToken } from './getAuthToken';
+
 export const authFetch = async (url, options = {}) => {
-    // Preparar headers base
+    const method = String(options.method || 'GET').toUpperCase();
     const headers = {
-        'Content-Type': 'application/json',
         ...options.headers
     };
-
-    // ✅ BUSCAR TOKEN EN MÚLTIPLES LUGARES
-    let token = null;
-
-    // 1. Intentar obtener de localStorage
-    try {
-        token = localStorage.getItem('authToken');
-    } catch (e) {
-        // localStorage puede no estar disponible en algunos contextos
+    if (method !== 'GET' && method !== 'HEAD' && !(options.body instanceof FormData)) {
+        if (!headers['Content-Type'] && !headers['content-type']) {
+            headers['Content-Type'] = 'application/json';
+        }
     }
 
-    // 2. Intentar obtener de window (si se guardó ahí)
-    if (!token && typeof window !== 'undefined' && window.authToken) {
-        token = window.authToken;
-    }
+    let token = getStoredAuthToken();
 
     // 3. Intentar leer de cookies manualmente (solo en navegador)
     if (!token && typeof document !== 'undefined' && document.cookie) {

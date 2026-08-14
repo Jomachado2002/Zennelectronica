@@ -2,42 +2,11 @@
 
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
+const { pickAuthToken } = require('./pickAuthToken');
 
 async function adminAuth(req, res, next) {
     try {
-        // console.log removed for production
-        
-        // ✅ BUSCAR TOKEN EN MÚLTIPLES LUGARES
-        let token = null;
-        let source = 'none';
-
-        // 1. Cookie principal
-        if (req.cookies?.token) {
-            token = req.cookies.token;
-            source = 'cookie';
-        }
-        // 2. Parsing manual de cookies
-        else if (req.headers.cookie) {
-            const cookies = req.headers.cookie.split(';');
-            for (const cookie of cookies) {
-                const [key, value] = cookie.trim().split('=');
-                if (key === 'token' && value) {
-                    token = decodeURIComponent(value);
-                    source = 'manual_cookie';
-                    break;
-                }
-            }
-        }
-        // 3. Authorization header
-        else if (req.headers.authorization?.startsWith('Bearer ')) {
-            token = req.headers.authorization.substring(7);
-            source = 'header';
-        }
-        // 4. Headers personalizados
-        else if (req.headers['x-auth-token']) {
-            token = req.headers['x-auth-token'];
-            source = 'x-auth-token';
-        }
+        const { token, source } = pickAuthToken(req);
 
         console.log('🎫 Admin Token Status:', {
             found: !!token,
@@ -89,7 +58,7 @@ async function adminAuth(req, res, next) {
             }
 
             // ✅ VERIFICAR ROL DE ADMINISTRADOR
-            if (user.role !== 'ADMIN') {
+            if (user.role !== 'ADMIN' && user.role !== 'ROOT') {
                 console.log('❌ ADMIN AUTH FAILED - User is not admin:', {
                     userId: user._id,
                     userRole: user.role,

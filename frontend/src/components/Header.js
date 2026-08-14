@@ -21,6 +21,7 @@ import {
 } from "react-icons/fa";
 import MenuCategorias from './MenuCategorias';
 import SearchPreview from './SearchPreview';
+import { clearAuthToken } from '../helpers/getAuthToken';
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -136,6 +137,7 @@ const Header = () => {
     const data = await fetchData.json();
 
     if (data.success) {
+      clearAuthToken();
       toast.success(data.message);
       dispatch(setUserDetails(null));
       setUserDropdownOpen(false);

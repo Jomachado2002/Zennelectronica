@@ -45,9 +45,7 @@ const checkPermission = async (userId, module, action) => {
             permissions: user.permissions
         });
 
-        // ROOT tiene acceso completo a todo
-        if (user.role === 'ROOT') {
-            // console.log removed for production
+        if (user.role === 'ROOT' || user.role === 'ADMIN') {
             return true;
         }
 

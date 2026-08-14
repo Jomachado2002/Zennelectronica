@@ -133,8 +133,13 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
       }
       throw new Error('Tiempo agotado. Si el worker está scrapeando, esperá y reintentá.');
     } catch (error) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error.message ||
+        'Error al generar el PDF. Por favor, intenta de nuevo.';
       console.error('Error generando PDF:', error);
-      alert(error.message || 'Error al generar el PDF. Por favor, intenta de nuevo.');
+      alert(msg);
     } finally {
       setIsGenerating(false);
     }

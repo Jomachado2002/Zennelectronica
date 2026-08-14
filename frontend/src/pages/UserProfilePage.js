@@ -12,6 +12,7 @@ import UserPurchases from '../components/user/UserPurchases';
 import BalanceManagement from '../components/user/BalanceManagement';
 import BalanceDisplay from '../components/BalanceDisplay';
 import { BiSolidPurchaseTag } from "react-icons/bi";
+import { clearAuthToken } from '../helpers/getAuthToken';
 
 import SummaryApi from '../common';
 import { 
@@ -376,6 +377,7 @@ const UserProfilePage = () => {
 
       const result = await response.json();
       if (result.success) {
+        clearAuthToken();
         toast.success('👋 Sesión cerrada');
         dispatch(setUserDetails(null)); // ✅ LIMPIAR REDUX
         navigate('/');

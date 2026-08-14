@@ -6,7 +6,9 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common';
 import { toast } from 'react-toastify';
-import Context from '../context';
+import { persistAuthToken } from '../helpers/getAuthToken';
+import { localCartHelper } from '../helpers/addToCart';
+import axiosInstance from '../config/axiosInstance';
 
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -77,11 +79,16 @@ const Login = () => {
             if (dataApi.success) {
                 // ✅ MANEJAR TOKEN COMO FALLBACK SI LAS COOKIES FALLAN
                 if (dataApi.token) {
-                    // console.log removed for production
-                    localStorage.setItem('authToken', dataApi.token);
-                    
-                    // ✅ CONFIGURAR HEADER PARA FUTURAS PETICIONES
-                    window.authToken = dataApi.token;
+                    persistAuthToken(dataApi.token);
+                }
+
+                try {
+                    const localItems = localCartHelper.getCart();
+                    if (localItems.length) {
+                        await axiosInstance.post('/api/carrito/merge', { items: localItems });
+                    }
+                } catch (mergeErr) {
+                    console.warn('No se pudo unir el carrito local', mergeErr);
                 }
 
                 dispatch(setUserDetails(dataApi.user));

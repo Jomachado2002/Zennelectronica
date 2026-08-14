@@ -14,6 +14,7 @@
     const { requirePermission } = require('../helpers/granularPermission');
     const cookieDebug = require('../middleware/cookieDebug');
     const userLogout = require('../controller/user/userLogout');
+    const mergeLocalCartController = require('../controller/user/mergeLocalCartController');
     const allUsers = require('../controller/user/allUser');
     const updateUser = require('../controller/user/updateUser');
     const UploadProductController = require('../controller/product/uploadProduct');
@@ -322,9 +323,26 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
         try {
             
             
+            if (!req.isAuthenticated || !req.user) {
+                return res.status(401).json({
+                    message: "Debes iniciar sesión para registrar tarjetas",
+                    success: false,
+                    error: true,
+                });
+            }
+
+            const bancardId = req.bancardUserId || req.user?.bancardUserId;
+            if (!bancardId) {
+                return res.status(400).json({
+                    message: "Tu cuenta no tiene ID de Bancard. Contactá a Zenn.",
+                    success: false,
+                    error: true,
+                });
+            }
+
             const testData = {
-                card_id: Math.floor(Math.random() * 100000) + 11000, // ID único
-                user_id: req.bancardUserId || req.user?.bancardUserId || 1,
+                card_id: Math.floor(Math.random() * 100000) + 11000,
+                user_id: bancardId,
                 user_cell_phone: req.user?.phone || "12345678",
                 user_mail: req.user?.email || "test@zenn.com",
                 return_url: `${process.env.FRONTEND_URL}/mi-perfil?tab=cards`
@@ -892,6 +910,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     router.post("/iniciar-sesion", userSignInController);
     router.get("/detalles-usuario", authToken, userDetailsController);
     router.get("/cerrar-sesion", userLogout);
+    router.post("/carrito/merge", authToken, mergeLocalCartController);
     router.get("/todos-usuarios", cookieDebug, authToken, allUsers);
     router.post("/actualizar-usuario", authToken, updateUser);
 
@@ -968,7 +987,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     router.put("/admin/home-category-tiles/:id", authToken, updateTileController);
     router.delete("/admin/home-category-tiles/:id", authToken, deleteTileController);
 
-router.get("/obtener-productos-admin", cookieDebug, authToken, async (req, res) => {
+router.get("/obtener-productos-admin", cookieDebug, adminAuth, async (req, res) => {
     try {
         const products = await productModel.find({}).sort({ createdAt: -1 });
         
@@ -1928,11 +1947,11 @@ router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 router.get('/catalog-pdf-job/:jobId', authToken, getCatalogPdfJobStatus);
 router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
 
-router.get('/worker/settings', authToken, getWorkerSettingsController);
-router.put('/worker/settings', authToken, putWorkerSettingsController);
-router.get('/worker/logs', authToken, getWorkerLogsController);
-router.post('/worker/run', authToken, postWorkerRunController);
-router.post('/worker/cancel', authToken, postWorkerCancelController);
+router.get('/worker/settings', adminAuth, getWorkerSettingsController);
+router.put('/worker/settings', adminAuth, putWorkerSettingsController);
+router.get('/worker/logs', adminAuth, getWorkerLogsController);
+router.post('/worker/run', adminAuth, postWorkerRunController);
+router.post('/worker/cancel', adminAuth, postWorkerCancelController);
 
 // ===== RUTAS DE META TRACKING (Conversions API) =====
 const { trackEventController, trackPurchaseController } = require('../controller/meta/metaTrackingController');

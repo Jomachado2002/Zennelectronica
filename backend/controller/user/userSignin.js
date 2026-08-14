@@ -64,7 +64,7 @@ async function userSignInController(req, res) {
         
 
         const token = jwt.sign(tokenData, process.env.TOKEN_SECRET_KEY, { 
-            expiresIn: '24h' 
+            expiresIn: '30d' 
         });
 
         
@@ -74,7 +74,7 @@ async function userSignInController(req, res) {
             httpOnly: true,
             secure: true, // Siempre true para Vercel
             sameSite: 'none', // Siempre 'none' para Vercel (cross-site)
-            maxAge: 24 * 60 * 60 * 1000, // 24 horas
+            maxAge: 30 * 24 * 60 * 60 * 1000,
             path: '/'
             // No especificar domain para que funcione en cualquier subdominio de Vercel
         };

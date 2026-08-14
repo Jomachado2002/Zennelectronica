@@ -7,6 +7,9 @@ import { Provider } from 'react-redux';
 import { store } from './store/store';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queryClient';
+import { installAuthFetchPatch } from './helpers/patchFetchAuth';
+
+installAuthFetchPatch();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

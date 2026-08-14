@@ -570,7 +570,7 @@ const createCardController = async (req, res) => {
             });
         }
 
-        if (req.userRole !== 'GENERAL' && req.userRole !== 'ADMIN') {
+        if (req.userRole !== 'GENERAL' && req.userRole !== 'ADMIN' && req.userRole !== 'ROOT') {
             return res.status(403).json({
                 message: "No tienes permisos para registrar tarjetas",
                 success: false,
@@ -579,7 +579,7 @@ const createCardController = async (req, res) => {
         }
 
         const finalCardId = card_id || Date.now();
-        const finalUserId = req.bancardUserId || req.user?.bancardUserId || user_id;
+        const finalUserId = req.bancardUserId || req.user?.bancardUserId;
         const finalUserPhone = user_cell_phone || req.user?.phone || "12345678";
         const finalUserEmail = user_mail || req.user?.email;
 

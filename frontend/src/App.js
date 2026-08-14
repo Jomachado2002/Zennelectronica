@@ -36,7 +36,6 @@ function App() {
       if (dataApi.success && dataApi.data) {
         dispatch(setUserDetails(dataApi.data));
       } else {
-        // ✅ SI NO HAY USUARIO, LIMPIAR REDUX (USUARIO INVITADO)
         dispatch(setUserDetails(null));
       }
     } catch (error) {

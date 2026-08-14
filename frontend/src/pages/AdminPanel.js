@@ -39,6 +39,7 @@ import { toast } from 'react-toastify';
 import SummaryApi from '../common';
 import { useDispatch } from 'react-redux';
 import { setUserDetails } from '../store/userSlice';
+import { clearAuthToken, getStoredAuthToken } from '../helpers/getAuthToken';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const AdminPanel = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fullScreenMode, setFullScreenMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [user] = useState(useSelector(state => state.user?.user));
+  const user = useSelector(state => state.user?.user);
 
   // Detectar si es móvil y ajustar sidebar
   useEffect(() => {
@@ -70,22 +71,17 @@ const AdminPanel = () => {
 
   useEffect(() => {
     const userRole = user?.role;
-    console.log("🔍 AdminPanel - Verificación de rol:", {
-      user: user,
-      userRole: userRole,
-      ROLE_ADMIN: ROLE.ADMIN,
-      ROLE_ROOT: ROLE.ROOT,
-      isAdmin: userRole === ROLE.ADMIN,
-      isRoot: userRole === ROLE.ROOT,
-      hasAccess: userRole === ROLE.ADMIN || userRole === ROLE.ROOT
-    });
-    
+    if (!user) {
+      if (!getStoredAuthToken()) {
+        toast.error("Acceso denegado");
+        navigate("/");
+      }
+      return;
+    }
+
     if (userRole !== ROLE.ADMIN && userRole !== ROLE.ROOT) {
-      // console.log removed for production
       toast.error("Acceso denegado");
       navigate("/");
-    } else {
-      // console.log removed for production
     }
   }, [user, navigate]);
 
@@ -98,6 +94,7 @@ const AdminPanel = () => {
       
       const result = await response.json();
       if (result.success) {
+        clearAuthToken();
         dispatch(setUserDetails(null));
         navigate("/");
       }
