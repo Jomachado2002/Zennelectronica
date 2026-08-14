@@ -5,8 +5,6 @@
       (typeof window !== 'undefined' && window.location.origin) || 
       '';
 
-    const jobsApiDomain = (process.env.REACT_APP_JOBS_API_URL || 'http://127.0.0.1:8787').replace(/\/$/, '');
-
     const SummaryApi = {
         // ===========================================
         // AUTENTICACIÓN
@@ -562,7 +560,7 @@
                 method: 'get'
             },
             generatePDF: {
-                url: `${jobsApiDomain}/catalog-pdf`,
+                url: `${backendDomain}/api/generate-catalog-pdf`,
                 method: 'post'
             }
         }
