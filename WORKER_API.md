@@ -1,5 +1,5 @@
 # API de jobs
 
-El código vive en **`jobs-api/`** (no en `backend/`).
+Vive en un repo aparte (no en Zennelectronica): **zenn-jobs-api**.
 
-Ver: [`jobs-api/README.md`](jobs-api/README.md)
+El admin de la tienda (horario, logs, margen) sigue acá. El proceso Puppeteer corre en el VPS desde ese repo.
