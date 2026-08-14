@@ -3,11 +3,6 @@ name: Deploy jobs-api VPS
 on:
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - 'scripts/vps-deploy.sh'
-      - 'scripts/install-jobs-deploy.sh'
-      - '.github/workflows/deploy-jobs-vps.yml'
   workflow_dispatch:
 
 jobs:
