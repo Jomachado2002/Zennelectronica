@@ -22,6 +22,7 @@ function isUsableToken(token) {
 /**
  * Prefer Bearer / x-auth-token over cookies so iOS (ITP) still authenticates
  * when a stale or third-party cookie is present.
+ * Also returns unique candidates so a bad header token can fall back to cookie.
  */
 function pickAuthToken(req) {
   const header = req.headers.authorization?.startsWith('Bearer ')
@@ -36,15 +37,24 @@ function pickAuthToken(req) {
     : null;
   const query = req.query?.token ? String(req.query.token).trim() : null;
 
-  const candidates = [header, xAuth, extra, cookie, query];
-  const token = candidates.find(isUsableToken) || null;
-  let source = 'none';
-  if (token === header) source = 'header';
-  else if (token === xAuth) source = 'x-auth-token';
-  else if (token === extra) source = 'auth-token-header';
-  else if (token === cookie) source = 'cookie';
-  else if (token === query) source = 'query-param';
-  return { token, source };
+  const ordered = [
+    { token: header, source: 'header' },
+    { token: xAuth, source: 'x-auth-token' },
+    { token: extra, source: 'auth-token-header' },
+    { token: cookie, source: 'cookie' },
+    { token: query, source: 'query-param' }
+  ].filter((c) => isUsableToken(c.token));
+
+  const seen = new Set();
+  const candidates = [];
+  for (const c of ordered) {
+    if (seen.has(c.token)) continue;
+    seen.add(c.token);
+    candidates.push(c);
+  }
+
+  const first = candidates[0] || { token: null, source: 'none' };
+  return { token: first.token, source: first.source, candidates };
 }
 
 module.exports = { pickAuthToken };
