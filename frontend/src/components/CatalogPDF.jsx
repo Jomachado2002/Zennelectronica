@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
 import { jobsConfig } from '../helpers/jobsApi';
+import axiosInstance from '../config/axiosInstance';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-const backendBase = () =>
-  (process.env.REACT_APP_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(
-    /\/$/,
-    ''
-  );
 
 const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCategory = 'all', selectedSubcategory = 'all' }) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -26,29 +21,40 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
   const pdfFileName = () =>
     `catalogo-${companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`;
 
-  const savePdf = (blob) => {
-    const url = window.URL.createObjectURL(blob);
-    const ios = /iPad|iPhone|iPod/i.test(navigator.userAgent);
-    if (ios) {
-      window.location.href = url;
-      return;
+  const savePdf = async (blob) => {
+    const name = pdfFileName();
+    const file = new File([blob], name, { type: 'application/pdf' });
+    const canShare =
+      typeof navigator.share === 'function' &&
+      typeof navigator.canShare === 'function' &&
+      navigator.canShare({ files: [file] });
+    if (canShare) {
+      try {
+        await navigator.share({ files: [file], title: name });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
     }
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = pdfFileName();
+    a.download = name;
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    }, 1500);
   };
 
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
       let jobId;
-      let pollUrl;
-      let fileUrl;
-      let fetchOpts;
+      let poll;
+      let download;
 
       if (isLocal) {
         if (!jobs.base) {
@@ -58,7 +64,6 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
           'Content-Type': 'application/json',
           'X-Worker-Key': jobs.key,
         };
-        fetchOpts = { headers };
         const response = await fetch(`${jobs.base}/catalog-pdf`, {
           method: 'POST',
           headers,
@@ -72,44 +77,61 @@ const CatalogPDF = ({ catalogData, companyName = 'Zenn Electrónica', selectedCa
         if (!response.ok) throw new Error(data.error || data.message || `jobs-api ${response.status}`);
         if (!data.jobId) throw new Error('jobs-api no devolvió jobId');
         jobId = data.jobId;
-        pollUrl = `${jobs.base}/catalog-pdf/${jobId}`;
-        fileUrl = `${jobs.base}/catalog-pdf/${jobId}/file`;
+        poll = async () => {
+          const st = await fetch(`${jobs.base}/catalog-pdf/${jobId}`, {
+            headers: { 'X-Worker-Key': jobs.key },
+          });
+          return st.json().catch(() => ({}));
+        };
+        download = async () => {
+          const fileRes = await fetch(`${jobs.base}/catalog-pdf/${jobId}/file`, {
+            headers: { 'X-Worker-Key': jobs.key },
+          });
+          if (!fileRes.ok) throw new Error('No se pudo descargar el PDF');
+          return fileRes.blob();
+        };
       } else {
-        const api = backendBase();
-        fetchOpts = { credentials: 'include', headers: { 'Content-Type': 'application/json' } };
-        const response = await fetch(`${api}/api/generate-catalog-pdf`, {
-          method: 'POST',
-          ...fetchOpts,
-          body: JSON.stringify({
-            category: selectedCategory,
-            subcategory: selectedSubcategory,
-            title: `Catálogo - ${companyName}`,
-          }),
+        const { data } = await axiosInstance.post('/api/generate-catalog-pdf', {
+          category: selectedCategory,
+          subcategory: selectedSubcategory,
+          title: `Catálogo - ${companyName}`,
         });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || data.error || `Error ${response.status}`);
-        if (!data.jobId) throw new Error(data.message || 'El backend no inició el PDF en el VPS');
+        if (!data?.jobId) throw new Error(data?.message || 'El backend no inició el PDF en el VPS');
         jobId = data.jobId;
-        pollUrl = `${api}/api/catalog-pdf-job/${jobId}`;
-        fileUrl = `${api}/api/catalog-pdf-job/${jobId}/file`;
+        poll = async () => {
+          const st = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}`, {
+            headers: { 'Content-Type': undefined },
+          });
+          return st.data || {};
+        };
+        download = async () => {
+          const fileRes = await axiosInstance.get(`/api/catalog-pdf-job/${jobId}/file`, {
+            headers: { 'Content-Type': undefined },
+            responseType: 'blob',
+          });
+          const blob = fileRes.data;
+          if (blob && blob.type && blob.type.includes('json')) {
+            const text = await blob.text();
+            const err = JSON.parse(text);
+            throw new Error(err.message || err.error || 'PDF no listo');
+          }
+          return blob;
+        };
       }
 
       const started = Date.now();
-      while (Date.now() - started < 8 * 60 * 1000) {
-        const st = await fetch(pollUrl, fetchOpts);
-        const status = await st.json().catch(() => ({}));
+      while (Date.now() - started < 3 * 60 * 1000) {
+        const status = await poll();
         if (status.status === 'ready') {
-          const fileRes = await fetch(fileUrl, fetchOpts);
-          if (!fileRes.ok) throw new Error('No se pudo descargar el PDF');
-          savePdf(await fileRes.blob());
+          await savePdf(await download());
           return;
         }
         if (status.status === 'error') {
           throw new Error(status.error || 'Error generando PDF');
         }
-        await sleep(2500);
+        await sleep(2000);
       }
-      throw new Error('Tiempo agotado generando el PDF');
+      throw new Error('Tiempo agotado. Si el worker está scrapeando, esperá y reintentá.');
     } catch (error) {
       console.error('Error generando PDF:', error);
       alert(error.message || 'Error al generar el PDF. Por favor, intenta de nuevo.');
