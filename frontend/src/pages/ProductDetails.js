@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { SITE_ORIGIN, siteUrl } from '../config/siteUrl';
 import SummaryApi from '../common';
@@ -530,6 +530,12 @@ ${productUrl}
                       WhatsApp
                     </button>
                   </div>
+                  <p className="text-sm text-gray-500">
+                    7 días para devolver · Garantía según producto y marca.{' '}
+                    <Link to="/devoluciones" className="text-[#7B2CBF] hover:underline font-medium">
+                      Ver política de devoluciones
+                    </Link>
+                  </p>
 
                   {!loading && (
                     <div className="mt-6 bg-gray-50 p-4 rounded-lg">

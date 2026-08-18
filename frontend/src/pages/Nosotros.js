@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 
 const Nosotros = () => {
@@ -680,12 +681,12 @@ const Nosotros = () => {
             transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
             className="mb-6 inline-block"
           >
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg hologram">
-              <svg className="w-16 h-16 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 2V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 12H22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+            <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg hologram p-4">
+              <img
+                src="/logozenn.svg"
+                alt="Zenn"
+                className="w-full h-full object-contain"
+              />
             </div>
           </motion.div>
           
@@ -695,7 +696,16 @@ const Nosotros = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-4xl md:text-6xl font-bold text-white mb-6 drop-shadow-lg"
           >
-            <span className="text-blue-400">Blue</span>Tec
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage: 'linear-gradient(135deg, #7EE8FA 0%, #E0AAFF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              Zenn
+            </span>
           </motion.h1>
           
           <motion.p 
@@ -704,7 +714,7 @@ const Nosotros = () => {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-xl text-blue-100 max-w-3xl mx-auto mb-8"
           >
-            Tu aliado tecnológico en Paraguay, ofreciendo los mejores productos informáticos con la calidad y garantía que mereces desde 2023.
+            Especialistas en informática en Paraguay. Tu aliado tecnológico, con los mejores productos, calidad y garantía que merecés desde 2023.
           </motion.p>
           
           <motion.div
@@ -720,7 +730,8 @@ const Nosotros = () => {
                   behavior: 'smooth'
                 });
               }}
-              className="px-8 py-4 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-lg transition duration-300 shadow-lg shine-button"
+              className="px-8 py-4 text-white rounded-lg font-bold text-lg transition duration-300 shadow-lg shine-button hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
             >
               Descubre Nuestra Historia
             </button>
@@ -1223,7 +1234,11 @@ const Nosotros = () => {
                 <div>
                   <h3 className="text-lg font-bold text-gray-800 mb-2">Garantía Asegurada</h3>
                   <p className="text-gray-600">
-                    Todos nuestros productos cuentan con garantía oficial, respaldada por las mejores marcas del mercado.
+                    Todos nuestros productos cuentan con garantía oficial, respaldada por las mejores marcas del mercado.{' '}
+                    <Link to="/devoluciones" className="text-blue-600 hover:underline font-medium">
+                      Consultá devoluciones y garantía
+                    </Link>
+                    .
                   </p>
                 </div>
               </motion.div>
@@ -1320,7 +1335,10 @@ const Nosotros = () => {
         className="py-16 bg-white"
       >
         <div className="container mx-auto px-4">
-          <div className="bg-gradient-to-r from-gray-900 to-blue-900 rounded-2xl shadow-xl overflow-hidden">
+          <div
+            className="rounded-2xl shadow-xl overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #111827 0%, #5B21B6 55%, #7B2CBF 100%)' }}
+          >
             <div className="px-6 py-12 sm:px-12 relative">
               {/* Elementos decorativos tech */}
               <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
@@ -1366,22 +1384,26 @@ const Nosotros = () => {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className="flex flex-col sm:flex-row gap-4 justify-center"
                 >
-                  <a href="/" className="inline-block px-8 py-4 bg-white text-blue-700 hover:bg-blue-50 rounded-lg font-bold text-lg transition duration-300 shadow-lg shine-button">
+                  <Link to="/" className="inline-block px-8 py-4 bg-white text-[#7B2CBF] hover:bg-purple-50 rounded-lg font-bold text-lg transition duration-300 shadow-lg shine-button">
                     <span className="flex items-center justify-center">
                       <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                       Explorar Productos
                     </span>
-                  </a>
-                  <a href="/categoria-producto?category=informatica" className="inline-block px-8 py-4 bg-blue-700 text-white hover:bg-blue-800 rounded-lg font-bold text-lg transition duration-300 shadow-lg border border-blue-500 shine-button">
+                  </Link>
+                  <Link
+                    to="/categoria-producto"
+                    className="inline-block px-8 py-4 text-white hover:opacity-90 rounded-lg font-bold text-lg transition duration-300 shadow-lg shine-button"
+                    style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
+                  >
                     <span className="flex items-center justify-center">
                       <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                       </svg>
                       Ver Categorías
                     </span>
-                  </a>
+                  </Link>
                 </motion.div>
               </div>
             </div>

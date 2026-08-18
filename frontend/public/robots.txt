@@ -21,6 +21,9 @@ Allow: /categoria-producto
 Allow: /producto/
 Allow: /promociones
 Allow: /nosotros
+Allow: /devoluciones
+Allow: /politica-de-devoluciones
+Allow: /garantia
 
 # Sitemap XML dinámico (vía rewrite Vercel → backend).
 # Tras el deploy debe abrir XML, no HTML.

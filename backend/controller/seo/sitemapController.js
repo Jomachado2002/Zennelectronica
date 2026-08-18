@@ -55,6 +55,7 @@ async function buildSitemapXml() {
   entries.push(urlEntry(`${SITE}/`, today, 'daily', '1.0'));
   entries.push(urlEntry(`${SITE}/nosotros`, today, 'monthly', '0.5'));
   entries.push(urlEntry(`${SITE}/promociones`, today, 'daily', '0.9'));
+  entries.push(urlEntry(`${SITE}/devoluciones`, today, 'monthly', '0.8'));
 
   // Hubs de vitrinas / home slots
   const seenCatUrls = new Set();

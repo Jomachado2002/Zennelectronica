@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp, faInstagram, faFacebook } from '@fortawesome/free-brands-svg-icons';
 import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +26,18 @@ const Footer = () => {
                 <FontAwesomeIcon icon={faEnvelope} className="text-white/80" />
                 <span>ventas@zenn.com.py</span>
               </div>
+            </div>
+            <p className="font-semibold mt-6 mb-2">Enlaces</p>
+            <div className="space-y-2 text-sm">
+              <Link to="/nosotros" className="block text-white/90 hover:text-white underline-offset-2 hover:underline">
+                Nosotros
+              </Link>
+              <Link to="/promociones" className="block text-white/90 hover:text-white underline-offset-2 hover:underline">
+                Promociones
+              </Link>
+              <Link to="/devoluciones" className="block text-white/90 hover:text-white underline-offset-2 hover:underline">
+                Devoluciones y garantía
+              </Link>
             </div>
           </div>
           
@@ -76,7 +89,10 @@ const Footer = () => {
         </div>
         
         {/* Derechos de autor */}
-        <div className="border-t border-white/30 mt-8 pt-6 text-center">
+        <div className="border-t border-white/30 mt-8 pt-6 text-center space-y-3">
+          <p className="text-white/80 text-sm">
+            Gaudioso Nuñez casi Celsa Speratti, Asunción, Paraguay
+          </p>
           <p className="text-white/80">
             ©{new Date().getFullYear()} Zenn. Todos los derechos reservados
           </p>

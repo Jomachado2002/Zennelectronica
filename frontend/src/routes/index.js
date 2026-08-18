@@ -27,6 +27,7 @@ const MobileCategoriesPage = lazy(() => import('../pages/MobileCategoriesPage'))
 const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const Checkout = lazy(() => import('../pages/Checkout'));
 const Nosotros = lazy(() => import('../pages/Nosotros'));
+const Devoluciones = lazy(() => import('../pages/Devoluciones'));
 
 // ✅ NUEVA PÁGINA DE PERFIL DE USUARIO
 const UserProfilePage = lazy(() => import('../pages/UserProfilePage'));
@@ -120,6 +121,18 @@ const router = createBrowserRouter([
             {
                 path: "nosotros",
                 element: <Lazy><Nosotros /></Lazy>
+            },
+            {
+                path: "devoluciones",
+                element: <Lazy><Devoluciones /></Lazy>
+            },
+            {
+                path: "politica-de-devoluciones",
+                element: <Lazy><Devoluciones /></Lazy>
+            },
+            {
+                path: "garantia",
+                element: <Lazy><Devoluciones /></Lazy>
             },
             {
                 path: "categorias-movil",
