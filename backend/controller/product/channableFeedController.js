@@ -2,6 +2,7 @@
 // Incluye todo el catálogo vendible: todas las categorías, fotos CDN/Firebase y campos GMC.
 
 const ProductModel = require('../../models/productModel');
+const { toMerchantJpegUrl } = require('./merchantJpegController');
 
 const XML_CONFIG = {
     STORE_NAME: 'Zenn Electronicos',
@@ -190,7 +191,7 @@ function getValidImages(productImages) {
     for (const img of productImages) {
         if (!isValidImageUrl(img) || seen.has(img)) continue;
         seen.add(img);
-        valid.push(img);
+        valid.push(toMerchantJpegUrl(img));
         if (valid.length >= XML_CONFIG.MAX_IMAGES) break;
     }
     return valid;
