@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
+import { productPath } from '../helpers/productPath';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
 
 // ✅ COMPONENTE OPTIMIZADO PARA MOBILE/DESKTOP
@@ -320,7 +321,7 @@ const VerticalCardProduct = ({
                             }
                           
                             return (
-                                <Link to={`/producto/${product?.slug || product?._id}`}
+                                <Link to={productPath(product)}
                                     key={product?._id} 
                                     data-product-id={product?._id}
                                     className='snap-center flex-none w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px] h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'

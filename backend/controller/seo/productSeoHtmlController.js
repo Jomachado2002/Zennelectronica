@@ -3,11 +3,18 @@
 /**
  * HTML SEO para fichas de producto (bots / crawlers).
  * Los usuarios normales siguen viendo el SPA de React.
+ *
+ * Si la URL es /producto/{ObjectId} y el producto tiene slug → 301 canónico.
  */
 
 const mongoose = require('mongoose');
 const productModel = require('../../models/productModel');
 const { SITE } = require('./sitemapController');
+const {
+  isMongoObjectId,
+  humanizeTaxonomy,
+  offerShippingAndReturns
+} = require('../../helpers/productStructuredData');
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -31,6 +38,12 @@ function oneYearFromNow() {
   return d.toISOString().slice(0, 10);
 }
 
+function clip(text, max) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  return s.length > max ? s.slice(0, max).trim() : s;
+}
+
 async function findProduct(slugOrId) {
   const key = String(slugOrId || '').trim();
   if (!key) return null;
@@ -46,10 +59,12 @@ async function findProduct(slugOrId) {
 
 function buildProductHtml(product) {
   const pathId = product.slug || String(product._id);
-  const pageUrl = `${SITE}/producto/${encodeURIComponent(pathId)}`;
-  const name = product.productName || 'Producto';
-  const brand = product.brandName || 'Zenn';
-  const descRaw = (product.description || `${name} en Zenn Paraguay. Precio en guaraníes, stock y envío.`).replace(/\s+/g, ' ').trim();
+  const pageUrl = `${SITE}/producto/${pathId}`;
+  const name = clip(product.productName || 'Producto', 150) || 'Producto';
+  const brand = clip(product.brandName, 70) || 'Zenn';
+  const descRaw = (product.description || `${name} en Zenn Paraguay. Precio en guaraníes, stock y envío.`)
+    .replace(/\s+/g, ' ')
+    .trim();
   const desc = descRaw.slice(0, 160);
   const images = Array.isArray(product.productImage)
     ? product.productImage.filter(Boolean).map(absoluteUrl)
@@ -61,6 +76,10 @@ function buildProductHtml(product) {
     product.stock === undefined || product.stock === null || Number(product.stock) > 0;
   const category = product.category || '';
   const subcategory = product.subcategory || '';
+  const categoryLabel = humanizeTaxonomy(category);
+  const subcategoryLabel = humanizeTaxonomy(subcategory);
+  const sku = String(product.codigo || '').trim();
+  const extras = offerShippingAndReturns(pageUrl);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -68,24 +87,33 @@ function buildProductHtml(product) {
     name,
     image: images.length ? images : [image],
     description: descRaw.slice(0, 5000),
-    sku: String(product._id),
-    brand: { '@type': 'Brand', name: brand },
-    offers: {
+    brand: { '@type': 'Brand', name: brand }
+  };
+
+  if (sku) {
+    jsonLd.sku = sku;
+    jsonLd.mpn = sku;
+  }
+  if (subcategoryLabel || categoryLabel) {
+    jsonLd.category = subcategoryLabel || categoryLabel;
+  }
+
+  if (price > 0) {
+    jsonLd.offers = {
       '@type': 'Offer',
       url: pageUrl,
       priceCurrency: 'PYG',
       price,
       priceValidUntil: oneYearFromNow(),
+      validFrom: extras.validFrom,
       itemCondition: 'https://schema.org/NewCondition',
       availability: inStock
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
-      seller: { '@type': 'Organization', name: 'Zenn' }
-    }
-  };
-
-  if (category) {
-    jsonLd.category = subcategory ? `${category}/${subcategory}` : category;
+      seller: { '@type': 'Organization', name: 'Zenn' },
+      shippingDetails: extras.shippingDetails,
+      hasMerchantReturnPolicy: extras.hasMerchantReturnPolicy
+    };
   }
 
   const breadcrumbLd = {
@@ -97,7 +125,7 @@ function buildProductHtml(product) {
         ? {
             '@type': 'ListItem',
             position: 2,
-            name: category,
+            name: categoryLabel || category,
             item: `${SITE}/categoria-producto?category=${encodeURIComponent(category)}`
           }
         : null,
@@ -105,7 +133,7 @@ function buildProductHtml(product) {
         ? {
             '@type': 'ListItem',
             position: 3,
-            name: subcategory,
+            name: subcategoryLabel || subcategory,
             item: `${SITE}/categoria-producto?category=${encodeURIComponent(category)}&subcategory=${encodeURIComponent(subcategory)}`
           }
         : null,
@@ -145,6 +173,7 @@ function buildProductHtml(product) {
   <meta name="twitter:image" content="${escapeHtml(image)}"/>
   <meta property="product:price:amount" content="${price}"/>
   <meta property="product:price:currency" content="PYG"/>
+  ${image ? `<link rel="preload" as="image" href="${escapeHtml(image)}" fetchpriority="high"/>` : ''}
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   <script type="application/ld+json">${JSON.stringify(breadcrumbLd)}</script>
   <style>
@@ -163,14 +192,14 @@ function buildProductHtml(product) {
       <p>Marca: ${escapeHtml(brand)}</p>
       ${priceBlock}
       <p>${inStock ? 'En stock' : 'Sin stock'} · Venta en Asunción y envíos a todo Paraguay.</p>
-      ${image ? `<p><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}"/></p>` : ''}
+      ${image ? `<p><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" width="800" height="800" fetchpriority="high" decoding="async"/></p>` : ''}
       <div>${escapeHtml(descRaw).slice(0, 4000)}</div>
       <p><a href="${escapeHtml(pageUrl)}">Ver producto en Zenn</a></p>
       ${
         category
           ? `<p><a href="${SITE}/categoria-producto?category=${encodeURIComponent(category)}${
               subcategory ? `&subcategory=${encodeURIComponent(subcategory)}` : ''
-            }">Ver más en ${escapeHtml(subcategory || category)}</a></p>`
+            }">Ver más en ${escapeHtml(subcategoryLabel || categoryLabel || subcategory || category)}</a></p>`
           : ''
       }
     </article>
@@ -191,6 +220,17 @@ const productSeoHtmlController = async (req, res) => {
         .send(
           `<!DOCTYPE html><html lang="es"><head><title>Producto no encontrado | Zenn</title><meta name="robots" content="noindex"/></head><body><h1>Producto no encontrado</h1><p><a href="${SITE}/">Ir al inicio</a></p></body></html>`
         );
+      return;
+    }
+
+    if (
+      isMongoObjectId(slugOrId) &&
+      product.slug &&
+      String(product.slug) !== String(slugOrId)
+    ) {
+      const loc = `${SITE}/producto/${product.slug}`;
+      res.set('Cache-Control', 'public, max-age=3600');
+      res.redirect(301, loc);
       return;
     }
 

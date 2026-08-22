@@ -5,6 +5,7 @@ import { FaArrowRight, FaTimes, FaShoppingCart } from 'react-icons/fa';
 import { BiCategoryAlt } from 'react-icons/bi';
 import SummaryApi from '../common';
 import displayPYGCurrency from '../helpers/displayCurrency';
+import { productPath } from '../helpers/productPath';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import { useContext } from 'react';
@@ -92,11 +93,7 @@ const SearchPreview = ({
     onClose();
     
     // ✅ NAVEGAR USANDO SLUG O ID COMO FALLBACK
-    const productSlug = product?.slug || product?._id;
-    // console.log removed for production
-    
-    // Forzar navegación con window.location para asegurar que funcione
-    window.location.href = `/producto/${productSlug}`;
+    window.location.href = productPath(product);
   }, [onSearchChange, onClose]);
 
   const handleCategoryClick = useCallback((category) => {

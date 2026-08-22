@@ -11,7 +11,7 @@ import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
 import VerticalCardGrid from '../components/VerticalCardGrid';
-import { siteUrl } from '../config/siteUrl';
+import { siteUrl, SITE_ORIGIN } from '../config/siteUrl';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -477,6 +477,20 @@ const CategoryProductContent = () => {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Zenn" />
         <meta property="og:locale" content="es_PY" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'CollectionPage',
+            name: seoTitle,
+            description: seoDescription,
+            url: siteUrl(canonicalPath),
+            isPartOf: {
+              '@type': 'WebSite',
+              name: 'Zenn',
+              url: SITE_ORIGIN
+            }
+          })}
+        </script>
       </Helmet>
 
       {/* Barra de filtros con auto-hide */}

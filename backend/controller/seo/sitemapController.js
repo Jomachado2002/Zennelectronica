@@ -94,11 +94,10 @@ async function buildSitemapXml() {
     .lean();
 
   for (const p of products) {
-    const pathId = p.slug || String(p._id);
-    if (!pathId) continue;
+    if (!p.slug) continue;
     entries.push(
       urlEntry(
-        `${SITE}/producto/${encodeURIComponent(pathId)}`,
+        `${SITE}/producto/${p.slug}`,
         p.updatedAt || p.createdAt || today,
         'weekly',
         '0.8'

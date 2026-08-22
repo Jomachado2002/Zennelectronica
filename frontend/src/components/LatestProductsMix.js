@@ -8,6 +8,7 @@ import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
 import SummaryApi from '../common';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
+import { productPath } from '../helpers/productPath';
 
 const LatestProductsMix = ({ limit = 5 }) => {
     const [data, setData] = useState([]);
@@ -260,7 +261,7 @@ const fetchDataFromServer = async () => {
                             
                             return (
                                 <Link 
-                                    to={`/producto/${product?._id}`} 
+                                    to={productPath(product)} 
                                     key={product?._id} 
                                     className='snap-center flex-none w-[220px] sm:w-[250px] md:w-[280px] bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 group/card product-card relative'
                                     onClick={scrollTop}

@@ -2,6 +2,8 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { SITE_ORIGIN, siteUrl } from '../config/siteUrl';
+import { productPath } from '../helpers/productPath';
+import { buildProductJsonLd } from '../helpers/productJsonLd';
 import SummaryApi from '../common';
 import displayINRCurrency from '../helpers/displayCurrency';
 import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
@@ -60,13 +62,6 @@ const ProductDetails = () => {
     
     // Si stock es mayor a 0, está disponible
     return { status: 'in_stock', text: 'En Stock', color: 'bg-green-500' };
-  };
-
-  // Función para formatear la fecha un año en el futuro (para priceValidUntil)
-  const getOneYearFromNow = () => {
-    const oneYearFromNow = new Date();
-    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-    return oneYearFromNow.toISOString().split('T')[0]; // Formato YYYY-MM-DD
   };
 
   // Función para obtener las especificaciones técnicas en formato schema.org (dinámicas)
@@ -220,7 +215,7 @@ useEffect(() => {
   // Función principal para WhatsApp con tracking
   const handleWhatsAppClick = () => {
     const price = displayINRCurrency(data.sellingPrice);
-    const productUrl = window.location.href;
+    const productUrl = data.slug ? siteUrl(`/producto/${data.slug}`) : window.location.href;
     const message = `Hola, estoy interesado en este producto: *${data.productName}* (${data.brandName})
 Precio: ${price}
 ${productUrl}
@@ -271,6 +266,13 @@ ${productUrl}
   // Variables optimizadas para Google Merchant
   const isInStock = data?.stock === undefined || data?.stock === null || data?.stock > 0;
   const stockInfo = getStockStatus(data?.stock);
+  const canonicalPath = productPath({ slug: data.slug, _id: data.slug ? undefined : params.id });
+  const canonicalUrl = siteUrl(canonicalPath);
+  const heroImage = data.productImage?.[0] || activeImage;
+  const schemaImages = (data.productImage || [])
+    .map((img) => (typeof img === 'string' && img.startsWith('http') ? img : getAbsoluteImageUrl(img)))
+    .filter(Boolean);
+  const hasValidOffer = Boolean(data.productName && Number(data.sellingPrice) > 0 && schemaImages.length);
 
   return (
     <>
@@ -282,7 +284,7 @@ ${productUrl}
         <meta property="og:title" content={data.productName || 'Producto'} />
         <meta property="og:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={siteUrl(`/producto/${data.slug || params.id}`)} />
+        <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Zenn" />
         {data.productImage && data.productImage[0] && (
           <meta property="og:image" content={getAbsoluteImageUrl(data.productImage[0])} />
@@ -296,6 +298,9 @@ ${productUrl}
         {data.productImage && data.productImage[0] && (
           <meta property="og:image:alt" content={data.productName || 'Imagen del producto'} />
         )}
+        {heroImage && (
+          <link rel="preload" as="image" href={heroImage} fetchpriority="high" />
+        )}
         
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -305,9 +310,9 @@ ${productUrl}
           <meta name="twitter:image" content={getAbsoluteImageUrl(data.productImage[0])} />
         )}
         
-        <link rel="canonical" href={siteUrl(`/producto/${data.slug || params.id}`)} />
+        <link rel="canonical" href={canonicalUrl} />
         
-        {/* BreadcrumbList Schema.org para navegación */}
+        {data.productName && (
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -322,62 +327,47 @@ ${productUrl}
               {
                 "@type": "ListItem",
                 "position": 2,
-                "name": data.category ? (data.category.charAt(0).toUpperCase() + data.category.slice(1)) : "Categoría",
+                "name": data.category ? (data.category.charAt(0).toUpperCase() + data.category.slice(1)).replace(/_/g, ' ') : "Categoría",
                 "item": siteUrl(`/categoria-producto?category=${data.category}`)
               },
               {
                 "@type": "ListItem",
                 "position": 3,
-                "name": data.subcategory ? (data.subcategory.charAt(0).toUpperCase() + data.subcategory.slice(1)) : "Subcategoría",
+                "name": data.subcategory ? (data.subcategory.charAt(0).toUpperCase() + data.subcategory.slice(1)).replace(/_/g, ' ') : "Subcategoría",
                 "item": siteUrl(`/categoria-producto?category=${data.category}&subcategory=${data.subcategory}`)
               },
               {
                 "@type": "ListItem",
                 "position": 4,
                 "name": data.productName,
-                "item": siteUrl(`/producto/${data.slug || params.id}`)
+                "item": canonicalUrl
               }
             ]
           })}
         </script>
+        )}
         
-        {/* Product Schema.org — sin ratings inventados */}
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": data.productName,
-            "image": (data.productImage || []).map((img) =>
-              typeof img === 'string' && img.startsWith('http') ? img : getAbsoluteImageUrl(img)
-            ),
-            "description": data.description,
-            "sku": data._id,
-            "mpn": data._id,
-            "category": `${data.category}/${data.subcategory}`.replace(/undefined/g, ''),
-            "brand": {
-              "@type": "Brand",
-              "name": data.brandName
-            },
-            "offers": {
-              "@type": "Offer",
-              "url": siteUrl(`/producto/${data.slug || params.id}`),
-              "priceCurrency": "PYG",
-              "price": data.sellingPrice,
-              "priceValidUntil": getOneYearFromNow(),
-              "itemCondition": "https://schema.org/NewCondition",
-              "availability": isInStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-              "seller": {
-                "@type": "Organization",
-                "name": "Zenn"
-              }
-            },
-            "additionalProperty": Object.entries(getProductSpecifications()).map(([name, value]) => ({
-              "@type": "PropertyValue",
-              "name": name,
-              "value": value
-            }))
-          })}
-        </script>
+        {hasValidOffer && (
+          <script type="application/ld+json">
+            {JSON.stringify(buildProductJsonLd({
+              name: data.productName,
+              images: schemaImages,
+              description: data.description,
+              sku: data.codigo || '',
+              brandName: data.brandName,
+              category: data.category,
+              subcategory: data.subcategory,
+              pageUrl: canonicalUrl,
+              price: data.sellingPrice,
+              inStock: isInStock,
+              extraProperties: Object.entries(getProductSpecifications()).map(([name, value]) => ({
+                "@type": "PropertyValue",
+                name,
+                value
+              }))
+            }))}
+          </script>
+        )}
       </Helmet>
       
       <div className="container mx-auto p-4 font-roboto overflow-x-hidden max-w-full">
@@ -395,6 +385,10 @@ ${productUrl}
                     src={activeImage}
                     alt={data.productName}
                     className="object-contain h-full w-full"
+                    width={800}
+                    height={800}
+                    fetchPriority="high"
+                    decoding="async"
                   />
                 )}
                 {/** Contenedor de Zoom (visible solo en pantallas grandes) **/}
@@ -432,7 +426,11 @@ ${productUrl}
                         <img 
                           src={imgURL} 
                           alt={`Producto ${index + 1}`} 
-                          className="h-full w-full object-cover rounded" 
+                          className="h-full w-full object-cover rounded"
+                          width={64}
+                          height={64}
+                          loading="lazy"
+                          decoding="async"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>

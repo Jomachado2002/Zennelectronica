@@ -1,6 +1,7 @@
 // frontend/src/components/user/FavoritesPage.js
 import React, { useState, useEffect } from 'react';
 import { FaHeart, FaShoppingCart, FaTrash, FaArrowLeft } from 'react-icons/fa';
+import { productPath } from '../../helpers/productPath';
 
 const FavoritesPage = ({ user, onNavigate }) => {
   const [favorites, setFavorites] = useState([]);
@@ -155,7 +156,7 @@ const FavoritesPage = ({ user, onNavigate }) => {
                   </button>
                   
                   <button
-                    onClick={() => onNavigate && onNavigate(`/producto/${product.slug || product.id}`)}
+                    onClick={() => onNavigate && onNavigate(productPath(product))}
                     className="bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition-colors text-sm"
                   >
                     Ver

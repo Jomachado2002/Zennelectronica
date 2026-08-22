@@ -31,12 +31,16 @@ const getSeoTitle = (location, categories = []) => {
   if (selectedCategory && categories.length > 0) {
     const categoryObj = categories.find((cat) => cat.value === selectedCategory);
     if (categoryObj) {
-      return `${categoryObj.label || categoryObj.name} al mejor precio en Paraguay`;
+      const label = categoryObj.label || categoryObj.name;
+      if (/notebook/i.test(selectedCategory) || /notebook/i.test(label)) {
+        return 'Notebooks para estudio, oficina y gaming en Paraguay';
+      }
+      return `${label} al mejor precio en Paraguay`;
     }
   }
 
   // Fallbacks legacy
-  if (selectedSubcategory === 'notebooks' || selectedSubcategory.includes('notebook')) {
+  if (selectedCategory.includes('notebook') || selectedSubcategory === 'notebooks' || selectedSubcategory.includes('notebook')) {
     return 'Notebooks para estudio, oficina y gaming en Paraguay';
   }
   if (selectedSubcategory.includes('celular') || selectedSubcategory.includes('smartphone')) {

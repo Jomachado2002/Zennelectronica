@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import displayPYGCurrency from '../../helpers/displayCurrency';
 import addToCart from '../../helpers/addToCart';
 import scrollTop from '../../helpers/scrollTop';
+import { productPath } from '../../helpers/productPath';
 
 const InfiniteCarousel = ({ 
   products = [], 
@@ -214,7 +215,7 @@ const InfiniteCarousel = ({
             return (
               <Link
                 key={`${product._id}-${currentIndex}-${index}`}
-                to={`/producto/${product?.slug || product?._id}`}
+                to={productPath(product)}
                 className={`${currentConfig.cardWidth} ${currentConfig.cardHeight} 
                           flex-shrink-0 bg-white rounded-lg shadow-sm border 
                           hover:shadow-md transition-all duration-200 flex flex-col

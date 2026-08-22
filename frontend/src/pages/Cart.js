@@ -14,6 +14,7 @@ import BancardPayButton from '../components/BancardPayButton';
 import BalanceService from '../services/balanceService';
 import SummaryApi from '../common';
 import { trackWhatsAppContact, trackPDFDownload, trackInitiateCheckout } from '../components/MetaPixelTracker';
+import { productPath } from '../helpers/productPath';
 
 
 const Cart = () => {
@@ -924,7 +925,7 @@ const Cart = () => {
                                                     <div className="flex-1 flex flex-col">
                                                         <div className="flex-grow">
                                                             <Link 
-                                                                to={`/producto/${product.productId.slug || product.productId._id}`} 
+                                                                to={productPath(product.productId)} 
                                                                 className="text-lg font-semibold text-gray-900 hover:text-[#2A3190] transition-colors line-clamp-2"
                                                             >
                                                                 {product.productId.productName}

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { FaShoppingCart } from 'react-icons/fa';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
+import { productPath } from '../helpers/productPath';
 
 const VerticalCardGrid = ({ loading, data = [] }) => {
     const loadingList = useMemo(() => new Array(12).fill(null), []);
@@ -176,7 +177,7 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                 
                 return (
                     <Link
-                        to={`/producto/${product?.slug || product?._id}`} 
+                        to={productPath(product)} 
                         key={product._id}
                         data-product-id={product._id}
                         className='w-full h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'

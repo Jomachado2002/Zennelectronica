@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import displayPYGCurrency from '../helpers/displayCurrency';
+import { productPath } from '../helpers/productPath';
 
 const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentProductId }) => {
   const [data, setData] = useState([]);
@@ -40,10 +41,9 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
   );
 
   // Función para navegar directamente a la página del producto
-  const handleProductClick = useCallback((e, productSlug) => {
+  const handleProductClick = useCallback((e, product) => {
     e.preventDefault();
-    // Forzar una recarga completa para evitar problemas de estado
-    window.location.href = `/producto/${productSlug}`;
+    window.location.href = productPath(product);
   }, []);
 
   // Función para obtener datos
@@ -195,7 +195,6 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
               ))
             : data.map((product) => {
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
-                const productUrl = `/producto/${product?.slug || product?._id}`;
                 const isHovered = hoveredProductId === product?._id;
                 const secondImage = product.productImage?.[1];
                 const showSecondImage = isHovered && secondImage;
@@ -210,7 +209,7 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
                       backgroundOrigin: 'border-box',
                       backgroundClip: 'padding-box, border-box'
                     }}
-                    onClick={(e) => handleProductClick(e, product?.slug || product?._id)}
+                    onClick={(e) => handleProductClick(e, product)}
                     onMouseEnter={() => setHoveredProductId(product?._id)}
                     onMouseLeave={() => setHoveredProductId(null)}
                   >

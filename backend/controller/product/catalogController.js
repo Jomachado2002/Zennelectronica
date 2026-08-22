@@ -120,7 +120,7 @@ const getCatalogProducts = async (req, res) => {
               ? product.productImage[0] 
               : null,
             slug: product.slug,
-            url: product.slug ? `https://zenn.com.py/producto/${product.slug}` : '#'
+            url: product.slug ? `https://www.zenn.com.py/producto/${product.slug}` : '#'
           });
         }
       }
@@ -281,7 +281,7 @@ async function generateCatalogPdfBuffer({
               ? product.productImage[0]
               : null,
           slug: product.slug,
-          url: product.slug ? `https://zenn.com.py/producto/${product.slug}` : '#'
+          url: product.slug ? `https://www.zenn.com.py/producto/${product.slug}` : '#'
         });
       }
     }
