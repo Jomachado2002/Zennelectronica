@@ -64,7 +64,8 @@ export default async function middleware(request) {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+        'Cache-Control': 'public, max-age=600, s-maxage=43200, stale-while-revalidate=604800',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=43200, stale-while-revalidate=604800',
         'X-Robots-Tag': 'index, follow',
         'X-Zenn-Seo': 'bot-html',
       },

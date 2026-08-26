@@ -10,6 +10,22 @@
     ],
     "routes" : [
         {
+            "src": "/api/seo/(.*)",
+            "headers": {
+                "Cache-Control": "public, max-age=600, s-maxage=43200, stale-while-revalidate=604800",
+                "Vercel-CDN-Cache-Control": "public, s-maxage=43200, stale-while-revalidate=604800"
+            },
+            "dest": "/"
+        },
+        {
+            "src": "/api/sitemap.xml",
+            "headers": {
+                "Cache-Control": "public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400",
+                "Vercel-CDN-Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+            },
+            "dest": "/"
+        },
+        {
             "src" : "/(.*)",
             "dest" : "/"
         }

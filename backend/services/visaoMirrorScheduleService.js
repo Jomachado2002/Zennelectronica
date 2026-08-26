@@ -6,6 +6,7 @@
  */
 
 const { syncVisionVipMirrorToMongo } = require('./visionVipSyncService');
+const { getPricingSettings } = require('./workerSettingsService');
 
 function truthy(v) {
     return v === '1' || v === 'true' || v === 'yes';
@@ -29,9 +30,12 @@ function formatWallHuman(ms) {
     return parts.join(' ');
 }
 
-function buildOptsFromEnv() {
+async function buildOptsFromEnv() {
     const maxListingsRaw = process.env.VISAO_SCHEDULE_MIRROR_MAX_LISTINGS;
     const maxProductUrlsRaw = process.env.VISAO_SCHEDULE_MIRROR_MAX_PRODUCT_URLS;
+    const pricing = await getPricingSettings();
+    const deliveryFromEnv = process.env.VISAO_SCHEDULE_DELIVERY_COST;
+    const marginFromEnv = process.env.VISAO_SCHEDULE_PROFIT_MARGIN;
     return {
         resetCatalog: truthy(process.env.VISAO_SCHEDULE_RESET_CATALOG),
         persistConcurrency: Math.min(24, Math.max(1, parseMs('VISAO_SCHEDULE_PERSIST_CONCURRENCY', 10))),
@@ -48,8 +52,14 @@ function buildOptsFromEnv() {
             detailConcurrency: Math.min(12, Math.max(1, parseMs('VISAO_SCHEDULE_MIRROR_DETAIL_CONCURRENCY', 6))),
             listingConcurrency: Math.min(8, Math.max(1, parseMs('VISAO_SCHEDULE_MIRROR_LISTING_CONCURRENCY', 2)))
         },
-        deliveryCost: parseMs('VISAO_SCHEDULE_DELIVERY_COST', 0),
-        profitMargin: Math.min(100, Math.max(0, parseMs('VISAO_SCHEDULE_PROFIT_MARGIN', 20))),
+        deliveryCost:
+            deliveryFromEnv != null && deliveryFromEnv !== ''
+                ? parseMs('VISAO_SCHEDULE_DELIVERY_COST', pricing.deliveryCost)
+                : pricing.deliveryCost,
+        profitMargin:
+            marginFromEnv != null && marginFromEnv !== ''
+                ? Math.min(100, Math.max(0, parseMs('VISAO_SCHEDULE_PROFIT_MARGIN', pricing.profitMargin)))
+                : pricing.profitMargin,
         cleanupMissingStock: !(
             process.env.VISAO_SCHEDULE_CLEANUP_MISSING_STOCK === '0' ||
             process.env.VISAO_SCHEDULE_CLEANUP_MISSING_STOCK === 'false'
@@ -79,7 +89,7 @@ async function runScheduledMirrorOnce(label) {
     const isoStart = new Date(t0).toISOString();
     console.log(`[Visão schedule][${label}] Inicio mirror ${isoStart}`);
     try {
-        const report = await syncVisionVipMirrorToMongo(buildOptsFromEnv());
+        const report = await syncVisionVipMirrorToMongo(await buildOptsFromEnv());
         const wallMs = Date.now() - t0;
         const s = report.mirrorSummary || {};
         console.log(
@@ -98,6 +108,10 @@ async function runScheduledMirrorOnce(label) {
 }
 
 function startVisaoMirrorScheduleIfEnabled() {
+    if (process.env.VERCEL) {
+        console.log('[Visão schedule] Omitido en Vercel serverless. El worker corre en el VPS.');
+        return;
+    }
     if (!truthy(process.env.VISAO_MIRROR_SCHEDULE_ENABLED)) {
         console.log(
             '[Visão schedule] Desactivado. Sync automático: definí VISAO_MIRROR_SCHEDULE_ENABLED=1 (y opcional VISAO_MIRROR_SCHEDULE_INTERVAL_MS, VISAO_MIRROR_SCHEDULE_INITIAL_DELAY_MS).'

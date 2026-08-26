@@ -3,12 +3,13 @@ const mongoose = require("mongoose");
 async function connectDB() {
     try {
         // ✅ CONFIGURACIÓN OPTIMIZADA PARA PRODUCCIÓN
+        const isVercel = Boolean(process.env.VERCEL);
         const options = {
-            serverSelectionTimeoutMS: 30000, // 30 segundos
-            socketTimeoutMS: 45000, // 45 segundos
-            maxPoolSize: 10,
-            minPoolSize: 5,
-            maxIdleTimeMS: 30000,
+            serverSelectionTimeoutMS: 30000,
+            socketTimeoutMS: 45000,
+            maxPoolSize: isVercel ? 5 : 10,
+            minPoolSize: isVercel ? 0 : 5,
+            maxIdleTimeMS: isVercel ? 10000 : 30000,
             retryWrites: true,
             retryReads: true,
         };

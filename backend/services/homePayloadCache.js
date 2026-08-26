@@ -4,7 +4,7 @@
  * Cache en memoria del payload del home.
  * En Vercel dura mientras la instancia esté caliente → respuestas ~1ms.
  */
-const DEFAULT_TTL_MS = 90 * 1000;
+const DEFAULT_TTL_MS = 180 * 1000;
 
 let entry = null;
 

@@ -63,6 +63,8 @@ app.use((req, res, next) => {
     if (/catalog-pdf|jobs-health|generate-catalog-pdf/.test(req.path)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
+    } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images/.test(req.path)) {
+      // Cache-Control lo define el controlador (CDN público).
     } else {
       res.setHeader('Cache-Control', 'private, max-age=300');
     }
@@ -102,8 +104,9 @@ app.options('*', (req, res) => {
 app.use(express.json());
 app.use(cookieParser(process.env.SESSION_SECRET));
 
-// Configuración de sesión mejorada para invitados
-app.use(session({
+// Configuración de sesión mejorada para invitados.
+// SEO/sitemap no crean cookie: si no, el CDN de Vercel no cachea y Google pega al origin.
+const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'default_secret_for_development',
   resave: false,
   saveUninitialized: true,
@@ -115,7 +118,20 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   },
   store: new session.MemoryStore()
-}));
+});
+app.use((req, res, next) => {
+  const p = req.path || '';
+  if (
+    p.startsWith('/api/seo/') ||
+    p === '/api/sitemap.xml' ||
+    p === '/sitemap.xml' ||
+    p === '/api/obtener-productos' ||
+    p.startsWith('/api/subcategory-preview-images')
+  ) {
+    return next();
+  }
+  return sessionMiddleware(req, res, next);
+});
 
 // Rutas API
 app.use("/api", router);

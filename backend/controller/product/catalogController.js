@@ -1,7 +1,6 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const puppeteer = require('puppeteer');
 const Product = require('../../models/productModel');
 const Category = require('../../models/categoryModel');
 
@@ -192,6 +191,7 @@ async function getSharedBrowser() {
   const chromePath = resolveChromePath();
   if (chromePath) launchOptions.executablePath = chromePath;
 
+  const puppeteer = require('puppeteer');
   browserLaunch = puppeteer
     .launch(launchOptions)
     .then((browser) => {

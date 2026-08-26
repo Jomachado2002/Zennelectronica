@@ -12,6 +12,22 @@ import axiosInstance from '../../config/axiosInstance';
 
 const pad = (n) => String(n).padStart(2, '0');
 
+/** 30000, 30.000 o 30.000,50 → número (formato Paraguay). */
+function parseGsAmount(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return 0;
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) {
+    const n = Number(s.replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (/^\d+(,\d+)?$/.test(s)) {
+    const n = Number(s.replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const statusLabel = {
   queued: 'En cola',
   running: 'En curso',
@@ -28,14 +44,22 @@ const AdminWorkerPage = () => {
   const [logs, setLogs] = useState([]);
   const [openLog, setOpenLog] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+  const [deliveryDraft, setDeliveryDraft] = useState('');
+  const [marginDraft, setMarginDraft] = useState('');
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ keepForm } = {}) => {
     const [s, l] = await Promise.all([
       axiosInstance.get('/api/worker/settings'),
       axiosInstance.get('/api/worker/logs', { params: { limit: 40 } }),
     ]);
     if (!s.data.success) throw new Error(s.data.message || 'Error al leer settings');
-    setSettings(s.data.settings);
+    if (!keepForm) {
+      setSettings(s.data.settings);
+      setDeliveryDraft(String(s.data.settings?.deliveryCost ?? '30000'));
+      setMarginDraft(String(s.data.settings?.profitMargin ?? '27'));
+      setFormDirty(false);
+    }
     setLogs(l.data.logs || []);
     setRunning(Boolean(s.data.running || l.data.running));
   }, []);
@@ -47,11 +71,14 @@ const AdminWorkerPage = () => {
   }, [refresh]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      refresh().catch(() => {});
-    }, 4000);
+    const ms = running ? 8000 : 30000;
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      refresh({ keepForm: formDirty }).catch(() => {});
+    };
+    const id = setInterval(tick, ms);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, formDirty, running]);
 
   const save = async (patch) => {
     setSaving(true);
@@ -62,13 +89,16 @@ const AdminWorkerPage = () => {
           runHour: Number(next.runHour),
           runMinute: Number(next.runMinute),
           intervalHours: Number(next.intervalHours),
-          profitMargin: Number(next.profitMargin),
-          deliveryCost: Number(next.deliveryCost),
+          profitMargin: Number(marginDraft),
+          deliveryCost: parseGsAmount(deliveryDraft),
           cleanupMissingStock: Boolean(next.cleanupMissingStock),
       });
       if (!data.success) throw new Error(data.message || 'No se pudo guardar');
       setSettings(data.settings);
-      toast.success('Configuración guardada');
+      setDeliveryDraft(String(data.settings?.deliveryCost ?? parseGsAmount(deliveryDraft)));
+      setMarginDraft(String(data.settings?.profitMargin ?? marginDraft));
+      setFormDirty(false);
+      toast.success('Configuración guardada. El próximo worker usará este envío y margen.');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -189,7 +219,10 @@ const AdminWorkerPage = () => {
               type="checkbox"
               disabled={busy}
               checked={Boolean(settings.enabled)}
-              onChange={(e) => setSettings({ ...settings, enabled: e.target.checked })}
+              onChange={(e) => {
+                setFormDirty(true);
+                setSettings({ ...settings, enabled: e.target.checked });
+              }}
             />
             Worker encendido (usa el horario)
           </label>
@@ -203,6 +236,7 @@ const AdminWorkerPage = () => {
               onChange={(e) => {
                 const [h, m] = e.target.value.split(':');
                 setSettings({ ...settings, runHour: Number(h), runMinute: Number(m) });
+                setFormDirty(true);
               }}
             />
           </label>
@@ -215,7 +249,10 @@ const AdminWorkerPage = () => {
               className="mt-1 w-full border rounded-lg px-3 py-2"
               disabled={busy}
               value={settings.intervalHours}
-              onChange={(e) => setSettings({ ...settings, intervalHours: Number(e.target.value) })}
+              onChange={(e) => {
+                setFormDirty(true);
+                setSettings({ ...settings, intervalHours: Number(e.target.value) });
+              }}
             />
           </label>
           <label className="text-sm">
@@ -223,33 +260,47 @@ const AdminWorkerPage = () => {
             <input
               type="number"
               min={0}
-              max={100}
-              disabled={busy}
+              max={99}
+              disabled={false}
               className="mt-1 w-full border rounded-lg px-3 py-2"
-              value={settings.profitMargin}
-              onChange={(e) => setSettings({ ...settings, profitMargin: Number(e.target.value) })}
+              value={marginDraft}
+              onChange={(e) => {
+                setFormDirty(true);
+                setMarginDraft(e.target.value);
+              }}
             />
             <span className="text-xs text-gray-500">
-              Venta = (precio Visão / (1 − margen)) + envío. Con 20% se divide por 0,80.
+              Fórmula: (costo Visão ÷ {Number.isFinite(Number(marginDraft)) && Number(marginDraft) > 0 && Number(marginDraft) < 100 ? (1 - Number(marginDraft) / 100).toFixed(2).replace('.', ',') : '0,73'}) × dólar + envío.
+              Para ÷ 0,73 usá 27%.
             </span>
           </label>
           <label className="text-sm">
-            Costo de envío
+            Costo de envío (Gs)
             <input
-              type="number"
-              min={0}
+              type="text"
+              inputMode="numeric"
               className="mt-1 w-full border rounded-lg px-3 py-2"
-              disabled={busy}
-              value={settings.deliveryCost}
-              onChange={(e) => setSettings({ ...settings, deliveryCost: Number(e.target.value) })}
+              disabled={false}
+              value={deliveryDraft}
+              placeholder="30000"
+              onChange={(e) => {
+                setFormDirty(true);
+                setDeliveryDraft(e.target.value);
+              }}
             />
+            <span className="text-xs text-gray-500">
+              Se suma al final. Podés escribir 30000 o 30.000. Guardar actualiza Mongo; los productos se recalculan en la próxima corrida.
+            </span>
           </label>
           <label className="flex items-center gap-2 text-sm mt-6">
             <input
               type="checkbox"
               disabled={busy}
               checked={Boolean(settings.cleanupMissingStock)}
-              onChange={(e) => setSettings({ ...settings, cleanupMissingStock: e.target.checked })}
+              onChange={(e) => {
+                setFormDirty(true);
+                setSettings({ ...settings, cleanupMissingStock: e.target.checked });
+              }}
             />
             Limpiar stock de productos que ya no están
           </label>
@@ -257,7 +308,7 @@ const AdminWorkerPage = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={saving || busy}
+            disabled={saving}
             onClick={() => save({})}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm flex items-center gap-2"
           >

@@ -1882,8 +1882,9 @@ const {
 const authTestRoutes = require('./authTest');
 router.use('/test', authTestRoutes);
 
-const testRoutes = require('./testRoutes');
-router.use('/test-routes', testRoutes);
+router.use('/test-routes', (req, res, next) => {
+    require('./testRoutes')(req, res, next);
+});
 
 // ===== ENDPOINT PARA OBTENER PRODUCTO POR ID (para modal de edición) =====
 router.get('/admin/products/:id', authToken, async (req, res) => {

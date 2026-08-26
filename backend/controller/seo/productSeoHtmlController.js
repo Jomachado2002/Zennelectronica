@@ -214,6 +214,10 @@ const productSeoHtmlController = async (req, res) => {
     const product = await findProduct(slugOrId);
 
     if (!product) {
+      res.set({
+        'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600'
+      });
       res
         .status(404)
         .type('html')
@@ -229,7 +233,10 @@ const productSeoHtmlController = async (req, res) => {
       String(product.slug) !== String(slugOrId)
     ) {
       const loc = `${SITE}/producto/${product.slug}`;
-      res.set('Cache-Control', 'public, max-age=3600');
+      res.set({
+        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=86400'
+      });
       res.redirect(301, loc);
       return;
     }
@@ -237,7 +244,9 @@ const productSeoHtmlController = async (req, res) => {
     const html = buildProductHtml(product);
     res.set({
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+      // CDN 12 h: Google recrawlea sin pegarle al origin. La tienda (SPA) no usa este HTML.
+      'Cache-Control': 'public, max-age=600, s-maxage=43200, stale-while-revalidate=604800',
+      'Vercel-CDN-Cache-Control': 'public, s-maxage=43200, stale-while-revalidate=604800',
       'X-Robots-Tag': 'index, follow'
     });
     res.status(200).send(html);

@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 const { pickAuthToken } = require('./pickAuthToken');
 
+const AUTH_DEBUG = process.env.NODE_ENV !== 'production';
+
 async function authToken(req, res, next) {
     try {
         const userAgent = req.headers['user-agent'] || '';
@@ -13,14 +15,16 @@ async function authToken(req, res, next) {
             ? picked.candidates
             : (picked.token ? [{ token: picked.token, source: picked.source }] : []);
 
-        console.log('🎫 Token Status:', {
-            found: candidates.length > 0,
-            source: picked.source,
-            length: picked.token ? picked.token.length : 0,
-            preview: picked.token ? picked.token.substring(0, 20) + '...' : 'NO TOKEN',
-            endpoint: req.path,
-            method: req.method
-        });
+        if (AUTH_DEBUG) {
+            console.log('🎫 Token Status:', {
+                found: candidates.length > 0,
+                source: picked.source,
+                length: picked.token ? picked.token.length : 0,
+                preview: picked.token ? picked.token.substring(0, 20) + '...' : 'NO TOKEN',
+                endpoint: req.path,
+                method: req.method
+            });
+        }
 
         for (const { token, source } of candidates) {
             try {
@@ -34,15 +38,17 @@ async function authToken(req, res, next) {
                 req.userRole = user.role;
                 req.bancardUserId = user.bancardUserId;
                 req.userType = 'REGISTERED';
-                console.log('✅ USUARIO AUTENTICADO EXITOSAMENTE:', {
-                    id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    bancardUserId: user.bancardUserId,
-                    device: isIOS ? 'iOS' : 'Other',
-                    tokenSource: source
-                });
+                if (AUTH_DEBUG) {
+                    console.log('✅ USUARIO AUTENTICADO EXITOSAMENTE:', {
+                        id: user._id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        bancardUserId: user.bancardUserId,
+                        device: isIOS ? 'iOS' : 'Other',
+                        tokenSource: source
+                    });
+                }
                 return next();
             } catch {
                 continue;
@@ -58,12 +64,14 @@ async function authToken(req, res, next) {
         req.userType = 'GUEST';
         req.sessionId = req.session?.id || `session-${Date.now()}`;
 
-        console.log('🔓 CONFIGURADO COMO INVITADO:', {
-            guestId,
-            isIOS,
-            reason: candidates.length ? 'invalid_token' : 'no_token',
-            tokenSource: picked.source
-        });
+        if (AUTH_DEBUG) {
+            console.log('🔓 CONFIGURADO COMO INVITADO:', {
+                guestId,
+                isIOS,
+                reason: candidates.length ? 'invalid_token' : 'no_token',
+                tokenSource: picked.source
+            });
+        }
 
         next();
     } catch (err) {

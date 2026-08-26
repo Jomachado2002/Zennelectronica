@@ -119,7 +119,8 @@ const sitemapController = async (req, res) => {
     const xml = await buildSitemapXml();
     res.set({
       'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400'
+      'Cache-Control': 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400',
+      'Vercel-CDN-Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400'
     });
     res.status(200).send(xml);
   } catch (err) {

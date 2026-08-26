@@ -191,7 +191,7 @@ const getHomeProductsController = async(req, res) => {
             const cached = getHomePayloadCache();
             if (cached) {
                 const meta = homeCacheMeta();
-                res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
+                res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800');
                 res.set('X-Home-Cache', `HIT age=${meta.ageMs || 0}`);
                 return res.json(cached);
             }
@@ -301,8 +301,8 @@ const getHomeProductsController = async(req, res) => {
             }
         };
 
-        setHomePayloadCache(body, 90 * 1000);
-        res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
+        setHomePayloadCache(body, 180 * 1000);
+        res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800');
         res.set('X-Home-Cache', 'MISS');
         res.json(body);
     } catch (err) {
@@ -389,7 +389,7 @@ const getSubcategoryPreviewImagesController = async (req, res) => {
 
         const data = await buildSubcategoryPreviewMap(values);
 
-        res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
+        res.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=1800');
         res.json({
             message: "Previews obtenidos",
             success: true,
