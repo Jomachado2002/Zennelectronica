@@ -1,7 +1,7 @@
 /**
- * /producto/{ObjectId} → 301 a /producto/{slug} (bots y usuarios).
- * Bots (Google, etc.) reciben HTML con producto real.
- * Usuarios en URL canónica siguen al SPA de React.
+ * Solo 301 /producto/{ObjectId} → slug para usuarios.
+ * Los bots no se resuelven acá: vercel.json los reescribe a /api/seo y el CDN cachea.
+ * Un fetch desde Edge Middleware al backend esquiva el CDN y cobra Fluid CPU en cada crawl.
  */
 
 export const config = {
@@ -31,7 +31,8 @@ export default async function middleware(request) {
     const isId = MONGO_ID.test(slugOrId);
     const isBot = BOT_UA.test(ua);
 
-    if (!isId && !isBot) {
+    // Bots: rewrite + CDN. Usuarios en URL canónica: SPA.
+    if (isBot || !isId) {
       return;
     }
 
@@ -50,26 +51,6 @@ export default async function middleware(request) {
         return Response.redirect(loc, 301);
       }
     }
-
-    if (!isBot) {
-      return;
-    }
-
-    if (!seoRes.ok) {
-      return;
-    }
-
-    const html = await seoRes.text();
-    return new Response(html, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=600, s-maxage=43200, stale-while-revalidate=604800',
-        'Vercel-CDN-Cache-Control': 'public, s-maxage=43200, stale-while-revalidate=604800',
-        'X-Robots-Tag': 'index, follow',
-        'X-Zenn-Seo': 'bot-html',
-      },
-    });
   } catch {
     return;
   }

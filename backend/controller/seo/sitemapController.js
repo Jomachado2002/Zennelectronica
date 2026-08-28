@@ -114,9 +114,18 @@ async function buildSitemapXml() {
   ].join('\n');
 }
 
+let sitemapMem = { xml: '', expiresAt: 0 };
+
 const sitemapController = async (req, res) => {
   try {
-    const xml = await buildSitemapXml();
+    const now = Date.now();
+    if (!sitemapMem.xml || now > sitemapMem.expiresAt) {
+      sitemapMem = {
+        xml: await buildSitemapXml(),
+        expiresAt: now + 6 * 60 * 60 * 1000
+      };
+    }
+    const xml = sitemapMem.xml;
     res.set({
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400',
