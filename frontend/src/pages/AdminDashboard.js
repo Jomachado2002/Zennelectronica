@@ -73,46 +73,75 @@ const AdminDashboard = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('30d'); // '7d', '30d', '90d', '1y'
   const [selectedView, setSelectedView] = useState('overview'); // 'overview', 'financial', 'differences'
 
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
+  const fetchDashboardData = async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
+
+    const jsonOrEmpty = async (res, fallback) => {
+      try {
+        return await res.json();
+      } catch {
+        return fallback;
+      }
+    };
+
     try {
-      // console.log removed for production
-      // Usar las URLs correctas del SummaryApi
-      const [salesRes, purchasesRes, usersRes, productsRes, budgetsRes, clientsRes, suppliersRes, transactionsRes] = await Promise.all([
-        fetch(SummaryApi.getAllSales.url, { method: SummaryApi.getAllSales.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { sales: [] } }) })),
-        fetch(SummaryApi.getAllPurchases.url, { method: SummaryApi.getAllPurchases.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { purchases: [] } }) })),
-        fetch(SummaryApi.allUser.url, { method: SummaryApi.allUser.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: [] }) })),
-        fetch(SummaryApi.allProduct.url, { method: SummaryApi.allProduct.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { products: [] } }) })),
-        fetch(SummaryApi.getAllBudgets.url, { method: SummaryApi.getAllBudgets.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { budgets: [] } }) })),
-        fetch(SummaryApi.getAllClients.url, { method: SummaryApi.getAllClients.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: [] }) })),
-        fetch(SummaryApi.getAllSuppliers.url, { method: SummaryApi.getAllSuppliers.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { suppliers: [] } }) })),
-        fetch(SummaryApi.bancard.transactions.getAll.url, { method: SummaryApi.bancard.transactions.getAll.method, credentials: 'include' }).catch(() => ({ json: () => Promise.resolve({ success: false, data: { transactions: [] } }) }))
+      const [salesRes, purchasesRes] = await Promise.all([
+        fetch(`${SummaryApi.getAllSales.url}?limit=200`, { method: SummaryApi.getAllSales.method, credentials: 'include' }).catch(() => null),
+        fetch(`${SummaryApi.getAllPurchases.url}?limit=200`, { method: SummaryApi.getAllPurchases.method, credentials: 'include' }).catch(() => null)
       ]);
 
-      const [sales, purchases, users, products, budgets, clients, suppliers, transactions] = await Promise.all([
-        salesRes.json(),
-        purchasesRes.json(),
-        usersRes.json(),
-        productsRes.json(),
-        budgetsRes.json(),
-        clientsRes.json(),
-        suppliersRes.json(),
-        transactionsRes.json()
+      const [sales, purchases] = await Promise.all([
+        salesRes ? jsonOrEmpty(salesRes, { success: false }) : { success: false },
+        purchasesRes ? jsonOrEmpty(purchasesRes, { success: false }) : { success: false }
       ]);
-
-      console.log('📊 Respuestas del dashboard:', {
-        sales: sales?.success,
-        purchases: purchases?.success,
-        users: users?.success,
-        products: products?.success,
-        budgets: budgets?.success,
-        clients: clients?.success,
-        suppliers: suppliers?.success,
-        transactions: transactions?.success
-      });
 
       const salesData = sales.success ? (sales.data?.sales || sales.data || []) : [];
       const purchasesData = purchases.success ? (purchases.data?.purchases || purchases.data || []) : [];
+
+      setDashboardData(prev => ({
+        ...prev,
+        overview: {
+          ...prev.overview,
+          totalSales: salesData.length,
+          totalPurchases: purchasesData.length
+        },
+        financial: {
+          ...prev.financial,
+          totalSalesAmount: salesData.reduce((sum, s) => sum + (s.totalAmount || 0), 0),
+          totalPurchasesAmount: purchasesData.reduce((sum, p) => sum + (p.totalAmount || 0), 0),
+          pendingPayments: calculatePendingPayments(purchasesData),
+          pendingReceipts: calculatePendingReceipts(salesData),
+          grossProfit: calculateGrossProfit(salesData, purchasesData),
+          netProfit: calculateNetProfit(salesData, purchasesData),
+          totalIVA: calculateTotalIVA(salesData, purchasesData)
+        },
+        recent: {
+          ...prev.recent,
+          sales: salesData.slice(0, 5),
+          purchases: purchasesData.slice(0, 5)
+        },
+        alerts: generateAlerts(salesData, purchasesData, [], [])
+      }));
+      setIsLoading(false);
+
+      const [usersRes, productsRes, budgetsRes, clientsRes, suppliersRes, transactionsRes] = await Promise.all([
+        fetch(SummaryApi.allUser.url, { method: SummaryApi.allUser.method, credentials: 'include' }).catch(() => null),
+        fetch(SummaryApi.allProduct.url, { method: SummaryApi.allProduct.method, credentials: 'include' }).catch(() => null),
+        fetch(SummaryApi.getAllBudgets.url, { method: SummaryApi.getAllBudgets.method, credentials: 'include' }).catch(() => null),
+        fetch(SummaryApi.getAllClients.url, { method: SummaryApi.getAllClients.method, credentials: 'include' }).catch(() => null),
+        fetch(SummaryApi.getAllSuppliers.url, { method: SummaryApi.getAllSuppliers.method, credentials: 'include' }).catch(() => null),
+        fetch(SummaryApi.bancard.transactions.getAll.url, { method: SummaryApi.bancard.transactions.getAll.method, credentials: 'include' }).catch(() => null)
+      ]);
+
+      const [users, products, budgets, clients, suppliers, transactions] = await Promise.all([
+        usersRes ? jsonOrEmpty(usersRes, { success: false }) : { success: false },
+        productsRes ? jsonOrEmpty(productsRes, { success: false }) : { success: false },
+        budgetsRes ? jsonOrEmpty(budgetsRes, { success: false }) : { success: false },
+        clientsRes ? jsonOrEmpty(clientsRes, { success: false }) : { success: false },
+        suppliersRes ? jsonOrEmpty(suppliersRes, { success: false }) : { success: false },
+        transactionsRes ? jsonOrEmpty(transactionsRes, { success: false }) : { success: false }
+      ]);
+
       const usersData = users.success ? (users.data || []) : [];
       const productsData = products.success ? (products.data?.products || products.data || []) : [];
       const budgetsData = budgets.success ? (budgets.data?.budgets || budgets.data || []) : [];
@@ -120,32 +149,23 @@ const AdminDashboard = () => {
       const suppliersData = suppliers.success ? (suppliers.data?.suppliers || suppliers.data || []) : [];
       const transactionsData = transactions.success ? (transactions.data?.transactions || transactions.data || []) : [];
 
-      // Calcular diferencias entre compras y ventas
       const differences = calculateDifferences(purchasesData, salesData, productsData);
-
-      // Generar alertas
       const alerts = generateAlerts(salesData, purchasesData, productsData, budgetsData);
 
-      setDashboardData({
+      setDashboardData(prev => ({
+        ...prev,
         overview: {
+          ...prev.overview,
           totalProducts: productsData.length,
           totalUsers: usersData.length,
-          totalSales: salesData.length,
-          totalPurchases: purchasesData.length,
-          totalClients: clientsData.length,
+          totalClients: Array.isArray(clientsData) ? clientsData.length : (clientsData.clients?.length || 0),
           totalSuppliers: suppliersData.length,
           totalBudgets: budgetsData.length,
           totalTransactions: transactionsData.length
         },
         financial: {
-          totalSalesAmount: salesData.reduce((sum, s) => sum + (s.totalAmount || 0), 0),
-          totalPurchasesAmount: purchasesData.reduce((sum, p) => sum + (p.totalAmount || 0), 0),
-          totalBudgetsAmount: budgetsData.reduce((sum, b) => sum + (b.finalAmount || 0), 0),
-          grossProfit: calculateGrossProfit(salesData, purchasesData),
-          netProfit: calculateNetProfit(salesData, purchasesData),
-          totalIVA: calculateTotalIVA(salesData, purchasesData),
-          pendingPayments: calculatePendingPayments(purchasesData),
-          pendingReceipts: calculatePendingReceipts(salesData)
+          ...prev.financial,
+          totalBudgetsAmount: budgetsData.reduce((sum, b) => sum + (b.finalAmount || 0), 0)
         },
         trends: {
           salesGrowth: calculateGrowth(salesData, 'saleDate'),
@@ -154,17 +174,15 @@ const AdminDashboard = () => {
           productGrowth: calculateGrowth(productsData, 'createdAt')
         },
         recent: {
-          sales: salesData.slice(0, 5),
-          purchases: purchasesData.slice(0, 5),
+          ...prev.recent,
           users: usersData.slice(0, 5),
           budgets: budgetsData.slice(0, 5)
         },
         alerts,
         differences
-      });
+      }));
 
     } catch (error) {
-      // console.error removed for production
       toast.error("Error al cargar los datos del dashboard");
     } finally {
       setIsLoading(false);
@@ -173,7 +191,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 300000); // Actualizar cada 5 minutos
+    const interval = setInterval(() => fetchDashboardData({ silent: true }), 300000);
     return () => clearInterval(interval);
   }, [selectedPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 

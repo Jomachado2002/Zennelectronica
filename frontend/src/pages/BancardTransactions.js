@@ -1,21 +1,15 @@
 // frontend/src/pages/BancardTransactions.js - MEJORADO CON INTERFAZ OPTIMIZADA
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { deliveryStatuses, calculateProgress } from '../helpers/deliveryHelpers';
-import { getTransactionDisplayStatus, getStatusBadgeClass, getStatusIcon, getStatusTitle, canManageDelivery, canRollback } from '../helpers/transactionStatusHelper';
-import StatusBadge, { StatusWithProgress } from '../components/common/StatusBadge';
-import { AdminOrderActions } from '../components/order/OrderActionButtons';
-import OrderSearchAndFilters from '../components/order/OrderSearchAndFilters';
+import { deliveryStatuses } from '../helpers/deliveryHelpers';
+import { canManageDelivery, canRollback } from '../helpers/transactionStatusHelper';
 
 import { 
     FaCreditCard, 
     FaUndo, 
-    FaExclamationTriangle, 
     FaCheckCircle, 
     FaTimesCircle, 
     FaClock,
     FaSyncAlt,
-    FaFileInvoiceDollar,
     FaTruck,
     FaSearch,
     FaFilter,
@@ -25,16 +19,11 @@ import {
     FaMoneyBillWave,
     FaUsers,
     FaCalendarAlt,
-    FaSort,
     FaTimes,
-    FaCheck,
     FaExclamationCircle,
-    FaInfoCircle,
     FaFileExcel,
-    FaPrint,
     FaExpand,
-    FaCompress,
-    FaArrowUp
+    FaCompress
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -68,6 +57,8 @@ const BancardTransactions = () => {
         sortOrder: 'desc'
     });
     
+    const [syncingPending, setSyncingPending] = useState(false);
+    const [syncingId, setSyncingId] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
     const [selectedTransactions, setSelectedTransactions] = useState([]);
@@ -150,12 +141,16 @@ const BancardTransactions = () => {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
+        const isApproved = (t) => t.status === 'approved' || t.status === 'successful' || t.status === 'success';
+        const isFailed = (t) => t.status === 'rejected' || t.status === 'failed';
+        const isPending = (t) => t.status === 'pending' || t.status === 'processing' || t.status === 'requires_3ds';
+
         const total = transactions.length;
-        const successful = transactions.filter(t => t.status === 'successful').length;
-        const pending = transactions.filter(t => t.status === 'pending').length;
-        const failed = transactions.filter(t => t.status === 'failed').length;
+        const successful = transactions.filter(isApproved).length;
+        const pending = transactions.filter(isPending).length;
+        const failed = transactions.filter(isFailed).length;
         
-        const totalAmount = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+        const totalAmount = transactions.filter(isApproved).reduce((sum, t) => sum + (t.amount || 0), 0);
         const averageAmount = total > 0 ? totalAmount / total : 0;
         
         const todayTransactions = transactions.filter(t => {
@@ -211,7 +206,8 @@ const BancardTransactions = () => {
     const exportToExcel = () => {
         const excelData = filteredTransactions.map(transaction => ({
             'ID': transaction.id || '',
-            'Usuario': transaction.user?.name || transaction.user?.email || 'N/A',
+            'Usuario': transaction.customer_info?.name || transaction.user?.name || transaction.user?.email || transaction.summary?.customer_name || 'N/A',
+            'Email': transaction.customer_info?.email || transaction.user?.email || transaction.summary?.customer_email || '',
             'Monto': transaction.amount || 0,
             'Moneda': transaction.currency || 'PYG',
             'Estado': transaction.status || '',
@@ -259,7 +255,7 @@ const BancardTransactions = () => {
             let body = {};
 
             // ✅ BUSCAR LA TRANSACCIÓN PARA OBTENER shop_process_id
-            const transaction = transactions.find(t => t.id === transactionId);
+            const transaction = transactions.find(t => t._id === transactionId || t.id === transactionId);
             
             if (!transaction) {
                 toast.error('Transacción no encontrada');
@@ -269,7 +265,6 @@ const BancardTransactions = () => {
             switch (action) {
                 case 'rollback':
                     endpoint = `${SummaryApi.baseURL}/api/bancard/rollback`;
-                    // ✅ ENVIAR shop_process_id QUE ES LO QUE ESPERA EL BACKEND
                     body = {
                         shop_process_id: transaction.shop_process_id,
                         ...additionalData
@@ -277,16 +272,19 @@ const BancardTransactions = () => {
                     console.log('🔄 Enviando rollback:', body);
                     break;
                 case 'update_delivery':
-                    endpoint = `${SummaryApi.baseURL}/api/bancard/update-delivery`;
-                    body = { transactionId, ...additionalData };
+                    endpoint = `${SummaryApi.baseURL}/api/bancard/transactions/${transaction._id}/delivery-status`;
+                    method = 'PUT';
+                    body = additionalData;
                     break;
                 default:
                     throw new Error('Acción no válida');
             }
 
             // ✅ USAR authPost PARA INCLUIR TOKEN
-            const { authPost } = await import('../helpers/authFetch');
-            const response = await authPost(endpoint, body);
+            const { authPost, authPut } = await import('../helpers/authFetch');
+            const response = method === 'PUT'
+                ? await authPut(endpoint, body)
+                : await authPost(endpoint, body);
 
             const result = await response.json();
             
@@ -307,29 +305,86 @@ const BancardTransactions = () => {
         }
     };
 
+    const getCustomerName = (transaction) =>
+        transaction.customer_info?.name ||
+        transaction.summary?.customer_name ||
+        transaction.user?.name ||
+        transaction.created_by?.name ||
+        'Invitado';
+
+    const getCustomerEmail = (transaction) =>
+        transaction.customer_info?.email ||
+        transaction.summary?.customer_email ||
+        transaction.user?.email ||
+        transaction.created_by?.email ||
+        '';
+
     const getStatusIcon = (status) => {
         switch (status) {
+            case 'approved':
             case 'successful':
+            case 'success':
                 return <FaCheckCircle className="w-4 h-4 text-green-600" />;
             case 'pending':
+            case 'processing':
+            case 'requires_3ds':
                 return <FaClock className="w-4 h-4 text-yellow-600" />;
+            case 'rejected':
             case 'failed':
                 return <FaTimesCircle className="w-4 h-4 text-red-600" />;
+            case 'rolled_back':
+                return <FaUndo className="w-4 h-4 text-orange-600" />;
+            case 'cancelled':
+                return <FaTimes className="w-4 h-4 text-gray-600" />;
             default:
                 return <FaExclamationCircle className="w-4 h-4 text-gray-600" />;
         }
     };
 
     const getStatusColor = (status) => {
-    switch (status) {
+        switch (status) {
+            case 'approved':
             case 'successful':
+            case 'success':
                 return 'bg-green-100 text-green-800';
             case 'pending':
+            case 'processing':
+            case 'requires_3ds':
                 return 'bg-yellow-100 text-yellow-800';
+            case 'rejected':
             case 'failed':
                 return 'bg-red-100 text-red-800';
+            case 'rolled_back':
+                return 'bg-orange-100 text-orange-800';
+            case 'cancelled':
+                return 'bg-gray-100 text-gray-800';
             default:
                 return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getStatusLabel = (status) => {
+        switch (status) {
+            case 'approved':
+            case 'successful':
+            case 'success':
+                return 'Aprobado';
+            case 'pending':
+                return 'Pendiente';
+            case 'processing':
+                return 'Procesando';
+            case 'requires_3ds':
+                return '3DS';
+            case 'rejected':
+                return 'Rechazado';
+            case 'failed':
+                return 'Fallido';
+            case 'rolled_back':
+                return 'Revertido';
+            case 'cancelled':
+                return 'Cancelado';
+            default:
+                return status || 'N/A';
         }
     };
 
@@ -339,12 +394,66 @@ const BancardTransactions = () => {
                 return 'bg-green-100 text-green-800';
             case 'in_transit':
                 return 'bg-blue-100 text-blue-800';
+            case 'preparing_order':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'payment_confirmed':
+                return 'bg-emerald-100 text-emerald-800';
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800';
+            case 'problem':
             case 'cancelled':
                 return 'bg-red-100 text-red-800';
             default:
                 return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getDeliveryStatusLabel = (status) => {
+        return deliveryStatuses[status]?.title || status || 'Sin envío';
+    };
+
+    const syncTransactionWithBancard = async (transaction) => {
+        if (!transaction?._id) return;
+        setSyncingId(transaction._id);
+        try {
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(
+                `${SummaryApi.baseURL}/api/bancard/transactions/${transaction._id}/status`
+            );
+            const result = await response.json();
+            if (result.success) {
+                const newStatus = result.data?.transaction?.status || result.data?.local_transaction?.status;
+                toast.success(newStatus === 'approved'
+                    ? 'Pago confirmado en Bancard'
+                    : result.message || 'Estado actualizado');
+                fetchTransactions();
+            } else {
+                toast.error(result.message || 'No se pudo verificar en Bancard');
+            }
+        } catch (error) {
+            toast.error('Error al verificar el estado en Bancard');
+        } finally {
+            setSyncingId(null);
+        }
+    };
+
+    const syncPendingTransactions = async () => {
+        setSyncingPending(true);
+        try {
+            const { authPost } = await import('../helpers/authFetch');
+            const response = await authPost(`${SummaryApi.baseURL}/api/bancard/transactions/sync-pending`);
+            const result = await response.json();
+            if (result.success) {
+                const data = result.data || {};
+                toast.success(`Revisadas ${data.checked || 0}: ${data.approved || 0} aprobadas, ${data.rejected || 0} rechazadas, ${data.stillPending || 0} siguen pendientes`);
+                fetchTransactions();
+            } else {
+                toast.error(result.message || 'No se pudieron sincronizar las pendientes');
+            }
+        } catch (error) {
+            toast.error('Error al sincronizar pendientes');
+        } finally {
+            setSyncingPending(false);
         }
     };
 
@@ -407,6 +516,15 @@ const BancardTransactions = () => {
                         </button>
                         
                         <button
+                            onClick={syncPendingTransactions}
+                            disabled={syncingPending}
+                            className="flex items-center px-4 py-2 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+                        >
+                            <FaSyncAlt className={`w-4 h-4 mr-2 ${syncingPending ? 'animate-spin' : ''}`} />
+                            {syncingPending ? 'Verificando...' : 'Verificar pendientes'}
+                        </button>
+
+                        <button
                             onClick={fetchTransactions}
                             className="flex items-center px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                         >
@@ -437,7 +555,7 @@ const BancardTransactions = () => {
                             <FaCheckCircle className="w-5 h-5 text-green-600" />
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-600">Exitosas</p>
+                            <p className="text-sm font-medium text-gray-600">Aprobadas</p>
                             <p className="text-xl font-bold text-gray-900">{stats.successful}</p>
                         </div>
                     </div>
@@ -461,7 +579,7 @@ const BancardTransactions = () => {
                             <FaTimesCircle className="w-5 h-5 text-red-600" />
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-600">Fallidas</p>
+                            <p className="text-sm font-medium text-gray-600">Rechazadas</p>
                             <p className="text-xl font-bold text-gray-900">{stats.failed}</p>
                         </div>
                     </div>
@@ -565,9 +683,11 @@ const BancardTransactions = () => {
                                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">Todos los estados</option>
-                                <option value="successful">Exitosas</option>
+                                <option value="approved">Aprobadas</option>
                                 <option value="pending">Pendientes</option>
-                                <option value="failed">Fallidas</option>
+                                <option value="rejected">Rechazadas</option>
+                                <option value="rolled_back">Revertidas</option>
+                                <option value="cancelled">Canceladas</option>
                             </select>
         </div>
 
@@ -580,10 +700,11 @@ const BancardTransactions = () => {
                                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">Todos los estados</option>
-                                <option value="pending">Pendiente</option>
+                                <option value="payment_confirmed">Pago confirmado</option>
+                                <option value="preparing_order">Preparando</option>
                                 <option value="in_transit">En tránsito</option>
                                 <option value="delivered">Entregado</option>
-                                <option value="cancelled">Cancelado</option>
+                                <option value="problem">Requiere atención</option>
                             </select>
     </div>
 
@@ -761,12 +882,15 @@ const BancardTransactions = () => {
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900">
-                                                        {transaction.id || 'N/A'}
-                                            </div>
-                                                    <div className="text-sm text-gray-500">
-                                                        {transaction.user?.name || transaction.user?.email || 'Usuario no disponible'}
-                                            </div>
-                                            </div>
+                                                        #{transaction.shop_process_id || transaction._id || 'N/A'}
+                                                    </div>
+                                                    <div className="text-sm text-gray-900">
+                                                        {getCustomerName(transaction)}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {getCustomerEmail(transaction) || 'Sin email'}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -778,16 +902,30 @@ const BancardTransactions = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                {getStatusIcon(transaction.status)}
-                                                <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
-                                                    {transaction.status || 'N/A'}
-                                                </span>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center">
+                                                    {getStatusIcon(transaction.status)}
+                                                    <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
+                                                        {getStatusLabel(transaction.status)}
+                                                    </span>
+                                                </div>
+                                                {(transaction.authorization_number || transaction.ticket_number) && (
+                                                    <div className="text-xs text-gray-500">
+                                                        {transaction.authorization_number ? `Auth ${transaction.authorization_number}` : ''}
+                                                        {transaction.authorization_number && transaction.ticket_number ? ' · ' : ''}
+                                                        {transaction.ticket_number ? `Ticket ${transaction.ticket_number}` : ''}
+                                                    </div>
+                                                )}
+                                                {transaction.response_description && transaction.status !== 'approved' && (
+                                                    <div className="text-xs text-gray-500 max-w-[180px] truncate" title={transaction.response_description}>
+                                                        {transaction.response_description}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDeliveryStatusColor(transaction.delivery_status)}`}>
-                                                {transaction.delivery_status || 'N/A'}
+                                                {getDeliveryStatusLabel(transaction.delivery_status)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -824,6 +962,17 @@ const BancardTransactions = () => {
                                                     </button>
                                                 )}
                                                 
+                                                {(transaction.status === 'pending' || transaction.status === 'processing') && (
+                                                    <button
+                                                        onClick={() => syncTransactionWithBancard(transaction)}
+                                                        className="text-amber-600 hover:text-amber-900"
+                                                        title="Verificar en Bancard"
+                                                        disabled={syncingId === transaction._id}
+                                                    >
+                                                        <FaSyncAlt className={`w-4 h-4 ${syncingId === transaction._id ? 'animate-spin' : ''}`} />
+                                                    </button>
+                                                )}
+
                                                 {canManageDelivery(transaction) && (
                                                     <button
                                                         onClick={() => {
@@ -851,10 +1000,13 @@ const BancardTransactions = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">
-                                        Transacción #{transaction.id || 'N/A'}
+                                        Pedido #{transaction.shop_process_id || 'N/A'}
                                     </h3>
-                                    <p className="text-sm text-gray-500">
-                                        {transaction.user?.name || transaction.user?.email || 'Usuario no disponible'}
+                                    <p className="text-sm text-gray-900">
+                                        {getCustomerName(transaction)}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {getCustomerEmail(transaction)}
                                     </p>
                                 </div>
                                 <div className="flex items-center">
@@ -873,14 +1025,14 @@ const BancardTransactions = () => {
                                 <div className="flex justify-between">
                                     <span className="text-sm font-medium text-gray-600">Estado:</span>
                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
-                                        {transaction.status || 'N/A'}
+                                        {getStatusLabel(transaction.status)}
                                     </span>
                                 </div>
                                 
                                 <div className="flex justify-between">
                                     <span className="text-sm font-medium text-gray-600">Envío:</span>
                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDeliveryStatusColor(transaction.delivery_status)}`}>
-                                        {transaction.delivery_status || 'N/A'}
+                                        {getDeliveryStatusLabel(transaction.delivery_status)}
                                     </span>
                                 </div>
                                 

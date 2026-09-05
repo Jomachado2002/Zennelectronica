@@ -78,9 +78,9 @@ const PurchaseDetails = () => {
 
       const result = await response.json();
       if (result.success) {
-        toast.success("Compra actualizada correctamente");
+        toast.success("Compra actualizada");
         setShowEditModal(false);
-        fetchPurchaseDetails();
+        setPurchase(prev => ({ ...prev, ...editData }));
       } else {
         toast.error(result.message || "Error al actualizar la compra");
       }
@@ -145,15 +145,19 @@ const PurchaseDetails = () => {
   };
 
   const getPurchaseTypeLabel = (type) => {
-    switch (type) {
-      case 'inventario': return 'Inventario';
-      case 'equipos': return 'Equipos';
-      case 'servicios': return 'Servicios';
-      case 'gastos_operativos': return 'Gastos Operativos';
-      case 'marketing': return 'Marketing';
-      case 'otros': return 'Otros';
-      default: return type;
-    }
+    const labels = {
+      inventario: 'Inventario',
+      equipos: 'Equipos',
+      servicios: 'Servicios',
+      gastos: 'Gastos',
+      gastos_operativos: 'Gastos Operativos',
+      marketing: 'Marketing',
+      otros: 'Otros'
+    };
+    if (!type) return 'Inventario';
+    if (labels[type]) return labels[type];
+    if (/^\d+$/.test(String(type))) return 'Inventario';
+    return type;
   };
 
   const getCategoryLabel = (category) => {
@@ -459,6 +463,20 @@ const PurchaseDetails = () => {
                         <span className="text-lg font-semibold">TOTAL:</span>
                         <span className="text-lg font-bold text-red-600">{displayPYGCurrency(total)}</span>
                       </div>
+                      {(purchase.exchangeRate > 1 || purchase.currency === 'USD') && (
+                        <div className="mt-2 text-sm text-gray-600 space-y-1">
+                          <div className="flex justify-between">
+                            <span>Cotización USD:</span>
+                            <span>Gs. {Number(purchase.exchangeRate || 0).toLocaleString('es-PY')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Total USD:</span>
+                            <span>
+                              {(purchase.totalAmountUSD || (purchase.exchangeRate ? total / purchase.exchangeRate : 0)).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -20,6 +20,11 @@ const {
     formatAmount,
     generateRollbackToken
 } = require('../../helpers/bancardUtils');
+const {
+    ensureBancardUserId,
+    claimGuestTransactionsForUser,
+    buildConfirmationUpdate
+} = require('../../helpers/bancardUserHelper');
 
 /**
  * ✅ CONTROLADOR MEJORADO PARA CONFIRMACIÓN - CON EMAILS
@@ -214,25 +219,19 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                         // ✅ ACTUALIZAR USER_ID SI ERA GUEST PERO TENEMOS UN USUARIO REAL
                         // Esto puede pasar si el usuario inició sesión después de crear el pago
                         const currentUserId = transaction.created_by || transaction.user_id;
-                        if (currentUserId && typeof currentUserId === 'string' && currentUserId.startsWith('guest-')) {
-                            // La transacción se creó como invitado, intentar encontrar el usuario real
-                            const customerEmail = transaction.customer_info?.email;
-                            if (customerEmail) {
-                                try {
-                                    const realUser = await UserModel.findOne({ email: customerEmail }).select('_id bancardUserId');
-                                    if (realUser) {
-                                        updateData.created_by = realUser._id;
-                                        updateData.user_bancard_id = realUser.bancardUserId;
-                                        updateData.user_type = 'REGISTERED';
-                                        console.log('✅ Transacción actualizada: usuario guest → usuario real', {
-                                            guest_id: currentUserId,
-                                            real_user_id: realUser._id,
-                                            email: customerEmail
-                                        });
-                                    }
-                                } catch (userLookupError) {
-                                    console.warn('⚠️ No se pudo buscar usuario real:', userLookupError.message);
+                        const customerEmail = transaction.customer_info?.email;
+                        const createdByIsGuest = !currentUserId || (typeof currentUserId === 'string' && currentUserId.startsWith('guest-'));
+                        if (createdByIsGuest && customerEmail) {
+                            try {
+                                const realUser = await UserModel.findOne({ email: customerEmail }).select('_id bancardUserId email');
+                                if (realUser) {
+                                    updateData.created_by = realUser._id;
+                                    updateData.user_bancard_id = realUser.bancardUserId;
+                                    updateData.user_type = 'REGISTERED';
+                                    await claimGuestTransactionsForUser(realUser);
                                 }
+                            } catch (userLookupError) {
+                                console.warn('⚠️ No se pudo buscar usuario real:', userLookupError.message);
                             }
                         }
 
@@ -477,8 +476,14 @@ const createPaymentController = async (req, res) => {
             utm_campaign = ''
         } = req.body;
 
-        const finalUserType = req.isAuthenticated === true ? 'REGISTERED' : 'GUEST';
-        const finalUserBancardId = req.isAuthenticated === true ? (req.bancardUserId || req.user?.bancardUserId) : null;
+        const isRegisteredUser = req.isAuthenticated === true && req.user && !String(req.userId || '').startsWith('guest-');
+        if (isRegisteredUser) {
+            await ensureBancardUserId(req.user);
+            req.bancardUserId = req.user.bancardUserId;
+        }
+        const finalUserType = isRegisteredUser ? 'REGISTERED' : 'GUEST';
+        const finalUserBancardId = isRegisteredUser ? (req.user.bancardUserId || req.bancardUserId) : null;
+        const createdBy = isRegisteredUser ? (req.user._id || req.userId) : (req.userId || null);
         const clientIpAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
         console.log("🔍 Variables de tracking declaradas:", {
@@ -677,7 +682,7 @@ const createPaymentController = async (req, res) => {
                         status: 'pending',
                         environment: process.env.BANCARD_ENVIRONMENT || 'staging',
                         sale_id: sale_id || null,
-                        created_by: req.userId || null,
+                        created_by: createdBy,
                         is_certification_test: false,
                         
                         delivery_location: delivery_location ? {
@@ -937,85 +942,64 @@ const getTransactionStatusController = async (req, res) => {
                 'Content-Type': 'application/json',
                 'User-Agent': 'Zenn-eCommerce/1.0'
             },
-            timeout: 30000
+            timeout: 30000,
+            validateStatus: () => true
         });
 
-        // ✅ PROCESAR RESPUESTA DE BANCARD Y ACTUALIZAR TRANSACCIÓN (IGUAL QUE chargeWithTokenController)
-        if (response.status === 200 && response.data) {
-            const confirmation = response.data?.confirmation || response.data?.operation || response.data;
-            
-            if (confirmation) {
-                // ✅ VERIFICAR SI EL PAGO FUE EXITOSO
-                const hasAuthorization = confirmation.authorization_number && confirmation.ticket_number;
-                const hasResponseAndCode = confirmation.response === 'S' && confirmation.response_code === '00';
-                const hasApprovalCode = confirmation.response_code === '00';
-                
-                const isApproved = hasResponseAndCode || hasAuthorization || hasApprovalCode;
-                
-                // ✅ PREPARAR DATOS DE ACTUALIZACIÓN (IGUAL QUE chargeWithTokenController)
-                const updateData = {
-                    bancard_confirmed: true,
-                    confirmation_date: new Date(),
-                    response: confirmation.response || null,
-                    response_code: confirmation.response_code || null,
-                    response_description: confirmation.response_description || null,
-                    extended_response_description: confirmation.extended_response_description || null,
-                    authorization_number: confirmation.authorization_number || null,
-                    ticket_number: confirmation.ticket_number || null,
-                    status: isApproved ? 'approved' : (confirmation.response === 'N' ? 'rejected' : 'pending'),
-                    can_rollback: isApproved, // ✅ PERMITIR ROLLBACK SI ESTÁ APROBADO
-                    show_in_user_purchases: isApproved,
-                    visible_to_user: true
-                };
+        const confirmation = response.status === 200
+            ? (response.data?.confirmation || response.data?.operation)
+            : null;
 
-                if (confirmation.security_information) {
-                    updateData.security_information = confirmation.security_information;
-                }
+        if (confirmation && (confirmation.response || confirmation.response_code || confirmation.authorization_number)) {
+            const applied = buildConfirmationUpdate(confirmation, { currentStatus: transaction.status });
+            const updatedTransaction = await BancardTransactionModel.findOneAndUpdate(
+                { shop_process_id: parseInt(transactionId) },
+                applied.updateData,
+                { new: true }
+            );
 
-                // ✅ ACTUALIZAR TRANSACCIÓN EN BD
-                const updatedTransaction = await BancardTransactionModel.findOneAndUpdate(
-                    { shop_process_id: parseInt(transactionId) },
-                    updateData,
-                    { new: true }
-                );
-
-                // ✅ ENVIAR EMAILS SI EL PAGO FUE APROBADO (IGUAL QUE chargeWithTokenController)
-                if (isApproved && updatedTransaction) {
-                    try {
-                        const customerEmailResult = await emailService.sendPurchaseConfirmationEmail(updatedTransaction, true);
-                        if (customerEmailResult.success) {
-                            updatedTransaction.notifications_sent = updatedTransaction.notifications_sent || [];
-                            updatedTransaction.notifications_sent.push({
-                                type: 'email',
-                                status: 'purchase_approved',
-                                sent_at: new Date(),
-                                success: true,
-                                recipient: updatedTransaction.customer_info?.email
-                            });
-                            await updatedTransaction.save();
+            if (applied.justApproved && updatedTransaction) {
+                try {
+                    const customerEmail = updatedTransaction.customer_info?.email;
+                    if (customerEmail) {
+                        const realUser = await UserModel.findOne({ email: customerEmail }).select('_id bancardUserId email');
+                        if (realUser) {
+                            await claimGuestTransactionsForUser(realUser);
                         }
-
-                        await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_aprobado');
-                    } catch (emailError) {
-                        console.warn('⚠️ Error al enviar emails:', emailError.message);
                     }
+
+                    const customerEmailResult = await emailService.sendPurchaseConfirmationEmail(updatedTransaction, true);
+                    if (customerEmailResult.success) {
+                        updatedTransaction.notifications_sent = updatedTransaction.notifications_sent || [];
+                        updatedTransaction.notifications_sent.push({
+                            type: 'email',
+                            status: 'purchase_approved',
+                            sent_at: new Date(),
+                            success: true,
+                            recipient: updatedTransaction.customer_info?.email
+                        });
+                        await updatedTransaction.save();
+                    }
+
+                    await emailService.sendAdminNotificationEmail(updatedTransaction, 'pago_aprobado');
+                } catch (emailError) {
+                    console.warn('⚠️ Error al enviar emails:', emailError.message);
                 }
-
-                return res.json({
-                    message: "Estado consultado y transacción actualizada",
-                    success: true,
-                    error: false,
-                    data: {
-                        transaction: updatedTransaction,
-                        bancard_status: response.data,
-                        is_approved: isApproved,
-                        can_rollback: isApproved
-                    }
-                });
             }
+
+            return res.json({
+                message: "Estado consultado y transacción actualizada",
+                success: true,
+                error: false,
+                data: {
+                    transaction: updatedTransaction,
+                    bancard_status: response.data,
+                    is_approved: applied.isApproved,
+                    can_rollback: applied.isApproved
+                }
+            });
         }
 
-        // ✅ SI NO HAY CONFIRMACIÓN AÚN, RETORNAR ESTADO ACTUAL
         res.json({
             message: "Estado consultado (sin confirmación aún)",
             success: true,
@@ -1023,8 +1007,8 @@ const getTransactionStatusController = async (req, res) => {
             data: {
                 transaction: transaction,
                 bancard_status: response.data,
-                is_approved: false,
-                can_rollback: false
+                is_approved: transaction.status === 'approved',
+                can_rollback: transaction.status === 'approved'
             }
         });
 

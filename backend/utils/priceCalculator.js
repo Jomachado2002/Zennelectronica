@@ -109,11 +109,11 @@ function convertUSDtoPYG(priceUSD, exchangeRate = 7300) {
     return parseFloat(priceUSD) * parseFloat(exchangeRate);
 }
 
-/** Visão Vip: margen vía divisor (ej. 0,83) + envío fijo en Gs. */
+/** Visão Vip: margen vía divisor (0,73 = 27%) + envío fijo en Gs. */
 const VISAO_VIP_MARGIN_DIVISOR =
     Number(process.env.VISAO_VIP_MARGIN_DIVISOR) > 0 && Number(process.env.VISAO_VIP_MARGIN_DIVISOR) < 1
         ? Number(process.env.VISAO_VIP_MARGIN_DIVISOR)
-        : 0.83;
+        : 0.73;
 
 const VISAO_VIP_DELIVERY_PYG =
     Number(process.env.VISAO_VIP_DELIVERY_PYG) >= 0 && Number.isFinite(Number(process.env.VISAO_VIP_DELIVERY_PYG))
@@ -122,8 +122,8 @@ const VISAO_VIP_DELIVERY_PYG =
 
 /**
  * Precio de venta Visão Vip:
- * - Si el PDP viene en USD: basePyg = usd × cotización (Mongo) → ((basePyg / 0,83) + 30000)
- * - Si el PDP viene en Gs.: ((montoGs / 0,83) + 30000) sin pasar por USD para el cálculo
+ * - USD: (costoUSD / 0,73) × cotización + envío
+ * - Gs.: (montoGs / 0,73) + envío
  * - Si hay precio lista (tachado): `price` usa la misma fórmula; si no, `price` = 0
  */
 function calculateVisaoVipPrices(opts = {}) {

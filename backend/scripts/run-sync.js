@@ -59,6 +59,7 @@ const {
     syncVisionVipMirrorToMongo,
     syncVisionVipCatalogToMongo
 } = require('../services/visionVipSyncService');
+const { getPricingSettings } = require('../services/workerSettingsService');
 
 function has(flag) {
     return process.argv.includes(flag);
@@ -83,6 +84,20 @@ function optNumArg(prefixName, fallback = null) {
 async function main() {
     console.log('[run-sync] Inicio', new Date().toISOString());
     await connectDB();
+    const pricing = await getPricingSettings();
+    const deliveryCostCli = optNumArg('--delivery-cost', null);
+    const profitMarginCli = optNumArg('--profit-margin', null);
+    const deliveryCost = deliveryCostCli != null ? deliveryCostCli : pricing.deliveryCost;
+    const profitMargin = Math.min(
+        100,
+        Math.max(
+            0,
+            Math.round(profitMarginCli != null ? profitMarginCli : pricing.profitMargin)
+        )
+    );
+    console.log(
+        `[run-sync] Precios worker: envío=${deliveryCost} Gs, margen=${profitMargin}% (Visão ÷ ${((1 - profitMargin / 100) || 0).toFixed(2)}) × dólar + envío`
+    );
 
     const useLegacy = has('--legacy');
     const persistConcurrency = Math.min(24, Math.max(1, numArg('--persist-concurrency', 10)));
@@ -92,11 +107,6 @@ async function main() {
             const full = has('--full');
             const resetCatalog = has('--reset-catalog');
             const cleanupMissingStock = has('--cleanup-missing');
-            const deliveryCost = numArg('--delivery-cost', 0);
-            const profitMargin = Math.min(
-                100,
-                Math.max(0, Math.round(numArg('--profit-margin', 20)))
-            );
             const maxCategories = Math.max(
                 1,
                 Math.round(numArg('--max-categories', full ? 200 : 2))
@@ -139,11 +149,6 @@ async function main() {
         const quick = has('--quick');
         const resetCatalog = has('--reset-catalog');
         const cleanupMissingStock = has('--cleanup-missing');
-        const deliveryCost = numArg('--delivery-cost', 0);
-        const profitMargin = Math.min(
-            100,
-            Math.max(0, Math.round(numArg('--profit-margin', 20)))
-        );
 
         let mirrorMaxListings = mirrorFull ? null : optNumArg('--mirror-max-listings', null);
         let maxProductUrls = mirrorFull ? null : optNumArg('--max-product-urls', null);

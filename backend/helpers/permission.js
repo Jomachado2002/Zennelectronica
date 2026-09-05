@@ -18,6 +18,15 @@ const uploadProductPermission = async (userId) => {
     }
 }
 
+// Usa el usuario ya cargado por authToken para no volver a consultar Mongo
+const hasAdminAccessFromRequest = (req) => {
+    const user = req?.user;
+    if (!user) return false;
+    if (user.isActive === false) return false;
+    if (user.role === 'ROOT' || user.role === 'ADMIN') return true;
+    return user.permissions?.adminPanel === true;
+};
+
 // ✅ NUEVA FUNCIÓN: Verificar si usuario puede realizar compras
 const canUserMakePurchase = async (userId) => {
     try {
@@ -84,3 +93,4 @@ module.exports = uploadProductPermission;
 module.exports.canUserMakePurchase = canUserMakePurchase;
 module.exports.canUserViewOwnTransactions = canUserViewOwnTransactions;
 module.exports.uploadProductPermission = uploadProductPermission;
+module.exports.hasAdminAccessFromRequest = hasAdminAccessFromRequest;

@@ -224,7 +224,7 @@ const CardRegistrationModal = ({ user, isOpen, onClose, onSuccess }) => {
       setLoading(true);
       
       const cardId = Date.now() + Math.floor(Math.random() * 10000);
-      const userId = user.bancardUserId || user._id;
+      const userId = user.bancardUserId || 'me';
       
       console.log('🎫 Iniciando registro de tarjeta:', {
         cardId,

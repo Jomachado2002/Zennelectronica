@@ -1,6 +1,6 @@
 // import logo from './logo.svg'; // Removed unused import
 import './App.css';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { ToastContainer } from 'react-toastify';
@@ -19,6 +19,8 @@ import { SpeedInsights } from '@vercel/speed-insights/react'; // Importa Speed I
 
 function App() {
   const dispatch = useDispatch()
+  const location = useLocation()
+  const isAdminRoute = location.pathname.includes('/panel-admin')
   const [cartProductCount, setCartProductCount] = useState(0)
   
   const fetchUserDetails = useCallback(async() => {
@@ -79,11 +81,11 @@ function App() {
           position='top-center'
         />
         
-        <Header/>
-        <main className='min-h-[calc(100vh-120px)] pt-30'>
+        {!isAdminRoute && <Header/>}
+        <main className={isAdminRoute ? 'h-screen overflow-hidden' : 'min-h-[calc(100vh-120px)] pt-30'}>
           <Outlet/>
         </main>
-        <Footer/>
+        {!isAdminRoute && <Footer/>}
       </Context.Provider>
     </>
   );

@@ -54,20 +54,19 @@ app.use(compression());
 // Cache middleware for static resources
 app.use((req, res, next) => {
   // Set cache headers for static assets
-  if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
-  } else if (req.path.match(/^\/banners\//)) {
-    // Banner images - long cache
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
-  } else if (req.path.startsWith('/api/')) {
+  if (req.path.startsWith('/api/')) {
     if (/catalog-pdf|jobs-health|generate-catalog-pdf/.test(req.path)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
-    } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images/.test(req.path)) {
+    } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images|gmc\/image|merchant-feed|channable\/feed/.test(req.path)) {
       // Cache-Control lo define el controlador (CDN público).
     } else {
       res.setHeader('Cache-Control', 'private, max-age=300');
     }
+  } else if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  } else if (req.path.match(/^\/banners\//)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
   }
   next();
 });
@@ -126,7 +125,11 @@ app.use((req, res, next) => {
     p === '/api/sitemap.xml' ||
     p === '/sitemap.xml' ||
     p === '/api/obtener-productos' ||
-    p.startsWith('/api/subcategory-preview-images')
+    p.startsWith('/api/subcategory-preview-images') ||
+    p === '/api/gmc/image.jpg' ||
+    p.startsWith('/api/gmc/') ||
+    p === '/api/channable/feed.xml' ||
+    p === '/api/google/merchant-feed.xml'
   ) {
     return next();
   }

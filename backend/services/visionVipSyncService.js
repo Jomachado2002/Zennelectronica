@@ -1536,8 +1536,15 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
     /** Sobrescribe siempre texto/precios/datos PDP desde Visão cuando el producto se persiste correctamente */
     const mirrorStrict = opts.mirrorStrict !== false;
 
-    const deliveryCost = opts.deliveryCost != null ? Number(opts.deliveryCost) : 0;
-    const profitMargin = opts.profitMargin != null ? Number(opts.profitMargin) : 20;
+    const deliveryCost = opts.deliveryCost != null ? Number(opts.deliveryCost) : 30000;
+    const profitMargin = opts.profitMargin != null ? Number(opts.profitMargin) : 27;
+    const visaoDivisor =
+        Number.isFinite(profitMargin) && profitMargin > 0 && profitMargin < 100
+            ? 1 - profitMargin / 100
+            : 0.73;
+    console.log(
+        `[Visão mirror] Precios: envío=${deliveryCost} Gs, margen=${profitMargin}% (costo Visão ÷ ${visaoDivisor.toFixed(2)} × dólar + envío)`
+    );
     const maxImagesPerProduct =
         opts.maxImagesPerProduct != null ? Math.min(20, Math.max(1, opts.maxImagesPerProduct)) : 8;
     const mirrorPrune = opts.mirrorPrune !== false;
@@ -1734,8 +1741,8 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
         );
     }
 
-    const deliveryCost = opts.deliveryCost != null ? Number(opts.deliveryCost) : 0;
-    const profitMargin = opts.profitMargin != null ? Number(opts.profitMargin) : 20;
+    const deliveryCost = opts.deliveryCost != null ? Number(opts.deliveryCost) : 30000;
+    const profitMargin = opts.profitMargin != null ? Number(opts.profitMargin) : 27;
     const maxImagesPerProduct =
         opts.maxImagesPerProduct != null ? Math.min(20, Math.max(1, opts.maxImagesPerProduct)) : 8;
     const cleanupMissingStock = !!opts.cleanupMissingStock;

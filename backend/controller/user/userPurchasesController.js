@@ -43,17 +43,20 @@ const getUserPurchasesController = async (req, res) => {
         } = req.query;
 
         // ✅ CONSTRUIR QUERY PARA TRANSACCIONES DEL USUARIO
-        const query = {
-            created_by: req.userId,
-            // ✅ SOLO TRANSACCIONES CONFIRMADAS O APROBADAS
-            $or: [
-                { status: 'approved' },
-                { bancard_confirmed: true },
-                { response: 'S', response_code: '00' }
-            ]
-        };
+        const { buildUserPurchaseMatch, claimGuestTransactionsForUser, ensureBancardUserId } = require('../../helpers/bancardUserHelper');
+        await ensureBancardUserId(req.user);
+        await claimGuestTransactionsForUser({
+            _id: req.userId,
+            email: req.user?.email,
+            bancardUserId: req.bancardUserId || req.user?.bancardUserId
+        });
 
-        // ✅ FILTROS ADICIONALES
+        const query = buildUserPurchaseMatch({
+            _id: req.userId,
+            email: req.user?.email,
+            bancardUserId: req.bancardUserId || req.user?.bancardUserId
+        });
+
         if (status) {
             query.status = status;
         }
@@ -95,6 +98,7 @@ const getUserPurchasesController = async (req, res) => {
         const processedPurchases = transactions.map(transaction => {
             return {
                 id: transaction._id,
+                _id: transaction._id,
                 shop_process_id: transaction.shop_process_id,
                 bancard_process_id: transaction.bancard_process_id,
                 amount: transaction.amount,
@@ -108,6 +112,12 @@ const getUserPurchasesController = async (req, res) => {
                 authorization_number: transaction.authorization_number,
                 ticket_number: transaction.ticket_number,
                 response_description: transaction.response_description,
+                delivery_status: transaction.delivery_status,
+                delivery_timeline: transaction.delivery_timeline,
+                customer_satisfaction: transaction.customer_satisfaction,
+                bancard_confirmed: transaction.bancard_confirmed,
+                response: transaction.response,
+                response_code: transaction.response_code,
                 
                 // ✅ INFORMACIÓN DEL CLIENTE
                 customer_info: transaction.customer_info,
@@ -117,6 +127,7 @@ const getUserPurchasesController = async (req, res) => {
                 
                 // ✅ FECHAS
                 purchase_date: transaction.createdAt,
+                createdAt: transaction.createdAt,
                 confirmation_date: transaction.confirmation_date,
                 
                 // ✅ INFORMACIÓN DE SEGURIDAD (SOLO ALGUNOS CAMPOS)
@@ -143,7 +154,7 @@ const getUserPurchasesController = async (req, res) => {
         });
 
         // ✅ CALCULAR ESTADÍSTICAS DEL USUARIO
-        const userStats = await calculateUserPurchaseStats(req.userId);
+        const userStats = await calculateUserPurchaseStats(req.userId, req.user);
 
         
 
@@ -327,7 +338,7 @@ const getUserPurchaseStatsController = async (req, res) => {
             });
         }
 
-        const stats = await calculateUserPurchaseStats(req.userId);
+        const stats = await calculateUserPurchaseStats(req.userId, req.user);
 
         res.json({
             message: "Estadísticas obtenidas exitosamente",
@@ -350,18 +361,14 @@ const getUserPurchaseStatsController = async (req, res) => {
 /**
  * ✅ FUNCIÓN AUXILIAR PARA CALCULAR ESTADÍSTICAS
  */
-const calculateUserPurchaseStats = async (userId) => {
+const calculateUserPurchaseStats = async (userId, user = null) => {
     try {
-        
-
-        const baseQuery = {
-            created_by: userId,
-            $or: [
-                { status: 'approved' },
-                { bancard_confirmed: true },
-                { response: 'S', response_code: '00' }
-            ]
-        };
+        const { buildUserPurchaseMatch } = require('../../helpers/bancardUserHelper');
+        const baseQuery = buildUserPurchaseMatch({
+            _id: userId,
+            email: user?.email,
+            bancardUserId: user?.bancardUserId
+        }, { status: 'approved' });
 
         // ✅ ESTADÍSTICAS GENERALES
         const totalPurchases = await BancardTransactionModel.countDocuments(baseQuery);

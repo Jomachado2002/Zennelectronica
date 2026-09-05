@@ -75,9 +75,9 @@ const SaleDetails = () => {
 
       const result = await response.json();
       if (result.success) {
-        toast.success("Venta actualizada correctamente");
+        toast.success("Venta actualizada");
         setShowEditModal(false);
-        fetchSaleDetails();
+        setSale(prev => ({ ...prev, ...editData }));
       } else {
         toast.error(result.message || "Error al actualizar la venta");
       }

@@ -52,15 +52,16 @@ async function createSupplierController(req, res) {
 
         // MANEJAR USUARIOS INVITADOS CORRECTAMENTE
         const supplierData = {
-            name,
-            email,
-            phone,
+            name: name.trim(),
+            email: email?.trim() || undefined,
+            phone: phone?.trim() || undefined,
             address,
-            company,
-            taxId,
+            company: company?.trim() || undefined,
+            taxId: taxId?.trim() || undefined,
             contactPerson,
             businessInfo,
-            notes
+            notes,
+            isActive: true
         };
 
         // Verificar si es usuario registrado o invitado
@@ -115,7 +116,7 @@ async function getAllSuppliersController(req, res) {
         const { search, limit = 50, page = 1, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
         
         // Construir query
-        const query = { isActive: true };
+        const query = { isActive: { $ne: false } };
         
         if (search) {
             query.$or = [
@@ -123,6 +124,8 @@ async function getAllSuppliersController(req, res) {
                 { email: { $regex: search, $options: 'i' } },
                 { phone: { $regex: search, $options: 'i' } },
                 { company: { $regex: search, $options: 'i' } },
+                { taxId: { $regex: search, $options: 'i' } },
+                { ruc: { $regex: search, $options: 'i' } },
                 { 'businessInfo.specialty': { $regex: search, $options: 'i' } }
             ];
         }

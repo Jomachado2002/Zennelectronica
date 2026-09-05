@@ -13,6 +13,10 @@ const {
     isR2PublicUrl,
     r2KeyFromPublicUrl
 } = require('./r2StorageService');
+const {
+    convertBufferToMerchantJpeg,
+    jpegKeyFromWebpKey
+} = require('../helpers/merchantJpeg');
 
 function useR2Storage() {
     const mode = (process.env.IMAGE_STORAGE || 'r2').toLowerCase();
@@ -162,13 +166,10 @@ async function uploadImageToFirebase(imageBuffer, providerCode, originalUrl = ''
         const fullPath = `products/${fileName}`;
 
         if (useR2Storage()) {
-            return await uploadBufferToR2(webpBuffer, fullPath, {
-                contentType: 'image/webp',
-                metadata: {
-                    providercode: String(providerCode).slice(0, 128),
-                    source: 'inventory_sync',
-                    format: 'webp'
-                }
+            return await uploadProductWebpAndMerchantJpeg(webpBuffer, fullPath, {
+                providercode: String(providerCode).slice(0, 128),
+                source: 'inventory_sync',
+                format: 'webp'
             });
         }
 
@@ -221,13 +222,10 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
 
         let publicUrl;
         if (useR2Storage()) {
-            publicUrl = await uploadBufferToR2(webpBuffer, fullPath, {
-                contentType: 'image/webp',
-                metadata: {
-                    providercode: String(providerCode).slice(0, 128),
-                    source: 'inventory_sync',
-                    format: 'webp'
-                }
+            publicUrl = await uploadProductWebpAndMerchantJpeg(webpBuffer, fullPath, {
+                providercode: String(providerCode).slice(0, 128),
+                source: 'inventory_sync',
+                format: 'webp'
             });
         } else {
             const { storage: firebaseStorage } = initializeFirebase();
@@ -264,6 +262,46 @@ async function importImageFromUrl(imageUrl, providerCode, options = {}) {
 
 function sleepMs(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Sube WebP (tienda) + JPEG hermano (Google/Meta). El catálogo sigue
+ * guardando la URL WebP; el feed reescribe a .jpg.
+ */
+async function uploadProductWebpAndMerchantJpeg(webpBuffer, fullPath, metadata = {}) {
+    const webpUrl = await uploadBufferToR2(webpBuffer, fullPath, {
+        contentType: 'image/webp',
+        metadata
+    });
+    const jpegKey = jpegKeyFromWebpKey(fullPath);
+    if (jpegKey && jpegKey !== fullPath) {
+        try {
+            const jpegBuffer = await convertBufferToMerchantJpeg(webpBuffer);
+            await uploadBufferToR2(jpegBuffer, jpegKey, {
+                contentType: 'image/jpeg',
+                metadata: { ...metadata, format: 'jpeg' }
+            });
+        } catch (err) {
+            console.warn(
+                '[merchant-jpeg] No se pudo subir sibling JPEG:',
+                jpegKey,
+                err && err.message ? err.message : err
+            );
+        }
+    }
+    return webpUrl;
+}
+
+async function deleteR2JpegSibling(webpKey) {
+    const jpegKey = jpegKeyFromWebpKey(webpKey);
+    if (!jpegKey || jpegKey === webpKey) return;
+    try {
+        await deleteObjectFromR2(jpegKey);
+    } catch (error) {
+        const code = error && (error.name || error.Code || error.message);
+        if (code === 'NoSuchKey' || code === 'NotFound') return;
+        console.warn('[merchant-jpeg] No se pudo borrar sibling JPEG:', jpegKey, code);
+    }
 }
 
 /**
@@ -406,6 +444,7 @@ async function deleteFirebaseImageByUrl(imageUrl) {
         }
         try {
             await deleteObjectFromR2(key);
+            await deleteR2JpegSibling(key);
             return { deleted: true, path: key, storage: 'r2' };
         } catch (error) {
             const code = error && (error.name || error.Code || error.message);
@@ -511,5 +550,6 @@ module.exports = {
     deleteFirebaseImageByUrl,
     deleteFirebaseImages,
     convertBufferToWebP,
+    uploadProductWebpAndMerchantJpeg,
     WEBP_OPTS
 };

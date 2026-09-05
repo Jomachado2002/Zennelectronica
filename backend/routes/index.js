@@ -69,7 +69,8 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
         getBancardTransactionByIdController,
         rollbackBancardTransactionController,
         checkBancardTransactionStatusController,
-        createBancardTransactionController
+        createBancardTransactionController,
+        syncPendingBancardTransactionsController
     } = require('../controller/bancard/bancardTransactionsController');
 
     // ===== CONTROLADORES DE CLIENTES =====
@@ -247,6 +248,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
 
     // ✅ RUTAS PARA GESTIÓN DE TRANSACCIONES BANCARD
     router.get("/bancard/transactions", authToken, getAllBancardTransactionsController);
+    router.post("/bancard/transactions/sync-pending", authToken, syncPendingBancardTransactionsController);
     router.get("/bancard/transactions/:transactionId", authToken, getBancardTransactionByIdController);
     router.post("/bancard/transactions/:transactionId/rollback", authToken, rollbackBancardTransactionController);
     router.get("/bancard/transactions/:transactionId/status", authToken, checkBancardTransactionStatusController);

@@ -184,10 +184,12 @@ async function createEnhancedSaleController(req, res) {
                 }
             }
 
+            const itemExchangeRate = Number(item.exchangeRate || currentExchangeRate || 1);
+
             // Convert price to PYG if needed
             let unitPriceInPYG = unitPrice;
             if (itemCurrency !== 'PYG') {
-                const conversion = convertCurrency(unitPrice, itemCurrency, 'PYG', currentExchangeRate);
+                const conversion = convertCurrency(unitPrice, itemCurrency, 'PYG', itemExchangeRate);
                 unitPriceInPYG = conversion.convertedAmount;
             }
 
@@ -207,11 +209,12 @@ async function createEnhancedSaleController(req, res) {
                 productSnapshot: productData,
                 description: description || (productData ? productData.name : ''),
                 quantity,
-                unitPrice: unitPriceInPYG,
+                unitPrice,
                 currency: itemCurrency,
-                exchangeRate: currentExchangeRate,
+                exchangeRate: itemCurrency === 'PYG' ? 1 : itemExchangeRate,
                 unitPricePYG: unitPriceInPYG,
                 taxType,
+                priceIncludesTax,
                 taxRate: taxCalculation.taxRate,
                 taxAmount: itemTaxAmount,
                 subtotal: itemSubtotal,
@@ -275,7 +278,9 @@ async function createEnhancedSaleController(req, res) {
             },
             items: processedItems,
             subtotal: totalSubtotal,
-            tax: Math.round((totalTaxAmount / totalSubtotal) * 100) || 0,
+            tax: [0, 5, 10].includes(Math.round((totalTaxAmount / (totalSubtotal || 1)) * 100))
+                ? Math.round((totalTaxAmount / (totalSubtotal || 1)) * 100)
+                : 10,
             taxAmount: totalTaxAmount,
             totalAmount: totalAmount,
             currency,
@@ -350,13 +355,24 @@ async function searchProductsForSalesController(req, res) {
             ],
             isActive: { $ne: false }
         })
-        .select('productName codigo brandName category sellingPrice productImage')
+        .select('productName codigo brandName category sellingPrice price purchasePriceUSD purchasePrice stock productImage')
         .limit(parseInt(limit))
-        .sort({ productName: 1 });
+        .sort({ productName: 1 })
+        .lean();
+
+        const mapped = products.map((product) => ({
+            ...product,
+            name: product.productName,
+            code: product.codigo,
+            salesPrice: product.sellingPrice,
+            purchasePriceUSD: product.purchasePriceUSD || 0,
+            sellingPrice: product.sellingPrice || 0,
+            stock: product.stock || 0
+        }));
 
         res.json({
             message: "Productos encontrados",
-            data: products,
+            data: mapped,
             success: true,
             error: false
         });
@@ -376,30 +392,24 @@ async function searchProductsForSalesController(req, res) {
  */
 async function searchCustomersForSalesController(req, res) {
     try {
-        const { query, limit = 20 } = req.query;
+        const { query = '', limit = 50 } = req.query;
+        const searchQuery = { isActive: { $ne: false } };
 
-        if (!query || query.trim() === '') {
-            return res.status(400).json({
-                message: "Query de búsqueda es requerido",
-                error: true,
-                success: false
-            });
-        }
-
-        const searchRegex = new RegExp(query, 'i');
-        const customers = await ClientModel.find({
-            $or: [
+        if (query && query.trim() !== '') {
+            const searchRegex = new RegExp(query.trim(), 'i');
+            searchQuery.$or = [
                 { name: searchRegex },
                 { email: searchRegex },
                 { phone: searchRegex },
                 { taxId: searchRegex },
                 { company: searchRegex }
-            ],
-            isActive: { $ne: false }
-        })
+            ];
+        }
+
+        const customers = await ClientModel.find(searchQuery)
         .select('name email phone taxId company address')
-        .limit(parseInt(limit))
-        .sort({ name: 1 });
+        .limit(parseInt(limit, 10) || 50)
+        .sort(query?.trim() ? { name: 1 } : { createdAt: -1 });
 
         res.json({
             message: "Clientes encontrados",

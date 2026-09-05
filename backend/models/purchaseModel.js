@@ -39,7 +39,40 @@ const purchaseSchema = new mongoose.Schema({
         code: String,
         address: String
     },
+    currency: {
+        type: String,
+        enum: ['PYG', 'USD', 'EUR'],
+        default: 'PYG'
+    },
+    exchangeRate: {
+        type: Number,
+        default: 1
+    },
+    totalAmountPYG: {
+        type: Number
+    },
+    totalAmountUSD: {
+        type: Number
+    },
+    invoiceNumber: {
+        type: String,
+        trim: true
+    },
+    paymentTerms: {
+        type: String,
+        enum: ['efectivo', 'net_15', 'net_30', 'net_60', 'net_90', 'personalizado'],
+        default: 'efectivo'
+    },
     items: [{
+        product: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'product',
+            required: false
+        },
+        productCode: {
+            type: String,
+            trim: true
+        },
         description: {
             type: String,
             required: true
@@ -48,6 +81,10 @@ const purchaseSchema = new mongoose.Schema({
             type: String,
             enum: ['producto', 'servicio', 'gasto_fijo', 'gasto_variable', 'inversion'],
             default: 'producto'
+        },
+        productCategory: {
+            type: String,
+            trim: true
         },
         quantity: {
             type: Number,
@@ -69,9 +106,12 @@ const purchaseSchema = new mongoose.Schema({
             type: Number,
             default: 1
         },
+        unitPricePYG: {
+            type: Number
+        },
         taxType: {
             type: String,
-            enum: ['iva_10', 'iva_5', 'exento'],
+            enum: ['iva_10', 'iva_5', 'exento', 'exempt'],
             required: true
         },
         taxRate: {

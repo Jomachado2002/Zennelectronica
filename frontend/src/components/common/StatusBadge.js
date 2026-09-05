@@ -1,15 +1,13 @@
 // frontend/src/components/common/StatusBadge.js
 import React from 'react';
-import { getTransactionDisplayStatus, transactionStatuses } from '../../helpers/transactionStatusHelper';
+import { transactionStatuses } from '../../helpers/transactionStatusHelper';
 import { deliveryStatuses } from '../../helpers/deliveryHelpers';
 
 const StatusBadge = ({ 
     transaction, 
     showBoth = false, 
-    size = 'sm',
-    variant = 'default'
+    size = 'sm'
 }) => {
-    const displayStatus = getTransactionDisplayStatus(transaction);
     
     const sizeClasses = {
         xs: 'px-2 py-1 text-xs',
@@ -57,10 +55,14 @@ const StatusBadge = ({
     };
     
     // Si no está aprobado, solo mostrar estado de pago
-    if (transaction.status !== 'approved') {
+    const paymentStatus = (transaction.status === 'successful' || transaction.status === 'success')
+        ? 'approved'
+        : transaction.status;
+
+    if (paymentStatus !== 'approved') {
         return (
             <div className="flex flex-col gap-1">
-                <PaymentBadge status={transaction.status} />
+                <PaymentBadge status={paymentStatus} />
                 {transaction.status === 'rejected' && transaction.response_description && (
                     <div className="text-xs text-red-600 max-w-48 truncate" title={transaction.response_description}>
                         💬 {transaction.response_description}
@@ -86,7 +88,11 @@ const StatusBadge = ({
 
 // Componente específico para mostrar progreso
 export const StatusWithProgress = ({ transaction, showProgress = true }) => {
-    if (transaction.status !== 'approved') {
+    const paymentStatus = (transaction.status === 'successful' || transaction.status === 'success')
+        ? 'approved'
+        : transaction.status;
+
+    if (paymentStatus !== 'approved') {
         return <StatusBadge transaction={transaction} />;
     }
     

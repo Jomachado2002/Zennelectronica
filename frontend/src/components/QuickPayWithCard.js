@@ -44,12 +44,10 @@ const QuickPayWithCard = ({
   const fetchUserCards = async () => {
     try {
       setLoadingCards(true);
-      const userId = user.bancardUserId || user._id;
+      const userId = user.bancardUserId || 'me';
       
-      const response = await fetch(`${SummaryApi.baseURL}/api/bancard/tarjetas/${userId}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const { authGet } = await import('../helpers/authFetch');
+      const response = await authGet(`${SummaryApi.baseURL}/api/bancard/tarjetas/${userId}`);
 
       const result = await response.json();
       

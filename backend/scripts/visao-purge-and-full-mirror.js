@@ -35,6 +35,7 @@ const connectDB = require('../config/db');
 const Category = require('../models/categoryModel');
 const productModel = require('../models/productModel');
 const { syncVisionVipMirrorToMongo } = require('../services/visionVipSyncService');
+const { getPricingSettings } = require('../services/workerSettingsService');
 
 function has(flag) {
     return process.argv.includes(flag);
@@ -109,16 +110,22 @@ Recomendado: snapshot/backup en MongoDB Atlas antes.
 
     console.log('[visao-purge] Iniciando sync espejo completo…', mirrorScrapeOpts);
 
+    const pricing = await getPricingSettings();
+    const deliveryCostCli = optNumArg('--delivery-cost', null);
+    const profitMarginCli = optNumArg('--profit-margin', null);
+    const deliveryCost = deliveryCostCli != null ? deliveryCostCli : pricing.deliveryCost;
+    const profitMargin = Math.min(
+        100,
+        Math.max(0, Math.round(profitMarginCli != null ? profitMarginCli : pricing.profitMargin))
+    );
+
     try {
         const report = await syncVisionVipMirrorToMongo({
             resetCatalog: false,
             persistConcurrency,
             cleanupMissingStock: has('--cleanup-missing'),
-            deliveryCost: numArg('--delivery-cost', 0),
-            profitMargin: Math.min(
-                100,
-                Math.max(0, Math.round(numArg('--profit-margin', 20)))
-            ),
+            deliveryCost,
+            profitMargin,
             mirrorScrapeOpts,
             maxImagesPerProduct: Math.round(numArg('--max-images-per-product', 8)),
             mirrorPrune: !has('--no-prune'),

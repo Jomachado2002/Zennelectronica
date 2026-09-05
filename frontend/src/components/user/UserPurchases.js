@@ -60,12 +60,14 @@ const UserPurchases = ({ user }) => {
         }
       }
       
-      // ✅ SOLO MOSTRAR TRANSACCIONES APROBADAS/CONFIRMADAS
-      queryParams.append('status', 'approved');
-      
-      // ✅ APLICAR FILTROS ADICIONALES
+      if (!filters.status) {
+        queryParams.append('limit', '50');
+      } else {
+        queryParams.append('status', filters.status);
+      }
+
       Object.entries(filters).forEach(([key, value]) => {
-        if (value && key !== 'status') { // No duplicar status
+        if (value && key !== 'status') {
           queryParams.append(key, value);
         }
       });
@@ -79,11 +81,14 @@ const UserPurchases = ({ user }) => {
       
       if (result.success) {
         // ✅ FILTRAR SOLO COMPRAS CONFIRMADAS Y APROBADAS
-        const confirmedPurchases = (result.data.transactions || []).filter(tx => 
-          tx.status === 'approved' && 
-          tx.bancard_confirmed === true &&
-          (tx.response === 'S' || tx.response_code === '00')
-        );
+        const transactions = result.data.transactions || result.data.purchases || [];
+        const confirmedPurchases = transactions.filter(tx => {
+          if (filters.status) return tx.status === filters.status;
+          return ['approved', 'pending', 'processing', 'rolled_back', 'rejected'].includes(tx.status)
+            || tx.bancard_confirmed === true
+            || tx.response === 'S'
+            || tx.response_code === '00';
+        });
         
         setPurchases(confirmedPurchases);
         
@@ -170,14 +175,14 @@ Por favor, ¿me pueden ayudar?`;
 
   // ✅ FUNCIÓN PARA OBTENER IMAGEN DEL PRODUCTO - MEJORADA
   const getProductImage = (item) => {
-    // Buscar imagen en diferentes ubicaciones posibles
-    if (item.product_details?.productImage && Array.isArray(item.product_details.productImage) && item.product_details.productImage.length > 0) {
-      return item.product_details.productImage[0];
-    }
+    const detailsImage = item.product_details?.productImage;
+    if (typeof detailsImage === 'string' && detailsImage) return detailsImage;
+    if (Array.isArray(detailsImage) && detailsImage.length > 0) return detailsImage[0];
     
     if (item.productImage && Array.isArray(item.productImage) && item.productImage.length > 0) {
       return item.productImage[0];
     }
+    if (typeof item.productImage === 'string' && item.productImage) return item.productImage;
     
     if (item.product?.productImage && Array.isArray(item.product.productImage) && item.product.productImage.length > 0) {
       return item.product.productImage[0];

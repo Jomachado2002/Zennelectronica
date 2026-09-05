@@ -52,6 +52,17 @@ async function userSignUpController(req, res) {
         const userData = new userModel(payload);
         const saveUser = await userData.save();
 
+        try {
+            const {
+                ensureBancardUserId,
+                claimGuestTransactionsForUser
+            } = require('../../helpers/bancardUserHelper');
+            await ensureBancardUserId(saveUser);
+            await claimGuestTransactionsForUser(saveUser);
+        } catch (claimError) {
+            console.warn('⚠️ No se pudieron asociar compras al registrarse:', claimError.message);
+        }
+
         res.status(201).json({
             data: saveUser,
             success: true,

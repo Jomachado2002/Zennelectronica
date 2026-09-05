@@ -58,17 +58,42 @@ export const transactionStatuses = {
         bgColor: '#dbeafe',
         textColor: 'text-blue-800',
         description: 'Transacción en proceso'
+    },
+    cancelled: {
+        icon: '🚫',
+        title: 'Cancelado',
+        color: '#6b7280',
+        bgColor: '#f3f4f6',
+        textColor: 'text-gray-800',
+        description: 'El pago fue cancelado por el usuario'
     }
+};
+
+export const normalizePaymentStatus = (status) => {
+    const aliases = {
+        successful: 'approved',
+        success: 'approved',
+        failed: 'rejected',
+        fail: 'rejected',
+        canceled: 'cancelled'
+    };
+    return aliases[status] || status || 'pending';
+};
+
+export const getPaymentStatusLabel = (status) => {
+    const normalized = normalizePaymentStatus(status);
+    return transactionStatuses[normalized]?.title || status || 'Pendiente';
 };
 
 // ✅ FUNCIÓN PRINCIPAL PARA OBTENER EL ESTADO CORRECTO
 export const getTransactionDisplayStatus = (transaction) => {
-    // Si el pago no está aprobado, mostrar el estado de pago
-    if (transaction.status !== 'approved') {
+    const paymentStatus = normalizePaymentStatus(transaction.status);
+
+    if (paymentStatus !== 'approved') {
         return {
             type: 'payment',
-            status: transaction.status,
-            data: transactionStatuses[transaction.status] || transactionStatuses.pending
+            status: paymentStatus,
+            data: transactionStatuses[paymentStatus] || transactionStatuses.pending
         };
     }
     
@@ -91,6 +116,7 @@ export const getStatusBadgeClass = (transaction) => {
                 return `${baseClasses} bg-green-100 text-green-800`;
             case 'rejected':
             case 'failed':
+            case 'cancelled':
                 return `${baseClasses} bg-red-100 text-red-800`;
             case 'pending':
             case 'processing':
@@ -122,7 +148,7 @@ export const getStatusTitle = (transaction) => {
 
 // ✅ FUNCIÓN PARA VERIFICAR SI PUEDE GESTIONAR DELIVERY
 export const canManageDelivery = (transaction) => {
-    return transaction.status === 'approved';
+    return normalizePaymentStatus(transaction.status) === 'approved';
 };
 
 // ✅ FUNCIÓN PARA VERIFICAR SI PUEDE HACER ROLLBACK
@@ -136,12 +162,11 @@ export const canRollback = (transaction) => {
     }
     
     // Si está aprobada, se puede hacer rollback
-    if (transaction.status === 'approved') {
+    if (normalizePaymentStatus(transaction.status) === 'approved') {
         return true;
     }
     
-    // Si está pendiente pero tiene datos de autorización (dinero debitado), se puede hacer rollback
-    if (transaction.status === 'pending') {
+    if (normalizePaymentStatus(transaction.status) === 'pending') {
         const hasAuthorization = transaction.authorization_number && transaction.ticket_number;
         const hasApprovalCode = transaction.response_code === '00';
         const isBancardConfirmed = transaction.bancard_confirmed === true;

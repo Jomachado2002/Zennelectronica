@@ -32,7 +32,7 @@ const CardManagementPage = ({
     
     setLoading(true);
     try {
-      const userId = user.bancardUserId || user._id;
+      const userId = user.bancardUserId || 'me';
       const userCards = await onFetchCards(userId);
       setCards(userCards || []);
     } catch (error) {
@@ -75,7 +75,7 @@ const CardManagementPage = ({
 
     try {
       setDeletingCardId(card.alias_token);
-      const userId = user.bancardUserId || user._id;
+      const userId = user.bancardUserId || 'me';
       const result = await onDeleteCard(userId, card.alias_token);
       
       if (result.success) {

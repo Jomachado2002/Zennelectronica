@@ -8,7 +8,7 @@ const workerSettingsSchema = new mongoose.Schema(
     runHour: { type: Number, default: 3, min: 0, max: 23 },
     runMinute: { type: Number, default: 0, min: 0, max: 59 },
     intervalHours: { type: Number, default: 24, min: 1, max: 168 },
-    profitMargin: { type: Number, default: 20, min: 0, max: 100 },
+    profitMargin: { type: Number, default: 27, min: 0, max: 100 },
     deliveryCost: { type: Number, default: 30000, min: 0 },
     cleanupMissingStock: { type: Boolean, default: true },
     nextRunAt: { type: Date, default: null },

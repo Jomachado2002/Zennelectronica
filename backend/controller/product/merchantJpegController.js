@@ -1,6 +1,7 @@
 'use strict';
 
 const sharp = require('sharp');
+const { toMerchantJpegUrl } = require('../../helpers/merchantJpeg');
 
 const ALLOWED_HOSTS = new Set([
     'cdn.zenn.com.py',
@@ -15,34 +16,32 @@ function isAllowedImageHost(hostname) {
     return false;
 }
 
-function toMerchantJpegUrl(originalUrl) {
-    if (!originalUrl) return originalUrl;
-    const lower = originalUrl.toLowerCase();
-    const needsConvert =
-        lower.includes('.webp') ||
-        lower.includes('.avif') ||
-        lower.includes('.svg') ||
-        lower.includes('image/webp');
-    if (!needsConvert) return originalUrl;
-    return `https://www.zenn.com.py/api/gmc/image.jpg?src=${encodeURIComponent(originalUrl)}`;
-}
-
 const merchantJpegController = async (req, res) => {
+    const fail = (status, message, cacheSeconds) => {
+        res.set({
+            'Cache-Control': cacheSeconds
+                ? `public, max-age=${cacheSeconds}`
+                : 'no-store',
+            'Access-Control-Allow-Origin': '*'
+        });
+        return res.status(status).type('text/plain').send(message);
+    };
+
     try {
         const src = String(req.query.src || '').trim();
         if (!src) {
-            return res.status(400).type('text/plain').send('src requerido');
+            return fail(400, 'src requerido', 0);
         }
 
         let urlObj;
         try {
             urlObj = new URL(src);
         } catch (_) {
-            return res.status(400).type('text/plain').send('URL inválida');
+            return fail(400, 'URL inválida', 0);
         }
 
         if (urlObj.protocol !== 'https:' || !isAllowedImageHost(urlObj.hostname)) {
-            return res.status(403).type('text/plain').send('Host no permitido');
+            return fail(403, 'Host no permitido', 0);
         }
 
         const upstream = await fetch(src, {
@@ -50,7 +49,7 @@ const merchantJpegController = async (req, res) => {
             headers: { Accept: 'image/*,*/*' }
         });
         if (!upstream.ok) {
-            return res.status(502).type('text/plain').send('No se pudo leer la imagen');
+            return fail(404, 'Imagen no encontrada', 300);
         }
 
         const buffer = Buffer.from(await upstream.arrayBuffer());
@@ -67,7 +66,7 @@ const merchantJpegController = async (req, res) => {
         });
         return res.send(jpeg);
     } catch (error) {
-        return res.status(500).type('text/plain').send('Error convirtiendo imagen');
+        return fail(404, 'Imagen no encontrada', 120);
     }
 };
 

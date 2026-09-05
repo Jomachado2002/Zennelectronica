@@ -20,6 +20,8 @@
     "visao-purge-full": "node scripts/visao-purge-and-full-mirror.js --confirm-purge",
     "visao-migrate-cdn-full": "node scripts/visao-migrate-cdn-and-full-mirror.js",
     "generate-home-slot-routes": "node scripts/generate-home-slot-nav-routes.js",
+    "test-merchant-jpeg": "node scripts/test-merchant-jpeg.js",
+    "backfill-merchant-jpegs": "node scripts/backfill-merchant-jpegs.js",
     "validate-home-slots": "node scripts/validate-home-featured-slots.js",
     "restore-business-dry-run": "node scripts/restore-business-data-from-backup.js --dry-run",
     "restore-business": "node scripts/restore-business-data-from-backup.js --confirm"

@@ -578,10 +578,14 @@ const createCardController = async (req, res) => {
             });
         }
 
+        const UserModel = require('../../models/userModel');
+        const { ensureBancardUserId } = require('../../helpers/bancardUserHelper');
+        const currentUser = req.user || await UserModel.findById(req.userId);
         const finalCardId = card_id || Date.now();
-        const finalUserId = req.bancardUserId || req.user?.bancardUserId;
-        const finalUserPhone = user_cell_phone || req.user?.phone || "12345678";
-        const finalUserEmail = user_mail || req.user?.email;
+        const finalUserId = await ensureBancardUserId(currentUser);
+        req.bancardUserId = finalUserId;
+        const finalUserPhone = user_cell_phone || currentUser?.phone || req.user?.phone || "12345678";
+        const finalUserEmail = user_mail || currentUser?.email || req.user?.email;
 
        
 
@@ -719,7 +723,6 @@ const getUserCardsController = async (req, res) => {
         
         let targetUserId = req.params.user_id;
         
-        // ✅ VALIDAR QUE EL USUARIO ESTÉ AUTENTICADO (NO INVITADO)
         if (!req.isAuthenticated || !req.userId || (typeof req.userId === 'string' && req.userId.startsWith('guest-'))) {
             return res.status(401).json({
                 message: "Debes iniciar sesión para ver tus tarjetas",
@@ -728,23 +731,25 @@ const getUserCardsController = async (req, res) => {
                 isGuest: true
             });
         }
+
+        const { ensureBancardUserId } = require('../../helpers/bancardUserHelper');
+        const ownBancardId = await ensureBancardUserId(req.user);
+        req.bancardUserId = ownBancardId;
+        const looksLikeMongoId = /^[0-9a-fA-F]{24}$/.test(String(targetUserId || ''));
+
+        if (!targetUserId || targetUserId === 'me' || looksLikeMongoId || (req.userRole !== 'ADMIN' && req.userRole !== 'ROOT')) {
+            targetUserId = ownBancardId;
+        }
         
-        if (!targetUserId || targetUserId === 'me') {
-            // ✅ OBTENER bancardUserId DE FORMA SEGURA
-            targetUserId = req.bancardUserId || req.user?.bancardUserId;
-            
-            if (!targetUserId) {
-                return res.status(400).json({
-                    message: "No tienes un ID de Bancard asociado. Contacta al soporte.",
-                    success: false,
-                    error: true
-                });
-            }
+        if (!targetUserId) {
+            return res.status(400).json({
+                message: "No tienes un ID de Bancard asociado. Contacta al soporte.",
+                success: false,
+                error: true
+            });
         }
 
-        // ✅ VALIDAR PERMISOS DE FORMA SEGURA
-        const userBancardId = req.bancardUserId || req.user?.bancardUserId;
-        if (req.userRole !== 'ADMIN' && targetUserId != userBancardId) {
+        if (req.userRole !== 'ADMIN' && req.userRole !== 'ROOT' && String(targetUserId) !== String(ownBancardId)) {
             return res.status(403).json({
                 message: "No puedes ver tarjetas de otros usuarios",
                 success: false,

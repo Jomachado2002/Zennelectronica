@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { FaTimes, FaUser, FaShoppingCart, FaMapMarkerAlt, FaCreditCard, FaChartLine, FaInfoCircle } from 'react-icons/fa';
 import DeliveryProgress from '../delivery/DeliveryProgress';
 import { formatDeliveryDate } from '../../helpers/deliveryHelpers';
-import { getTransactionDisplayStatus, getStatusBadgeClass, canManageDelivery } from '../../helpers/transactionStatusHelper';
+import { getTransactionDisplayStatus, getStatusBadgeClass, canManageDelivery, getPaymentStatusLabel } from '../../helpers/transactionStatusHelper';
 import { formatCurrencyWithOptions } from '../../helpers/displayCurrency';
 
 const TransactionDetailsModal = ({ transaction, onClose }) => {
@@ -17,10 +17,10 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
 
   const fetchTransactionDetails = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions/${transaction._id}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const { authGet } = await import('../../helpers/authFetch');
+      const response = await authGet(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions/${transaction._id || transaction.id}`
+      );
 
       const result = await response.json();
       if (result.success) {
@@ -122,12 +122,9 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
                     <div className="flex justify-between items-center">
                         <span className="text-gray-600">Estado de Pago:</span>
                         <span className={getStatusBadgeClass(details)}>
-                            {details.status === 'approved' ? '✅' : 
-                            details.status === 'rejected' ? '❌' : 
-                            details.status === 'pending' ? '⏳' : '❓'} 
-                            {details.status === 'approved' ? 'Aprobado' :
-                            details.status === 'rejected' ? 'Rechazado' :
-                            details.status === 'pending' ? 'Pendiente' : details.status}
+                            {getTransactionDisplayStatus(details).type === 'payment'
+                                ? `${getTransactionDisplayStatus(details).data.icon} ${getPaymentStatusLabel(details.status)}`
+                                : `✅ ${getPaymentStatusLabel(details.status)}`}
                         </span>
                     </div>
                     
@@ -278,9 +275,9 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
                       <div className="flex gap-4">
                         {/* Imagen del Producto */}
                         <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                          {item.product_details?.productImage?.[0] ? (
+                          {item.product_details?.productImage?.[0] || (typeof item.product_details?.productImage === 'string' && item.product_details.productImage) ? (
                             <img 
-                              src={item.product_details.productImage[0]} 
+                              src={Array.isArray(item.product_details.productImage) ? item.product_details.productImage[0] : item.product_details.productImage} 
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
@@ -481,8 +478,8 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-yellow-600">Respuesta:</span>
-                      <span className={`font-medium ${details.response === 'S' ? 'text-green-600' : 'text-red-600'}`}>
-                        {details.response === 'S' ? '✅ Aprobado' : details.response === 'N' ? '❌ Rechazado' : 'Pendiente'}
+                      <span className={`font-medium ${details.response === 'S' ? 'text-green-600' : details.response === 'N' ? 'text-red-600' : 'text-gray-600'}`}>
+                        {details.response === 'S' ? '✅ Aprobado' : details.response === 'N' ? '❌ Rechazado' : (details.response || 'Pendiente')}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -491,8 +488,24 @@ const TransactionDetailsModal = ({ transaction, onClose }) => {
                     </div>
                     <div>
                       <span className="text-yellow-600">Descripción:</span>
-                      <p className="font-medium text-gray-800">{details.response_description || 'N/A'}</p>
+                      <p className="font-medium text-gray-800">{details.response_description || details.extended_response_description || 'N/A'}</p>
                     </div>
+                    {details.security_information && (
+                      <div className="pt-2 border-t border-yellow-200 space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-yellow-600">Origen tarjeta:</span>
+                          <span className="font-medium">{details.security_information.card_source || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-yellow-600">País:</span>
+                          <span className="font-medium">{details.security_information.card_country || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-yellow-600">Riesgo:</span>
+                          <span className="font-medium">{details.security_information.risk_index ?? 'N/A'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -52,7 +52,7 @@ async function getSettings() {
       runHour: 3,
       runMinute: 0,
       intervalHours: 24,
-      profitMargin: 20,
+      profitMargin: 27,
       deliveryCost: 30000,
       cleanupMissingStock: true,
     });
@@ -230,10 +230,30 @@ async function isRunning() {
   return true;
 }
 
+function getPricingFromDoc(doc) {
+  const deliveryRaw = Number(doc?.deliveryCost);
+  const deliveryCost = Number.isFinite(deliveryRaw) && deliveryRaw >= 0 ? deliveryRaw : 30000;
+  const marginRaw = Number(doc?.profitMargin);
+  const profitMargin =
+    Number.isFinite(marginRaw) && marginRaw > 0 && marginRaw < 100 ? marginRaw : 27;
+  return {
+    deliveryCost,
+    profitMargin,
+    visaoDivisor: Math.round((1 - profitMargin / 100) * 100) / 100,
+  };
+}
+
+async function getPricingSettings() {
+  const doc = await getSettings();
+  return getPricingFromDoc(doc);
+}
+
 module.exports = {
   TZ,
   computeNextRun,
   getSettings,
+  getPricingSettings,
+  getPricingFromDoc,
   saveSettings,
   requestRun,
   consumeRunRequest,

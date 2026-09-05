@@ -61,7 +61,7 @@ const PurchaseManagement = () => {
     amountRange: { min: '', max: '' },
     includeIVA: '',
     currency: '',
-    sortBy: 'purchaseDate',
+    sortBy: 'createdAt',
     sortOrder: 'desc'
   });
 
@@ -141,8 +141,16 @@ const PurchaseManagement = () => {
     applyFiltersAndSort();
   }, [filters, purchases]);
 
-  const fetchPurchases = async () => {
-    setIsLoading(true);
+  const applyPurchasesUpdate = (updater) => {
+    setPurchases(prev => {
+      const next = updater(prev);
+      calculateStats(next);
+      return next;
+    });
+  };
+
+  const fetchPurchases = async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     try {
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -151,7 +159,7 @@ const PurchaseManagement = () => {
         }
       });
 
-      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras?${queryParams.toString()}`, {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras?limit=200&sortBy=createdAt&sortOrder=desc${queryParams.toString() ? `&${queryParams.toString()}` : ''}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -209,7 +217,10 @@ const PurchaseManagement = () => {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       result = result.filter(purchase => 
+        (purchase.purchaseNumber?.toLowerCase() || '').includes(searchLower) ||
         (purchase.invoiceNumber?.toLowerCase() || '').includes(searchLower) ||
+        (purchase.supplierSnapshot?.name?.toLowerCase() || '').includes(searchLower) ||
+        (purchase.supplier?.name?.toLowerCase() || '').includes(searchLower) ||
         (purchase.supplierInfo?.name?.toLowerCase() || '').includes(searchLower) ||
         (purchase.supplierInfo?.company?.toLowerCase() || '').includes(searchLower) ||
         (purchase.notes?.toLowerCase() || '').includes(searchLower)
@@ -331,7 +342,7 @@ const PurchaseManagement = () => {
       amountRange: { min: '', max: '' },
       includeIVA: '',
       currency: '',
-      sortBy: 'purchaseDate',
+      sortBy: 'createdAt',
       sortOrder: 'desc'
     });
   };
@@ -451,8 +462,52 @@ const PurchaseManagement = () => {
   };
 
   // ✅ Función para actualizar estado de pago (edición rápida)
+  const updatePaymentStatus = async (purchaseId, newStatus) => {
+    const previousStatus = purchases.find(purchase => purchase._id === purchaseId)?.paymentStatus;
+    applyPurchasesUpdate(prev => prev.map(purchase =>
+      purchase._id === purchaseId ? { ...purchase, paymentStatus: newStatus } : purchase
+    ));
+
+    try {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${purchaseId}/pago`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ paymentStatus: newStatus })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success("Estado de pago actualizado");
+      } else {
+        applyPurchasesUpdate(prev => prev.map(purchase =>
+          purchase._id === purchaseId ? { ...purchase, paymentStatus: previousStatus } : purchase
+        ));
+        toast.error(result.message || "Error al actualizar el estado");
+      }
+    } catch (error) {
+      applyPurchasesUpdate(prev => prev.map(purchase =>
+        purchase._id === purchaseId ? { ...purchase, paymentStatus: previousStatus } : purchase
+      ));
+      toast.error("Error de conexión");
+    }
+  };
+
   const handleQuickUpdate = async () => {
     if (!editingPurchase) return;
+
+    const previous = {
+      paymentStatus: editingPurchase.paymentStatus,
+      paymentMethod: editingPurchase.paymentMethod,
+      notes: editingPurchase.notes
+    };
+
+    applyPurchasesUpdate(prev => prev.map(purchase =>
+      purchase._id === editingPurchase._id ? { ...purchase, ...quickEditData } : purchase
+    ));
+    setShowQuickEditModal(false);
 
     try {
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${editingPurchase._id}/pago`, {
@@ -466,13 +521,17 @@ const PurchaseManagement = () => {
 
       const result = await response.json();
       if (result.success) {
-        toast.success("Compra actualizada correctamente");
-        setShowQuickEditModal(false);
-        fetchPurchases(); // Recargar lista
+        toast.success("Compra actualizada");
       } else {
+        applyPurchasesUpdate(prev => prev.map(purchase =>
+          purchase._id === editingPurchase._id ? { ...purchase, ...previous } : purchase
+        ));
         toast.error(result.message || "Error al actualizar");
       }
     } catch (error) {
+      applyPurchasesUpdate(prev => prev.map(purchase =>
+        purchase._id === editingPurchase._id ? { ...purchase, ...previous } : purchase
+      ));
       toast.error("Error de conexión");
     }
   };
@@ -991,7 +1050,8 @@ const PurchaseManagement = () => {
                 onChange={handleFilterChange}
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="purchaseDate">Fecha</option>
+                <option value="createdAt">Más recientes</option>
+                <option value="purchaseDate">Fecha de compra</option>
                 <option value="totalAmount">Monto</option>
                 <option value="supplier">Proveedor</option>
                 <option value="invoiceNumber">Número de Factura</option>
@@ -1146,9 +1206,15 @@ const PurchaseManagement = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getPaymentStatusIcon(purchase.paymentStatus)}
-                        <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
-                          {purchase.paymentStatus || 'N/A'}
-                        </span>
+                        <select
+                          value={purchase.paymentStatus || 'pendiente'}
+                          onChange={(e) => updatePaymentStatus(purchase._id, e.target.value)}
+                          className={`ml-2 text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 ${getPaymentStatusColor(purchase.paymentStatus)}`}
+                        >
+                          <option value="pendiente">Pendiente</option>
+                          <option value="pagado">Pagado</option>
+                          <option value="vencido">Vencido</option>
+                        </select>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1246,11 +1312,17 @@ const PurchaseManagement = () => {
                   </span>
                 </div>
                 
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-600">Estado:</span>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
-                    {purchase.paymentStatus || 'N/A'}
-                  </span>
+                  <select
+                    value={purchase.paymentStatus || 'pendiente'}
+                    onChange={(e) => updatePaymentStatus(purchase._id, e.target.value)}
+                    className={`text-xs font-semibold rounded-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 ${getPaymentStatusColor(purchase.paymentStatus)}`}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="vencido">Vencido</option>
+                  </select>
                 </div>
               </div>
               

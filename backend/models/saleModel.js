@@ -111,6 +111,10 @@ const saleSchema = new mongoose.Schema({
             enum: ['exempt', 'iva_5', 'iva_10'],
             default: 'iva_10'
         },
+        priceIncludesTax: {
+            type: Boolean,
+            default: true
+        },
         taxRate: {
             type: Number,
             default: 10

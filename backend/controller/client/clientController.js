@@ -52,13 +52,14 @@ async function createClientController(req, res) {
 
         // Crear nuevo cliente
         const newClient = new ClientModel({
-            name,
-            email,
-            phone,
+            name: name.trim(),
+            email: email?.trim() || undefined,
+            phone: phone?.trim() || undefined,
             address,
-            company,
-            taxId,
+            company: company?.trim() || undefined,
+            taxId: taxId?.trim() || undefined,
             notes,
+            isActive: true,
             createdBy: req.userId
         });
 
@@ -93,13 +94,14 @@ async function getAllClientsController(req, res) {
         const { search, limit = 50, page = 1, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
         
         // Construir query
-        const query = { isActive: true };
+        const query = { isActive: { $ne: false } };
         
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
                 { phone: { $regex: search, $options: 'i' } },
+                { taxId: { $regex: search, $options: 'i' } },
                 { company: { $regex: search, $options: 'i' } }
             ];
         }

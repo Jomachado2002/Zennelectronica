@@ -9,6 +9,12 @@ const {
     validateBancardConfig,
     getBancardBaseUrl
 } = require('../../helpers/bancardUtils');
+const {
+    buildUserPurchaseMatch,
+    buildConfirmationUpdate,
+    claimGuestTransactionsForUser
+} = require('../../helpers/bancardUserHelper');
+const UserModel = require('../../models/userModel');
 
 /**
  * ✅ OBTENER TODAS LAS TRANSACCIONES CON DATOS COMPLETOS DE PRODUCTOS
@@ -28,7 +34,7 @@ const getAllBancardTransactionsController = async (req, res) => {
 
         const { 
             status, 
-            delivery_status,  // ✅ NUEVO FILTRO
+            delivery_status,
             startDate, 
             endDate, 
             search, 
@@ -38,21 +44,19 @@ const getAllBancardTransactionsController = async (req, res) => {
             sortOrder = 'desc',
             user_bancard_id,
             payment_method,
-            created_by
+            created_by,
+            shop_process_id
         } = req.query;
 
-        // ✅ CONSTRUIR QUERY MEJORADA
         let query = {};
 
-        // ✅ FILTROS DE PERMISOS
         if (!hasAdminPermission && req.isAuthenticated) {
-            
-            query.$or = [
-                { created_by: req.userId },
-                { user_bancard_id: req.bancardUserId || req.user?.bancardUserId }
-            ];
+            query = buildUserPurchaseMatch({
+                _id: req.userId,
+                bancardUserId: req.bancardUserId || req.user?.bancardUserId,
+                email: req.user?.email
+            });
         } else if (!hasAdminPermission && !req.isAuthenticated) {
-            
             return res.json({
                 message: "Acceso denegado para usuarios no autenticados",
                 data: {
@@ -64,30 +68,44 @@ const getAllBancardTransactionsController = async (req, res) => {
             });
         }
 
-        // ✅ FILTROS ADICIONALES
-        if (status) query.status = status;
-        if (delivery_status) query.delivery_status = delivery_status; // ✅ NUEVO
-        
-        if (startDate || endDate) {
-            query.transaction_date = {};
-            if (startDate) query.transaction_date.$gte = new Date(startDate);
-            if (endDate) query.transaction_date.$lte = new Date(endDate);
+        const statusAliases = {
+            successful: 'approved',
+            success: 'approved',
+            failed: 'rejected',
+            cancelled: 'cancelled'
+        };
+        if (status) {
+            query.status = statusAliases[status] || status;
+        }
+        if (delivery_status) {
+            const deliveryAliases = { pending: 'payment_confirmed', cancelled: 'problem' };
+            query.delivery_status = deliveryAliases[delivery_status] || delivery_status;
+        }
+
+        if (shop_process_id && !isNaN(shop_process_id)) {
+            query.shop_process_id = parseInt(shop_process_id, 10);
         }
         
-        if (user_bancard_id) {
-            if (query.$or) {
-                query = { ...query };
-                delete query.$or;
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = end;
             }
-            query.$or = [
-                { user_bancard_id: parseInt(user_bancard_id) },
+        }
+        
+        if (hasAdminPermission && user_bancard_id) {
+            const extraOr = [
+                { user_bancard_id: parseInt(user_bancard_id, 10) },
                 { user_bancard_id: user_bancard_id },
                 { created_by: user_bancard_id }
             ];
+            query.$and = [...(query.$and || []), { $or: extraOr }];
         }
 
-        if (created_by) {
-            if (query.$or) delete query.$or;
+        if (hasAdminPermission && created_by) {
             query.created_by = created_by;
         }
         
@@ -164,6 +182,9 @@ const getAllBancardTransactionsController = async (req, res) => {
                                         .lean();
                                     
                                     if (product) {
+                                        const images = Array.isArray(product.productImage)
+                                            ? product.productImage
+                                            : (product.productImage ? [product.productImage] : []);
                                         return {
                                             ...item,
                                             product_details: {
@@ -172,7 +193,7 @@ const getAllBancardTransactionsController = async (req, res) => {
                                                 brandName: product.brandName,
                                                 category: product.category,
                                                 subcategory: product.subcategory,
-                                                productImage: product.productImage?.[0] || null, // Solo primera imagen
+                                                productImage: images,
                                                 price: product.price,
                                                 sellingPrice: product.sellingPrice,
                                                 stock: product.stock,
@@ -208,19 +229,33 @@ const getAllBancardTransactionsController = async (req, res) => {
                     // ✅ CALCULAR PROGRESO DE DELIVERY
                     const deliveryProgress = calculateDeliveryProgress(transaction.delivery_status);
 
+                    const populatedUser = transaction.created_by && typeof transaction.created_by === 'object'
+                        ? transaction.created_by
+                        : null;
+                    const customerName = transaction.customer_info?.name || populatedUser?.name || 'Invitado';
+                    const customerEmail = transaction.customer_info?.email || populatedUser?.email || '';
+
                     return {
                         ...transaction,
+                        id: transaction._id,
                         items: enrichedItems,
                         delivery_progress: deliveryProgress,
-                        // ✅ RESUMEN ÚTIL PARA LA TABLA
+                        user: {
+                            name: customerName,
+                            email: customerEmail,
+                            _id: populatedUser?._id || transaction.created_by || null
+                        },
                         summary: {
                             total_products: enrichedItems.length,
-                            has_images: enrichedItems.some(item => item.product_details?.productImage),
+                            has_images: enrichedItems.some(item => {
+                                const img = item.product_details?.productImage;
+                                return Array.isArray(img) ? img.length > 0 : Boolean(img);
+                            }),
                             product_names: enrichedItems.slice(0, 2).map(item => item.product_details?.productName || item.name),
                             has_delivery_location: !!(transaction.delivery_location?.lat && transaction.delivery_location?.lng),
                             delivery_address_short: transaction.delivery_location?.address || transaction.delivery_location?.manual_address || 'Sin dirección',
-                            customer_name: transaction.customer_info?.name || 'N/A',
-                            customer_email: transaction.customer_info?.email || 'N/A',
+                            customer_name: customerName,
+                            customer_email: customerEmail,
                             is_tracked: !!transaction.tracking_number
                         }
                     };
@@ -319,9 +354,12 @@ const getBancardTransactionByIdController = async (req, res) => {
         // ✅ VERIFICAR PERMISOS DE ACCESO
         if (!hasAdminPermission) {
             const userCanAccess = req.isAuthenticated && (
-                transaction.created_by?._id?.toString() === req.userId ||
+                transaction.created_by?._id?.toString() === String(req.userId) ||
+                String(transaction.created_by) === String(req.userId) ||
                 transaction.user_bancard_id === req.bancardUserId ||
-                transaction.user_bancard_id === req.user?.bancardUserId
+                transaction.user_bancard_id === req.user?.bancardUserId ||
+                (req.user?.email && transaction.customer_info?.email &&
+                    req.user.email.toLowerCase() === String(transaction.customer_info.email).toLowerCase())
             );
 
             if (!userCanAccess) {
@@ -907,6 +945,71 @@ const rollbackBancardTransactionController = async (req, res) => {
     }
 };
 
+async function fetchBancardConfirmation(shopProcessId) {
+    const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${shopProcessId}get_confirmation`;
+    const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
+
+    const payload = {
+        public_key: process.env.BANCARD_PUBLIC_KEY,
+        operation: {
+            token,
+            shop_process_id: parseInt(shopProcessId, 10)
+        }
+    };
+
+    const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
+    return axios.post(bancardUrl, payload, {
+        headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Zenn-eCommerce/1.0'
+        },
+        timeout: 30000,
+        validateStatus: () => true
+    });
+}
+
+async function syncTransactionWithBancard(transaction) {
+    const response = await fetchBancardConfirmation(transaction.shop_process_id);
+    const confirmation = response.data?.confirmation || response.data?.operation || null;
+
+    if (response.status >= 400 || !confirmation) {
+        return {
+            updated: false,
+            transaction,
+            bancard_status: response.data,
+            message: 'Bancard aún no confirmó esta transacción'
+        };
+    }
+
+    const applied = buildConfirmationUpdate(confirmation, { currentStatus: transaction.status });
+    const updatedTransaction = await BancardTransactionModel.findByIdAndUpdate(
+        transaction._id,
+        applied.updateData,
+        { new: true }
+    );
+
+    if (applied.justApproved && updatedTransaction?.customer_info?.email) {
+        try {
+            const user = await UserModel.findOne({
+                email: updatedTransaction.customer_info.email
+            }).select('_id bancardUserId email');
+            if (user) {
+                await claimGuestTransactionsForUser(user);
+            }
+        } catch (claimError) {
+            console.warn('⚠️ No se pudo asociar la compra al usuario:', claimError.message);
+        }
+    }
+
+    return {
+        updated: true,
+        justApproved: applied.justApproved,
+        isApproved: applied.isApproved,
+        transaction: updatedTransaction,
+        bancard_status: response.data
+    };
+}
+
 const checkBancardTransactionStatusController = async (req, res) => {
     try {
         const hasPermission = await uploadProductPermission(req.userId);
@@ -938,48 +1041,97 @@ const checkBancardTransactionStatusController = async (req, res) => {
             });
         }
 
-        const tokenString = `${process.env.BANCARD_PRIVATE_KEY}${transaction.shop_process_id}get_confirmation`;
-        const token = crypto.createHash('md5').update(tokenString, 'utf8').digest('hex');
-
-        const payload = {
-            public_key: process.env.BANCARD_PUBLIC_KEY,
-            operation: {
-                token: token,
-                shop_process_id: transaction.shop_process_id
-            }
-        };
-
-        
-
-        const bancardUrl = `${getBancardBaseUrl()}/vpos/api/0.3/single_buy/confirmations`;
-        
-        const response = await axios.post(bancardUrl, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Zenn-eCommerce/1.0'
-            },
-            timeout: 30000
-        });
-
-        
+        const synced = await syncTransactionWithBancard(transaction);
 
         res.json({
-            message: "Estado de transacción consultado",
+            message: synced.updated
+                ? 'Estado de transacción actualizado con Bancard'
+                : synced.message || 'Estado de transacción consultado',
             success: true,
             error: false,
             data: {
-                local_transaction: transaction,
-                bancard_status: response.data
+                local_transaction: synced.transaction,
+                transaction: synced.transaction,
+                bancard_status: synced.bancard_status,
+                is_approved: synced.isApproved === true,
+                updated: synced.updated
             }
         });
 
     } catch (error) {
-        // console.error removed for production
         res.status(500).json({
             message: "Error al consultar estado de la transacción",
             success: false,
             error: true,
             details: error.response?.data || error.message
+        });
+    }
+};
+
+const syncPendingBancardTransactionsController = async (req, res) => {
+    try {
+        const hasPermission = await uploadProductPermission(req.userId);
+        if (!hasPermission) {
+            return res.status(403).json({
+                message: "Permiso denegado",
+                error: true,
+                success: false
+            });
+        }
+
+        const configValidation = validateBancardConfig();
+        if (!configValidation.isValid) {
+            return res.status(500).json({
+                message: "Error de configuración de Bancard",
+                error: true,
+                success: false
+            });
+        }
+
+        const since = new Date();
+        since.setDate(since.getDate() - 14);
+
+        const pending = await BancardTransactionModel.find({
+            status: { $in: ['pending', 'processing', 'requires_3ds'] },
+            createdAt: { $gte: since }
+        }).sort({ createdAt: -1 }).limit(25);
+
+        const results = {
+            checked: pending.length,
+            approved: 0,
+            rejected: 0,
+            stillPending: 0,
+            errors: 0
+        };
+
+        for (const transaction of pending) {
+            try {
+                const synced = await syncTransactionWithBancard(transaction);
+                const status = synced.transaction?.status || transaction.status;
+                if (status === 'approved') results.approved += 1;
+                else if (status === 'rejected') results.rejected += 1;
+                else results.stillPending += 1;
+            } catch (syncError) {
+                results.errors += 1;
+                console.warn('⚠️ Error al sincronizar transacción pendiente:', {
+                    shop_process_id: transaction.shop_process_id,
+                    error: syncError.message
+                });
+            }
+        }
+
+        res.json({
+            message: `Sincronizadas ${results.checked} transacciones pendientes`,
+            success: true,
+            error: false,
+            data: results
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Error al sincronizar transacciones pendientes",
+            success: false,
+            error: true,
+            details: error.message
         });
     }
 };
@@ -1068,5 +1220,6 @@ module.exports = {
     getBancardTransactionByIdController,
     rollbackBancardTransactionController,
     checkBancardTransactionStatusController,
-    createBancardTransactionController
+    createBancardTransactionController,
+    syncPendingBancardTransactionsController
 };

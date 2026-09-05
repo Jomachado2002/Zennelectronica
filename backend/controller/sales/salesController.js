@@ -2,6 +2,7 @@
 const SaleModel = require('../../models/saleModel');
 const ClientModel = require('../../models/clientModel');
 const uploadProductPermission = require('../../helpers/permission');
+const { hasAdminAccessFromRequest } = uploadProductPermission;
 const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 
 /**
@@ -162,7 +163,7 @@ async function getAllSalesController(req, res) {
             startDate,
             endDate,
             clientId,
-            limit = 50,
+            limit = 200,
             page = 1,
             sortBy = 'createdAt',
             sortOrder = 'desc'
@@ -194,7 +195,8 @@ async function getAllSalesController(req, res) {
             .populate('client', 'name company email phone')
             .sort(sort)
             .skip(skip)
-            .limit(Number(limit));
+            .limit(Number(limit))
+            .lean();
 
         const total = await SaleModel.countDocuments(query);
 
@@ -272,7 +274,7 @@ async function getSaleByIdController(req, res) {
  */
 async function updateSalePaymentController(req, res) {
     try {
-        const hasPermission = await uploadProductPermission(req.userId);
+        const hasPermission = hasAdminAccessFromRequest(req) || await uploadProductPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({
                 message: "Permiso denegado",
@@ -284,25 +286,24 @@ async function updateSalePaymentController(req, res) {
         const { saleId } = req.params;
         const { paymentStatus, paymentMethod, notes } = req.body;
 
-        const sale = await SaleModel.findById(saleId);
-        if (!sale) {
+        const updateData = {};
+        if (paymentStatus) updateData.paymentStatus = paymentStatus;
+        if (paymentMethod) updateData.paymentMethod = paymentMethod;
+        if (notes !== undefined) updateData.notes = notes;
+
+        const updatedSale = await SaleModel.findByIdAndUpdate(
+            saleId,
+            updateData,
+            { new: true }
+        ).lean();
+
+        if (!updatedSale) {
             return res.status(404).json({
                 message: "Venta no encontrada",
                 error: true,
                 success: false
             });
         }
-
-        const updateData = {};
-        if (paymentStatus) updateData.paymentStatus = paymentStatus;
-        if (paymentMethod) updateData.paymentMethod = paymentMethod;
-        if (notes) updateData.notes = notes;
-
-        const updatedSale = await SaleModel.findByIdAndUpdate(
-            saleId,
-            updateData,
-            { new: true }
-        ).populate('client', 'name company email phone');
 
         res.json({
             message: "Estado de pago actualizado",
@@ -428,7 +429,7 @@ async function uploadSaleInvoiceController(req, res) {
  */
 async function updateSalePaymentStatusController(req, res) {
     try {
-        const hasPermission = await uploadProductPermission(req.userId);
+        const hasPermission = hasAdminAccessFromRequest(req) || await uploadProductPermission(req.userId);
         if (!hasPermission) {
             return res.status(403).json({
                 message: "Permiso denegado",
@@ -450,12 +451,9 @@ async function updateSalePaymentStatusController(req, res) {
 
         const sale = await SaleModel.findByIdAndUpdate(
             saleId,
-            { 
-                paymentStatus,
-                updatedAt: new Date()
-            },
+            { paymentStatus },
             { new: true }
-        ).populate('client', 'name company email phone');
+        ).lean();
 
         if (!sale) {
             return res.status(404).json({

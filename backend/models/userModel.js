@@ -251,7 +251,7 @@ userSchema.pre('save', async function(next) {
 // ✅ MIDDLEWARE MEJORADO PARA GENERAR bancardUserId
 userSchema.pre('save', async function(next) {
     // Solo generar bancardUserId si es un nuevo usuario y no tiene uno
-    if (this.isNew && !this.bancardUserId) {
+    if (!this.bancardUserId) {
         try {
             
             
@@ -355,7 +355,10 @@ userSchema.statics.assignBancardUserIds = async function() {
         
         
         const usersWithoutBancardId = await this.find({ 
-            bancardUserId: { $exists: false } 
+            $or: [
+                { bancardUserId: { $exists: false } },
+                { bancardUserId: null }
+            ]
         });
         
         

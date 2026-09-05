@@ -6,8 +6,47 @@ const ExchangeRateModel = require('../../models/exchangeRateModel');
 let PurchaseTypeModel;
 try { PurchaseTypeModel = require('../../models/purchaseTypeModel'); } catch (_) { PurchaseTypeModel = null; }
 const uploadProductPermission = require('../../helpers/permission');
+const { hasAdminAccessFromRequest } = uploadProductPermission;
 const { uploadTempFile } = require('../../helpers/uploadTempFile');
 const { uploadBufferToFirebase } = require('../../services/firebase');
+const { calculateTax } = require('../../helpers/salesUtils');
+
+function parseLocalDate(value) {
+    if (!value) return new Date();
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day, 12, 0, 0);
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+async function resolvePurchaseType(purchaseType) {
+    const raw = String(purchaseType || '').trim();
+    if (!raw) return 'inventario';
+    if (PurchaseTypeModel) {
+        let found = null;
+        if (/^[a-fA-F0-9]{24}$/.test(raw)) {
+            found = await PurchaseTypeModel.findById(raw);
+        }
+        if (!found) {
+            found = await PurchaseTypeModel.findOne({
+                $or: [
+                    { code: raw },
+                    { code: raw.toUpperCase() },
+                    { name: new RegExp(`^${raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+                ]
+            });
+        }
+        if (found) {
+            const code = String(found.code || '').trim();
+            if (code && !/^\d+$/.test(code)) return code.toLowerCase();
+            if (found.name) return String(found.name).trim();
+        }
+    }
+    if (/^\d+$/.test(raw)) return 'inventario';
+    return raw.toLowerCase();
+}
 
 /**
  * Crear una nueva compra
@@ -28,9 +67,13 @@ async function createPurchaseController(req, res) {
             items,
             paymentMethod,
             paymentStatus,
+            paymentTerms,
             dueDate,
             purchaseDate,
-            notes
+            notes,
+            invoiceNumber,
+            currency = 'PYG',
+            exchangeRate
         } = req.body;
 
         // Validaciones básicas
@@ -70,6 +113,9 @@ async function createPurchaseController(req, res) {
             };
         }
 
+        const resolvedPurchaseType = await resolvePurchaseType(purchaseType);
+        const documentRate = Number(exchangeRate) > 0 ? Number(exchangeRate) : 7300;
+
         // Calcular totales con IVA por ítem
         let calculatedSubtotal = 0; // suma de base imponible
         let totalTaxAmount = 0;
@@ -80,33 +126,29 @@ async function createPurchaseController(req, res) {
                 throw new Error("Cada item debe tener cantidad > 0 y precio >= 0");
             }
 
-            // Conversión de moneda a PYG
+            const itemCurrency = item.currency || currency || 'PYG';
+            const itemRate = itemCurrency === 'PYG'
+                ? 1
+                : (Number(item.exchangeRate) > 0 ? Number(item.exchangeRate) : documentRate);
             let unitPriceInPYG = unitPrice;
-            if (item.currency === 'USD') {
-                unitPriceInPYG = unitPrice * Number(item.exchangeRate || 0);
-            } else if (item.currency === 'EUR') {
-                unitPriceInPYG = unitPrice * Number(item.exchangeRate || 0);
+            if (itemCurrency !== 'PYG') {
+                unitPriceInPYG = unitPrice * itemRate;
             }
             if (isNaN(unitPriceInPYG) || unitPriceInPYG <= 0) {
                 throw new Error("Tipo de cambio requerido para moneda extranjera");
             }
 
-            const taxType = item.taxType;
+            const rawTaxType = item.taxType || 'iva_10';
+            const taxType = rawTaxType === 'exempt' ? 'exento' : rawTaxType;
             if (!['iva_10', 'iva_5', 'exento'].includes(taxType)) {
                 throw new Error("Tipo de IVA inválido en item");
             }
 
-            let baseAmount, taxAmount;
-            if (taxType === 'iva_10') {
-                baseAmount = unitPriceInPYG / 1.10;
-                taxAmount = unitPriceInPYG - baseAmount;
-            } else if (taxType === 'iva_5') {
-                baseAmount = unitPriceInPYG / 1.05;
-                taxAmount = unitPriceInPYG - baseAmount;
-            } else {
-                baseAmount = unitPriceInPYG;
-                taxAmount = 0;
-            }
+            const priceIncludesTax = item.priceIncludesTax !== false && item.priceIncludesTax !== 'false';
+            const calcTaxType = taxType === 'exento' ? 'exempt' : taxType;
+            const taxCalculation = calculateTax(unitPriceInPYG, calcTaxType, priceIncludesTax);
+            const baseAmount = taxCalculation.baseAmount;
+            const taxAmount = taxCalculation.taxAmount;
 
             const itemSubtotal = quantity * baseAmount;
             const itemTotalTax = quantity * taxAmount;
@@ -114,16 +156,25 @@ async function createPurchaseController(req, res) {
             calculatedSubtotal += itemSubtotal;
             totalTaxAmount += itemTotalTax;
 
+            const ACCOUNTING_CATEGORIES = ['producto', 'servicio', 'gasto_fijo', 'gasto_variable', 'inversion'];
+            const incomingCategory = String(item.category || 'producto').trim();
+            const category = ACCOUNTING_CATEGORIES.includes(incomingCategory) ? incomingCategory : 'producto';
+            const productCategory = item.productCategory || (!ACCOUNTING_CATEGORIES.includes(incomingCategory) ? incomingCategory : '');
+
             return {
+                product: item.productId || item.product || null,
+                productCode: item.productCode || '',
                 description: item.description,
-                category: item.category,
+                category,
+                productCategory,
                 quantity,
-                unitPrice: unitPrice,
-                currency: item.currency || 'PYG',
-                exchangeRate: item.currency === 'PYG' ? 1 : Number(item.exchangeRate),
+                unitPrice,
+                currency: itemCurrency,
+                exchangeRate: itemCurrency === 'PYG' ? 1 : itemRate,
+                unitPricePYG: unitPriceInPYG,
                 taxType,
-                taxRate: taxType === 'iva_10' ? 10 : taxType === 'iva_5' ? 5 : 0,
-                priceIncludesTax: true,
+                taxRate: taxCalculation.taxRate,
+                priceIncludesTax,
                 baseAmount,
                 taxAmount,
                 subtotal: itemSubtotal
@@ -134,20 +185,26 @@ async function createPurchaseController(req, res) {
 
         // Crear nueva compra (el número se genera automáticamente en el modelo)
         const newPurchase = new PurchaseModel({
-            purchaseType,
+            purchaseType: resolvedPurchaseType,
             branch: branch._id,
             branchSnapshot,
             supplier: supplierId || null,
             supplierSnapshot,
             supplierInfo: !supplierId ? supplierInfo : null,
+            currency,
+            exchangeRate: currency === 'PYG' ? 1 : documentRate,
+            invoiceNumber,
+            paymentTerms: paymentTerms || 'efectivo',
             items: processedItems,
             subtotal: calculatedSubtotal,
             totalTaxAmount,
             totalAmount: calculatedTotal,
+            totalAmountPYG: calculatedTotal,
+            totalAmountUSD: documentRate > 0 ? calculatedTotal / documentRate : 0,
             paymentMethod: paymentMethod || 'efectivo',
             paymentStatus: paymentStatus || 'pendiente',
-            dueDate: dueDate ? new Date(dueDate) : null,
-            purchaseDate: purchaseDate ? new Date(purchaseDate) : new Date(),
+            dueDate: dueDate ? parseLocalDate(dueDate) : null,
+            purchaseDate: purchaseDate ? parseLocalDate(purchaseDate) : new Date(),
             notes,
             createdBy: req.userId
         });
@@ -187,14 +244,14 @@ async function getAllPurchasesController(req, res) {
             startDate,
             endDate,
             supplierId,
-            limit = 50,
+            limit = 200,
             page = 1,
             sortBy = 'createdAt',
             sortOrder = 'desc'
         } = req.query;
 
         // Construir query
-        const query = { isActive: true };
+        const query = { isActive: { $ne: false } };
 
         if (purchaseType) query.purchaseType = purchaseType;
         if (paymentStatus) query.paymentStatus = paymentStatus;
@@ -219,7 +276,8 @@ async function getAllPurchasesController(req, res) {
             .populate('supplier', 'name company email phone')
             .sort(sort)
             .skip(skip)
-            .limit(Number(limit));
+            .limit(Number(limit))
+            .lean();
 
         const total = await PurchaseModel.countDocuments(query);
 
@@ -287,7 +345,7 @@ async function getPurchaseByIdController(req, res) {
  */
 async function updatePurchasePaymentController(req, res) {
     try {
-        const hasPermission = await uploadProductPermission(req.userId);
+        const hasPermission = hasAdminAccessFromRequest(req) || await uploadProductPermission(req.userId);
         if (!hasPermission) {
             throw new Error("Permiso denegado");
         }
@@ -295,21 +353,20 @@ async function updatePurchasePaymentController(req, res) {
         const { purchaseId } = req.params;
         const { paymentStatus, paymentMethod, notes } = req.body;
 
-        const purchase = await PurchaseModel.findById(purchaseId);
-        if (!purchase) {
-            throw new Error("Compra no encontrada");
-        }
-
         const updateData = {};
         if (paymentStatus) updateData.paymentStatus = paymentStatus;
         if (paymentMethod) updateData.paymentMethod = paymentMethod;
-        if (notes) updateData.notes = notes;
+        if (notes !== undefined) updateData.notes = notes;
 
         const updatedPurchase = await PurchaseModel.findByIdAndUpdate(
             purchaseId,
             updateData,
             { new: true }
-        ).populate('supplier', 'name company email phone');
+        ).lean();
+
+        if (!updatedPurchase) {
+            throw new Error("Compra no encontrada");
+        }
 
         res.json({
             message: "Estado de pago actualizado",
@@ -679,30 +736,76 @@ module.exports = {
     getPurchasesFormDataController
 };
 
+const DEFAULT_PURCHASE_TYPES = [
+    { code: 'inventario', name: 'Inventario' },
+    { code: 'servicios', name: 'Servicios' },
+    { code: 'gastos', name: 'Gastos' },
+    { code: 'equipos', name: 'Equipos' },
+    { code: 'gastos_operativos', name: 'Gastos operativos' },
+    { code: 'marketing', name: 'Marketing' },
+    { code: 'otros', name: 'Otros' }
+];
+
+function mapPurchaseType(type) {
+    return {
+        _id: type._id ? String(type._id) : type.code,
+        code: type.code || String(type._id || ''),
+        name: type.name || type.code || 'Tipo'
+    };
+}
+
+function mapBranch(branch) {
+    const address = branch.address;
+    const addressText = typeof address === 'string'
+        ? address
+        : [address?.street, address?.city, address?.state].filter(Boolean).join(', ');
+    return {
+        _id: String(branch._id),
+        name: branch.name,
+        code: branch.code,
+        isMainBranch: Boolean(branch.isMainBranch),
+        address: addressText
+    };
+}
+
 /**
  * Datos para formulario de Nueva Compra (tipos, sucursales, proveedores, TC)
  */
 async function getPurchasesFormDataController(req, res) {
     try {
-        // Form-data es de solo lectura; permitimos acceso a usuarios autenticados
-
-        // Tipos de compra desde BD si existe modelo; fallback a ENV
         let purchaseTypes = [];
-        if (PurchaseTypeModel) {
-            const types = await PurchaseTypeModel.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
-            purchaseTypes = types.map(t => ({ code: t.code, name: t.name }));
-        } else {
-            const purchaseTypesEnv = process.env.PURCHASE_TYPES || 'inventario,equipos,servicios,gastos_operativos,marketing,otros';
-            purchaseTypes = purchaseTypesEnv.split(',').map(s => ({ code: s.trim().toUpperCase(), name: s.trim().replace('_',' ') })).filter(t => t.code);
+        try {
+            if (PurchaseTypeModel) {
+                const types = await PurchaseTypeModel.find({ isActive: { $ne: false } }).sort({ sortOrder: 1, name: 1 });
+                purchaseTypes = types.map(mapPurchaseType);
+            }
+        } catch (err) {
+            purchaseTypes = [];
+        }
+
+        if (!purchaseTypes.length) {
+            purchaseTypes = DEFAULT_PURCHASE_TYPES.map(mapPurchaseType);
         }
 
         let branches = [];
+        try {
+            branches = await BranchModel.getActiveBranches();
+            if (!branches.length) {
+                branches = await BranchModel.find().sort({ name: 1 });
+            }
+        } catch (_) {
+            try {
+                branches = await BranchModel.find({ isActive: { $ne: false } }).sort({ name: 1 });
+            } catch (__) {
+                branches = [];
+            }
+        }
+
         let suppliers = [];
-        let usdRate = null;
-        let eurRate = null;
-        try { branches = await BranchModel.getActiveBranches(); } catch (_) { branches = []; }
-        try { suppliers = await SupplierModel.find({ isActive: true }).select('name company ruc email phone address').limit(500); } catch (_) { suppliers = []; }
-        try { usdRate = await ExchangeRateModel.getCurrentRate('USD'); } catch (_) { usdRate = { toPYG: 0 }; }
+        let usdRate = { toPYG: 7300 };
+        let eurRate = { toPYG: 0 };
+        try { suppliers = await SupplierModel.find({ isActive: { $ne: false } }).select('name company ruc taxId email phone address').limit(500); } catch (_) { suppliers = []; }
+        try { usdRate = await ExchangeRateModel.getCurrentRate('USD'); } catch (_) { usdRate = { toPYG: 7300 }; }
         try { eurRate = await ExchangeRateModel.getCurrentRate('EUR'); } catch (_) { eurRate = { toPYG: 0 }; }
 
         res.json({
@@ -710,16 +813,34 @@ async function getPurchasesFormDataController(req, res) {
             error: false,
             data: {
                 purchaseTypes,
-                branches: branches.map(b => ({ _id: b._id, name: b.name, code: b.code, address: b.getFullAddress ? b.getFullAddress() : '' })),
-                suppliers: (suppliers || []).map(s => ({ _id: s._id, name: s.name, company: s.company, ruc: s.ruc, email: s.email, phone: s.phone })),
+                branches: (branches || []).map(mapBranch),
+                suppliers: (suppliers || []).map((s) => ({
+                    _id: String(s._id),
+                    name: s.name,
+                    company: s.company,
+                    ruc: s.ruc || s.taxId,
+                    taxId: s.taxId || s.ruc,
+                    email: s.email,
+                    phone: s.phone
+                })),
                 exchangeRates: {
-                    USD: usdRate?.toPYG || 0,
+                    USD: usdRate?.toPYG || 7300,
                     EUR: eurRate?.toPYG || 0
                 }
             }
         });
     } catch (err) {
-        res.json({ success: false, error: true, message: err?.message || 'Error obteniendo datos del formulario', data: { purchaseTypes: [], branches: [], suppliers: [], exchangeRates: { USD: 0, EUR: 0 } } });
+        res.json({
+            success: true,
+            error: false,
+            message: err?.message || 'Error obteniendo datos del formulario',
+            data: {
+                purchaseTypes: DEFAULT_PURCHASE_TYPES.map(mapPurchaseType),
+                branches: [],
+                suppliers: [],
+                exchangeRates: { USD: 7300, EUR: 0 }
+            }
+        });
     }
 }
 

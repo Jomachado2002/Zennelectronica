@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import SummaryApi from '../common';
 import { toast } from 'react-toastify';
 import { FaUserEdit, FaUserMinus, FaSearch, FaFilePdf } from 'react-icons/fa';
+import { authGet } from '../helpers/authFetch';
 
 const ClientsList = () => {
   const [clients, setClients] = useState([]);
@@ -14,15 +15,11 @@ const ClientsList = () => {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(SummaryApi.getAllClients.url, {
-        method: SummaryApi.getAllClients.method,
-        credentials: 'include'
-      });
+      const response = await authGet(`${SummaryApi.baseURL}/api/finanzas/clientes?limit=200&sortBy=createdAt&sortOrder=desc`);
       const result = await response.json();
 
       if (result.success) {
-        // Asegurarse que clients contiene un array (corrige el problema)
-        setClients(result.data?.clients || []);
+        setClients(result.data?.clients || (Array.isArray(result.data) ? result.data : []));
       } else {
         toast.error(result.message || "Error al cargar los clientes");
       }

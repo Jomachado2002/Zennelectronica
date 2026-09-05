@@ -70,10 +70,21 @@ const SalesManagement = () => {
     thisMonthAmount: 0
   });
 
-  const fetchSales = async () => {
-    setIsLoading(true);
+  const applySalesUpdate = (updater) => {
+    setSales(prev => {
+      const next = updater(prev);
+      calculateStats(next);
+      return next;
+    });
+  };
+
+  const fetchSales = async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     try {
       const queryParams = new URLSearchParams();
+      queryParams.append('limit', '200');
+      queryParams.append('sortBy', 'createdAt');
+      queryParams.append('sortOrder', 'desc');
       Object.entries(filters).forEach(([key, value]) => {
         if (value && key !== 'amountRange' && key !== 'sortBy' && key !== 'sortOrder' && key !== 'search') {
           queryParams.append(key, value);
@@ -392,6 +403,11 @@ const SalesManagement = () => {
   };
 
   const updatePaymentStatus = async (saleId, newStatus) => {
+    const previousStatus = sales.find(sale => sale._id === saleId)?.paymentStatus;
+    applySalesUpdate(prev => prev.map(sale =>
+      sale._id === saleId ? { ...sale, paymentStatus: newStatus } : sale
+    ));
+
     try {
       const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas/${saleId}/estado-pago`, {
         method: 'PATCH',
@@ -404,13 +420,17 @@ const SalesManagement = () => {
 
       const result = await response.json();
       if (result.success) {
-        toast.success("Estado de pago actualizado correctamente");
-        fetchSales(); // Recargar las ventas
+        toast.success("Estado de pago actualizado");
       } else {
+        applySalesUpdate(prev => prev.map(sale =>
+          sale._id === saleId ? { ...sale, paymentStatus: previousStatus } : sale
+        ));
         toast.error(result.message || "Error al actualizar el estado");
       }
     } catch (error) {
-      // console.error removed for production
+      applySalesUpdate(prev => prev.map(sale =>
+        sale._id === saleId ? { ...sale, paymentStatus: previousStatus } : sale
+      ));
       toast.error("Error de conexión");
     }
   };

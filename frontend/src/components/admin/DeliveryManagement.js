@@ -56,14 +56,11 @@ const DeliveryManagement = ({ transaction, onClose, onUpdate }) => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions/${transaction._id}/delivery-status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData)
-      });
+      const { authPut } = await import('../../helpers/authFetch');
+      const response = await authPut(
+        `${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions/${transaction._id}/delivery-status`,
+        formData
+      );
 
       const result = await response.json();
 

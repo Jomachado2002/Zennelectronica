@@ -50,20 +50,23 @@ const OrderDetailsPage = () => {
     const fetchOrderDetails = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions?shop_process_id=${shop_process_id}`, {
-                method: 'GET',
-                credentials: 'include'
-            });
+            const { authGet } = await import('../helpers/authFetch');
+            const response = await authGet(
+                `${process.env.REACT_APP_BACKEND_URL}/api/bancard/transactions?shop_process_id=${shop_process_id}`
+            );
 
             const result = await response.json();
             if (result.success && result.data.transactions.length > 0) {
-                const transaction = result.data.transactions[0];
-                
-                // Verificar permisos
-                const canView = !user || 
-                               user._id === transaction.created_by ||
+                const transaction = result.data.transactions.find(
+                    tx => String(tx.shop_process_id) === String(shop_process_id)
+                ) || result.data.transactions[0];
+
+                const ownerId = transaction.created_by?._id || transaction.created_by || transaction.user?._id;
+                const canView = !user ||
+                               String(user._id) === String(ownerId) ||
                                user.bancardUserId === transaction.user_bancard_id ||
-                               user.role === 'ADMIN';
+                               (user.email && user.email.toLowerCase() === transaction.customer_info?.email?.toLowerCase()) ||
+                               ['ADMIN', 'ROOT'].includes(user.role);
                 
                 if (!canView) {
                     toast.error('No tienes permisos para ver este pedido');

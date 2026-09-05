@@ -98,7 +98,17 @@ async function userSignInController(req, res) {
             }
         } catch (cartError) {
             console.error('⚠️ Error al transferir carrito (no crítico):', cartError);
-            // No interrumpimos el login si falla la transferencia del carrito
+        }
+
+        try {
+            const {
+                ensureBancardUserId,
+                claimGuestTransactionsForUser
+            } = require('../../helpers/bancardUserHelper');
+            await ensureBancardUserId(user);
+            await claimGuestTransactionsForUser(user);
+        } catch (claimError) {
+            console.warn('⚠️ No se pudieron asociar compras previas:', claimError.message);
         }
 
         // ✅ ACTUALIZAR ÚLTIMO LOGIN
