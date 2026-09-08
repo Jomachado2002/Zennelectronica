@@ -314,12 +314,19 @@ const downloadCreativePng = async (req, res) => {
     const fileName = `${slugFile(['zenn', payload.family, payload.title, format])}.png`;
     res.set({
       'Content-Type': 'image/png',
-      'Content-Disposition': `attachment; filename="${fileName}"`
+      'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      'Cache-Control': 'no-store'
     });
     return res.send(png);
   } catch (error) {
     console.error('[creativos] download one', error);
-    return res.status(500).json({ success: false, message: 'Error descargando creativo' });
+    const chromeMissing = /Could not find Chrome|executablePath|chromium/i.test(String(error && error.message));
+    return res.status(500).json({
+      success: false,
+      message: chromeMissing
+        ? 'Chrome no está disponible en el servidor. Reintentá en unos segundos.'
+        : 'Error descargando creativo'
+    });
   }
 };
 

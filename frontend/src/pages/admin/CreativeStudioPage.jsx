@@ -34,15 +34,39 @@ const PREVIEW_SIZE = {
   square: { w: 1080, h: 1080 }
 };
 
-function saveBlob(blob, fileName) {
+async function saveBlob(blob, fileName) {
+  const type = blob.type || (fileName.endsWith('.zip') ? 'application/zip' : 'image/png');
+  try {
+    const file = new File([blob], fileName, { type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: fileName });
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function errorFromAxios(err, fallback) {
+  const data = err?.response?.data;
+  if (typeof Blob !== 'undefined' && data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text());
+      if (parsed && parsed.message) return parsed.message;
+    } catch {
+      /* no era JSON */
+    }
+  }
+  return data?.message || fallback;
 }
 
 function captionFor(product, title) {
@@ -288,10 +312,10 @@ const CreativeStudioPage = () => {
         timeout: 180000
       });
       const name = `zenn-${(titleDraft || 'producto').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-${previewFormat}.png`;
-      saveBlob(res.data, name);
+      await saveBlob(res.data, name);
     } catch (err) {
       console.error(err);
-      toast.error('No se pudo descargar el PNG');
+      toast.error(await errorFromAxios(err, 'No se pudo descargar el PNG'));
     } finally {
       setDownloadingOne(false);
     }
@@ -319,11 +343,11 @@ const CreativeStudioPage = () => {
         },
         { responseType: 'blob', timeout: 300000 }
       );
-      saveBlob(res.data, `zenn-creativos-${new Date().toISOString().slice(0, 10)}.zip`);
+      await saveBlob(res.data, `zenn-creativos-${new Date().toISOString().slice(0, 10)}.zip`);
       toast.success('ZIP listo para Instagram y Facebook');
     } catch (err) {
       console.error(err);
-      toast.error('Error exportando el ZIP');
+      toast.error(await errorFromAxios(err, 'Error exportando el ZIP'));
     } finally {
       setExporting(false);
     }

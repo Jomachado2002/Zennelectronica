@@ -5,6 +5,14 @@ const fs = require('fs');
 let sharedBrowser = null;
 let browserLaunch = null;
 
+function isServerless() {
+  return Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.AWS_EXECUTION_ENV
+  );
+}
+
 function resolveChromePath() {
   const fromEnv = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
   if (fromEnv) return fromEnv;
@@ -17,16 +25,19 @@ function resolveChromePath() {
   return candidates.find((p) => fs.existsSync(p)) || '';
 }
 
-async function getSharedBrowser() {
-  if (sharedBrowser) {
+function loadPuppeteer(preferCore) {
+  if (preferCore) {
     try {
-      if (sharedBrowser.connected !== false) return sharedBrowser;
+      return require('puppeteer-core');
     } catch {
-      sharedBrowser = null;
+      /* el paquete completo también acepta executablePath */
     }
   }
-  if (browserLaunch) return browserLaunch;
+  return require('puppeteer');
+}
 
+async function launchLocalBrowser() {
+  const puppeteer = loadPuppeteer(false);
   const launchOptions = {
     headless: true,
     args: [
@@ -46,10 +57,38 @@ async function getSharedBrowser() {
   };
   const chromePath = resolveChromePath();
   if (chromePath) launchOptions.executablePath = chromePath;
+  return puppeteer.launch(launchOptions);
+}
 
-  const puppeteer = require('puppeteer');
-  browserLaunch = puppeteer
-    .launch(launchOptions)
+async function launchServerlessBrowser() {
+  const chromium = require('@sparticuz/chromium');
+  const puppeteer = loadPuppeteer(true);
+  chromium.setGraphicsMode = false;
+  const executablePath = await chromium.executablePath();
+  const args = typeof puppeteer.defaultArgs === 'function'
+    ? puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' })
+    : chromium.args;
+  return puppeteer.launch({
+    args,
+    defaultViewport: chromium.defaultViewport || { width: 1080, height: 1350 },
+    executablePath,
+    headless: 'shell',
+    ignoreHTTPSErrors: true
+  });
+}
+
+async function getSharedBrowser() {
+  if (sharedBrowser) {
+    try {
+      if (sharedBrowser.connected !== false) return sharedBrowser;
+    } catch {
+      sharedBrowser = null;
+    }
+  }
+  if (browserLaunch) return browserLaunch;
+
+  const start = isServerless() ? launchServerlessBrowser() : launchLocalBrowser();
+  browserLaunch = start
     .then((browser) => {
       sharedBrowser = browser;
       browserLaunch = null;
@@ -66,4 +105,4 @@ async function getSharedBrowser() {
   return browserLaunch;
 }
 
-module.exports = { getSharedBrowser, resolveChromePath };
+module.exports = { getSharedBrowser, resolveChromePath, isServerless };
