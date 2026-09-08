@@ -1,6 +1,6 @@
 // frontend/src/helpers/productCategory.js
-// Categorías generadas desde MongoDB (2026-08-05T23:09:14.643Z), solo isActive=true
-// Total de categorías: 15
+// Categorías generadas desde MongoDB (2026-09-05T15:25:44.294Z), solo isActive=true
+// Total de categorías: 14
 //
 const productCategory = [
   {
@@ -162,226 +162,246 @@ const productCategory = [
       },
       {
         id: 30,
+        value: "adaptador_receptor_y_bluetooth__33_02_04",
+        label: "Adaptador Receptor y Bluetooth"
+      },
+      {
+        id: 31,
         value: "aire_acondicionado__33_08_01",
         label: "Aire Acondicionado"
       },
       {
-        id: 31,
+        id: 32,
         value: "antena_rastreador_y_accesorios__33_03_06",
         label: "Antena, Rastreador y Accesorios"
       },
       {
-        id: 32,
+        id: 33,
         value: "balanza_digital__33_06_03",
         label: "Balanza Digital"
       },
       {
-        id: 33,
+        id: 34,
         value: "binoculares__33_07_03",
         label: "Binoculares"
       },
       {
-        id: 34,
+        id: 35,
         value: "calculadoras__33_12_01",
         label: "Calculadoras"
       },
       {
-        id: 35,
+        id: 36,
         value: "camaras_de_accion__33_04_05",
         label: "Cámaras de Acción"
       },
       {
-        id: 36,
+        id: 37,
         value: "camaras_de_vigilancia__33_11_01",
         label: "Cámaras de Vigilancia"
       },
       {
-        id: 37,
+        id: 38,
         value: "camaras_fotograficas__33_04_01",
         label: "Cámaras Fotográficas"
       },
       {
-        id: 38,
+        id: 39,
         value: "cargadores_baterias_y_pilas__33_05_01",
         label: "Cargadores, Baterías y Pilas"
       },
       {
-        id: 39,
+        id: 40,
         value: "cctv_de_vigilancia_y_dvr__33_11_04",
         label: "CCTV de Vigilancia y DVR"
       },
       {
-        id: 40,
+        id: 41,
         value: "cerraduras_de_seguridad_y_candado__33_11_06",
         label: "Cerraduras de Seguridad y Candado"
       },
       {
-        id: 41,
+        id: 42,
         value: "consolas__33_10_01",
         label: "Consolas"
       },
       {
-        id: 42,
+        id: 43,
         value: "contador_de_billetes__33_12_02",
         label: "Contador de Billetes"
       },
       {
-        id: 43,
+        id: 44,
         value: "control_para_tv_y_receptores__33_03_05",
         label: "Control para TV y Receptores"
       },
       {
-        id: 44,
+        id: 45,
+        value: "controladores_y_mesas_dj__33_02_06",
+        label: "Controladores y Mesas DJ"
+      },
+      {
+        id: 46,
         value: "controles_y_accesorios__33_10_02",
         label: "Controles y Accesorios"
       },
       {
-        id: 45,
+        id: 47,
         value: "convertidor_digital__33_03_07",
         label: "Convertidor Digital"
       },
       {
-        id: 46,
+        id: 48,
         value: "corta_pelos_afeitadora_y_masajeador__33_06_01",
         label: "Corta Pelos, Afeitadora y Masajeador"
       },
       {
-        id: 47,
+        id: 49,
         value: "cubiertos_de_cocina__33_08_04",
         label: "Cubiertos de Cocina"
       },
       {
-        id: 48,
+        id: 50,
         value: "drones__33_07_01",
         label: "Drones"
       },
       {
-        id: 49,
+        id: 51,
         value: "electrodomesticos__33_08_05",
         label: "Electrodomésticos"
       },
       {
-        id: 50,
+        id: 52,
         value: "equipos_de_sonidos_y_subwoofer__33_09_03",
         label: "Equipos de Sonidos y Subwoofer"
       },
       {
-        id: 51,
+        id: 53,
         value: "estetoscopio_oximetro_y_termometro__33_06_02",
         label: "Estetoscopio, Oxímetro y Termómetro"
       },
       {
-        id: 52,
+        id: 54,
         value: "filmadoras__33_04_03",
         label: "Filmadoras"
       },
       {
-        id: 53,
+        id: 55,
         value: "frascos_termicos__33_08_03",
         label: "Frascos Térmicos"
       },
       {
-        id: 54,
+        id: 56,
         value: "herramientas__33_08_02",
         label: "Herramientas"
       },
       {
-        id: 55,
+        id: 57,
+        value: "home_theater_y_soundbar__33_02_02",
+        label: "Home Theater y Soundbar"
+      },
+      {
+        id: 58,
         value: "iluminacion__33_08_06",
         label: "Iluminación"
       },
       {
-        id: 56,
+        id: 59,
         value: "irrigador_bucal__33_06_04",
         label: "Irrigador Bucal"
       },
       {
-        id: 57,
+        id: 60,
         value: "lector_de_codigo_de_barras_y_biometricos__33_12_04",
         label: "Lector de Código de Barras y Biometricos"
       },
       {
-        id: 58,
+        id: 61,
         value: "patinetas_y_scooter__33_07_02",
         label: "Patinetas y Scooter"
       },
       {
-        id: 59,
+        id: 62,
         value: "pulseras_y_acessorios__33_01_02",
         label: "Pulseras y Acessorios"
       },
       {
-        id: 60,
+        id: 63,
         value: "radio_comunicador__33_11_05",
         label: "Rádio Comunicador"
       },
       {
-        id: 61,
+        id: 64,
+        value: "radio_portatil_y_grabadoras__33_02_07",
+        label: "Radio Portátil y Grabadoras"
+      },
+      {
+        id: 65,
         value: "rastreador_y_gps__33_11_03",
         label: "Rastreador y GPS"
       },
       {
-        id: 62,
+        id: 66,
         value: "receptores__33_03_04",
         label: "Receptores"
       },
       {
-        id: 63,
+        id: 67,
         value: "reloj_inteligente__33_01_01",
         label: "Reloj Inteligente"
       },
       {
-        id: 64,
+        id: 68,
         value: "secadora_y_placha__33_06_05",
         label: "Secadora y Placha"
       },
       {
-        id: 65,
+        id: 69,
         value: "soporte_para_tv__33_03_08",
         label: "Soporte para TV"
       },
       {
-        id: 66,
+        id: 70,
+        value: "speaker_y_micro_system__33_02_03",
+        label: "Speaker y Micro System"
+      },
+      {
+        id: 71,
         value: "streaming_de_multimedias__33_03_02",
         label: "Streaming de Multimedias"
       },
       {
-        id: 67,
+        id: 72,
+        value: "suporte_de_tripode_y_altavoz__33_02_05",
+        label: "Suporte de Trípode y Altavoz"
+      },
+      {
+        id: 73,
         value: "terminal_pos__33_12_05",
         label: "Términal POS"
       },
       {
-        id: 68,
+        id: 74,
         value: "toca_radio_y_toca_cd_dvd__33_09_01",
         label: "Toca Radio y Toca CD/DVD"
       },
       {
-        id: 69,
+        id: 75,
         value: "transformadores__33_05_02",
         label: "Transformadores"
       },
       {
-        id: 70,
+        id: 76,
         value: "tv__33_03_01",
         label: "TV"
       },
       {
-        id: 71,
-        value: "videojuegos__33_10_03",
-        label: "Videojuegos"
-      },
-      {
-        id: 72,
-        value: "audio__33_02",
-        label: "Audio"
-      },
-      {
-        id: 73,
+        id: 77,
         value: "vigila_bebes__33_11_02",
         label: "Vigila Bebés"
       },
       {
-        id: 74,
+        id: 78,
         value: "cofres_y_gavetas_de_dinero__33_12_03",
         label: "Cofres y Gavetas de Dinero"
       }
@@ -393,52 +413,67 @@ const productCategory = [
     label: "Almacenamiento",
     subcategories: [
       {
-        id: 75,
+        id: 79,
         value: "lector_para_tarjetas_de_memoria__21_01_04",
         label: "Lector para Tarjetas de Memoria"
       },
       {
-        id: 76,
+        id: 80,
         value: "memoria_ram_notebook__21_01_02",
         label: "Memoria RAM Notebook"
       },
       {
-        id: 77,
+        id: 81,
         value: "memoria_ram_pc__21_01_01",
         label: "Memoria RAM PC"
       },
       {
-        id: 78,
+        id: 82,
         value: "pendrive__21_04",
         label: "Pendrive"
       },
       {
-        id: 79,
+        id: 83,
+        value: "ssd_2_5__21_03_02",
+        label: "SSD 2.5\""
+      },
+      {
+        id: 84,
+        value: "ssd_externo__21_03_01",
+        label: "SSD Externo"
+      },
+      {
+        id: 85,
+        value: "ssd_m_2_nvme__21_03_03",
+        label: "SSD M.2 NVMe"
+      },
+      {
+        id: 86,
+        value: "ssd_m_2_sata__21_03_04",
+        label: "SSD M.2 SATA"
+      },
+      {
+        id: 87,
         value: "accesorios_para_disco_duro_ssd__21_05",
         label: "Accesorios para Disco Duro/SSD"
       },
       {
-        id: 80,
+        id: 88,
         value: "disco_duro_externo__21_02_02",
         label: "Disco Duro Externo"
       },
       {
-        id: 81,
+        id: 89,
         value: "disco_duro_interno__21_02_01",
         label: "Disco Duro Interno"
       },
       {
-        id: 82,
+        id: 90,
         value: "disco_duro_pull__21_02_03",
         label: "Disco Duro Pull"
       },
       {
-        id: 83,
-        value: "ssd__21_03",
-        label: "SSD"
-      },
-      {
-        id: 84,
+        id: 91,
         value: "tarjetas_sd_micro_sd_y_stick__21_01_03",
         label: "Tarjetas SD, Micro SD y Stick"
       }
@@ -450,64 +485,64 @@ const productCategory = [
     label: "Apple",
     subcategories: [
       {
-        id: 85,
+        id: 92,
         value: "accesorios__19_14",
         label: "Accesorios"
       },
       {
-        id: 86,
+        id: 93,
         value: "imac__19_01",
         label: "iMac"
       },
       {
-        id: 87,
+        id: 94,
         value: "ipad__19_05",
         label: "iPad"
       },
       {
-        id: 88,
+        id: 95,
         value: "iphone__19_04",
         label: "iPhone"
       },
       {
-        id: 89,
+        id: 96,
         value: "macbook__19_02",
         label: "Macbook"
       },
       {
-        id: 90,
+        id: 97,
         value: "mini_pc__19_03",
         label: "Mini Pc"
       },
       {
-        id: 91,
+        id: 98,
         value: "monitor__19_07",
         label: "Monitor"
       },
       {
-        id: 92,
+        id: 99,
         value: "rastreador_y_gps__19_13",
         label: "Rastreador y GPS"
       },
       {
-        id: 93,
-        value: "smartwatch__19_06",
-        label: "Smartwatch"
-      },
-      {
-        id: 94,
+        id: 100,
         value: "teclado__19_09",
         label: "Teclado"
       },
       {
-        id: 95,
+        id: 101,
         value: "airpods__19_10",
         label: "AirPods"
       },
       {
-        id: 96,
+        id: 102,
         value: "mouse_y_trackpad__19_08",
         label: "Mouse y Trackpad"
+      },
+      {
+        id: 103,
+        value: "apple_watch__19_06",
+        label: "Apple Watch"
       }
     ]
   },
@@ -517,22 +552,22 @@ const productCategory = [
     label: "Celulares y Tablets",
     subcategories: [
       {
-        id: 97,
+        id: 104,
         value: "accesorios_para_celulares__32_04",
         label: "Accesorios para Celulares"
       },
       {
-        id: 98,
+        id: 105,
         value: "tablets__32_02",
         label: "Tablets"
       },
       {
-        id: 99,
+        id: 106,
         value: "telefonos__32_03",
         label: "Teléfonos"
       },
       {
-        id: 100,
+        id: 107,
         value: "smartphones_y_celulares__32_01",
         label: "Smartphones y Celulares"
       }
@@ -544,27 +579,27 @@ const productCategory = [
     label: "Cooler",
     subcategories: [
       {
-        id: 101,
+        id: 108,
         value: "accesorios_para_cooler__25_06",
         label: "Accesorios para Cooler"
       },
       {
-        id: 102,
+        id: 109,
         value: "cooler_para_cpu__25_02",
         label: "Cooler para CPU"
       },
       {
-        id: 103,
+        id: 110,
         value: "cooler_para_gabinete__25_04",
         label: "Cooler para Gabinete"
       },
       {
-        id: 104,
+        id: 111,
         value: "cooler_para_notebook__25_05",
         label: "Cooler para Notebook"
       },
       {
-        id: 105,
+        id: 112,
         value: "water_cooler__25_01",
         label: "Water Cooler"
       }
@@ -576,7 +611,7 @@ const productCategory = [
     label: "Gabinetes",
     subcategories: [
       {
-        id: 106,
+        id: 113,
         value: "gabinetes__28",
         label: "Gabinetes"
       }
@@ -588,44 +623,44 @@ const productCategory = [
     label: "Impresoras y Suministros",
     subcategories: [
       {
-        id: 107,
+        id: 114,
         value: "cartuchos_toners_y_cintas__29_02",
         label: "Cartuchos, Toners y Cintas"
       },
       {
-        id: 108,
+        id: 115,
         value: "escaner__29_03",
         label: "Escáner"
       },
       {
-        id: 109,
-        value: "impresora_3d__29_01_01",
-        label: "Impresora 3D"
+        id: 116,
+        value: "impresoras_3d__29_01_01",
+        label: "Impresoras 3D"
       },
       {
-        id: 110,
-        value: "impresora_corte__29_01_02",
-        label: "Impresora Corte"
+        id: 117,
+        value: "impresoras_de_corte__29_01_02",
+        label: "Impresoras de Corte"
       },
       {
-        id: 111,
-        value: "impresora_laser__29_01_04",
-        label: "Impresora Laser"
+        id: 118,
+        value: "impresoras_de_inyeccion_de_tinta__29_01_03",
+        label: "Impresoras de Inyección de Tinta"
       },
       {
-        id: 112,
-        value: "impresora_matricial__29_01_05",
-        label: "Impresora Matricial"
+        id: 119,
+        value: "impresoras_laser__29_01_04",
+        label: "Impresoras Laser"
       },
       {
-        id: 113,
-        value: "impresora_termica__29_01_06",
-        label: "Impresora Térmica"
+        id: 120,
+        value: "impresoras_matriciales__29_01_05",
+        label: "Impresoras Matriciales"
       },
       {
-        id: 114,
-        value: "impresora_inyeccion_de_tinta__29_01_03",
-        label: "Impresora Inyección de Tinta"
+        id: 121,
+        value: "impresoras_termicas__29_01_06",
+        label: "Impresoras Térmicas"
       }
     ]
   },
@@ -635,7 +670,7 @@ const productCategory = [
     label: "Monitores",
     subcategories: [
       {
-        id: 115,
+        id: 122,
         value: "monitores__27",
         label: "Monitores"
       }
@@ -647,27 +682,27 @@ const productCategory = [
     label: "Notebook y Computadoras",
     subcategories: [
       {
-        id: 116,
+        id: 123,
         value: "computadoras__20_02",
         label: "Computadoras"
       },
       {
-        id: 117,
+        id: 124,
         value: "fuente_cargador_y_baterias_para_notebook__20_07",
         label: "Fuente, Cargador y Baterías para Notebook"
       },
       {
-        id: 118,
+        id: 125,
         value: "mini_pc__20_05",
         label: "Mini PC"
       },
       {
-        id: 119,
+        id: 126,
         value: "notebook__20_03",
         label: "Notebook"
       },
       {
-        id: 120,
+        id: 127,
         value: "pc_montado__20_06",
         label: "PC Montado"
       }
@@ -675,96 +710,86 @@ const productCategory = [
   },
   {
     id: 11,
-    value: "procesadores",
-    label: "Procesadores",
-    subcategories: [
-      {
-        id: 121,
-        value: "cpu_amd__24_02",
-        label: "CPU AMD"
-      },
-      {
-        id: 122,
-        value: "cpu_intel__24_01",
-        label: "CPU Intel"
-      },
-      {
-        id: 123,
-        value: "cpu_oem__24_03",
-        label: "CPU OEM"
-      }
-    ]
-  },
-  {
-    id: 12,
     value: "red_y_internet",
     label: "Red y Internet",
     subcategories: [
       {
-        id: 124,
+        id: 128,
         value: "adaptadores_wifi_y_bluetooth__31_02",
         label: "Adaptadores Wifi y Bluetooth"
       },
       {
-        id: 125,
+        id: 129,
         value: "alicate_y_decapitador__31_05",
         label: "Alicate y Decapitador"
       },
       {
-        id: 126,
+        id: 130,
         value: "cables_de_red_y_conectores__31_03",
         label: "Cables de Red y Conectores"
       },
       {
-        id: 127,
+        id: 131,
         value: "hub__31_04",
         label: "Hub"
       },
       {
-        id: 128,
+        id: 132,
         value: "router_y_repetidor__31_01",
         label: "Router y Repetidor"
       }
     ]
   },
   {
-    id: 13,
+    id: 12,
     value: "tarjetas_graficas",
     label: "Tarjetas Gráficas",
     subcategories: [
       {
-        id: 129,
-        value: "vga_intel__23_03",
-        label: "VGA INTEL"
+        id: 133,
+        value: "tarjetas_graficas_amd__23_02",
+        label: "Tarjetas Gráficas AMD"
       },
       {
-        id: 130,
-        value: "vga_nvidia__23_01",
-        label: "VGA NVIDIA"
+        id: 134,
+        value: "tarjetas_graficas_intel__23_03",
+        label: "Tarjetas Gráficas Intel"
       },
       {
-        id: 131,
-        value: "vga_radeon__23_02",
-        label: "VGA RADEON"
+        id: 135,
+        value: "tarjetas_graficas_nvidia__23_01",
+        label: "Tarjetas Gráficas NVIDIA"
       }
     ]
   },
   {
-    id: 14,
+    id: 13,
     value: "fuentes_de_alimentacion",
     label: "Fuentes de Alimentación",
     subcategories: [
       {
-        id: 132,
+        id: 136,
         value: "fuentes_de_alimentacion__26",
         label: "Fuentes de Alimentación"
       }
     ]
   },
   {
-    id: 15,
+    id: 14,
     value: "placas_madre",
-    label: "Placas Madre"
+    label: "Placas Madre",
+    subcategories: [
+      {
+        id: 137,
+        value: "placas_madre_amd__22_02",
+        label: "Placas Madre AMD"
+      },
+      {
+        id: 138,
+        value: "placas_madre_intel__22_01",
+        label: "Placas Madre Intel"
+      }
+    ]
   }
 ];
 

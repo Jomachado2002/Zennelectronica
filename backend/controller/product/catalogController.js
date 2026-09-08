@@ -3,20 +3,9 @@ const os = require('os');
 const path = require('path');
 const Product = require('../../models/productModel');
 const Category = require('../../models/categoryModel');
+const { getSharedBrowser } = require('../../helpers/sharedChrome');
 
 const PDF_LOCK = path.join(os.tmpdir(), 'zenn-catalog-pdf.lock');
-
-function resolveChromePath() {
-  const fromEnv = String(process.env.PUPPETEER_EXECUTABLE_PATH || '').trim();
-  if (fromEnv) return fromEnv;
-  const candidates = [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium-browser',
-  ];
-  return candidates.find((p) => fs.existsSync(p)) || '';
-}
 
 // Obtener categorías para el catálogo
 const getCatalogCategories = async (req, res) => {
@@ -157,58 +146,6 @@ const getCatalogProducts = async (req, res) => {
 
 const WORKER_API_URL = (process.env.WORKER_API_URL || '').replace(/\/$/, '');
 const WORKER_SECRET = process.env.WORKER_SECRET || '';
-
-let sharedBrowser = null;
-let browserLaunch = null;
-
-async function getSharedBrowser() {
-  if (sharedBrowser) {
-    try {
-      if (sharedBrowser.connected !== false) return sharedBrowser;
-    } catch {
-      sharedBrowser = null;
-    }
-  }
-  if (browserLaunch) return browserLaunch;
-
-  const launchOptions = {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-software-rasterizer',
-      '--disable-extensions',
-      '--no-first-run',
-      '--disable-background-networking',
-      '--disable-sync',
-      '--disable-translate',
-      '--hide-scrollbars',
-      '--mute-audio'
-    ]
-  };
-  const chromePath = resolveChromePath();
-  if (chromePath) launchOptions.executablePath = chromePath;
-
-  const puppeteer = require('puppeteer');
-  browserLaunch = puppeteer
-    .launch(launchOptions)
-    .then((browser) => {
-      sharedBrowser = browser;
-      browserLaunch = null;
-      browser.on('disconnected', () => {
-        sharedBrowser = null;
-      });
-      return browser;
-    })
-    .catch((err) => {
-      browserLaunch = null;
-      throw err;
-    });
-
-  return browserLaunch;
-}
 
 async function generateCatalogPdfBuffer({
   category,

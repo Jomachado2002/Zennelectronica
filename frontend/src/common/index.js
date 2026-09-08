@@ -563,6 +563,24 @@
                 url: `${backendDomain}/api/generate-catalog-pdf`,
                 method: 'post'
             }
+        },
+
+        creativos: {
+            categories: {
+                url: `${backendDomain}/api/creativos/categorias`,
+                method: 'get'
+            },
+            products: {
+                url: `${backendDomain}/api/creativos/productos`,
+                method: 'get'
+            },
+            html: (id) => `${backendDomain}/api/creativos/html/${id}`,
+            png: (id) => `${backendDomain}/api/creativos/png/${id}`,
+            download: (id) => `${backendDomain}/api/creativos/descargar/${id}`,
+            exportZip: {
+                url: `${backendDomain}/api/creativos/exportar`,
+                method: 'post'
+            }
         }
     };
 

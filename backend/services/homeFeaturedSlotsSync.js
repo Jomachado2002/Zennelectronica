@@ -5,6 +5,62 @@ const path = require('path');
 const Category = require('../models/categoryModel');
 const { HOME_SLOT_DEFS, buildHomeSlotNavRoutes } = require('../config/homeFeaturedSlots');
 
+function visaoIdSuffix(value) {
+    const m = String(value || '').match(/(__[\d_]+)$/);
+    return m ? m[1] : '';
+}
+
+/**
+ * Visão renombra `value` (mb_intel → placas_madre_intel) y deja el sufijo __22_01.
+ * Reescribe pares inactivos a las subcategorías activas actuales.
+ */
+function remapPairsToActiveSubcategories(pairs, categoryDocs) {
+    const byValue = new Map((categoryDocs || []).map((c) => [c.value, c]));
+    const resolved = [];
+    const seen = new Set();
+
+    const push = (category, subcategory) => {
+        if (!category || !subcategory) return;
+        const key = `${category}::${subcategory}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        resolved.push({ category, subcategory });
+    };
+
+    for (const pair of pairs || []) {
+        const category = pair.category;
+        const subcategory = pair.subcategory;
+        const cat = byValue.get(category);
+        const active = (cat?.subcategories || []).filter((s) => s && s.isActive !== false && s.value);
+
+        if (!cat || !active.length) {
+            push(category, subcategory);
+            continue;
+        }
+
+        if (active.some((s) => s.value === subcategory)) {
+            push(category, subcategory);
+            continue;
+        }
+
+        const suffix = visaoIdSuffix(subcategory);
+        const matches = suffix
+            ? active.filter((s) => {
+                  const ss = visaoIdSuffix(s.value);
+                  return ss === suffix || ss.startsWith(`${suffix}_`);
+              })
+            : [];
+
+        if (matches.length) {
+            matches.forEach((s) => push(category, s.value));
+        } else {
+            push(category, subcategory);
+        }
+    }
+
+    return resolved.length ? resolved : pairs || [];
+}
+
 async function validateHomeFeaturedSlotsAgainstMongo() {
     const errors = [];
     const categories = await Category.find({ isActive: true }).sort({ order: 1, createdAt: 1 }).lean();
@@ -48,5 +104,7 @@ function generateHomeSlotNavRoutesFrontendFile() {
 
 module.exports = {
     validateHomeFeaturedSlotsAgainstMongo,
-    generateHomeSlotNavRoutesFrontendFile
+    generateHomeSlotNavRoutesFrontendFile,
+    remapPairsToActiveSubcategories,
+    visaoIdSuffix
 };

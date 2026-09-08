@@ -87,6 +87,7 @@ const ExportProductsPage = lazy(() => import('../pages/admin/ExportProductsPage'
 
 // Importar página de catálogo PDF
 const AdminCatalogoPDF = lazy(() => import('../pages/admin/AdminCatalogoPDF'));
+const CreativeStudioPage = lazy(() => import('../pages/admin/CreativeStudioPage'));
 const AdminWorkerPage = lazy(() => import('../pages/admin/AdminWorkerPage'));
 
 // Importar página de editor de imágenes
@@ -371,7 +372,10 @@ const router = createBrowserRouter([
                         path: "exportar-productos",
                         element: <Lazy><ExportProductsPage /></Lazy>
                     },
-                    
+                    {
+                        path: "creativos",
+                        element: <Lazy><CreativeStudioPage /></Lazy>
+                    },
                     // Catálogo PDF
                     {
                         path: "catalogo-pdf",

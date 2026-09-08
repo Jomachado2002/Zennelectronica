@@ -1879,6 +1879,14 @@ const {
     postWorkerRunController,
     postWorkerCancelController,
 } = require('../controller/product/workerAdminController');
+const {
+    listCreativeProducts,
+    getCreativeCategories,
+    previewCreativeHtml,
+    previewCreativePng,
+    downloadCreativePng,
+    exportCreativeZip
+} = require('../controller/product/creativeStudioController');
 
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
@@ -1954,6 +1962,17 @@ router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 router.get('/catalog-pdf-job/:jobId', authToken, getCatalogPdfJobStatus);
 router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
 router.get('/jobs-health', authToken, pingJobsHealth);
+
+router.get('/creativos/categorias', authToken, getCreativeCategories);
+router.get('/creativos/productos', authToken, listCreativeProducts);
+router.get('/creativos/html/:id', authToken, previewCreativeHtml);
+router.get('/creativos/png/:id', authToken, previewCreativePng);
+router.get('/creativos/descargar/:id', authToken, downloadCreativePng);
+router.post('/creativos/exportar', authToken, (req, res, next) => {
+    req.setTimeout(5 * 60 * 1000);
+    res.setTimeout(5 * 60 * 1000);
+    return exportCreativeZip(req, res, next);
+});
 
 router.get('/worker/settings', adminAuth, getWorkerSettingsController);
 router.put('/worker/settings', adminAuth, putWorkerSettingsController);

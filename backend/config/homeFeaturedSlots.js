@@ -29,8 +29,8 @@ const HOME_SLOT_DEFS = [
         key: 'placas_madre',
         limit: 20,
         pairs: [
-            { category: 'placas_madre', subcategory: 'mb_intel__22_01' },
-            { category: 'placas_madre', subcategory: 'mb_amd__22_02' }
+            { category: 'placas_madre', subcategory: 'placas_madre_intel__22_01' },
+            { category: 'placas_madre', subcategory: 'placas_madre_amd__22_02' }
         ]
     },
     {
@@ -55,7 +55,10 @@ const HOME_SLOT_DEFS = [
         key: 'discos',
         limit: 20,
         pairs: [
-            { category: 'almacenamiento', subcategory: 'ssd__21_03' },
+            { category: 'almacenamiento', subcategory: 'ssd_m_2_nvme__21_03_03' },
+            { category: 'almacenamiento', subcategory: 'ssd_2_5__21_03_02' },
+            { category: 'almacenamiento', subcategory: 'ssd_externo__21_03_01' },
+            { category: 'almacenamiento', subcategory: 'ssd_m_2_sata__21_03_04' },
             { category: 'almacenamiento', subcategory: 'disco_duro_interno__21_02_01' },
             { category: 'almacenamiento', subcategory: 'disco_duro_externo__21_02_02' },
             { category: 'almacenamiento', subcategory: 'pendrive__21_04' }
@@ -65,9 +68,9 @@ const HOME_SLOT_DEFS = [
         key: 'tarjetas_graficas',
         limit: 20,
         pairs: [
-            { category: 'tarjetas_graficas', subcategory: 'vga_nvidia__23_01' },
-            { category: 'tarjetas_graficas', subcategory: 'vga_radeon__23_02' },
-            { category: 'tarjetas_graficas', subcategory: 'vga_intel__23_03' }
+            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas_nvidia__23_01' },
+            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas_amd__23_02' },
+            { category: 'tarjetas_graficas', subcategory: 'tarjetas_graficas_intel__23_03' }
         ]
     },
     {

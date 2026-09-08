@@ -16,7 +16,7 @@ export const HOME_SLOT_ROUTES = {
   },
   placas_madre: {
     category: 'placas_madre',
-    subcategory: 'mb_intel__22_01'
+    subcategory: 'placas_madre_intel__22_01'
   },
   mouses: {
     category: 'perifericos',
@@ -32,11 +32,11 @@ export const HOME_SLOT_ROUTES = {
   },
   discos: {
     category: 'almacenamiento',
-    subcategory: 'ssd__21_03'
+    subcategory: 'ssd_m_2_nvme__21_03_03'
   },
   tarjetas_graficas: {
     category: 'tarjetas_graficas',
-    subcategory: 'vga_nvidia__23_01'
+    subcategory: 'tarjetas_graficas_nvidia__23_01'
   },
   apple: {
     category: 'apple',

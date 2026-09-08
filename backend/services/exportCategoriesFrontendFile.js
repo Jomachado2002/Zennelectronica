@@ -111,6 +111,18 @@ async function writeProductCategoryJsFromMongo() {
     }
 
     try {
+        const { persistRemappedHomeSectionPairs } = require('./homeSectionService');
+        const persisted = await persistRemappedHomeSectionPairs();
+        homeFeaturedReport.homeSectionsRemapped = persisted.updated;
+        if (persisted.updated) {
+            console.warn(`[HEADER] Vitrinas home re-alineadas (${persisted.updated} secciones)`);
+        }
+    } catch (e) {
+        homeFeaturedReport.homeSectionsRemapError = e.message || String(e);
+        console.warn('[HEADER] Re-alineación vitrinas home:', homeFeaturedReport.homeSectionsRemapError);
+    }
+
+    try {
         const validated = await validateHomeFeaturedSlotsAgainstMongo();
         homeFeaturedReport = { ...homeFeaturedReport, homeSlotsValid: validated.ok, homeSlotsErrors: validated.errors };
         if (!validated.ok) {
