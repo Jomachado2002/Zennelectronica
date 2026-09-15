@@ -9,7 +9,6 @@ import scrollTop from '../helpers/scrollTop';
 import { trackAddToCart } from './MetaPixelTracker';
 import { categoriaProductoHref } from '../config/homeSlotRoutes';
 import { productPath } from '../helpers/productPath';
-import { isStorageWithoutWarranty } from '../helpers/storageWarranty';
 
 const VerticalCardProductOptimized = ({ 
   category, 
@@ -323,11 +322,6 @@ const VerticalCardProductOptimized = ({
                         <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
                           {product?.subcategory || product?.brandName}
                         </div>
-                        {isStorageWithoutWarranty(product) && (
-                          <div className='text-[10px] font-semibold text-red-700 uppercase tracking-wide'>
-                            Sin garantía
-                          </div>
-                        )}
                       </div>
                       
                       <div className='mt-auto space-y-2'>

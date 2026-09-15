@@ -12,7 +12,6 @@ import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
 import VerticalCardGrid from '../components/VerticalCardGrid';
 import { siteUrl, SITE_ORIGIN } from '../config/siteUrl';
-import { categoryListingHasNoWarrantyNotice } from '../helpers/storageWarranty';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -434,10 +433,6 @@ const CategoryProductContent = () => {
   } = usePreloadedCategories();
   
   const categories = getCategories();
-  const showNoWarrantyNotice = categoryListingHasNoWarrantyNotice(
-    filterCategoryList,
-    filterSubcategoryList
-  );
 
   const pageHeading = onlyDiscounted
     ? (filterCategoryList[0] || filterSubcategoryList[0]
@@ -453,9 +448,7 @@ const CategoryProductContent = () => {
 
   const seoDescription = onlyDiscounted
     ? 'Productos en promoción en Zenn Paraguay. Filtrá por categoría y subcategoría. Descuentos reales y envío a todo el país.'
-    : showNoWarrantyNotice
-      ? `Comprá ${pageHeading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real y envío a Asunción y todo el país. Discos duros HD, SSD y almacenamiento no cuentan con garantía.`
-      : `Comprá ${pageHeading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`;
+    : `Comprá ${pageHeading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`;
 
   const canonicalPath = (() => {
     if (onlyDiscounted) {
@@ -576,17 +569,6 @@ const CategoryProductContent = () => {
             </button>
           </div>
         </div>
-
-        {showNoWarrantyNotice && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-            <p className="font-semibold">Estos productos no cuentan con garantía.</p>
-            <p className="mt-1">
-              Los discos duros HD, SSD, pendrives, tarjetas de memoria y accesorios de
-              almacenamiento se venden sin garantía. Sí aplica el plazo de 7 días para devolución
-              si el producto está sellado y en las mismas condiciones de entrega.
-            </p>
-          </div>
-        )}
 
         {/* Contenido principal grid */}
         <div className="flex flex-col lg:flex-row lg:space-x-6">

@@ -24,7 +24,7 @@ import { SITE_ORIGIN, siteUrl } from '../config/siteUrl';
 
 const PAGE_PATH = '/devoluciones';
 const PAGE_URL = siteUrl(PAGE_PATH);
-const LAST_UPDATED = '15 de septiembre de 2026';
+const LAST_UPDATED = '18 de agosto de 2026';
 
 const WARRANTY_ROWS = [
   { product: 'Adsl / Wireless / Print Server', brand: 'Todos', period: '3 meses de asistencia técnica' },
@@ -42,12 +42,16 @@ const WARRANTY_ROWS = [
   { product: 'Fuente de gabinete', brand: 'Adata', period: '1 año' },
   { product: 'Fuente universal de notebook', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Grabador CD / DVD / Blu-Ray', brand: 'Todos', period: '1 mes de asistencia técnica' },
-  { product: 'Disco duro HD (interno, externo, notebook, 3,5", pull)', brand: 'Todas', period: 'Sin garantía' },
+  { product: 'HD 3,5"', brand: 'Otros', period: '6 meses' },
+  { product: 'HD 3,5"', brand: 'Seagate / WD', period: '9 meses' },
+  { product: 'HD externo', brand: 'Adata', period: '1 año' },
+  { product: 'HD externo', brand: 'Todos', period: '3 meses' },
+  { product: 'HD notebook', brand: 'Todos', period: '6 meses' },
   { product: 'HUB', brand: 'Todos', period: '3 meses de asistencia técnica' },
   { product: 'Lavadora de alta presión', brand: 'Todas', period: '6 meses de asistencia técnica' },
   { product: 'Lector biométrico', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Lector de código de barras', brand: 'Todos', period: '1 mes de asistencia técnica' },
-  { product: 'Lector de tarjeta de memoria', brand: 'Todos', period: 'Sin garantía' },
+  { product: 'Lector de tarjeta de memoria', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Memoria RAM PC / Notebook', brand: 'Adata / Macrovip / Kingston', period: '1 año' },
   { product: 'Memoria RAM PC / Notebook', brand: 'Todos', period: '6 meses' },
   { product: 'Mesa digital', brand: 'Todos', period: '1 mes de asistencia técnica' },
@@ -71,14 +75,12 @@ const WARRANTY_ROWS = [
   { product: 'Proyector', brand: 'Otros', period: '1 mes de asistencia técnica (lámpara sin garantía)' },
   { product: 'Receptor', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Servidor', brand: 'Todos', period: '3 meses de asistencia técnica' },
-  { product: 'Pendrive', brand: 'Todas', period: 'Sin garantía' },
-  { product: 'SSD (2.5", externo, M.2 NVMe, M.2 SATA)', brand: 'Todas', period: 'Sin garantía' },
-  { product: 'Tarjetas SD, Micro SD y Stick', brand: 'Todas', period: 'Sin garantía' },
-  { product: 'Accesorios para disco duro / SSD', brand: 'Todas', period: 'Sin garantía' },
+  { product: 'SSD', brand: 'Adata / Macrovip / Kingston', period: '1 año' },
+  { product: 'SSD', brand: 'Otros', period: '3 meses' },
   { product: 'Tablet', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Teclado', brand: 'Todos', period: '2 meses de asistencia técnica' },
   { product: 'Teclado', brand: 'Adata', period: '1 año' },
-  { product: 'Todos los productos (excepto HD, SSD y almacenamiento)', brand: 'Corsair', period: '1 año' },
+  { product: 'Todos los productos', brand: 'Corsair', period: '1 año' },
   { product: 'Water cooler', brand: 'Todos', period: '1 mes de asistencia técnica' },
   { product: 'Webcam', brand: 'Todos', period: '1 mes de asistencia técnica' }
 ];
@@ -97,7 +99,7 @@ const NAV_ITEMS = [
 const FAQ_ITEMS = [
   {
     q: '¿Cuántos días tengo para devolver un producto?',
-    a: 'Tenés 7 días corridos desde la fecha de compra (fecha de la factura). Pasado ese plazo no se aceptan devoluciones por arrepentimiento o cambio de opinión; sí puede corresponder garantía según la tabla de plazos de cada producto, salvo discos duros HD, SSD y demás productos de almacenamiento, que no tienen garantía.'
+    a: 'Tenés 7 días corridos desde la fecha de compra (fecha de la factura). Pasado ese plazo no se aceptan devoluciones por arrepentimiento o cambio de opinión; sí puede corresponder garantía según la tabla de plazos de cada producto.'
   },
   {
     q: '¿Me devuelven el dinero?',
@@ -130,10 +132,6 @@ const FAQ_ITEMS = [
   {
     q: '¿La garantía cubre software o daños después de la entrega?',
     a: 'No. En ningún caso podrán reclamarse defectos por fallas producidas por el software, ni por el hardware, posteriormente a ser recibidos. La garantía cubre únicamente defectos de fábrica.'
-  },
-  {
-    q: '¿Los discos duros HD, SSD u otros productos de almacenamiento tienen garantía?',
-    a: 'No. Los discos duros HD (internos, externos, notebook y pull), los SSD (2.5", externos, M.2 NVMe y M.2 SATA), pendrives, tarjetas de memoria y accesorios de almacenamiento no cuentan con garantía. Sí aplica el plazo de 7 días para devolución si el producto está sellado, completo y en las mismas condiciones en las que se entregó.'
   }
 ];
 
@@ -148,7 +146,7 @@ const jsonLd = {
       description:
         'Política de devoluciones de Zenn Paraguay: 7 días para devolver, crédito en tienda, sin reembolso en efectivo. Consultá también la tabla de garantías por producto y marca.',
       inLanguage: 'es-PY',
-      dateModified: '2026-09-15',
+      dateModified: '2026-08-18',
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
       about: { '@id': `${SITE_ORIGIN}/#organization` },
       mainEntity: { '@id': `${PAGE_URL}#return-policy` }
@@ -352,8 +350,7 @@ const Devoluciones = () => {
                   'Los productos sellados de fábrica no se devolverán si están abiertos.',
                   'No aceptamos devolución de accesorios.',
                   'No hacemos devolución de dinero. El valor de la devolución debe utilizarse para la compra de otro producto en Zenn (crédito interno).',
-                  'El producto se devolverá con el coste del día.',
-                  'Los discos duros HD, los SSD y los productos de almacenamiento (pendrives, tarjetas de memoria y accesorios de disco) no cuentan con garantía.'
+                  'El producto se devolverá con el coste del día.'
                 ].map((line) => (
                   <li key={line} className="flex gap-3">
                     <CheckCircle2 className="w-5 h-5 text-[#00B5D8] shrink-0 mt-0.5" />
@@ -361,16 +358,6 @@ const Devoluciones = () => {
                   </li>
                 ))}
               </ul>
-
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-                <p className="font-semibold mb-1">Importante: almacenamiento sin garantía</p>
-                <p>
-                  Los discos duros HD, los SSD y todo el almacenamiento (pendrives, tarjetas de
-                  memoria y accesorios de disco) <strong>no contienen garantía</strong>. El plazo de
-                  7 días para devolución sí aplica si el producto está sellado y en las mismas
-                  condiciones en las que se entregó.
-                </p>
-              </div>
 
               <div className="grid sm:grid-cols-2 gap-4 pt-2">
                 <div className="rounded-xl bg-cyan-50 border border-cyan-100 p-4">
@@ -499,16 +486,6 @@ const Devoluciones = () => {
               Los plazos corren desde la fecha de emisión de la factura. Cuando una marca tiene un
               plazo específico, ese plazo prevalece sobre “Todos / Otras”.
             </p>
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-              <p className="font-semibold mb-1">Almacenamiento sin garantía</p>
-              <p>
-                Los discos duros HD (internos, externos, notebook y pull), los SSD (2.5", externos,
-                M.2 NVMe y M.2 SATA), pendrives, tarjetas SD / Micro SD y accesorios de
-                almacenamiento <strong>no cuentan con garantía</strong>. Sí aplica el plazo de 7
-                días para devolución si el producto está sellado, completo y en las mismas
-                condiciones en las que se entregó.
-              </p>
-            </div>
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -533,40 +510,23 @@ const Devoluciones = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRows.map((row, i) => {
-                    const noWarranty = row.period === 'Sin garantía';
-                    return (
-                    <tr
-                      key={`${row.product}-${row.brand}`}
-                      className={noWarranty ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                    >
+                  {filteredRows.map((row, i) => (
+                    <tr key={`${row.product}-${row.brand}`} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-4 py-3 font-medium text-gray-900">{row.product}</td>
                       <td className="px-4 py-3 text-gray-700">{row.brand}</td>
-                      <td className={`px-4 py-3 ${noWarranty ? 'font-semibold text-red-700' : 'text-gray-700'}`}>
-                        {row.period}
-                      </td>
+                      <td className="px-4 py-3 text-gray-700">{row.period}</td>
                     </tr>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
 
             <div className="md:hidden space-y-3">
               {filteredRows.map((row) => (
-                <article
-                  key={`${row.product}-${row.brand}`}
-                  className={`rounded-xl border p-4 shadow-sm ${
-                    row.period === 'Sin garantía'
-                      ? 'bg-red-50 border-red-100'
-                      : 'bg-white border-gray-100'
-                  }`}
-                >
+                <article key={`${row.product}-${row.brand}`} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
                   <h3 className="font-bold text-gray-900">{row.product}</h3>
                   <p className="text-sm text-gray-500 mt-1">Marca: {row.brand}</p>
-                  <p className={`text-sm font-medium mt-2 ${row.period === 'Sin garantía' ? 'text-red-700' : 'text-[#7B2CBF]'}`}>
-                    {row.period}
-                  </p>
+                  <p className="text-sm text-[#7B2CBF] font-medium mt-2">{row.period}</p>
                 </article>
               ))}
             </div>
@@ -580,7 +540,6 @@ const Devoluciones = () => {
             <SectionTitle id="terminos" title="Términos de garantía" icon={FileText} />
             <ul className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
               {[
-                'Los discos duros HD, los SSD y los productos de almacenamiento no cuentan con garantía.',
                 'La garantía cubre solamente problemas por defectos de fábrica.',
                 'Cuando se viola la etiqueta o el sello de seguridad, la garantía se anula automáticamente.',
                 'La garantía no cubre daños accidentales causados por el usuario, caídas, deterioro por agua o un golpe, problemas de la placa con un sistema modificado, instalación incorrecta o uso de software no recomendado o autorizado, o que haya sido manipulado (desmontado) por un tercero.',
@@ -670,8 +629,7 @@ const Devoluciones = () => {
                   'Placa madre (MB), tarjeta de video (VGA) y fuente de alimentación utilizadas en minería no están garantizadas. Toda la información se almacena en la BIOS; el fabricante detecta esa función con su propio sistema. De ser detectada, el producto pierde automáticamente la garantía, ya que no fueron fabricados para ese fin.',
                   'Todos y cada uno de los accesorios no están incluidos en la garantía.',
                   'La etiqueta con el código de serie o de barras tachado o alterado.',
-                  'Notebooks y netbooks con defectos en la pantalla, como líneas, manchas y rayones, no tienen garantía.',
-                  'Discos duros HD, SSD y productos de almacenamiento (pendrives, tarjetas de memoria y accesorios de disco) no cuentan con garantía.'
+                  'Notebooks y netbooks con defectos en la pantalla, como líneas, manchas y rayones, no tienen garantía.'
                 ].map((text) => (
                   <li key={text} className="flex gap-3">
                     <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
