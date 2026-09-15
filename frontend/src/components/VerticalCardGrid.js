@@ -7,6 +7,7 @@ import displayPYGCurrency from '../helpers/displayCurrency';
 import { FaShoppingCart } from 'react-icons/fa';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
 import { productPath } from '../helpers/productPath';
+import { isStorageWithoutWarranty } from '../helpers/storageWarranty';
 
 const VerticalCardGrid = ({ loading, data = [] }) => {
     const loadingList = useMemo(() => new Array(12).fill(null), []);
@@ -265,6 +266,11 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                                 <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
                                     {product?.subcategory || product?.brandName}
                                 </div>
+                                {isStorageWithoutWarranty(product) && (
+                                    <div className='text-[10px] font-semibold text-red-700 uppercase tracking-wide'>
+                                        Sin garantía
+                                    </div>
+                                )}
                             </div>
                             
                             <div className='mt-auto space-y-2'>

@@ -13,6 +13,7 @@ import { trackWhatsAppContact, trackAddToCart, trackViewContent } from '../compo
 import { trackGAEvent, trackProductView, trackWhatsAppClick as trackGAWhatsApp } from '../components/GoogleAnalytics';
 import { useQuery } from '@tanstack/react-query';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
+import { isStorageWithoutWarranty } from '../helpers/storageWarranty';
 
 
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
@@ -266,6 +267,11 @@ ${productUrl}
   // Variables optimizadas para Google Merchant
   const isInStock = data?.stock === undefined || data?.stock === null || data?.stock > 0;
   const stockInfo = getStockStatus(data?.stock);
+  const noStorageWarranty = isStorageWithoutWarranty({
+    category: data?.category,
+    subcategory: data?.subcategory,
+    productName: data?.productName
+  });
   const canonicalPath = productPath({ slug: data.slug, _id: data.slug ? undefined : params.id });
   const canonicalUrl = siteUrl(canonicalPath);
   const heroImage = data.productImage?.[0] || activeImage;
@@ -473,6 +479,11 @@ ${productUrl}
                       {data?.productName}
                     </h2>
                     <p className="capitalize text-sm md:text-lg text-gray-500">{data?.subcategory}</p>
+                    {noStorageWarranty && (
+                      <p className="mt-2 inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
+                        No cuenta con garantía
+                      </p>
+                    )}
                   </div>
                   
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 min-w-0">
@@ -528,12 +539,26 @@ ${productUrl}
                       WhatsApp
                     </button>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    7 días para devolver · Garantía según producto y marca.{' '}
-                    <Link to="/devoluciones" className="text-[#7B2CBF] hover:underline font-medium">
-                      Ver política de devoluciones
-                    </Link>
-                  </p>
+                  {noStorageWarranty ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                      <p className="font-semibold">Este producto no cuenta con garantía.</p>
+                      <p className="mt-1">
+                        Los discos duros HD, SSD y productos de almacenamiento no incluyen
+                        garantía. Sí aplica el plazo de 7 días para devolución si está sellado y en
+                        las mismas condiciones de entrega.{' '}
+                        <Link to="/devoluciones" className="font-medium underline hover:no-underline">
+                          Ver política de devoluciones
+                        </Link>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      7 días para devolver · Garantía según producto y marca.{' '}
+                      <Link to="/devoluciones" className="text-[#7B2CBF] hover:underline font-medium">
+                        Ver política de devoluciones
+                      </Link>
+                    </p>
+                  )}
 
                   {!loading && (
                     <div className="mt-6 bg-gray-50 p-4 rounded-lg">
