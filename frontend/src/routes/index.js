@@ -49,6 +49,7 @@ const PurchaseTypesManagement = lazy(() => import('../pages/PurchaseTypesManagem
 
 // Importar componente de gestión de categorías
 const CategoriesManagement = lazy(() => import('../components/admin/CategoriesManagement'));
+const BrandLogosManagement = lazy(() => import('../components/admin/BrandLogosManagement'));
 
 // Importar página de gestión de tipo de cambio
 const ExchangeRateManagement = lazy(() => import('../pages/ExchangeRateManagement'));
@@ -246,6 +247,10 @@ const router = createBrowserRouter([
                     {
                         path: "categorias",
                         element: <Lazy><CategoriesManagement /></Lazy>
+                    },
+                    {
+                        path: "logos",
+                        element: <Lazy><BrandLogosManagement /></Lazy>
                     },
                     {
                         path: "tipo-cambio",

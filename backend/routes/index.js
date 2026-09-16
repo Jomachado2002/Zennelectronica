@@ -1853,6 +1853,10 @@ router.get("/bancard/email/config-check", authToken, async (req, res) => {
     // ===== RUTAS DE ADMINISTRACIÓN DE CATEGORÍAS =====
     router.use('/admin/categories', categoryRoutes);
 
+    // ===== LOGOS DE MARCA =====
+    const brandRoutes = require('./brandRoutes');
+    router.use('/', brandRoutes);
+
     // ===== RUTAS DE SINCRONIZACIÓN DE INVENTARIO =====
 const inventorySyncRoutes = require('./inventorySyncRoutes');
 router.use('/admin/inventory-sync', inventorySyncRoutes);

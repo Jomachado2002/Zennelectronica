@@ -27,6 +27,7 @@ export function buildProductJsonLd({
   description,
   sku,
   brandName,
+  brandLogoUrl,
   category,
   subcategory,
   pageUrl,
@@ -46,7 +47,11 @@ export function buildProductJsonLd({
     name: schemaName,
     image: images,
     description: schemaDesc,
-    brand: { '@type': 'Brand', name: schemaBrand },
+    brand: {
+      '@type': 'Brand',
+      name: schemaBrand,
+      ...(brandLogoUrl ? { logo: brandLogoUrl } : {})
+    },
     offers: {
       '@type': 'Offer',
       url: pageUrl,

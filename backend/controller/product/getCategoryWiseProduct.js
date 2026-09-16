@@ -1,4 +1,5 @@
 const productModel = require("../../models/productModel");
+const { attachBrandLogos } = require("../../services/brandLogoService");
 
 const getCategoryWiseProduct = async (req, res) => {
   try {
@@ -48,7 +49,7 @@ const getCategoryWiseProduct = async (req, res) => {
       .lean();
 
     res.json({
-      data: products,
+      data: await attachBrandLogos(products),
       message: subcategory
         ? "Productos filtrados por categoría y subcategoría"
         : "Productos por categoría",

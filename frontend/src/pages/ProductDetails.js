@@ -355,6 +355,7 @@ ${productUrl}
               description: data.description,
               sku: data.codigo || '',
               brandName: data.brandName,
+              brandLogoUrl: data.brandLogoUrl,
               category: data.category,
               subcategory: data.subcategory,
               pageUrl: canonicalUrl,
@@ -460,7 +461,16 @@ ${productUrl}
               ) : (
                 <div className="space-y-6">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      {data?.brandLogoUrl && (
+                        <div className="h-10 px-2.5 flex items-center justify-center bg-white rounded-md border border-gray-100 shadow-sm">
+                          <img
+                            src={data.brandLogoUrl}
+                            alt={data.brandName || 'Marca'}
+                            className="h-8 w-auto max-w-[140px] object-contain"
+                          />
+                        </div>
+                      )}
                       <p className="inline-block bg-[#2A3190] text-white px-3 py-1 rounded-full text-sm font-semibold">
                         {data?.brandName}
                       </p>

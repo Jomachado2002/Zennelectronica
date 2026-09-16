@@ -11,7 +11,8 @@ const {
   FORMATS
 } = require('../../services/creativePayload');
 const { renderCreativeHtml } = require('../../services/creativeHtml');
-const { getLogoWhiteDataUri, getPhotoDataUri } = require('../../services/creativeImage');
+const { getLogoWhiteDataUri, getPhotoDataUri, getBrandLogoDataUri } = require('../../services/creativeImage');
+const { getLogoMap, normalizeBrandSlug } = require('../../services/brandLogoService');
 
 const MAX_LIST = 500;
 const MAX_SCAN = 2000;
@@ -77,8 +78,11 @@ async function waitForAssets(page, ms = 4000) {
 
 async function renderCreativeDocument(payload, format) {
   const urls = (payload.images && payload.images.length ? payload.images : [payload.imageUrl]).filter(Boolean).slice(0, 5);
-  const [logoDataUri, ...uris] = await Promise.all([
+  const logoMap = await getLogoMap();
+  const brandHit = payload.brandName ? logoMap[normalizeBrandSlug(payload.brandName)] : null;
+  const [logoDataUri, brandLogoDataUri, ...uris] = await Promise.all([
     getLogoWhiteDataUri(),
+    brandHit?.logoUrl ? getBrandLogoDataUri(brandHit.logoUrl) : Promise.resolve(''),
     ...urls.map((url) => getPhotoDataUri(url))
   ]);
   const gallery = urls.map((url, i) => ({
@@ -86,7 +90,7 @@ async function renderCreativeDocument(payload, format) {
     active: i === (payload.imageIndex || 0)
   })).filter((g) => g.uri);
   const photoDataUri = gallery.find((g) => g.active)?.uri || uris[0] || '';
-  return renderCreativeHtml(payload, format, { logoDataUri, photoDataUri, gallery });
+  return renderCreativeHtml(payload, format, { logoDataUri, brandLogoDataUri, photoDataUri, gallery });
 }
 
 async function renderPngBuffer(payload, format) {

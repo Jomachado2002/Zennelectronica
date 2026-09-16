@@ -9,6 +9,7 @@
 
 const mongoose = require('mongoose');
 const productModel = require('../../models/productModel');
+const { attachBrandLogo } = require('../../services/brandLogoService');
 const { SITE } = require('./sitemapController');
 const {
   isMongoObjectId,
@@ -49,12 +50,11 @@ async function findProduct(slugOrId) {
   if (!key) return null;
 
   let product = await productModel.findOne({ slug: key }).lean();
-  if (product) return product;
-
-  if (mongoose.Types.ObjectId.isValid(key) && String(new mongoose.Types.ObjectId(key)) === key) {
+  if (!product && mongoose.Types.ObjectId.isValid(key) && String(new mongoose.Types.ObjectId(key)) === key) {
     product = await productModel.findById(key).lean();
   }
-  return product || null;
+  if (!product) return null;
+  return attachBrandLogo(product);
 }
 
 function buildProductHtml(product) {
@@ -87,7 +87,11 @@ function buildProductHtml(product) {
     name,
     image: images.length ? images : [image],
     description: descRaw.slice(0, 5000),
-    brand: { '@type': 'Brand', name: brand }
+    brand: {
+      '@type': 'Brand',
+      name: brand,
+      ...(product.brandLogoUrl ? { logo: absoluteUrl(product.brandLogoUrl) } : {})
+    }
   };
 
   if (sku) {

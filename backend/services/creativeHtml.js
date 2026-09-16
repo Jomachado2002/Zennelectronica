@@ -55,9 +55,12 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   const gpuChip = payload.hasGpu
     ? '<div class="gpu-chip">GPU dedicada</div>'
     : '';
-  const brand = payload.brandName
-    ? `<div class="brand">${esc(payload.brandName)}</div>`
-    : '';
+  const brandLogo = assets.brandLogoDataUri || '';
+  const brand = brandLogo
+    ? `<div class="brand has-logo"><img class="brand-logo" src="${esc(brandLogo)}" alt="${esc(payload.brandName || '')}" /></div>`
+    : payload.brandName
+      ? `<div class="brand">${esc(payload.brandName)}</div>`
+      : '';
   const seal = 'Entrega Asunción 24 h';
 
   return `<!DOCTYPE html>
@@ -229,11 +232,23 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     background: linear-gradient(180deg, rgba(20,18,47,0) 0%, rgba(20,18,47,.88) 22%, #14122F 62%);
   }
   .brand {
-    display: inline-flex; align-items: center;
+    display: inline-flex; align-items: center; gap: 8px;
     font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
     color: #fff; background: #1E1B4B;
     border: 1px solid rgba(0,181,216,.35);
     padding: 6px 12px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .brand.has-logo {
+    background: #fff;
+    color: #1E1B4B;
+    border: 1px solid rgba(255,255,255,.7);
+    padding: 8px 14px;
+    box-shadow: 0 8px 18px rgba(8,7,31,.22);
+  }
+  .brand-logo {
+    height: 36px; width: auto; max-width: 168px;
+    object-fit: contain; object-position: center;
+    display: block;
   }
   .kicker {
     font-size: 14px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;

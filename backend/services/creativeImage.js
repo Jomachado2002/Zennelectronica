@@ -71,8 +71,42 @@ async function getPhotoDataUri(url) {
   return pending;
 }
 
+async function getBrandLogoDataUri(url) {
+  if (!url) return '';
+  if (photoCache.has(url)) return photoCache.get(url);
+
+  const pending = (async () => {
+    const buf = await Promise.race([
+      fetchBuffer(url),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000))
+    ]);
+    const png = await sharp(buf, { failOn: 'none' })
+      .rotate()
+      .resize({ width: 360, height: 360, fit: 'inside', withoutEnlargement: true })
+      .ensureAlpha()
+      .png({ compressionLevel: 6 })
+      .toBuffer();
+    return `data:image/png;base64,${png.toString('base64')}`;
+  })().catch(async () => {
+    try {
+      const buf = await fetchBuffer(url);
+      return `data:image/png;base64,${buf.toString('base64')}`;
+    } catch {
+      return '';
+    }
+  });
+
+  photoCache.set(url, pending);
+  if (photoCache.size > 220) {
+    const first = photoCache.keys().next().value;
+    photoCache.delete(first);
+  }
+  return pending;
+}
+
 module.exports = {
   getLogoWhiteDataUri,
   getPhotoDataUri,
+  getBrandLogoDataUri,
   getCutoutDataUri: getPhotoDataUri
 };

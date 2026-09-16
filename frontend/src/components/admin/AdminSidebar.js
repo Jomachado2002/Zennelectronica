@@ -28,7 +28,8 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaList,
-  FaBullhorn
+  FaBullhorn,
+  FaTrademark
 } from 'react-icons/fa';
 import ROLE from '../../common/role';
 
@@ -72,6 +73,7 @@ export function getAdminNavGroups() {
       children: [
         { path: 'productos', label: 'Productos', icon: FaBoxOpen },
         { path: 'categorias', label: 'Categorías', icon: FaFolder },
+        { path: 'logos', label: 'Logos', icon: FaTrademark },
         { path: 'sincronizacion-inventario', label: 'Sincronizar inventario', icon: FaSyncAlt },
         { path: 'worker-visao', label: 'Worker Visão', icon: FaSyncAlt },
         { path: 'exportar-productos', label: 'Exportar productos', icon: FaDownload },

@@ -1,11 +1,12 @@
 // backend/controller/product/getProductBySlug.js
 const productModel = require("../../models/productModel");
+const { attachBrandLogo } = require("../../services/brandLogoService");
 
 const getProductBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
 
-        const product = await productModel.findOne({ slug });
+        const product = await productModel.findOne({ slug }).lean();
 
         if (!product) {
             return res.status(404).json({
@@ -16,7 +17,7 @@ const getProductBySlug = async (req, res) => {
         }
 
         res.json({
-            data: product,
+            data: await attachBrandLogo(product),
             message: "Ok",
             success: true,
             error: false

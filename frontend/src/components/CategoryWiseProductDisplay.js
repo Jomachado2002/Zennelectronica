@@ -269,8 +269,17 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
                           </div>
                         )}
                         
-                        <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
-                          {product?.subcategory || product?.brandName}
+                        <div className='flex items-center gap-1.5 min-w-0'>
+                          {product?.brandLogoUrl && (
+                            <img
+                              src={product.brandLogoUrl}
+                              alt={product.brandName || ''}
+                              className="h-4 w-auto max-w-[40px] object-contain shrink-0"
+                            />
+                          )}
+                          <div className='text-xs text-gray-500 uppercase font-medium tracking-wide truncate'>
+                            {product?.subcategory || product?.brandName}
+                          </div>
                         </div>
                       </div>
                       

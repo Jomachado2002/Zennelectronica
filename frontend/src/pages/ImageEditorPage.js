@@ -4,7 +4,7 @@ import {
   FaImage, FaTextHeight, FaSquare, FaCircle, FaSave, 
   FaDownload, FaLayerGroup, FaTrash, FaPlus, FaSearchPlus,
   FaSearchMinus, FaChevronLeft, FaChevronRight,
-  FaArrowUp, FaArrowDown
+  FaArrowUp, FaArrowDown, FaTrademark
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import SummaryApi from '../common';
@@ -318,6 +318,48 @@ const ImageEditorPage = () => {
     };
     setLayers(prev => [...prev, shapeLayer]);
     setSelectedLayerId(shapeLayer.id);
+  };
+
+  const handleAddBrandLogo = async () => {
+    if (!selectedProduct?.brandName) {
+      toast.error('Seleccioná un producto con marca');
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${SummaryApi.baseURL}/api/brands/by-name/${encodeURIComponent(selectedProduct.brandName)}`
+      );
+      const json = await res.json();
+      const url = json.data?.logoUrl;
+      if (!url) {
+        toast.error('Esta marca todavía no tiene logo cargado');
+        return;
+      }
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const maxZIndex = Math.max(...layers.map((l) => l.zIndex || 0), 0);
+        const logoLayer = {
+          id: `layer-brand-logo-${Date.now()}`,
+          type: 'productContainer',
+          x: 80,
+          y: 80,
+          width: 280,
+          height: 120,
+          imageFit: 'contain',
+          image: img,
+          zIndex: maxZIndex + 1,
+          visible: true
+        };
+        setLayers((prev) => [...prev, logoLayer]);
+        setSelectedLayerId(logoLayer.id);
+        toast.success(`Logo de ${selectedProduct.brandName} agregado`);
+      };
+      img.onerror = () => toast.error('No se pudo cargar el logo de la marca');
+      img.src = url;
+    } catch (error) {
+      toast.error('No se pudo obtener el logo de la marca');
+    }
   };
 
   // Eliminar capa
@@ -739,6 +781,14 @@ const ImageEditorPage = () => {
             >
               <FaCircle />
               <span>Círculo</span>
+            </button>
+            <button
+              onClick={handleAddBrandLogo}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 flex items-center gap-2 text-sm"
+              title="Inserta el logo de la marca del producto seleccionado"
+            >
+              <FaTrademark />
+              <span>Logo marca</span>
             </button>
           </div>
         </div>
