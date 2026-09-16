@@ -4,7 +4,7 @@ const Brand = require('../models/brandModel');
 const Product = require('../models/productModel');
 const { normalizeBrandSlug, uniqueStrings, uniqueSlugs } = require('../helpers/brandSlug');
 const { processBrandLogo, clampSize } = require('./brandLogoImage');
-const { uploadBufferToR2, deleteObjectFromR2, isR2Configured } = require('./r2StorageService');
+const { uploadLogoBuffer, deleteLogoObject } = require('./logoStorageService');
 
 let logoMapCache = null;
 let logoMapCacheAt = 0;
@@ -301,6 +301,10 @@ async function updateBrand(id, body = {}) {
     brand.aliases = uniqueStrings([brand.name, ...body.aliases]);
   }
   if (typeof body.isActive === 'boolean') brand.isActive = body.isActive;
+  if (typeof body.logoUrl === 'string') brand.logoUrl = body.logoUrl;
+  if (typeof body.logoKey === 'string') brand.logoKey = body.logoKey;
+  if (body.logoWidth != null) brand.logoWidth = Number(body.logoWidth) || null;
+  if (body.logoHeight != null) brand.logoHeight = Number(body.logoHeight) || null;
   brand.aliasSlugs = uniqueSlugs([brand.slug, brand.name, ...(brand.aliases || [])]);
   await brand.save();
   invalidateBrandLogoCache();
@@ -314,12 +318,10 @@ async function deleteBrand(id) {
     err.status = 404;
     throw err;
   }
-  if (brand.logoKey) {
-    try {
-      await deleteObjectFromR2(brand.logoKey);
-    } catch {
-      /* keep going */
-    }
+  try {
+    await deleteLogoObject({ logoUrl: brand.logoUrl, logoKey: brand.logoKey });
+  } catch {
+    /* keep going */
   }
   await brand.deleteOne();
   invalidateBrandLogoCache();
@@ -327,11 +329,6 @@ async function deleteBrand(id) {
 }
 
 async function uploadBrandLogo(id, fileBuffer, { size, removeBackground = true } = {}) {
-  if (!isR2Configured()) {
-    const err = new Error('R2/CDN no configurado en el servidor');
-    err.status = 503;
-    throw err;
-  }
   const brand = await Brand.findById(id);
   if (!brand) {
     const err = new Error('Marca no encontrada');
@@ -344,21 +341,30 @@ async function uploadBrandLogo(id, fileBuffer, { size, removeBackground = true }
     removeBackground
   });
   const key = `brands/logos/${brand.slug}-${Date.now()}.png`;
-  const url = await uploadBufferToR2(processed.buffer, key, {
-    contentType: 'image/png',
-    cacheControl: 'public, max-age=31536000, immutable'
-  });
+  let uploaded;
+  try {
+    uploaded = await uploadLogoBuffer(processed.buffer, key, 'image/png');
+  } catch (storageErr) {
+    return {
+      ...brand.toObject(),
+      clientUpload: true,
+      processedPng: processed.buffer.toString('base64'),
+      logoWidth: processed.width,
+      logoHeight: processed.height,
+      storageError: storageErr.message
+    };
+  }
 
-  const previousKey = brand.logoKey;
-  brand.logoUrl = url;
-  brand.logoKey = key;
+  const previous = { logoUrl: brand.logoUrl, logoKey: brand.logoKey };
+  brand.logoUrl = uploaded.url;
+  brand.logoKey = uploaded.key;
   brand.logoWidth = processed.width;
   brand.logoHeight = processed.height;
   await brand.save();
 
-  if (previousKey && previousKey !== key) {
+  if (previous.logoKey && previous.logoKey !== key) {
     try {
-      await deleteObjectFromR2(previousKey);
+      await deleteLogoObject(previous);
     } catch {
       /* ignore stale delete */
     }
@@ -375,12 +381,10 @@ async function deleteBrandLogo(id) {
     err.status = 404;
     throw err;
   }
-  if (brand.logoKey) {
-    try {
-      await deleteObjectFromR2(brand.logoKey);
-    } catch {
-      /* ignore */
-    }
+  try {
+    await deleteLogoObject({ logoUrl: brand.logoUrl, logoKey: brand.logoKey });
+  } catch {
+    /* ignore */
   }
   brand.logoUrl = '';
   brand.logoKey = '';

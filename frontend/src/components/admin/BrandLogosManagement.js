@@ -16,6 +16,7 @@ import axiosInstance from '../../config/axiosInstance';
 import SummaryApi from '../../common';
 import { authFetch } from '../../helpers/authFetch';
 import { extractImagesFromClipboard, isValidImageFile } from '../../helpers/imageOptimizer';
+import uploadImage from '../../helpers/uploadImage';
 
 const SIZE_OPTIONS = [256, 400, 512, 800];
 
@@ -153,7 +154,20 @@ const BrandLogosManagement = () => {
       if (!res.ok || data.error) {
         throw new Error(data.message || `Error ${res.status}`);
       }
-      return data.data;
+      const payload = data.data || {};
+      if (payload.clientUpload && payload.processedPng) {
+        const bytes = Uint8Array.from(atob(payload.processedPng), (c) => c.charCodeAt(0));
+        const processedFile = new File([bytes], `logo-${brandId}.png`, { type: 'image/png' });
+        const firebase = await uploadImage(processedFile);
+        const saved = await axiosInstance.put(`/api/admin/brands/${brandId}`, {
+          logoUrl: firebase.url || firebase.secure_url,
+          logoKey: firebase.public_id || '',
+          logoWidth: payload.logoWidth,
+          logoHeight: payload.logoHeight
+        });
+        return saved.data.data;
+      }
+      return payload;
     },
     [apiBase, size, removeBackground]
   );
