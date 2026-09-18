@@ -5,6 +5,7 @@ import SummaryApi from '../common';
 import { toast } from 'react-toastify';
 import { FaPlus, FaTrash, FaSearch, FaTimes } from 'react-icons/fa';
 import displayPYGCurrency from '../helpers/displayCurrency';
+import CategoryBrowseModal from '../components/admin/CategoryBrowseModal';
 
 const NewBudget = () => {
   const [clients, setClients] = useState([]);
@@ -25,6 +26,13 @@ const NewBudget = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [browse, setBrowse] = useState({
+    category: '',
+    subcategory: '',
+    categoryLabel: '',
+    subcategoryLabel: ''
+  });
   const [showCustomProduct, setShowCustomProduct] = useState(false);
   const [currentCustomProduct, setCurrentCustomProduct] = useState({
     productSnapshot: {
@@ -41,7 +49,7 @@ const NewBudget = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   
   const navigate = useNavigate();
 
@@ -75,48 +83,83 @@ const NewBudget = () => {
     fetchClients();
   }, []);
 
-  // Fetch products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoadingProducts(true);
-      try {
-        const response = await fetch(SummaryApi.allProduct.url, {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          setProducts(result.data || []);
-        } else {
-          toast.error(result.message || "Error al cargar los productos");
-        }
-      } catch (error) {
-        // console.error removed for production
-        toast.error("Error de conexión");
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-    
-    fetchProducts();
-  }, []);
-
-  // Filter products based on search term
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
+  const fetchProductsByCategory = async (selection) => {
+    if (!selection?.category) {
+      setProducts([]);
       setFilteredProducts([]);
       return;
     }
-    
-    const filtered = products.filter(product => 
-      product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    setFilteredProducts(filtered.slice(0, 10)); // Limitar a 10 resultados para mejor rendimiento
-  }, [searchTerm, products]);
+
+    setIsLoadingProducts(true);
+    try {
+      const params = new URLSearchParams({
+        category: selection.category,
+        limit: '80'
+      });
+      if (selection.subcategory) params.set('subcategory', selection.subcategory);
+
+      const response = await fetch(`${SummaryApi.allProduct.url}?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const list = Array.isArray(result.data) ? result.data : [];
+        setProducts(list);
+        setFilteredProducts(list);
+      } else {
+        toast.error(result.message || 'Error al cargar los productos');
+        setProducts([]);
+        setFilteredProducts([]);
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+      setProducts([]);
+      setFilteredProducts([]);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 2) {
+      setIsLoadingProducts(false);
+      setFilteredProducts(browse.category ? products : []);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsLoadingProducts(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `${SummaryApi.baseURL}/api/finanzas/ventas/productos/buscar?query=${encodeURIComponent(term)}&limit=25`,
+          { method: 'GET', credentials: 'include' }
+        );
+        const result = await response.json();
+        if (!cancelled) {
+          setFilteredProducts(result.success ? (result.data || []) : []);
+        }
+      } catch {
+        if (!cancelled) setFilteredProducts([]);
+      } finally {
+        if (!cancelled) setIsLoadingProducts(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, browse.category, products]);
+
+  const handleCategorySelect = (selection) => {
+    setBrowse(selection);
+    setSearchTerm('');
+    fetchProductsByCategory(selection);
+  };
 
   // Calculate totals whenever items, discount, or tax changes
   useEffect(() => {
@@ -391,42 +434,53 @@ const NewBudget = () => {
                   <FaTimes />
                 </button>
               </div>
-              
+
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, marca o categoría..."
+                  placeholder="Escribí el nombre, marca o código (ej: Samsung A16)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
                   className="w-full p-2.5 pl-10 bg-white border border-gray-300 rounded-lg"
                 />
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               </div>
-              
-              {searchTerm.trim() !== '' && (
-                <div className="mt-2 max-h-60 overflow-y-auto">
-                  {isLoadingProducts ? (
-                    <p className="text-center py-2">Cargando productos...</p>
-                  ) : filteredProducts.length === 0 ? (
-                    <p className="text-center py-2">No se encontraron productos</p>
-                  ) : (
-                    <ul className="divide-y divide-gray-200">
-                      {filteredProducts.map(product => (
-                        <li 
-                          key={product._id} 
-                          className="py-2 px-3 hover:bg-blue-100 cursor-pointer"
-                          onClick={() => handleAddProduct(product)}
-                        >
-                          <div className="font-medium">{product.productName}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.brandName} - {displayPYGCurrency(product.sellingPrice)}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(true)}
+                className="mt-2 text-sm text-blue-700 hover:underline"
+              >
+                O elegir por categoría / subcategoría
+              </button>
+
+              <div className="mt-2 max-h-60 overflow-y-auto">
+                {isLoadingProducts ? (
+                  <p className="text-center py-2">Buscando productos...</p>
+                ) : searchTerm.trim().length < 2 && !browse.category ? (
+                  <p className="text-center py-2 text-sm text-gray-600">
+                    Escribí al menos 2 letras para buscar en todo el catálogo.
+                  </p>
+                ) : filteredProducts.length === 0 ? (
+                  <p className="text-center py-2">No se encontraron productos</p>
+                ) : (
+                  <ul className="divide-y divide-gray-200 bg-white rounded-lg">
+                    {filteredProducts.map((product) => (
+                      <li
+                        key={product._id}
+                        className="py-2 px-3 hover:bg-blue-100 cursor-pointer"
+                        onClick={() => handleAddProduct(product)}
+                      >
+                        <div className="font-medium">{product.productName || product.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {product.brandName || ''} {product.codigo ? `· ${product.codigo}` : ''} — {displayPYGCurrency(product.sellingPrice)}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
           
@@ -768,6 +822,12 @@ const NewBudget = () => {
           </div>
         </div>
       </form>
+
+      <CategoryBrowseModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onSelect={handleCategorySelect}
+      />
     </div>
   );
 };

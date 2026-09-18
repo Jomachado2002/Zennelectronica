@@ -2,7 +2,6 @@
 
     const express = require('express');
     const router = express.Router();
-    const productModel = require('../models/productModel');
 
     // ===== CONTROLADORES EXISTENTES =====
     const userSignUpController = require("../controller/user/userSignUp");
@@ -23,6 +22,7 @@
     const getCategoryProduct = require('../controller/product/getCategoryProduct');
 const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB');
     const getCategoryWiseProduct = require('../controller/product/getCategoryWiseProduct');
+    const getAdminProducts = require('../controller/product/getAdminProducts');
     const getProductDetails = require('../controller/product/getProductDetails');
     const { updateAllPricesController } = require('../controller/product/updateAllPrices');
     const channableFeedController = require('../controller/product/channableFeedController');
@@ -990,24 +990,7 @@ const { getCategoriesWithSpecifications } = require('../controller/category/cate
     router.put("/admin/home-category-tiles/:id", authToken, updateTileController);
     router.delete("/admin/home-category-tiles/:id", authToken, deleteTileController);
 
-router.get("/obtener-productos-admin", cookieDebug, adminAuth, async (req, res) => {
-    try {
-        const products = await productModel.find({}).sort({ createdAt: -1 });
-        
-        res.json({
-            message: "Todos los productos para admin",
-            success: true,
-            error: false,
-            data: products
-        });
-    } catch (err) {
-        res.status(400).json({
-            message: err.message || err,
-            error: true,
-            success: false
-        });
-    }
-});
+router.get("/obtener-productos-admin", cookieDebug, adminAuth, getAdminProducts);
 router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/obtener-productos", getHomeProductsController);
     router.get("/obtener-categorias", getCategoryProduct);

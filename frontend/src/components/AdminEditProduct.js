@@ -449,7 +449,6 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
     const errors = {};
     
     if (!data.productName.trim()) errors.productName = 'El nombre del producto es requerido';
-    if (!data.brandName.trim()) errors.brandName = 'La marca es requerida';
     if (!data.category) errors.category = 'La categoría es requerida';
     if (!data.subcategory) errors.subcategory = 'La subcategoría es requerida';
     if (!data.description.trim()) errors.description = 'La descripción es requerida';
@@ -893,7 +892,7 @@ const AdminEditProduct = ({ onClose, productData, fetchdata, extraData }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Marca *
+                  Marca
                 </label>
                 <input
                   type="text"

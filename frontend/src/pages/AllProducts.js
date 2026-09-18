@@ -1,13 +1,12 @@
-// frontend/src/pages/AllProducts.js - MEJORADO CON INTERFAZ OPTIMIZADA
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import UploadProduct from '../components/UploadProduct'
 import SummaryApi from '../common'
 import AdminProductCard from '../components/AdminProductCard'
-import { 
-  FaSearch, 
-  FaFilter, 
-  FaFileExcel, 
+import {
+  FaSearch,
+  FaFilter,
+  FaFileExcel,
   FaPlus,
   FaDownload,
   FaBox,
@@ -19,44 +18,45 @@ import {
   FaBars,
   FaTh
 } from 'react-icons/fa'
-import usePreloadedCategories from '../hooks/usePreloadedCategories'
 import * as XLSX from 'xlsx'
-// ExchangeRateConfig eliminado - ahora se maneja desde /panel-admin/tipo-cambio
 import StockManagement from '../components/admin/StockManagement'
+import CategoryBrowseModal from '../components/admin/CategoryBrowseModal'
 import { toast } from 'react-toastify'
 import displayPYGCurrency from '../helpers/displayCurrency'
+
+const PAGE_SIZE = 60
 
 const AllProducts = () => {
   const navigate = useNavigate()
   const [openUploadProduct, setOpenUploadProduct] = useState(false)
   const [allProduct, setAllProduct] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
-  
-  // Filtros mejorados
-  const [filters, setFilters] = useState({
-    search: '',
+  const [loading, setLoading] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(true)
+  const [browse, setBrowse] = useState({
     category: '',
     subcategory: '',
+    categoryLabel: '',
+    subcategoryLabel: ''
+  })
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [serverTotal, setServerTotal] = useState(0)
+
+  const [filters, setFilters] = useState({
+    search: '',
     brandName: '',
     priceRange: { min: '', max: '' },
     stockStatus: '',
     isVipOffer: '',
-    sortBy: 'newest',
-    sortOrder: 'desc'
+    sortBy: 'newest'
   })
 
   const [showFilters, setShowFilters] = useState(false)
-  const [viewMode, setViewMode] = useState('grid') // 'grid' o 'table'
+  const [viewMode, setViewMode] = useState('grid')
   const [selectedProducts, setSelectedProducts] = useState([])
-  
-  // Hook para categorías precargadas
-  const { getCategories, getSubcategories } = usePreloadedCategories()
-  
   const [showStockManagement, setShowStockManagement] = useState(false)
-  
-  // Tipo de cambio ahora se maneja desde /panel-admin/tipo-cambio
 
-  // Estadísticas
   const [stats, setStats] = useState({
     total: 0,
     inStock: 0,
@@ -65,57 +65,64 @@ const AllProducts = () => {
     totalValue: 0
   })
 
-  const fetchAllProduct = async() => {
+  const fetchProducts = useCallback(async ({ nextPage = 1, append = false, selection = browse } = {}) => {
+    if (!selection.category) {
+      setAllProduct([])
+      setFilteredProducts([])
+      setServerTotal(0)
+      setHasMore(false)
+      return
+    }
+
+    setLoading(true)
     try {
-      // console.log removed for production
-      const response = await fetch(SummaryApi.allProduct.url, {
+      const params = new URLSearchParams({
+        category: selection.category,
+        page: String(nextPage),
+        limit: String(PAGE_SIZE)
+      })
+      if (selection.subcategory) params.set('subcategory', selection.subcategory)
+
+      const response = await fetch(`${SummaryApi.allProduct.url}?${params.toString()}`, {
         method: SummaryApi.allProduct.method,
         credentials: 'include'
       })
       const dataResponse = await response.json()
-      
-      // console.log removed for production
-      
-      let products = [];
-      if (dataResponse?.data) {
-        if (Array.isArray(dataResponse.data)) {
-          products = dataResponse.data;
-        } else if (typeof dataResponse.data === 'object') {
-          // Convertir objeto organizado a array plano
-          products = [];
-          Object.values(dataResponse.data).forEach(category => {
-            if (typeof category === 'object') {
-              Object.values(category).forEach(subcategoryProducts => {
-                if (Array.isArray(subcategoryProducts)) {
-                  products.push(...subcategoryProducts);
-                }
-              });
-            }
-          });
-        }
-      }
-      
-      setAllProduct(products)
-      applyFiltersAndSort(products)
-      calculateStats(products)
-    } catch (error) {
-      console.error("Error fetching products:", error)
-    }
-  }
 
-  const calculateStats = (products) => {
-    const total = products.length
-    const inStock = products.filter(p => (p.stock || 0) > 0).length
-    const outOfStock = products.filter(p => (p.stock || 0) === 0).length
-    const vipOffers = products.filter(p => p.isVipOffer).length
+      const products = Array.isArray(dataResponse?.data) ? dataResponse.data : []
+      const total = Number(dataResponse.totalProducts || dataResponse.total || products.length) || 0
+      const pagination = dataResponse.pagination || {}
+
+      setServerTotal(total)
+      setPage(nextPage)
+      setHasMore(Boolean(pagination.hasNextPage) || nextPage * PAGE_SIZE < total)
+      setAllProduct((prev) => (append ? [...prev, ...products] : products))
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      toast.error('No se pudieron cargar los productos de esta categoría')
+    } finally {
+      setLoading(false)
+    }
+  }, [browse])
+
+  const calculateStats = (products, totalFromServer) => {
+    const inStock = products.filter((p) => (p.stock || 0) > 0).length
+    const outOfStock = products.filter((p) => (p.stock || 0) === 0).length
+    const vipOffers = products.filter((p) => p.isVipOffer).length
     const totalValue = products.reduce((sum, p) => sum + ((p.stock || 0) * (p.sellingPrice || 0)), 0)
 
-    setStats({ total, inStock, outOfStock, vipOffers, totalValue })
+    setStats({
+      total: totalFromServer || products.length,
+      inStock,
+      outOfStock,
+      vipOffers,
+      totalValue
+    })
   }
 
   const sortProducts = (products, option) => {
     const sorted = [...products]
-    
+
     switch (option) {
       case 'newest':
         return sorted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
@@ -141,61 +148,44 @@ const AllProducts = () => {
   const applyFiltersAndSort = (products) => {
     let result = [...products]
 
-    // Filtro de búsqueda
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
-      result = result.filter(product => 
+      result = result.filter((product) =>
         (product.productName?.toLowerCase() || '').includes(searchLower) ||
         (product.brandName?.toLowerCase() || '').includes(searchLower) ||
-        (product.category?.toLowerCase() || '').includes(searchLower) ||
-        (product.subcategory?.toLowerCase() || '').includes(searchLower) ||
         (product.codigo?.toLowerCase() || '').includes(searchLower)
       )
     }
 
-    // Filtro de categoría
-    if (filters.category) {
-      result = result.filter(product => product.category === filters.category)
-    }
-
-    // Filtro de subcategoría
-    if (filters.subcategory) {
-      result = result.filter(product => product.subcategory === filters.subcategory)
-    }
-
-    // Filtro de marca
     if (filters.brandName) {
-      result = result.filter(product => product.brandName === filters.brandName)
+      result = result.filter((product) => product.brandName === filters.brandName)
     }
 
-    // Filtro de rango de precio
     if (filters.priceRange.min) {
-      result = result.filter(product => (Number(product.sellingPrice) || 0) >= Number(filters.priceRange.min))
+      result = result.filter((product) => (Number(product.sellingPrice) || 0) >= Number(filters.priceRange.min))
     }
     if (filters.priceRange.max) {
-      result = result.filter(product => (Number(product.sellingPrice) || 0) <= Number(filters.priceRange.max))
+      result = result.filter((product) => (Number(product.sellingPrice) || 0) <= Number(filters.priceRange.max))
     }
 
-    // Filtro de estado de stock
     if (filters.stockStatus) {
       switch (filters.stockStatus) {
         case 'inStock':
-          result = result.filter(product => (product.stock || 0) > 0)
+          result = result.filter((product) => (product.stock || 0) > 0)
           break
         case 'outOfStock':
-          result = result.filter(product => (product.stock || 0) === 0)
+          result = result.filter((product) => (product.stock || 0) === 0)
           break
         case 'lowStock':
-          result = result.filter(product => (product.stock || 0) > 0 && (product.stock || 0) <= 10)
+          result = result.filter((product) => (product.stock || 0) > 0 && (product.stock || 0) <= 10)
           break
         default:
           break
       }
     }
 
-    // Filtro de ofertas VIP
     if (filters.isVipOffer) {
-      result = result.filter(product => 
+      result = result.filter((product) =>
         filters.isVipOffer === 'yes' ? product.isVipOffer : !product.isVipOffer
       )
     }
@@ -205,20 +195,17 @@ const AllProducts = () => {
   }
 
   useEffect(() => {
-    fetchAllProduct()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     applyFiltersAndSort(allProduct)
-  }, [filters, allProduct]) // eslint-disable-line react-hooks/exhaustive-deps
+    calculateStats(allProduct, serverTotal)
+  }, [filters, allProduct, serverTotal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target
-    setFilters(prev => ({ ...prev, [name]: value }))
+    setFilters((prev) => ({ ...prev, [name]: value }))
   }
 
   const handlePriceRangeChange = (field, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       priceRange: { ...prev.priceRange, [field]: value }
     }))
@@ -227,27 +214,29 @@ const AllProducts = () => {
   const resetFilters = () => {
     setFilters({
       search: '',
-      category: '',
-      subcategory: '',
       brandName: '',
       priceRange: { min: '', max: '' },
       stockStatus: '',
       isVipOffer: '',
-      sortBy: 'newest',
-      sortOrder: 'desc'
+      sortBy: 'newest'
     })
   }
 
-  const getSubcategoriesForCategory = () => {
-    return getSubcategories(filters.category)
+  const handleCategorySelect = (selection) => {
+    setBrowse(selection)
+    setSelectedProducts([])
+    resetFilters()
+    fetchProducts({ nextPage: 1, append: false, selection })
   }
 
+  const fetchAllProduct = () => fetchProducts({ nextPage: 1, append: false })
+
   const getUniqueBrands = () => {
-    return [...new Set(allProduct.map(p => p.brandName).filter(Boolean))]
+    return [...new Set(allProduct.map((p) => p.brandName).filter(Boolean))]
   }
 
   const exportToExcel = () => {
-    const excelData = filteredProducts.map(product => ({
+    const excelData = filteredProducts.map((product) => ({
       'Código': product.codigo || '',
       'Nombre del Producto': product.productName || '',
       'Marca': product.brandName || '',
@@ -269,64 +258,37 @@ const AllProducts = () => {
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.json_to_sheet(excelData)
-
-    const columnWidths = [
-      { wch: 15 }, // Código
-      { wch: 40 }, // Nombre del Producto
-      { wch: 20 }, // Marca
-      { wch: 15 }, // Categoría
-      { wch: 15 }, // Subcategoría
-      { wch: 15 }, // Precio de Venta
-      { wch: 10 }, // Stock
-      { wch: 18 }, // Precio de Compra USD
-      { wch: 15 }, // Tipo de Cambio
-      { wch: 18 }, // Precio de Compra PYG
-      { wch: 18 }, // Interés de Préstamo
-      { wch: 15 }, // Costo de Envío
-      { wch: 18 }, // Margen de Ganancia
-      { wch: 15 }, // Utilidad
-      { wch: 12 }, // Oferta VIP
-      { wch: 15 }, // Fecha de Creación
-      { wch: 15 }  // Última Actualización
+    ws['!cols'] = [
+      { wch: 15 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 },
+      { wch: 15 }, { wch: 10 }, { wch: 18 }, { wch: 15 }, { wch: 18 },
+      { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 12 },
+      { wch: 15 }, { wch: 15 }
     ]
-    ws['!cols'] = columnWidths
-
     XLSX.utils.book_append_sheet(wb, ws, 'Productos')
     XLSX.writeFile(wb, `Productos_${new Date().toLocaleDateString()}.xlsx`)
-    toast.success("Productos exportados a Excel")
+    toast.success('Productos exportados a Excel')
   }
 
   const handleBulkAction = (action) => {
     if (selectedProducts.length === 0) {
-      toast.error("Selecciona al menos un producto")
+      toast.error('Selecciona al menos un producto')
       return
     }
-
-    switch (action) {
-      case 'export':
-        // Exportar solo productos seleccionados
-        // Implementar exportación de productos seleccionados
-        toast.success(`${selectedProducts.length} productos seleccionados para exportación`)
-        break
-      case 'delete':
-        // Implementar eliminación masiva
-        toast.success(`${selectedProducts.length} productos seleccionados para eliminación`)
-        break
-      default:
-        break
+    if (action === 'export') {
+      toast.success(`${selectedProducts.length} productos seleccionados para exportación`)
     }
   }
 
   const toggleProductSelection = (productId) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
+    setSelectedProducts((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
         : [...prev, productId]
     )
   }
 
   const selectAllProducts = () => {
-    setSelectedProducts(filteredProducts.map(p => p._id))
+    setSelectedProducts(filteredProducts.map((p) => p._id))
   }
 
   const clearSelection = () => {
@@ -334,40 +296,16 @@ const AllProducts = () => {
   }
 
   const getFilterDescription = () => {
-    let description = `Mostrando ${filteredProducts.length} de ${allProduct.length} productos`
-    
-    if (filters.category) {
-      const categories = getCategories()
-      const category = categories.find(c => c.value === filters.category)
-      description += ` • Categoría: "${category?.label || filters.category}"`
-    }
-    
-    if (filters.brandName) {
-      description += ` • Marca: "${filters.brandName}"`
-    }
-
-    if (filters.search) {
-      description += ` • Buscando: "${filters.search}"`
-    }
-
+    if (!browse.category) return 'Elegí una categoría para ver productos'
+    let description = `Mostrando ${filteredProducts.length} de ${serverTotal} en esta sección`
+    if (browse.categoryLabel) description += ` • ${browse.categoryLabel}`
+    if (browse.subcategoryLabel) description += ` › ${browse.subcategoryLabel}`
+    if (filters.search) description += ` • En esta lista: "${filters.search}"`
     return description
   }
 
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.filter-menu')) {
-        // Los menús se cerrarán automáticamente al hacer clic fuera
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-start">
           <div>
@@ -376,10 +314,10 @@ const AllProducts = () => {
               Gestión de Productos
             </h1>
             <p className="text-gray-600 mt-1">
-              Administra tu catálogo de productos con herramientas avanzadas
+              Primero elegí categoría y subcategoría, como en el menú. Así no se carga todo el catálogo.
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
@@ -388,7 +326,7 @@ const AllProducts = () => {
               {viewMode === 'grid' ? <FaBars className="w-4 h-4 mr-2" /> : <FaTh className="w-4 h-4 mr-2" />}
               {viewMode === 'grid' ? 'Vista Lista' : 'Vista Cuadrícula'}
             </button>
-            
+
             <button
               onClick={() => navigate('/panel-admin/productos/nuevo')}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -400,7 +338,6 @@ const AllProducts = () => {
         </div>
       </div>
 
-      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
@@ -408,7 +345,7 @@ const AllProducts = () => {
               <FaBox className="w-5 h-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total</p>
+              <p className="text-sm font-medium text-gray-600">En esta sección</p>
               <p className="text-xl font-bold text-gray-900">{stats.total}</p>
             </div>
           </div>
@@ -456,28 +393,25 @@ const AllProducts = () => {
               <FaDollarSign className="w-5 h-5 text-orange-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Valor Total</p>
+              <p className="text-sm font-medium text-gray-600">Valor cargado</p>
               <p className="text-lg font-bold text-gray-900">{displayPYGCurrency(stats.totalValue)}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Configuración del tipo de cambio movida a /panel-admin/tipo-cambio */}
-
-      {/* Filtros y búsqueda */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold flex items-center">
             <FaFilter className="mr-2 text-gray-600" />
-            Filtros y Búsqueda
+            Categoría y filtros
           </h3>
           <div className="flex space-x-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm"
             >
-              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              {showFilters ? 'Ocultar filtros' : 'Más filtros'}
             </button>
             <button
               onClick={resetFilters}
@@ -488,8 +422,24 @@ const AllProducts = () => {
           </div>
         </div>
 
-        {/* Búsqueda principal */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="flex-1 rounded-lg border-2 border-blue-200 bg-blue-50 px-4 py-3 text-left hover:bg-blue-100"
+          >
+            <span className="block text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Categoría / subcategoría
+            </span>
+            <span className="block text-sm font-medium text-gray-900">
+              {browse.categoryLabel
+                ? `${browse.categoryLabel}${browse.subcategoryLabel ? ` › ${browse.subcategoryLabel}` : ' (toda la categoría)'}`
+                : 'Elegir desde el menú de categorías'}
+            </span>
+          </button>
+        </div>
+
+        {browse.category && (
           <div className="relative">
             <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -497,37 +447,20 @@ const AllProducts = () => {
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
-              placeholder="Buscar por nombre, marca, código o categoría..."
+              placeholder="Filtrar en esta lista (no busca en todo el catálogo)"
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-        </div>
+        )}
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <SelectField
-              label="Categoría"
-              name="category"
-              value={filters.category}
-              onChange={handleFilterChange}
-              options={getCategories()}
-            />
-            
-            <SelectField
-              label="Subcategoría"
-              name="subcategory"
-              value={filters.subcategory}
-              onChange={handleFilterChange}
-              options={getSubcategoriesForCategory()}
-              disabled={!filters.category}
-            />
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <SelectField
               label="Marca"
               name="brandName"
               value={filters.brandName}
               onChange={handleFilterChange}
-              options={getUniqueBrands().map(brand => ({ value: brand, label: brand }))}
+              options={getUniqueBrands().map((brand) => ({ value: brand, label: brand }))}
             />
 
             <SelectField
@@ -579,29 +512,26 @@ const AllProducts = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
-              <div className="flex space-x-2">
-                <select
-                  name="sortBy"
-                  value={filters.sortBy}
-                  onChange={handleFilterChange}
-                  className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="newest">Más recientes</option>
-                  <option value="oldest">Más antiguos</option>
-                  <option value="nameAZ">Nombre A-Z</option>
-                  <option value="nameZA">Nombre Z-A</option>
-                  <option value="priceHighToLow">Precio: Mayor a menor</option>
-                  <option value="priceLowToHigh">Precio: Menor a mayor</option>
-                  <option value="stockHighToLow">Stock: Mayor a menor</option>
-                  <option value="profitHighToLow">Ganancia: Mayor a menor</option>
-                </select>
-              </div>
+              <select
+                name="sortBy"
+                value={filters.sortBy}
+                onChange={handleFilterChange}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="newest">Más recientes</option>
+                <option value="oldest">Más antiguos</option>
+                <option value="nameAZ">Nombre A-Z</option>
+                <option value="nameZA">Nombre Z-A</option>
+                <option value="priceHighToLow">Precio: Mayor a menor</option>
+                <option value="priceLowToHigh">Precio: Menor a mayor</option>
+                <option value="stockHighToLow">Stock: Mayor a menor</option>
+                <option value="profitHighToLow">Ganancia: Mayor a menor</option>
+              </select>
             </div>
           </div>
         )}
       </div>
 
-      {/* Acciones masivas */}
       {selectedProducts.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <div className="flex justify-between items-center">
@@ -629,7 +559,6 @@ const AllProducts = () => {
         </div>
       )}
 
-      {/* Información de filtros */}
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-gray-600">
           {getFilterDescription()}
@@ -637,7 +566,8 @@ const AllProducts = () => {
         <div className="flex space-x-2">
           <button
             onClick={exportToExcel}
-            className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 text-sm"
+            disabled={!filteredProducts.length}
+            className="flex items-center px-4 py-2 text-green-600 bg-green-50 rounded-lg hover:bg-green-100 text-sm disabled:opacity-50"
           >
             <FaFileExcel className="w-4 h-4 mr-2" />
             Exportar Excel
@@ -652,8 +582,28 @@ const AllProducts = () => {
         </div>
       </div>
 
-      {/* Lista de productos */}
-      {viewMode === 'grid' ? (
+      {loading && allProduct.length === 0 && (
+        <div className="py-12 text-center text-sm text-gray-500">Cargando productos…</div>
+      )}
+
+      {!browse.category && !loading && (
+        <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
+          <FaBox className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Elegí una categoría</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Abrí el menú, seleccioná categoría y subcategoría, y recién ahí se listan los productos.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowCategoryModal(true)}
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Abrir menú de categorías
+          </button>
+        </div>
+      )}
+
+      {browse.category && viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product, index) => (
             <div key={product._id || index} className="relative">
@@ -664,20 +614,22 @@ const AllProducts = () => {
                   </div>
                 </div>
               )}
-              <div 
+              <div
                 className={`cursor-pointer ${selectedProducts.includes(product._id) ? 'ring-2 ring-blue-500' : ''}`}
                 onClick={() => toggleProductSelection(product._id)}
               >
-                <AdminProductCard 
-                  data={product} 
-                  key={product._id || index+"allProduct"} 
+                <AdminProductCard
+                  data={product}
+                  key={product._id || index + 'allProduct'}
                   fetchdata={fetchAllProduct}
                 />
               </div>
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {browse.category && viewMode === 'table' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -729,8 +681,8 @@ const AllProducts = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           {product.productImage && product.productImage.length > 0 ? (
-                            <img 
-                              src={product.productImage[0]} 
+                            <img
+                              src={product.productImage[0]}
                               alt={product.productName}
                               className="h-10 w-10 rounded-lg object-cover"
                             />
@@ -761,8 +713,8 @@ const AllProducts = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        (product.stock || 0) > 0 
-                          ? 'bg-green-100 text-green-800' 
+                        (product.stock || 0) > 0
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
                         {product.stock || 0}
@@ -788,8 +740,7 @@ const AllProducts = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                      </div>
+                      <div className="flex space-x-2" />
                     </td>
                   </tr>
                 ))}
@@ -799,24 +750,35 @@ const AllProducts = () => {
         </div>
       )}
 
-      {filteredProducts.length === 0 && (
+      {browse.category && hasMore && (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => fetchProducts({ nextPage: page + 1, append: true })}
+            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-blue-700 border border-blue-200 hover:bg-blue-50 disabled:opacity-50"
+          >
+            {loading ? 'Cargando…' : 'Cargar más de esta categoría'}
+          </button>
+        </div>
+      )}
+
+      {browse.category && !loading && filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <FaBox className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron productos</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Intenta ajustar los filtros para ver más resultados.
+            Probá otra subcategoría o ajustá los filtros de esta lista.
           </p>
         </div>
       )}
 
-      {/* Modales */}
       {openUploadProduct && (
-        <UploadProduct 
-          onClose={() => setOpenUploadProduct(false)} 
+        <UploadProduct
+          onClose={() => setOpenUploadProduct(false)}
           fetchData={fetchAllProduct}
         />
       )}
-
 
       {showStockManagement && (
         <div className="fixed inset-0 bg-black/60 z-[200] overflow-y-auto">
@@ -824,7 +786,7 @@ const AllProducts = () => {
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
               <div className="flex justify-between items-center p-4 border-b">
                 <h2 className="text-xl font-semibold">Gestión de Stock con Mayoristas</h2>
-                <button 
+                <button
                   onClick={() => setShowStockManagement(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
@@ -838,12 +800,17 @@ const AllProducts = () => {
           </div>
         </div>
       )}
+
+      <CategoryBrowseModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onSelect={handleCategorySelect}
+      />
     </div>
   )
 }
 
-// Componente helper para campos de selección
-const SelectField = ({ label, name, value, onChange, options = [], disabled = false, className = "" }) => (
+const SelectField = ({ label, name, value, onChange, options = [], disabled = false, className = '' }) => (
   <div className={className}>
     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
     <select
@@ -854,13 +821,13 @@ const SelectField = ({ label, name, value, onChange, options = [], disabled = fa
       className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
     >
       <option value="">Seleccionar {label.toLowerCase()}</option>
-      {options.map(option => (
+      {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}
     </select>
   </div>
-);
+)
 
 export default AllProducts

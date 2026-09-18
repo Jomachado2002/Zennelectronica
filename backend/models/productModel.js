@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const productSchema = mongoose.Schema({
     productName: { type: String, required: true },
-    brandName: { type: String, required: true },
+    brandName: { type: String, default: '', trim: true },
     category: { type: String, required: true },
     subcategory: { type: String, required: true },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true },
@@ -421,6 +421,8 @@ productSchema.index({ slug: 1 }, { unique: true, sparse: true });
 productSchema.index({ category: 1, subcategory: 1, stock: 1, createdAt: -1 });
 productSchema.index({ category: 1, stock: 1, createdAt: -1 });
 productSchema.index({ stock: 1, createdAt: -1 });
+productSchema.index({ category: 1, subcategory: 1, _id: -1 });
+productSchema.index({ category: 1, _id: -1 });
 
 const productModel = mongoose.model("product", productSchema);
 

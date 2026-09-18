@@ -2,6 +2,7 @@
 // Fase 1: extracción de catálogo Visão Vip (solo lectura, sin MongoDB).
 
 const puppeteer = require('puppeteer');
+const { parseVisaoMarcaSlug } = require('../helpers/visaoBrand');
 
 const HOME_URL = 'https://www.visaovip.com/es/';
 
@@ -1140,6 +1141,86 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
 
             const pdpBreadcrumbLabels = extractPdpBreadcrumbLabelsPDP();
 
+            /**
+             * Logo / listado de marca del PDP (no de relacionados).
+             * Ej: https://cdn.visaovip.com/img/marca/msi/62/logo.webp
+             *     https://www.visaovip.com/es/busca/marca/original-brand/76/
+             */
+            function extractMarcaAssets() {
+                const logoRe = /\/img\/marca\//i;
+                const hrefRe = /\/busca\/marca\//i;
+                const root = document.body || document.documentElement;
+                let marcaLogoUrl = '';
+                let marcaHref = '';
+                if (!root) return { marcaLogoUrl, marcaHref };
+
+                const imgs = root.querySelectorAll('img');
+                for (let i = 0; i < imgs.length; i++) {
+                    const img = imgs[i];
+                    const src = String(
+                        img.getAttribute('src') || img.currentSrc || img.src || ''
+                    );
+                    if (logoRe.test(src)) {
+                        marcaLogoUrl = src;
+                        break;
+                    }
+                    const srcset = String(img.getAttribute('srcset') || '');
+                    if (logoRe.test(srcset)) {
+                        const first = srcset.split(',')[0].trim().split(/\s+/)[0];
+                        if (first) {
+                            marcaLogoUrl = first;
+                            break;
+                        }
+                    }
+                }
+
+                const anchors = root.querySelectorAll('a[href]');
+                for (let i = 0; i < anchors.length; i++) {
+                    const href = String(anchors[i].href || anchors[i].getAttribute('href') || '');
+                    if (hrefRe.test(href) && !/marcas-parceiras/i.test(href)) {
+                        marcaHref = href;
+                        break;
+                    }
+                }
+
+                if (!marcaLogoUrl) {
+                    const html = String(root.innerHTML || '');
+                    const htmlMatch = html.match(
+                        /https?:\/\/[^"'\\\s]+\/img\/marca\/[^"'\\\s]+/i
+                    );
+                    if (htmlMatch) {
+                        marcaLogoUrl = htmlMatch[0];
+                    } else {
+                        const encMatch = html.match(
+                            /img%2Fmarca%2F([^%&/"']+)/i
+                        );
+                        if (encMatch && encMatch[1]) {
+                            let slug = encMatch[1];
+                            try {
+                                slug = decodeURIComponent(slug);
+                            } catch {
+                                /* keep */
+                            }
+                            marcaLogoUrl =
+                                'https://cdn.visaovip.com/img/marca/' + slug + '/';
+                        }
+                    }
+                }
+                if (!marcaHref) {
+                    const html = String(root.innerHTML || '');
+                    const hrefMatch = html.match(
+                        /(?:https?:\/\/[^"'\\\s]+)?\/es\/busca\/marca\/[^"'\\\s]+/i
+                    );
+                    if (hrefMatch && !/marcas-parceiras/i.test(hrefMatch[0])) {
+                        marcaHref = hrefMatch[0];
+                    }
+                }
+
+                return { marcaLogoUrl, marcaHref };
+            }
+
+            const marcaAssets = extractMarcaAssets();
+
             return {
                 supplierCodeStr: supplierCodeFinal ? String(supplierCodeFinal).trim() : '',
                 titulo,
@@ -1153,7 +1234,9 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 especificaciones,
                 descripcionFull: bodyText.slice(0, 10000),
                 descripcion,
-                pdpBreadcrumbLabels
+                pdpBreadcrumbLabels,
+                marcaLogoUrl: marcaAssets.marcaLogoUrl || '',
+                marcaHref: marcaAssets.marcaHref || ''
             };
         }, urlParam);
     }
@@ -1286,6 +1369,23 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
     await expandEspecificacionesPanel();
     await delay(preview ? 200 : 150);
 
+    await page
+        .waitForFunction(
+            () => {
+                const html = (document.documentElement && document.documentElement.innerHTML) || '';
+                if (/\/img\/marca\//i.test(html) || /\/busca\/marca\//i.test(html)) return true;
+                const imgs = document.querySelectorAll('img');
+                for (let i = 0; i < imgs.length; i++) {
+                    const src = String(imgs[i].getAttribute('src') || imgs[i].src || '');
+                    if (/\/img\/marca\//i.test(src)) return true;
+                }
+                const anchors = document.querySelectorAll('a[href*="/busca/marca/"]');
+                return anchors.length > 0;
+            },
+            { timeout: preview ? 4000 : 6000 }
+        )
+        .catch(() => {});
+
     let raw = await snapshotDom(productUrl);
     let precioResolved = resolveVisaoPrecioForSync(raw);
 
@@ -1353,14 +1453,19 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         raw.especificaciones && typeof raw.especificaciones === 'object'
             ? Object.keys(raw.especificaciones).length
             : 0;
-    if (specsCount === 0) {
-        console.warn(`[SCRAPER][SIN_SPECS] ${productUrl}`);
-    }
 
     const pdpBreadcrumbLabels =
         Array.isArray(raw.pdpBreadcrumbLabels) && raw.pdpBreadcrumbLabels.length
             ? raw.pdpBreadcrumbLabels.map((s) => String(s || '').trim()).filter(Boolean)
             : [];
+
+    const marcaLogoUrl = String(raw.marcaLogoUrl || '').trim();
+    const marcaHref = String(raw.marcaHref || '').trim();
+    const marcaSlug = parseVisaoMarcaSlug(marcaLogoUrl) || parseVisaoMarcaSlug(marcaHref) || '';
+
+    if (specsCount === 0) {
+        console.warn(`[SCRAPER][SIN_SPECS] ${productUrl} marca=${marcaSlug || 'n/a'}`);
+    }
 
     return {
         url: productUrl,
@@ -1375,7 +1480,10 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         descripcion,
         especificaciones: raw.especificaciones,
         imagenes: raw.imagenes,
-        pdpBreadcrumbLabels
+        pdpBreadcrumbLabels,
+        marcaLogoUrl,
+        marcaHref,
+        marcaSlug
     };
 }
 

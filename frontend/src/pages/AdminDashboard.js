@@ -126,7 +126,7 @@ const AdminDashboard = () => {
 
       const [usersRes, productsRes, budgetsRes, clientsRes, suppliersRes, transactionsRes] = await Promise.all([
         fetch(SummaryApi.allUser.url, { method: SummaryApi.allUser.method, credentials: 'include' }).catch(() => null),
-        fetch(SummaryApi.allProduct.url, { method: SummaryApi.allProduct.method, credentials: 'include' }).catch(() => null),
+        fetch(`${SummaryApi.allProduct.url}?countOnly=1`, { method: SummaryApi.allProduct.method, credentials: 'include' }).catch(() => null),
         fetch(SummaryApi.getAllBudgets.url, { method: SummaryApi.getAllBudgets.method, credentials: 'include' }).catch(() => null),
         fetch(SummaryApi.getAllClients.url, { method: SummaryApi.getAllClients.method, credentials: 'include' }).catch(() => null),
         fetch(SummaryApi.getAllSuppliers.url, { method: SummaryApi.getAllSuppliers.method, credentials: 'include' }).catch(() => null),
@@ -156,7 +156,7 @@ const AdminDashboard = () => {
         ...prev,
         overview: {
           ...prev.overview,
-          totalProducts: productsData.length,
+          totalProducts: Number(products.totalProducts ?? products.total ?? productsData.length) || 0,
           totalUsers: usersData.length,
           totalClients: Array.isArray(clientsData) ? clientsData.length : (clientsData.clients?.length || 0),
           totalSuppliers: suppliersData.length,

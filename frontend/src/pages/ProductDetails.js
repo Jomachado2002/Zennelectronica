@@ -216,7 +216,8 @@ useEffect(() => {
   const handleWhatsAppClick = () => {
     const price = displayINRCurrency(data.sellingPrice);
     const productUrl = data.slug ? siteUrl(`/producto/${data.slug}`) : window.location.href;
-    const message = `Hola, estoy interesado en este producto: *${data.productName}* (${data.brandName})
+    const brandLabel = data.brandName ? ` (${data.brandName})` : '';
+    const message = `Hola, estoy interesado en este producto: *${data.productName}*${brandLabel}
 Precio: ${price}
 ${productUrl}
 ¿Me puedes brindar más detalles sobre disponibilidad y envío?`;
@@ -471,9 +472,11 @@ ${productUrl}
                           />
                         </div>
                       )}
-                      <p className="inline-block bg-[#2A3190] text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        {data?.brandName}
-                      </p>
+                      {data?.brandName ? (
+                        <p className="inline-block bg-[#2A3190] text-white px-3 py-1 rounded-full text-sm font-semibold">
+                          {data.brandName}
+                        </p>
+                      ) : null}
                       {/* Badge de Stock simplificado para Google Merchant */}
                       <span className={`${stockInfo.color} text-white text-xs px-2 py-1 rounded-full`}>
                         {stockInfo.text}

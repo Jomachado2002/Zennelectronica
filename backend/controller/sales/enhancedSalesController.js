@@ -330,8 +330,13 @@ async function createEnhancedSaleController(req, res) {
     }
 }
 
+function escapeRegex(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
- * Search products for sales
+ * Search products for sales / budgets.
+ * Nunca ordena en Mongo: el sort por productName sobre un regex explota el límite de 32MB.
  */
 async function searchProductsForSalesController(req, res) {
     try {
@@ -345,20 +350,38 @@ async function searchProductsForSalesController(req, res) {
             });
         }
 
-        const searchRegex = new RegExp(query, 'i');
+        const terms = query
+            .trim()
+            .split(/\s+/)
+            .filter((term) => term.length > 0)
+            .slice(0, 6);
+
+        const andTerms = terms.map((term) => {
+            const searchRegex = new RegExp(escapeRegex(term), 'i');
+            return {
+                $or: [
+                    { productName: searchRegex },
+                    { codigo: searchRegex },
+                    { brandName: searchRegex }
+                ]
+            };
+        });
+
+        const cap = Math.min(30, Math.max(1, parseInt(limit, 10) || 20));
         const products = await ProductModel.find({
-            $or: [
-                { productName: searchRegex },
-                { codigo: searchRegex },
-                { brandName: searchRegex },
-                { category: searchRegex }
-            ],
-            isActive: { $ne: false }
+            $and: [
+                ...andTerms,
+                { isActive: { $ne: false } }
+            ]
         })
-        .select('productName codigo brandName category sellingPrice price purchasePriceUSD purchasePrice stock productImage')
-        .limit(parseInt(limit))
-        .sort({ productName: 1 })
-        .lean();
+            .select('productName codigo brandName category subcategory sellingPrice price purchasePriceUSD purchasePrice stock productImage')
+            .limit(cap)
+            .lean()
+            .maxTimeMS(5000);
+
+        products.sort((a, b) =>
+            String(a.productName || '').localeCompare(String(b.productName || ''), 'es', { sensitivity: 'base' })
+        );
 
         const mapped = products.map((product) => ({
             ...product,
@@ -378,7 +401,6 @@ async function searchProductsForSalesController(req, res) {
         });
 
     } catch (err) {
-        // console.error removed for production
         res.status(500).json({
             message: err.message || "Error interno del servidor",
             error: true,

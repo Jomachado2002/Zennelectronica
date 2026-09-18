@@ -23,9 +23,9 @@ const {
 } = require('./visionVipMirrorScrapeService');
 const { writeProductCategoryJsFromMongo } = require('./exportCategoriesFrontendFile');
 const { throwIfCancelled } = require('./workerLiveLog');
+const { resolveVisaoBrandName } = require('../helpers/visaoBrand');
 
 const SYNC_SOURCE = 'visao_vip';
-const VISAO_MARKET_BRAND = 'Visão Vip';
 const DEFAULT_CATEGORY_COLOR = '#3B82F6';
 const DEFAULT_CATEGORY_ICON = 'FaFolder';
 
@@ -232,15 +232,6 @@ function resolveBrandFromMarca(rawSpecs, standardized) {
         if (s) return s;
     }
     return '';
-}
-
-function inferBrandName(titulo) {
-    if (!titulo || typeof titulo !== 'string') return VISAO_MARKET_BRAND;
-    const first = titulo.trim().split(/\s+/)[0];
-    if (first && first.length >= 2 && first.length <= 24 && /^[A-Za-z0-9]+/.test(first)) {
-        return first.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑ.-]/g, '');
-    }
-    return VISAO_MARKET_BRAND;
 }
 
 function inferCategoryFromUrl(productUrl) {
@@ -1178,7 +1169,12 @@ async function persistOneVisaoProduct(scraped, ctx) {
                   ? scraped.titulo.trim()
                   : tituloFallback;
         const fromMarca = resolveBrandFromMarca(rawSpecs, specCanonical);
-        const brandName = fromMarca || inferBrandName(titulo);
+        const brandName = resolveVisaoBrandName({
+            marcaSlug: scraped.marcaSlug,
+            marcaLogoUrl: scraped.marcaLogoUrl,
+            marcaHref: scraped.marcaHref,
+            specsBrand: fromMarca
+        });
 
         const descriptionNew = mirrorStrict
             ? scraped.descripcion == null
@@ -1262,7 +1258,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
             const beforeSnap = snapshotForMirrorCompare(existing);
 
             existing.productName = titulo;
-            existing.brandName = mirrorStrict ? brandName : brandName || existing.brandName;
+            existing.brandName = brandName || '';
             existing.category = categoryValue;
             existing.subcategory = subcategoryValue;
             if (categoryId) existing.categoryId = categoryId;
@@ -1335,7 +1331,7 @@ async function persistOneVisaoProduct(scraped, ctx) {
 
         const baseDoc = {
             productName: titulo,
-            brandName,
+            brandName: brandName || '',
             category: categoryValue,
             subcategory: subcategoryValue,
             categoryId,
