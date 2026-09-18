@@ -1,14 +1,44 @@
 const WorkerLogLine = require('../models/workerLogLineModel');
+const WorkerSettings = require('../models/workerSettingsModel');
 
 let cancelFlag = false;
 let activeLogId = null;
 let buffer = [];
 let flushing = false;
+let cancelPollTimer = null;
+
+async function pollCancelFromMongo() {
+  try {
+    const doc = await WorkerSettings.findOne({ key: 'vision-worker' })
+      .select('cancelRequested')
+      .lean();
+    if (doc && doc.cancelRequested) cancelFlag = true;
+  } catch {
+    /* no cortar el scrape si Mongo falla un poll */
+  }
+}
+
+function startCancelPoll() {
+  stopCancelPoll();
+  cancelPollTimer = setInterval(() => {
+    pollCancelFromMongo().catch(() => {});
+  }, 1500);
+  pollCancelFromMongo().catch(() => {});
+}
+
+function stopCancelPoll() {
+  if (cancelPollTimer) {
+    clearInterval(cancelPollTimer);
+    cancelPollTimer = null;
+  }
+}
 
 function setActiveLog(id) {
   activeLogId = id || null;
   cancelFlag = false;
   buffer = [];
+  if (id) startCancelPoll();
+  else stopCancelPoll();
 }
 
 function requestLocalCancel() {
@@ -21,6 +51,7 @@ function isCancelled() {
 
 function throwIfCancelled() {
   if (!cancelFlag) return;
+  stopCancelPoll();
   const err = new Error('Corrida cancelada desde el admin');
   err.code = 'WORKER_CANCELLED';
   throw err;
@@ -100,4 +131,5 @@ module.exports = {
   captureConsole,
   flushLiveLines,
   listLiveLines,
+  stopCancelPoll,
 };

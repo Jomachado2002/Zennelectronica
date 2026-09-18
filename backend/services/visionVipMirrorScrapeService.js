@@ -13,7 +13,7 @@ const {
     relaunchMutableBrowserHolder,
     isDisconnectedOrDeadBrowserError
 } = require('./visionVipScraperService');
-const { throwIfCancelled } = require('./workerLiveLog');
+const { throwIfCancelled, stopCancelPoll } = require('./workerLiveLog');
 
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -343,6 +343,7 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
      * (p. ej. Volante para auto).
      */
     async function extractListingTilesByUrl(listingUrl) {
+        throwIfCancelled();
         await holder.page.goto(listingUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
         await delay(500);
         try {
@@ -455,6 +456,7 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
         const maxDepth = 5;
 
         while (stack.length) {
+            throwIfCancelled();
             const { node, path } = stack.pop();
             const key = `${node.url}|${path.map((p) => p.url).join('>')}`;
             if (visited.has(key)) continue;
@@ -527,6 +529,7 @@ async function collectMenuHierarchy(initialPage, opts = {}) {
     const tops = await extractTopCategoriesFromHeader();
     console.log(`[Visão mirror][MENU] Categorías raíz detectadas: ${tops.length}`);
     for (let ti = 0; ti < tops.length; ti++) {
+        throwIfCancelled();
         const top = tops[ti];
         console.log(
             `[Visão mirror][MENU] (${ti + 1}/${tops.length}) expandiendo "${top.label}" → ${top.url}`
@@ -839,6 +842,7 @@ async function scrapeVisionVipMirror(opts = {}) {
             products
         };
     } finally {
+        stopCancelPoll();
         if (ctx.browser) await ctx.browser.close().catch(() => {});
     }
 }

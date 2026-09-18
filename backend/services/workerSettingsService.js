@@ -168,12 +168,13 @@ async function finishLog(logId, payload) {
       $push: {
         events: {
           at: new Date(),
-          level: payload.status === 'success' ? 'info' : 'error',
+          level: payload.status === 'success' ? 'info' : payload.status === 'cancelled' ? 'warn' : 'error',
           message: payload.errorMessage || 'Corrida finalizada',
         },
       },
     }
   );
+  await clearCancelFlag();
   const settings = await getSettings();
   settings.lastRunAt = new Date();
   settings.lastStatus = payload.status;
@@ -203,6 +204,24 @@ async function requestCancel() {
     doc.runRequested = false;
     doc.runQuick = false;
     doc.pendingLogId = null;
+  } else {
+    const running = await WorkerLog.findOne({ status: { $in: ['queued', 'running'] } }).sort({
+      startedAt: -1,
+    });
+    if (running) {
+      await WorkerLog.updateOne(
+        { _id: running._id },
+        {
+          $push: {
+            events: {
+              at: new Date(),
+              level: 'warn',
+              message: 'Cancelación pedida. El worker corta en el próximo lote del menú o PDP.',
+            },
+          },
+        }
+      );
+    }
   }
   await doc.save();
   return doc;

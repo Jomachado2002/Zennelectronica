@@ -172,16 +172,19 @@ const AdminWorkerPage = () => {
               {cancellingUi ? 'Cancelando worker…' : 'Worker en ejecución — no inicies otra corrida'}
             </p>
             <p className="text-sm mt-1">
-              Puede tardar varias horas. El progreso sale en la consola de jobs-api; al terminar el histórico guarda creados, actualizados y errores.
+              {cancellingUi
+                ? 'La cancelación ya está pedida. El scrape corta al terminar el lote actual del menú o de un producto (unos segundos).'
+                : 'Puede tardar varias horas. El progreso sale en la consola de jobs-api; al terminar el histórico guarda creados, actualizados y errores.'}
             </p>
           </div>
           <button
             type="button"
-            disabled={cancelling || cancellingUi}
+            disabled={cancelling}
             onClick={cancelJob}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm flex items-center gap-2"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-70"
           >
-            {cancelling ? <FaSpinner className="animate-spin" /> : <FaStop />} Cancelar job
+            {cancelling ? <FaSpinner className="animate-spin" /> : <FaStop />}{' '}
+            {cancellingUi ? 'Seguir cancelando' : 'Cancelar job'}
           </button>
         </div>
       )}
