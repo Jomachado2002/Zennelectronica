@@ -125,6 +125,7 @@ async function consumeRunRequest() {
 }
 
 async function startLog({ trigger, label, logId }) {
+  await clearCancelFlag();
   if (logId) {
     await WorkerLog.updateOne(
       { _id: logId },
