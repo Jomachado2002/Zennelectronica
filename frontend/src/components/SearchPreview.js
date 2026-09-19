@@ -92,9 +92,8 @@ const SearchPreview = ({
     onSearchChange('');
     onClose();
     
-    // ✅ NAVEGAR USANDO SLUG O ID COMO FALLBACK
-    window.location.href = productPath(product);
-  }, [onSearchChange, onClose]);
+    navigate(productPath(product));
+  }, [onSearchChange, onClose, navigate]);
 
   const handleCategoryClick = useCallback((category) => {
     // Cerrar preview

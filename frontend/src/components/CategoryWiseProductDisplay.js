@@ -43,8 +43,8 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
   // Función para navegar directamente a la página del producto
   const handleProductClick = useCallback((e, product) => {
     e.preventDefault();
-    window.location.href = productPath(product);
-  }, []);
+    navigate(productPath(product));
+  }, [navigate]);
 
   // Función para obtener datos
   const fetchData = useCallback(async () => {

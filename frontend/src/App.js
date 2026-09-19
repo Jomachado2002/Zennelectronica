@@ -2,10 +2,9 @@
 import './App.css';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './components/Header';
-import Footer from './components/Footer';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import SummaryApi from './common';
 import Context from './context';
 import { useDispatch } from 'react-redux';
@@ -16,12 +15,15 @@ import GoogleAnalytics from './components/GoogleAnalytics'; // Importa Google An
 import { Analytics } from '@vercel/analytics/react'; // Importa Vercel Analytics
 import { SpeedInsights } from '@vercel/speed-insights/react'; // Importa Speed Insights para métricas de rendimiento
 
+const Footer = lazy(() => import('./components/Footer'));
+
 
 function App() {
   const dispatch = useDispatch()
   const location = useLocation()
   const isAdminRoute = location.pathname.includes('/panel-admin')
   const [cartProductCount, setCartProductCount] = useState(0)
+  const [enableTrackers, setEnableTrackers] = useState(false)
   
   const fetchUserDetails = useCallback(async() => {
     try {
@@ -58,11 +60,22 @@ function App() {
   }, [])
   
   useEffect(() => {
-    /**user Details */
-    fetchUserDetails()
-    /**user Details cart product */
     fetchUserAddToCart()
+    const t = setTimeout(() => {
+      fetchUserDetails()
+    }, 400)
+    return () => clearTimeout(t)
   }, [fetchUserDetails, fetchUserAddToCart])
+
+  useEffect(() => {
+    const enable = () => setEnableTrackers(true)
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(enable, { timeout: 2500 })
+      return () => window.cancelIdleCallback(idleId)
+    }
+    const t = setTimeout(enable, 1)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <>
@@ -71,11 +84,14 @@ function App() {
         cartProductCount, // current user add to cart product count,
         fetchUserAddToCart
       }}>
-        {/* Analytics Trackers */}
-        <MetaPixelTracker />
-        <GoogleAnalytics />
-        <Analytics />
-        <SpeedInsights />
+        {enableTrackers && (
+          <>
+            <MetaPixelTracker />
+            <GoogleAnalytics />
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
         
         <ToastContainer 
           position='top-center'
@@ -85,7 +101,11 @@ function App() {
         <main className={isAdminRoute ? 'h-screen overflow-hidden' : 'min-h-[calc(100vh-120px)] pt-30'}>
           <Outlet/>
         </main>
-        {!isAdminRoute && <Footer/>}
+        {!isAdminRoute && (
+          <Suspense fallback={null}>
+            <Footer/>
+          </Suspense>
+        )}
       </Context.Provider>
     </>
   );

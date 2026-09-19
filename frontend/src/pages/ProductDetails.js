@@ -85,32 +85,19 @@ const ProductDetails = () => {
 const { data: productData, isLoading: productLoading } = useQuery({
   queryKey: ['product-details', params?.id],
   queryFn: async () => {
-    // Primero intentamos buscar por ID
-    try {
-      const response = await fetch(SummaryApi.productDetails.url, {
-        method: SummaryApi.productDetails.method,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ productId: params?.id })
-      });
-      
-      const dataResponse = await response.json();
-      
-      if (dataResponse?.success) {
-        return dataResponse.data;
-      } else {
-        // Si no se encuentra por ID, intentar por slug
-        const slugResponse = await fetch(`${SummaryApi.productDetailsBySlug?.url || '/api/producto-por-slug'}/${params?.id}`);
-        const slugData = await slugResponse.json();
-        
-        if (slugData?.success) {
-          return slugData.data;
-        }
-        
-        throw new Error('Producto no encontrado');
-      }
-    } catch (error) {
-      throw new Error('Error al cargar producto: ' + error.message);
+    const response = await fetch(SummaryApi.productDetails.url, {
+      method: SummaryApi.productDetails.method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ productId: params?.id })
+    });
+
+    const dataResponse = await response.json();
+
+    if (dataResponse?.success && dataResponse.data) {
+      return dataResponse.data;
     }
+
+    throw new Error(dataResponse?.message || 'Producto no encontrado');
   },
   staleTime: 5 * 60 * 1000, // 5 minutos
   cacheTime: 10 * 60 * 1000, // 10 minutos

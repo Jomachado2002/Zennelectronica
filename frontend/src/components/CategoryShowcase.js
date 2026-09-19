@@ -1,7 +1,6 @@
 // frontend/src/components/CategoryShowcase.js
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import productCategory from '../helpers/productCategory';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import {
@@ -38,7 +37,7 @@ const CategoryShowcase = ({
     typeof homeShowcase.carousels === 'object'
   );
 
-  const { data: menuFromApi } = usePreloadedCategories();
+  const { data: menuFromApi } = usePreloadedCategories({ enabled: !bootstrapReady });
 
   const categories = useMemo(() => {
     // 1) Bootstrap del home (mismo timing que productos)
@@ -203,7 +202,7 @@ const CategoryShowcase = ({
   };
 
   return (
-    <section className="w-full bg-white py-4 sm:py-6">
+    <section className="w-full bg-white py-4 sm:py-6 min-h-[22rem] sm:min-h-[20rem]">
       <div className="max-w-7xl mx-auto px-4">
         
         {/* TÍTULO */}
@@ -219,7 +218,7 @@ const CategoryShowcase = ({
             <select
               value={selectedCategory || ''}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 pr-10 text-sm font-medium text-gray-800 bg-white border-2 border-transparent rounded-xl shadow-md appearance-none cursor-pointer transition-all duration-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full px-4 py-3 pr-10 text-base font-medium text-gray-800 bg-white border-2 border-transparent rounded-xl shadow-md appearance-none cursor-pointer transition-all duration-300 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               style={{
                 backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)',
                 backgroundOrigin: 'border-box',
@@ -232,7 +231,9 @@ const CategoryShowcase = ({
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
         </div>
 
@@ -252,7 +253,9 @@ const CategoryShowcase = ({
                   onClick={scrollLeft}
                   aria-label="Scroll izquierda"
                 >
-                  <ChevronLeft className='text-[#002060] w-5 h-5' />
+                  <svg className="text-[#002060] w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
                 </button>
               )}
 
@@ -265,7 +268,9 @@ const CategoryShowcase = ({
                   onClick={scrollRight}
                   aria-label="Scroll derecha"
                 >
-                  <ChevronRight className='text-[#002060] w-5 h-5' />
+                  <svg className="text-[#002060] w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               )}
 
@@ -287,7 +292,6 @@ const CategoryShowcase = ({
                       ? cdnThumbUrl(previewUrl, { width: 384, quality: 70, fit: 'cover' })
                       : '';
                     const initialImgSrc = productThumb || staticSubImg;
-                    const eagerCount = 4;
                     return (
                     <button
                       key={subcategory.id || subcategory.value}
@@ -309,8 +313,8 @@ const CategoryShowcase = ({
                           width={192}
                           height={144}
                           sizes="(max-width: 640px) 160px, (max-width: 1024px) 176px, 192px"
-                          loading={slideIndex < eagerCount ? 'eager' : 'lazy'}
-                          fetchPriority={slideIndex < 2 ? 'high' : 'low'}
+                          loading="lazy"
+                          fetchPriority="low"
                           decoding="async"
                           data-full={previewUrl || ''}
                           onError={(e) => {

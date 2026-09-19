@@ -20,11 +20,6 @@
   }
   
   /* Optimización de rendimiento */
-  img {
-    will-change: transform;
-  }
-  
-  /* Mejoras tipográficas */
   body {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

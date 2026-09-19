@@ -1,20 +1,6 @@
 {
   "headers": [
     {
-      "source": "/producto/:slug*",
-      "headers": [
-        { "key": "x-vercel-enable-rewrite-caching", "value": "1" }
-      ]
-    },
-    {
-      "source": "/api/seo/(.*)",
-      "headers": [
-        { "key": "x-vercel-enable-rewrite-caching", "value": "1" },
-        { "key": "Cache-Control", "value": "public, max-age=600, s-maxage=43200, stale-while-revalidate=604800" },
-        { "key": "Vercel-CDN-Cache-Control", "value": "public, s-maxage=43200, stale-while-revalidate=604800" }
-      ]
-    },
-    {
       "source": "/sitemap.xml",
       "headers": [
         { "key": "x-vercel-enable-rewrite-caching", "value": "1" },
@@ -48,17 +34,6 @@
     {
       "source": "/api/:path*",
       "destination": "https://zennelectronica.vercel.app/api/:path*"
-    },
-    {
-      "source": "/producto/:slug*",
-      "has": [
-        {
-          "type": "header",
-          "key": "user-agent",
-          "value": "(?i).*(googlebot|google-inspectiontool|bingbot|bingpreview|yandex|baiduspider|twitterbot|facebookexternalhit|linkedinbot|whatsapp|telegrambot|duckduckbot|applebot|semrushbot|ahrefsbot|storebot-google|adsbot-google|mediapartners-google).*"
-        }
-      ],
-      "destination": "https://zennelectronica.vercel.app/api/seo/producto/:slug*"
     }
   ]
 }

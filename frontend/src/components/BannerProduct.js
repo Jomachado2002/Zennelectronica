@@ -1,7 +1,6 @@
 // frontend/src/components/BannerProduct.js
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import scrollTop from '../helpers/scrollTop';
 
 /**
@@ -145,26 +144,31 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
           role={banners[activeSlide]?.href ? 'link' : undefined}
           aria-label={banners[activeSlide]?.alt || 'Banner'}
         >
-          {banners.map((banner, index) => (
+          {banners.map((banner, index) => {
+            const isActive = index === activeSlide;
+            const isNext = banners.length > 1 && index === (activeSlide + 1) % banners.length;
+            if (!isActive && !isNext) return null;
+            return (
             <div
               key={banner.id}
               className={`absolute inset-0 transition-opacity duration-500 ease-out ${
-                index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
               <img
                 src={banner.image}
                 alt={banner.alt}
                 className="w-full h-full object-cover"
-                style={{ objectPosition: 'center center' }}
+                style={{ objectPosition: 'center center', height: '100%', maxWidth: 'none' }}
                 width={isMobile ? 1545 : 1374}
                 height={isMobile ? 1329 : 438}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === activeSlide ? 'high' : 'low'}
-                decoding={index === 0 ? 'sync' : 'async'}
+                loading={isActive ? 'eager' : 'lazy'}
+                fetchPriority={isActive ? 'high' : 'low'}
+                decoding={isActive ? 'async' : 'async'}
               />
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {banners.length > 1 && (
@@ -176,7 +180,9 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
               style={{ minWidth: '44px', minHeight: '44px' }}
               aria-label="Anterior"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-800" />
+              <svg className="w-5 h-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
             <button
               type="button"
@@ -185,7 +191,9 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
               style={{ minWidth: '44px', minHeight: '44px' }}
               aria-label="Siguiente"
             >
-              <ChevronRight className="w-5 h-5 text-gray-800" />
+              <svg className="w-5 h-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
             <div className="absolute bottom-3 left-0 right-0 z-20 flex justify-center gap-1.5">
               {banners.map((b, i) => (

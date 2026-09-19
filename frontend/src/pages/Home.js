@@ -3,8 +3,6 @@ import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
-import CategoryShowcase from '../components/CategoryShowcase';
-import HomeDynamicSections from '../components/home/HomeDynamicSections';
 import { useHomeProducts } from '../hooks/useProducts';
 import '../styles/global.css';
 import scrollTop from '../helpers/scrollTop';
@@ -18,6 +16,8 @@ import { useSeedHomeShowcasePreviews } from '../hooks/useSubcategoryPreviewMap';
 import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
 import { SITE_ORIGIN } from '../config/siteUrl';
 
+const CategoryShowcase = lazy(() => import('../components/CategoryShowcase'));
+const HomeDynamicSections = lazy(() => import('../components/home/HomeDynamicSections'));
 const LatestProductsMix = lazy(() => import('../components/LatestProductsMix'));
 const BrandCarousel = lazy(() => import('../components/BrandCarousel'));
 
@@ -105,7 +105,8 @@ const Home = () => {
         if (item?.image) urls.push(cdnThumbUrl(item.image, { width: 384, quality: 70 }));
       });
     }
-    warmImageUrls(urls, 4);
+    const timer = setTimeout(() => warmImageUrls(urls, 4), 1200);
+    return () => clearTimeout(timer);
   }, [homeShowcase]);
 
   const slots = homeData?.data?.slots;
@@ -159,7 +160,6 @@ const Home = () => {
           name="keywords"
           content="informática, notebooks, placas madre, computadoras, monitores, Paraguay, tecnología, ofertas"
         />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="canonical" href={`${SITE_ORIGIN}/`} />
         <meta property="og:url" content={`${SITE_ORIGIN}/`} />
         <link rel="preconnect" href="https://cdn.zenn.com.py" crossOrigin="true" />
@@ -178,7 +178,8 @@ const Home = () => {
             />
           </div>
           {homePending ? (
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4" aria-hidden>
+            <div className="w-full bg-white py-4 sm:py-6 min-h-[22rem] sm:min-h-[20rem]" aria-hidden>
+              <div className="max-w-7xl mx-auto px-3 sm:px-4">
               <div className="flex gap-2 mb-4 overflow-hidden min-h-[36px]">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -192,12 +193,15 @@ const Home = () => {
                   </div>
                 ))}
               </div>
+              </div>
             </div>
           ) : (
-            <CategoryShowcase
-              showcasePreviewsByCategory={showcasePreviewsByCategory}
-              homeShowcase={homeShowcase}
-            />
+            <Suspense fallback={<div className="w-full min-h-[22rem] sm:min-h-[20rem] bg-white" aria-hidden />}>
+              <CategoryShowcase
+                showcasePreviewsByCategory={showcasePreviewsByCategory}
+                homeShowcase={homeShowcase}
+              />
+            </Suspense>
           )}
         </div>
 
@@ -211,11 +215,13 @@ const Home = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 space-y-8 sm:space-y-16 py-8 sm:py-16">
-          <HomeDynamicSections
-            sections={sections}
-            slotProducts={slotProducts}
-            loading={homePending || (homeLoading && !sections.length)}
-          />
+          <Suspense fallback={<div className="min-h-[280px]" aria-hidden />}>
+            <HomeDynamicSections
+              sections={sections}
+              slotProducts={slotProducts}
+              loading={homePending || (homeLoading && !sections.length)}
+            />
+          </Suspense>
 
           <section className="w-full">
             <div className="text-center mb-10">

@@ -8,9 +8,10 @@ import { prefetchCategoryShowcasePreviews } from '../api/prefetchCategoryShowcas
 let globalCache = null;
 let loadingPromise = null;
 
-const usePreloadedCategories = () => {
+const usePreloadedCategories = (options = {}) => {
+  const enabled = options.enabled !== false;
   const [data, setData] = useState(globalCache || []);
-  const [loading, setLoading] = useState(!globalCache);
+  const [loading, setLoading] = useState(enabled && !globalCache);
   const [error, setError] = useState(null);
 
   const loadAllData = useCallback(async () => {
@@ -107,8 +108,9 @@ const usePreloadedCategories = () => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
+    if (!enabled) return;
     loadAllData();
-  }, [loadAllData]);
+  }, [loadAllData, enabled]);
 
   return {
     data,

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { GrSearch } from "react-icons/gr";
 import { CiShoppingCart, CiHome } from "react-icons/ci";
 import { BiCategoryAlt } from "react-icons/bi";
@@ -19,9 +19,10 @@ import {
   FaHeart,
   FaCog
 } from "react-icons/fa";
-import MenuCategorias from './MenuCategorias';
-import SearchPreview from './SearchPreview';
 import { clearAuthToken } from '../helpers/getAuthToken';
+
+const MenuCategorias = lazy(() => import('./MenuCategorias'));
+const SearchPreview = lazy(() => import('./SearchPreview'));
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -80,6 +81,15 @@ const Header = () => {
   const userDropdownRef = useRef(null);
 
   const isAdminRoute = location.pathname.includes('/panel-admin');
+  const menuOpen = isMobile ? categoryMenuOpen : desktopMenuOpen;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      import('./MenuCategorias');
+      import('./SearchPreview');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, []);
 
   // Detectar cambios en el tamaño de pantalla
   useEffect(() => {
@@ -213,6 +223,9 @@ const Header = () => {
               src="/logozenn.svg" 
               alt="Zenn Electrónicos" 
               className="h-10 w-auto"
+              width={160}
+              height={40}
+              decoding="async"
               style={{
                 filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
               }}
@@ -235,7 +248,7 @@ const Header = () => {
                 <input
                   type="text"
                   placeholder="Busca tus productos..."
-                  className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
+                  className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-base placeholder:text-gray-400"
                   onChange={handleSearch}
                   value={search}
                   style={{
@@ -256,13 +269,16 @@ const Header = () => {
               </div>
             </form>
             
-            {/* Search Preview */}
-            <SearchPreview
-              searchTerm={search}
-              onSearchChange={setSearch}
-              isVisible={showSearchPreview}
-              onClose={handleCloseSearchPreview}
-            />
+            {showSearchPreview ? (
+              <Suspense fallback={null}>
+                <SearchPreview
+                  searchTerm={search}
+                  onSearchChange={setSearch}
+                  isVisible={showSearchPreview}
+                  onClose={handleCloseSearchPreview}
+                />
+              </Suspense>
+            ) : null}
           </div>
 
           {/* ÁREA DERECHA */}
@@ -498,6 +514,9 @@ const Header = () => {
                 src="/logozenn.svg" 
                 alt="Zenn Electrónicos" 
                 className="h-8 w-auto"
+                width={128}
+                height={32}
+                decoding="async"
                 style={{
                   filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
                 }}
@@ -571,7 +590,7 @@ const Header = () => {
                 <input
                   type="text"
                   placeholder="Busca tus productos..."
-                  className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-sm"
+                  className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-base"
                   onChange={handleSearch}
                   value={search}
                   autoFocus
@@ -587,25 +606,31 @@ const Header = () => {
                 </button>
               </div>
               
-              {/* Search Preview para móvil */}
-              <SearchPreview
-                searchTerm={search}
-                onSearchChange={setSearch}
-                isVisible={showSearchPreview}
-                onClose={handleCloseSearchPreview}
-                className="mt-2"
-              />
+              {showSearchPreview ? (
+                <Suspense fallback={null}>
+                  <SearchPreview
+                    searchTerm={search}
+                    onSearchChange={setSearch}
+                    isVisible={showSearchPreview}
+                    onClose={handleCloseSearchPreview}
+                    className="mt-2"
+                  />
+                </Suspense>
+              ) : null}
             </form>
           </div>
         </>
       )}
 
-      {/* ============ COMPONENTE MENU CATEGORÍAS ============ */}
-      <MenuCategorias 
-        isOpen={isMobile ? categoryMenuOpen : desktopMenuOpen}
-        onClose={isMobile ? toggleCategoryMenu : toggleDesktopMenu}
-        isMobile={isMobile}
-      />
+      {menuOpen ? (
+        <Suspense fallback={null}>
+          <MenuCategorias
+            isOpen={menuOpen}
+            onClose={isMobile ? toggleCategoryMenu : toggleDesktopMenu}
+            isMobile={isMobile}
+          />
+        </Suspense>
+      ) : null}
 
       {/* ============ BARRA DE NAVEGACIÓN MÓVIL INFERIOR ============ */}
       <div 
