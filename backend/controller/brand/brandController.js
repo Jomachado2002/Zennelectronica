@@ -4,6 +4,7 @@ const multer = require('multer');
 const {
   listAdminBrands,
   syncBrandsFromProducts,
+  rebuildBrandsFromProducts,
   createBrand,
   updateBrand,
   deleteBrand,
@@ -54,13 +55,29 @@ const listAdminBrandsController = async (req, res) => {
 const syncBrandsController = async (req, res) => {
   try {
     const data = await syncBrandsFromProducts();
-    const listed = await listAdminBrands();
+    const listed = await listAdminBrands({ limit: 1000 });
     res.json({
       success: true,
       error: false,
       data: listed.brands,
       stats: listed.stats,
       sync: data
+    });
+  } catch (err) {
+    sendError(res, err);
+  }
+};
+
+const rebuildBrandsController = async (req, res) => {
+  try {
+    const result = await rebuildBrandsFromProducts();
+    const listed = await listAdminBrands({ limit: 1000 });
+    res.json({
+      success: true,
+      error: false,
+      data: listed.brands,
+      stats: listed.stats,
+      rebuild: result
     });
   } catch (err) {
     sendError(res, err);
@@ -160,6 +177,7 @@ const publicBrandByNameController = async (req, res) => {
 module.exports = {
   listAdminBrandsController,
   syncBrandsController,
+  rebuildBrandsController,
   createBrandController,
   updateBrandController,
   deleteBrandController,

@@ -2,7 +2,6 @@ import React, { useContext, useRef, useState, useEffect, useMemo, useCallback } 
 import scrollTop from '../helpers/scrollTop';
 import Context from '../context';
 import addToCart from '../helpers/addToCart';
-import { Link } from 'react-router-dom';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { FaShoppingCart } from 'react-icons/fa';
 import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
@@ -176,8 +175,8 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                 };
                 
                 return (
-                    <Link
-                        to={productPath(product)} 
+                    <a
+                        href={productPath(product)} 
                         key={product._id}
                         data-product-id={product._id}
                         className='w-full h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
@@ -291,7 +290,7 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                                 </button>
                             </div>
                         </div>
-                    </Link>
+                    </a>
                 );
             })}
         </div>

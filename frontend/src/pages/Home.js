@@ -3,8 +3,6 @@ import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import BannerProduct from '../components/BannerProduct';
-import CategoryShowcase from '../components/CategoryShowcase';
-import HomeDynamicSections from '../components/home/HomeDynamicSections';
 import { useHomeProducts } from '../hooks/useProducts';
 import '../styles/global.css';
 import scrollTop from '../helpers/scrollTop';
@@ -20,9 +18,15 @@ import { SITE_ORIGIN } from '../config/siteUrl';
 
 const LatestProductsMix = lazy(() => import('../components/LatestProductsMix'));
 const BrandCarousel = lazy(() => import('../components/BrandCarousel'));
+const CategoryShowcase = lazy(() => import('../components/CategoryShowcase'));
+const HomeDynamicSections = lazy(() => import('../components/home/HomeDynamicSections'));
+
+const ShowcaseSlot = ({ children }) => (
+  <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4 min-h-[220px]">{children}</div>
+);
 
 const BelowFoldFallback = () => (
-  <div className="w-full h-40 rounded-xl bg-gray-100 animate-pulse" aria-hidden />
+  <div className="w-full min-h-[220px] rounded-xl bg-gray-100" aria-hidden />
 );
 
 /** Fallback si el API aún no envía `sections` (backend viejo). */
@@ -170,15 +174,16 @@ const Home = () => {
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white font-inter text-gray-800">
-        <div className="relative bg-white shadow-xl overflow-hidden mt-0 md:mt-4">
-          <div className="w-full -mt-2 sm:mt-0">
+        <div className="relative bg-white overflow-hidden mt-0">
+          <div className="w-full">
             <BannerProduct
               banners={homeBanners}
               pending={homePending || homeBanners == null}
             />
           </div>
           {homePending ? (
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 py-4" aria-hidden>
+            <ShowcaseSlot>
+              <div aria-hidden>
               <div className="flex gap-2 mb-4 overflow-hidden min-h-[36px]">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -192,12 +197,17 @@ const Home = () => {
                   </div>
                 ))}
               </div>
-            </div>
+              </div>
+            </ShowcaseSlot>
           ) : (
+            <ShowcaseSlot>
+            <Suspense fallback={<BelowFoldFallback />}>
             <CategoryShowcase
               showcasePreviewsByCategory={showcasePreviewsByCategory}
               homeShowcase={homeShowcase}
             />
+            </Suspense>
+            </ShowcaseSlot>
           )}
         </div>
 
@@ -211,11 +221,13 @@ const Home = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 space-y-8 sm:space-y-16 py-8 sm:py-16">
+          <Suspense fallback={<BelowFoldFallback />}>
           <HomeDynamicSections
             sections={sections}
             slotProducts={slotProducts}
             loading={homePending || (homeLoading && !sections.length)}
           />
+          </Suspense>
 
           <section className="w-full">
             <div className="text-center mb-10">

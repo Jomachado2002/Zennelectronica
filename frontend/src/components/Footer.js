@@ -1,8 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faWhatsapp, faInstagram, faFacebook } from '@fortawesome/free-brands-svg-icons';
-import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
 
 const Footer = () => {
   return (
@@ -14,16 +11,13 @@ const Footer = () => {
     >
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Información de Contacto */}
           <div className="text-center md:text-left">
             <h3 className="text-2xl font-bold mb-6 text-white">Contáctanos</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-center md:justify-start space-x-3">
-                <FontAwesomeIcon icon={faPhone} className="text-white/80" />
                 <span>+595 973 345284</span>
               </div>
               <div className="flex items-center justify-center md:justify-start space-x-3">
-                <FontAwesomeIcon icon={faEnvelope} className="text-white/80" />
                 <span>ventas@zenn.com.py</span>
               </div>
             </div>
@@ -41,7 +35,6 @@ const Footer = () => {
             </div>
           </div>
           
-          {/* Horarios */}
           <div className="text-center">
             <h3 className="text-2xl font-bold mb-6 text-white">Horarios</h3>
             <div className="space-y-2">
@@ -56,17 +49,16 @@ const Footer = () => {
             </div>
           </div>
           
-          {/* Redes Sociales */}
           <div className="text-center md:text-right">
             <h3 className="text-2xl font-bold mb-6 text-white">Síguenos</h3>
-            <div className="flex justify-center md:justify-end space-x-6">
+            <div className="flex justify-center md:justify-end space-x-6 text-sm font-semibold">
               <a
                 href="https://www.instagram.com/zennelectronicos/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"
               >
-                <FontAwesomeIcon icon={faInstagram} size="2x" />
+                Instagram
               </a>
               <a
                 href="https://wa.me/+595973345284"
@@ -74,7 +66,7 @@ const Footer = () => {
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"
               >
-                <FontAwesomeIcon icon={faWhatsapp} size="2x" />
+                WhatsApp
               </a>
               <a
                 href="https://www.facebook.com/Zennelectronicos/"
@@ -82,13 +74,12 @@ const Footer = () => {
                 rel="noopener noreferrer"
                 className="text-white hover:text-white/80 transition-colors duration-300"
               >
-                <FontAwesomeIcon icon={faFacebook} size="2x" />
+                Facebook
               </a>
             </div>
           </div>
         </div>
         
-        {/* Derechos de autor */}
         <div className="border-t border-white/30 mt-8 pt-6 text-center space-y-3">
           <p className="text-white/80 text-sm">
             Gaudioso Nuñez casi Celsa Speratti, Asunción, Paraguay

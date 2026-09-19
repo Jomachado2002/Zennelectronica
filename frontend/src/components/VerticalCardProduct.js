@@ -321,7 +321,7 @@ const VerticalCardProduct = ({
                             }
                           
                             return (
-                                <Link to={productPath(product)}
+                                <a href={productPath(product)}
                                     key={product?._id} 
                                     data-product-id={product?._id}
                                     className='snap-center flex-none w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px] h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
@@ -420,7 +420,7 @@ const VerticalCardProduct = ({
                                             </button>
                                         </div>
                                     </div>
-                                </Link>
+                                </a>
                             );
                         })}
                 </div>

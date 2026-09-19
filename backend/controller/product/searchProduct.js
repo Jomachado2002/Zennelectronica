@@ -1,59 +1,60 @@
 const productModel = require("../../models/productModel")
 
-const searchProduct = async(req,res)=>{
-    try{
-        const query = req.query.q 
+function escapeRegex(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
-        // Separar palabras de búsqueda
-        const searchTerms = query.split(/\s+/).filter(term => term.trim() !== '')
+const SEARCH_SELECT =
+    'productName slug sellingPrice price productImage brandName category subcategory stock codigo'
 
-        // Construir condiciones de búsqueda
-        const searchConditions = searchTerms.map(term => {
-            const regex = new RegExp(term, 'i')
+const searchProduct = async (req, res) => {
+    try {
+        const query = String(req.query.q || '').trim()
+        if (query.length < 2) {
+            return res.json({
+                data: [],
+                message: "Búsqueda demasiado corta",
+                error: false,
+                success: true
+            })
+        }
+
+        const parsedLimit = parseInt(req.query.limit, 10)
+        const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 48, 1), 80)
+
+        const searchTerms = query.split(/\s+/).filter((term) => term.trim() !== '').slice(0, 6)
+
+        const searchConditions = searchTerms.map((term) => {
+            const regex = new RegExp(escapeRegex(term), 'i')
             return {
                 "$or": [
                     { productName: regex },
                     { category: regex },
                     { subcategory: regex },
                     { brandName: regex },
-                    { processor: regex },
-                    { memory: regex },
-                    { storage: regex },
-                    { disk: regex },
-                    { graphicsCard: regex },
-                    { monitorSize: regex },
-                    { monitorRefreshRate: regex },
-                    { cameraResolution: regex },
-                    { dvrChannels: regex },
-                    { nasCapacity: regex },
-                    { printerType: regex },
-                    { printerFunctions: regex },
-                    { psuWattage: regex },
-                    { upsCapacity: regex },
-                    { airpodsModel: regex },
-                    { softwareLicenseType: regex },
-                    { phoneType: regex },
-                    { phoneStorage: regex }
+                    { codigo: regex }
                 ]
             }
         })
 
-        // ✅ FILTRAR PRODUCTOS CON STOCK > 0
         const stockFilter = {
             "$or": [
                 { stock: { $exists: false } },
                 { stock: null },
                 { stock: { $gt: 0 } }
             ]
-        };
+        }
 
-        // Buscar productos que coincidan con todos los términos Y tengan stock
-        const products = await productModel.find({
-            "$and": [
-                ...searchConditions,
-                stockFilter
-            ]
-        })
+        const products = await productModel
+            .find({
+                "$and": [
+                    ...searchConditions,
+                    stockFilter
+                ]
+            })
+            .select(SEARCH_SELECT)
+            .limit(limit)
+            .lean()
 
         res.json({
             data: products,
@@ -61,7 +62,7 @@ const searchProduct = async(req,res)=>{
             error: false,
             success: true
         })
-    }catch(err){
+    } catch (err) {
         res.status(400).json({
             message: err.message || err,
             error: true,

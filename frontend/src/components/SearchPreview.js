@@ -32,25 +32,35 @@ const SearchPreview = ({
     return Math.round(discount);
   }, []);
 
-  // Búsqueda con debounce
+  const abortRef = useRef(null);
+
+  // Búsqueda con debounce + cancelación de requests viejos
   useEffect(() => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
+    }
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
 
     const trimmedSearchTerm = String(searchTerm || '').trim();
     if (trimmedSearchTerm.length >= 2) {
       debounceTimeoutRef.current = setTimeout(async () => {
         await performSearch(trimmedSearchTerm);
-      }, 150); // Debounce más rápido para mejor UX
+      }, 200);
     } else {
       setSearchResults([]);
       setShowPreview(false);
+      setLoading(false);
     }
 
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
     };
   }, [searchTerm]);
@@ -64,18 +74,18 @@ const SearchPreview = ({
   const performSearch = useCallback(async (query) => {
     setLoading(true);
     try {
-      // Optimización: usar AbortController para cancelar requests previos
+      if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout de 5s
-      
-             const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}&limit=6`, {
-               signal: controller.signal,
-             });
+      abortRef.current = controller;
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(
+        `${SummaryApi.searchProduct.url}?q=${encodeURIComponent(query)}&limit=8`,
+        { signal: controller.signal }
+      );
       clearTimeout(timeoutId);
-      
+
       const dataResponse = await response.json();
-      
-      // Ya limitamos en la query, no necesitamos slice
       setSearchResults(dataResponse?.data || []);
     } catch (error) {
       if (error.name !== 'AbortError') {

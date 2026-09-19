@@ -6,6 +6,7 @@ const authToken = require('../middleware/authToken');
 const {
   listAdminBrandsController,
   syncBrandsController,
+  rebuildBrandsController,
   createBrandController,
   updateBrandController,
   deleteBrandController,
@@ -20,6 +21,7 @@ router.get('/brands/by-name/:name', publicBrandByNameController);
 
 router.get('/admin/brands', authToken, listAdminBrandsController);
 router.post('/admin/brands/sync', authToken, syncBrandsController);
+router.post('/admin/brands/rebuild', authToken, rebuildBrandsController);
 router.post('/admin/brands', authToken, createBrandController);
 router.put('/admin/brands/:id', authToken, updateBrandController);
 router.delete('/admin/brands/:id', authToken, deleteBrandController);
