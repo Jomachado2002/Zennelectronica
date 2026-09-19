@@ -39,15 +39,6 @@ code {
     monospace;
 }
 
-/* iOS hace zoom si el input tiene menos de 16px. El pellizco del usuario sigue activo. */
-@media (max-width: 1023px) {
-  input,
-  select,
-  textarea {
-    font-size: 16px !important;
-  }
-}
-
 /* Screen reader only class for SEO content */
 .sr-only {
   position: absolute;

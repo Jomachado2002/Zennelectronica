@@ -14,6 +14,7 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
     
+    <!-- Preconnect CDN de imágenes (R2 / Cloudflare) -->
     <link rel="preconnect" href="https://cdn.zenn.com.py" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.zenn.com.py" />
     <!-- Open Graph Meta Tags for Better Social Sharing -->
@@ -50,29 +51,38 @@
     <!-- Canonical URL (dominio único) -->
     <link rel="canonical" href="https://www.zenn.com.py/"/>
       
+    <!-- Robots Meta Tag for Search Engine Indexing -->
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
     
-    <!-- GA4 se carga después del primer paint (no bloquea el celular) -->
+    <!-- Preconnect to important domains for faster loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Optimized font loading with font-display: swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="//cdn.zenn.com.py" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    
+    <!-- Google Analytics 4 (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2BDLSJF39"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      window.addEventListener('load', function () {
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-M2BDLSJF39';
-        s.onload = function () {
-          gtag('js', new Date());
-          gtag('config', 'G-M2BDLSJF39', { send_page_view: true });
-        };
-        document.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', 'G-M2BDLSJF39', {
+        page_path: window.location.pathname,
+        send_page_view: true
       });
     </script>
     
+    <!-- Minimal critical CSS -->
     <style>
-      html,body{margin:0;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-      #root{min-height:100vh}
-      .zenn-boot{height:56px;display:flex;align-items:center;padding:0 16px;font-weight:700;border-bottom:1px solid #eee;color:#111}
-      @media (min-width:1024px){.zenn-boot{height:64px}}
+      body { margin: 0; font-family: Inter, sans-serif; }
+      #root { min-height: 100vh; }
     </style>
     
     <!-- Schema.org JSON-LD - Organización -->
@@ -155,6 +165,6 @@
         alt="" />
       Necesitas habilitar JavaScript para ejecutar esta aplicación.
     </noscript>
-    <div id="root"><div class="zenn-boot">Zenn</div></div>
+    <div id="root"></div>
   </body>
 </html>

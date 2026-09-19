@@ -24,7 +24,6 @@ const {
 const { writeProductCategoryJsFromMongo } = require('./exportCategoriesFrontendFile');
 const { throwIfCancelled } = require('./workerLiveLog');
 const { resolveVisaoBrandName } = require('../helpers/visaoBrand');
-const { ensureBrandFromName } = require('./brandLogoService');
 
 const SYNC_SOURCE = 'visao_vip';
 const DEFAULT_CATEGORY_COLOR = '#3B82F6';
@@ -982,15 +981,6 @@ async function markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos
     };
 }
 
-function queueEnsureBrand(name) {
-    if (!name) return;
-    Promise.resolve()
-        .then(() => ensureBrandFromName(name))
-        .catch((err) => {
-            console.warn('[brands] ensureBrandFromName', err && err.message);
-        });
-}
-
 async function persistOneVisaoProduct(scraped, ctx) {
     const {
         exchangeRate,
@@ -1330,7 +1320,6 @@ async function persistOneVisaoProduct(scraped, ctx) {
                 changedFields: drifted,
                 imagesFirebaseOnly: !!(productImageUrls && productImageUrls.length)
             });
-            queueEnsureBrand(brandName);
             return;
         }
 
@@ -1379,7 +1368,6 @@ async function persistOneVisaoProduct(scraped, ctx) {
             productId: String(created._id),
             changedFields: ['__created__']
         });
-        queueEnsureBrand(brandName);
     } catch (err) {
         const out = {
             codigo: code,

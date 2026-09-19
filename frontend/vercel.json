@@ -51,10 +51,11 @@
     },
     {
       "source": "/producto/:slug*",
-      "missing": [
+      "has": [
         {
-          "type": "query",
-          "key": "spa"
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(googlebot|google-inspectiontool|bingbot|bingpreview|yandex|baiduspider|twitterbot|facebookexternalhit|linkedinbot|whatsapp|telegrambot|duckduckbot|applebot|semrushbot|ahrefsbot|storebot-google|adsbot-google|mediapartners-google).*"
         }
       ],
       "destination": "https://zennelectronica.vercel.app/api/seo/producto/:slug*"

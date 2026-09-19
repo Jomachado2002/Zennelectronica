@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { GrSearch } from "react-icons/gr";
 import { CiShoppingCart, CiHome } from "react-icons/ci";
 import { BiCategoryAlt } from "react-icons/bi";
@@ -19,10 +19,9 @@ import {
   FaHeart,
   FaCog
 } from "react-icons/fa";
+import MenuCategorias from './MenuCategorias';
+import SearchPreview from './SearchPreview';
 import { clearAuthToken } from '../helpers/getAuthToken';
-
-const MenuCategorias = lazy(() => import('./MenuCategorias'));
-const SearchPreview = lazy(() => import('./SearchPreview'));
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -161,19 +160,11 @@ const Header = () => {
     }
   };
 
-  const blurSearchField = () => {
-    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-  };
-
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const trimmedSearch = String(search || '').trim();
     if (trimmedSearch) {
       setShowSearchPreview(false);
-      setShowMobileSearch(false);
-      blurSearchField();
       navigate(`/buscar?q=${encodeURIComponent(trimmedSearch)}`);
     }
   };
@@ -184,16 +175,7 @@ const Header = () => {
 
   const toggleCategoryMenu = () => setCategoryMenuOpen(!categoryMenuOpen);
   const toggleDesktopMenu = () => setDesktopMenuOpen(!desktopMenuOpen);
-  const toggleMobileSearch = () => {
-    setShowMobileSearch((open) => {
-      const next = !open;
-      if (!next) {
-        setShowSearchPreview(false);
-        blurSearchField();
-      }
-      return next;
-    });
-  };
+  const toggleMobileSearch = () => setShowMobileSearch(!showMobileSearch);
   const toggleUserDropdown = () => setUserDropdownOpen(!userDropdownOpen);
 
   const handleUserIconClick = () => {
@@ -211,9 +193,9 @@ const Header = () => {
   return (
     <>
       <header 
-        className={`fixed w-full top-0 z-[100] h-14 lg:h-16 ${
+        className={`fixed w-full top-0 z-[100] transition-all duration-300 ${
           scrolled 
-            ? 'bg-white shadow-lg'
+            ? 'bg-white shadow-lg' 
             : 'bg-white border-b border-gray-100'
         }`}
       >
@@ -231,9 +213,9 @@ const Header = () => {
               src="/logozenn.svg" 
               alt="Zenn Electrónicos" 
               className="h-10 w-auto"
-              width={180}
-              height={40}
-              decoding="async"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
+              }}
             />
           </Link>
 
@@ -251,16 +233,13 @@ const Header = () => {
                 }}
               >
                 <input
-                  type="search"
+                  type="text"
                   placeholder="Busca tus productos..."
-                  className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-base placeholder:text-gray-400"
+                  className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-[15px] placeholder:text-gray-400"
                   onChange={handleSearch}
                   value={search}
-                  enterKeyHint="search"
-                  autoComplete="off"
                   style={{
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontSize: 16
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
                   }}
                 />
                 <button 
@@ -277,16 +256,13 @@ const Header = () => {
               </div>
             </form>
             
-            {showSearchPreview ? (
-            <Suspense fallback={null}>
+            {/* Search Preview */}
             <SearchPreview
               searchTerm={search}
               onSearchChange={setSearch}
               isVisible={showSearchPreview}
               onClose={handleCloseSearchPreview}
             />
-            </Suspense>
-            ) : null}
           </div>
 
           {/* ÁREA DERECHA */}
@@ -522,9 +498,9 @@ const Header = () => {
                 src="/logozenn.svg" 
                 alt="Zenn Electrónicos" 
                 className="h-8 w-auto"
-                width={144}
-                height={32}
-                decoding="async"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 181, 216, 0.15))'
+                }}
               />
             </Link>
 
@@ -593,15 +569,12 @@ const Header = () => {
                 }}
               >
                 <input
-                  type="search"
+                  type="text"
                   placeholder="Busca tus productos..."
-                  className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-base"
+                  className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-sm"
                   onChange={handleSearch}
                   value={search}
                   autoFocus
-                  enterKeyHint="search"
-                  autoComplete="off"
-                  style={{ fontSize: 16 }}
                 />
                 <button 
                   type="submit"
@@ -614,8 +587,7 @@ const Header = () => {
                 </button>
               </div>
               
-              {showSearchPreview ? (
-              <Suspense fallback={null}>
+              {/* Search Preview para móvil */}
               <SearchPreview
                 searchTerm={search}
                 onSearchChange={setSearch}
@@ -623,22 +595,17 @@ const Header = () => {
                 onClose={handleCloseSearchPreview}
                 className="mt-2"
               />
-              </Suspense>
-              ) : null}
             </form>
           </div>
         </>
       )}
 
-      {(categoryMenuOpen || desktopMenuOpen) ? (
-      <Suspense fallback={null}>
+      {/* ============ COMPONENTE MENU CATEGORÍAS ============ */}
       <MenuCategorias 
         isOpen={isMobile ? categoryMenuOpen : desktopMenuOpen}
         onClose={isMobile ? toggleCategoryMenu : toggleDesktopMenu}
         isMobile={isMobile}
       />
-      </Suspense>
-      ) : null}
 
       {/* ============ BARRA DE NAVEGACIÓN MÓVIL INFERIOR ============ */}
       <div 

@@ -213,9 +213,9 @@ const InfiniteCarousel = ({
             const showSecondImage = isHovered && secondImage;
 
             return (
-              <a
+              <Link
                 key={`${product._id}-${currentIndex}-${index}`}
-                href={productPath(product)}
+                to={productPath(product)}
                 className={`${currentConfig.cardWidth} ${currentConfig.cardHeight} 
                           flex-shrink-0 bg-white rounded-lg shadow-sm border 
                           hover:shadow-md transition-all duration-200 flex flex-col
@@ -293,7 +293,7 @@ const InfiniteCarousel = ({
                     </button>
                   </div>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>

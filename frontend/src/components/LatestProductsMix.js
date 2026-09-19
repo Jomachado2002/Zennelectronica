@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { useQueryClient } from '@tanstack/react-query';
 import { FaAngleLeft, FaAngleRight, FaShoppingCart, FaExpand } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
@@ -259,8 +260,8 @@ const fetchDataFromServer = async () => {
                             const subcategoryInfo = getCategoryInfo(product.category, product.subcategory);
                             
                             return (
-                                <a 
-                                    href={productPath(product)} 
+                                <Link 
+                                    to={productPath(product)} 
                                     key={product?._id} 
                                     className='snap-center flex-none w-[220px] sm:w-[250px] md:w-[280px] bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 group/card product-card relative'
                                     onClick={scrollTop}
@@ -341,7 +342,7 @@ const fetchDataFromServer = async () => {
                                             <FaShoppingCart /> Agregar al Carrito
                                         </button>
                                     </div>
-                                </a>
+                                </Link>
                             );
                         })}
                 </div>

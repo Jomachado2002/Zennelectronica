@@ -11,7 +11,7 @@ import scrollTop from '../helpers/scrollTop';
  */
 export const BANNER_SHELL_CLASS =
   'w-full overflow-hidden rounded-none sm:rounded-xl bg-gray-200 ' +
-  '[aspect-ratio:1545/1329] sm:[aspect-ratio:1374/438]';
+  '[aspect-ratio:1545/1329] sm:[aspect-ratio:1374/438] sm:min-h-[180px] sm:max-h-[60vh]';
 
 /**
  * Solo banners del CMS (Admin → Home Media).
@@ -99,16 +99,32 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   };
 
   useEffect(() => {
+    if (!banners.length) return undefined;
+    const warm = (src, priority = 'low') => {
+      if (!src) return;
+      const img = new Image();
+      if ('fetchPriority' in img) img.fetchPriority = priority;
+      img.src = src;
+    };
+    warm(banners[activeSlide]?.image, 'high');
+    if (banners.length > 1) {
+      warm(banners[(activeSlide + 1) % banners.length]?.image, 'low');
+    }
+  }, [banners, activeSlide]);
+
+  useEffect(() => {
     if (banners.length < 2) return undefined;
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
   }, [activeSlide, nextSlide, banners.length]);
 
+  // Siempre reservar el hueco mientras carga; si ya cargó y no hay banners, no ocupar espacio
   if (!banners.length) {
+    if (!pending && Array.isArray(bannersProp)) return null;
     return (
       <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
         <div
-          className={`${BANNER_SHELL_CLASS} ${pending ? 'animate-pulse' : ''}`}
+          className={`${BANNER_SHELL_CLASS} animate-pulse`}
           aria-hidden
         />
       </div>
@@ -129,15 +145,11 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
           role={banners[activeSlide]?.href ? 'link' : undefined}
           aria-label={banners[activeSlide]?.alt || 'Banner'}
         >
-          {banners.map((banner, index) => {
-            const isActive = index === activeSlide;
-            const isNext = index === (activeSlide + 1) % banners.length;
-            if (!isActive && !isNext) return null;
-            return (
+          {banners.map((banner, index) => (
             <div
               key={banner.id}
               className={`absolute inset-0 transition-opacity duration-500 ease-out ${
-                isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
               }`}
             >
               <img
@@ -145,15 +157,14 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
                 alt={banner.alt}
                 className="w-full h-full object-cover"
                 style={{ objectPosition: 'center center' }}
-                width={isMobile ? 800 : 1374}
-                height={isMobile ? 688 : 438}
-                loading={isActive ? 'eager' : 'lazy'}
-                fetchPriority={isActive ? 'high' : 'low'}
-                decoding="async"
+                width={isMobile ? 1545 : 1374}
+                height={isMobile ? 1329 : 438}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchPriority={index === activeSlide ? 'high' : 'low'}
+                decoding={index === 0 ? 'sync' : 'async'}
               />
             </div>
-            );
-          })}
+          ))}
         </div>
 
         {banners.length > 1 && (

@@ -236,7 +236,7 @@ const VerticalCardProductOptimized = ({
                 };
                 
                 return (
-                  <a href={productPath(product)}
+                  <Link to={productPath(product)}
                     key={product?._id} 
                     className='snap-center flex-none w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px] h-[280px] sm:h-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 group/card relative flex flex-col overflow-hidden'
                     style={{
@@ -351,7 +351,7 @@ const VerticalCardProductOptimized = ({
                         </button>
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 );
               })}
         </div>

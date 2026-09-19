@@ -2,7 +2,7 @@
 
 const Brand = require('../models/brandModel');
 const Product = require('../models/productModel');
-const { normalizeBrandSlug, uniqueStrings, uniqueSlugs, isPlausibleBrandName } = require('../helpers/brandSlug');
+const { normalizeBrandSlug, uniqueStrings, uniqueSlugs } = require('../helpers/brandSlug');
 const { processBrandLogo, clampSize } = require('./brandLogoImage');
 const { uploadLogoBuffer, deleteLogoObject } = require('./logoStorageService');
 
@@ -10,7 +10,6 @@ let logoMapCache = null;
 let logoMapCacheAt = 0;
 const CACHE_MS = 5 * 60 * 1000;
 let syncPromise = null;
-const ensuredBrandSlugs = new Set();
 
 function invalidateBrandLogoCache() {
   logoMapCache = null;
@@ -122,7 +121,6 @@ async function runSyncBrandsFromProducts() {
   const bySlug = new Map();
   for (const row of grouped) {
     const name = String(row._id || '').trim();
-    if (!isPlausibleBrandName(name)) continue;
     const slug = normalizeBrandSlug(name);
     if (!slug) continue;
     if (!bySlug.has(slug)) {
@@ -201,60 +199,6 @@ async function syncBrandsFromProducts() {
     syncPromise = null;
   });
   return syncPromise;
-}
-
-async function deleteBrandsWithoutLogos() {
-  const result = await Brand.deleteMany({
-    $or: [{ logoUrl: { $exists: false } }, { logoUrl: null }, { logoUrl: '' }]
-  });
-  invalidateBrandLogoCache();
-  return { deleted: result.deletedCount || 0 };
-}
-
-async function rebuildBrandsFromProducts() {
-  if (syncPromise) {
-    try {
-      await syncPromise;
-    } catch {
-      /* la limpieza sigue igual */
-    }
-  }
-  const cleanup = await deleteBrandsWithoutLogos();
-  const sync = await syncBrandsFromProducts();
-  return { cleanup, sync };
-}
-
-async function ensureBrandFromName(name) {
-  if (!isPlausibleBrandName(name)) return null;
-  const trimmed = String(name).trim();
-  const slug = normalizeBrandSlug(trimmed);
-  if (!slug || ensuredBrandSlugs.has(slug)) return null;
-  ensuredBrandSlugs.add(slug);
-  if (ensuredBrandSlugs.size > 4000) ensuredBrandSlugs.clear();
-  try {
-    await Brand.updateOne(
-      { slug },
-      {
-        $setOnInsert: {
-          name: trimmed,
-          slug,
-          aliases: [trimmed],
-          aliasSlugs: [slug],
-          isActive: true,
-          logoUrl: '',
-          logoKey: '',
-          productCount: 0
-        }
-      },
-      { upsert: true }
-    );
-    return slug;
-  } catch (err) {
-    if (err && err.code !== 11000) {
-      console.error('[brands] ensureBrandFromName', err.message);
-    }
-    return null;
-  }
 }
 
 async function listAdminBrands({ q = '', filter = 'all', limit = 400, skip = 0 } = {}) {
@@ -459,9 +403,6 @@ module.exports = {
   attachBrandLogos,
   findBrandByName,
   syncBrandsFromProducts,
-  deleteBrandsWithoutLogos,
-  rebuildBrandsFromProducts,
-  ensureBrandFromName,
   listAdminBrands,
   createBrand,
   updateBrand,

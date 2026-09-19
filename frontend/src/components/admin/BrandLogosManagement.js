@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
   FaEdit,
-  FaEraser,
   FaPaste,
   FaPlus,
   FaSave,
@@ -106,7 +105,7 @@ const BrandLogosManagement = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/api/admin/brands', {
-        params: { q, filter, limit: 1000 }
+        params: { q, filter }
       });
       setBrands(Array.isArray(response.data.data) ? response.data.data : []);
       if (response.data.stats) setStats(response.data.stats);
@@ -136,30 +135,6 @@ const BrandLogosManagement = () => {
       );
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error al sincronizar marcas');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleRebuild = async () => {
-    const withoutLogo = stats.withoutLogo || 0;
-    const ok = window.confirm(
-      `Esto elimina las ${withoutLogo} marcas SIN logo (tipos de producto, gabinetes, etc.) y vuelve a crear solo las marcas reales que hay en el catálogo ahora.\n\nLas marcas CON logo no se tocan, aunque no tengan stock. ¿Continuar?`
-    );
-    if (!ok) return;
-    try {
-      setSyncing(true);
-      const response = await axiosInstance.post('/api/admin/brands/rebuild');
-      setFilter('all');
-      setBrands(Array.isArray(response.data.data) ? response.data.data : []);
-      if (response.data.stats) setStats(response.data.stats);
-      const deleted = response.data.rebuild?.cleanup?.deleted || 0;
-      const created = response.data.rebuild?.sync?.created || 0;
-      toast.success(
-        `Limpieza lista: se quitaron ${deleted} marcas sin logo y se regeneraron ${created} marcas reales del catálogo. Los logos existentes se conservaron.`
-      );
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Error al limpiar marcas');
     } finally {
       setSyncing(false);
     }
@@ -385,8 +360,7 @@ const BrandLogosManagement = () => {
             Logos de marca
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Cargá o pegá el logo (Ctrl+V). Las marcas con logo se conservan aunque se queden sin stock.
-            El worker de Visão agrega marcas nuevas reales; no borra las existentes.
+            Cargá o pegá el logo (Ctrl+V). Se guarda en el CDN y se conserva aunque esa marca no tenga productos.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -398,15 +372,6 @@ const BrandLogosManagement = () => {
           >
             <FaSyncAlt className={syncing ? 'animate-spin' : ''} />
             Sincronizar desde productos
-          </button>
-          <button
-            type="button"
-            onClick={handleRebuild}
-            disabled={syncing}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-60"
-          >
-            <FaEraser />
-            Limpiar sin logo
           </button>
           <button
             type="button"
