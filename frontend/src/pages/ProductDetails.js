@@ -18,16 +18,18 @@ import usePreloadedCategories from '../hooks/usePreloadedCategories';
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
 
 
+const emptyProduct = {
+  productName: "",
+  brandName: "",
+  category: "",
+  productImage: [],
+  description: "",
+  price: "",
+  sellingPrice: ""
+};
+
 const ProductDetails = () => {
-  const [data, setData] = useState({
-    productName: "",
-    brandName: "",
-    category: "",
-    productImage: [],
-    description: "",
-    price: "",
-    sellingPrice: ""
-  });
+  const [data, setData] = useState(emptyProduct);
   const params = useParams();
   const [loading, setLoading] = useState(true);
   const productImageListLoading = new Array(4).fill(null);
@@ -82,7 +84,7 @@ const ProductDetails = () => {
   };
 
  // ✅ PRODUCTO CON CACHÉ AUTOMÁTICO
-const { data: productData, isLoading: productLoading } = useQuery({
+const { data: productData } = useQuery({
   queryKey: ['product-details', params?.id],
   queryFn: async () => {
     const response = await fetch(SummaryApi.productDetails.url, {
@@ -104,32 +106,41 @@ const { data: productData, isLoading: productLoading } = useQuery({
   retry: 1,
 });
 
-// ✅ SINCRONIZAR CON ESTADO LOCAL
 useEffect(() => {
-  if (productData) {
-    setData(productData);
-    setCurrentProductId(productData._id ? String(productData._id) : null);
-    setLoading(false);
-    
-    if (productData.productImage && productData.productImage.length > 0) {
-      setActiveImage(productData.productImage[0]);
-    }
-    
-    // ✅ TRACKEAR VIEW CONTENT CUANDO SE CARGA EL PRODUCTO (Meta Pixel + GA4)
-    trackViewContent(productData);
-    trackProductView(productData); // Google Analytics 4
-  } else {
-    setLoading(productLoading);
-  }
-}, [productData, productLoading]);
+  setZoomImage(false);
+  window.scrollTo(0, 0);
 
-  // Redirección canónica para SEO
+  const param = String(params?.id || '');
+  const loadedId = productData?._id ? String(productData._id) : '';
+  const loadedSlug = productData?.slug ? String(productData.slug) : '';
+  const productMatchesUrl = Boolean(
+    productData && param && (param === loadedSlug || param === loadedId)
+  );
+
+  if (productMatchesUrl) {
+    setData(productData);
+    setCurrentProductId(loadedId || null);
+    setActiveImage(productData.productImage?.[0] || '');
+    setLoading(false);
+    trackViewContent(productData);
+    trackProductView(productData);
+    return;
+  }
+
+  setData(emptyProduct);
+  setCurrentProductId(null);
+  setActiveImage('');
+  setLoading(true);
+}, [params?.id, productData]);
+
   useEffect(() => {
-    // Si el usuario accedió por ID pero el producto tiene slug, redirigir a la URL con slug
-    if (data && data._id && data.slug && params.id !== data.slug) {
-      navigate(`/producto/${data.slug}`, { replace: true });
+    const param = String(params?.id || '');
+    const loadedId = productData?._id ? String(productData._id) : '';
+    const loadedSlug = productData?.slug ? String(productData.slug) : '';
+    if (loadedId && loadedSlug && param === loadedId && param !== loadedSlug) {
+      navigate(`/producto/${loadedSlug}`, { replace: true });
     }
-  }, [data, params.id, navigate]);
+  }, [productData, params?.id, navigate]);
 
   // Al pasar el cursor por una miniatura se cambia la imagen activa
   const handleMouseEnterProduct = useCallback((imageURL, e) => {
@@ -139,9 +150,11 @@ useEffect(() => {
     setActiveImage(imageURL);
   }, []);
 
-  // Calcula la posición relativa del cursor sobre la imagen principal
   const handleMouseMove = useCallback((e) => {
-    const { left, top, width, height } = e.target.getBoundingClientRect();
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    if (!width || !height) return;
     const x = (e.clientX - left) / width;
     const y = (e.clientY - top) / height;
     setZoomImageCoordinate({ x, y });
@@ -365,7 +378,7 @@ ${productUrl}
             {/** Sección de Imagen Principal y Zoom **/}
             <div className="relative w-full max-w-full lg:max-w-[600px]">
               <div
-                className="relative h-auto w-full max-w-full bg-gray-50 flex justify-center items-center border border-gray-200 overflow-hidden"
+                className="relative w-full max-w-full bg-gray-50 flex justify-center items-center border border-gray-200 overflow-hidden min-h-[220px] max-h-[70vh]"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
@@ -373,11 +386,12 @@ ${productUrl}
                   <img
                     src={activeImage}
                     alt={data.productName}
-                    className="object-contain h-full w-full"
+                    className="object-contain w-full h-auto max-h-[70vh]"
                     width={800}
                     height={800}
                     fetchPriority="high"
                     decoding="async"
+                    draggable={false}
                   />
                 )}
                 {/** Contenedor de Zoom (visible solo en pantallas grandes) **/}
@@ -574,4 +588,9 @@ ${productUrl}
   );
 };
 
-export default ProductDetails;
+const ProductDetailsPage = () => {
+  const { id } = useParams();
+  return <ProductDetails key={id || 'producto'} />;
+};
+
+export default ProductDetailsPage;

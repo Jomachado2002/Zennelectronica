@@ -42,9 +42,21 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
 
   // Función para navegar directamente a la página del producto
   const handleProductClick = useCallback((e, product) => {
+    if (e.target.closest('button')) return;
     e.preventDefault();
-    navigate(productPath(product));
+    setHoveredProductId(null);
+    const path = productPath(product);
+    if (!path || path === '/') return;
+    window.scrollTo(0, 0);
+    navigate(path);
   }, [navigate]);
+
+  const handleCardHover = useCallback((id) => {
+    if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return;
+    }
+    setHoveredProductId(id);
+  }, []);
 
   // Función para obtener datos
   const fetchData = useCallback(async () => {
@@ -210,7 +222,7 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
                       backgroundClip: 'padding-box, border-box'
                     }}
                     onClick={(e) => handleProductClick(e, product)}
-                    onMouseEnter={() => setHoveredProductId(product?._id)}
+                    onMouseEnter={() => handleCardHover(product?._id)}
                     onMouseLeave={() => setHoveredProductId(null)}
                   >
                     {/* Imagen del producto */}
