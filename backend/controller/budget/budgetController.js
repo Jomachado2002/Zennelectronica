@@ -3,11 +3,8 @@ const BudgetModel = require('../../models/budgetModel');
 const ClientModel = require('../../models/clientModel');
 const ProductModel = require('../../models/productModel');
 const uploadProductPermission = require('../../helpers/permission');
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 const nodemailer = require('nodemailer');
-const os = require('os');
+const { generateBudgetPDF, resolvePersonName } = require('../../services/budgetPdf');
 
 /**
  * Crea un nuevo presupuesto
@@ -74,7 +71,9 @@ async function createBudgetController(req, res) {
                       description: product.description,
                       category: product.category,
                       subcategory: product.subcategory,
-                      brandName: product.brandName
+                      brandName: product.brandName,
+                      codigo: product.codigo,
+                      image: Array.isArray(product.productImage) ? (product.productImage.find(Boolean) || '') : ''
                   },
                   quantity,
                   unitPrice,
@@ -398,468 +397,7 @@ async function deleteBudgetController(req, res) {
 }
 
 /**
- * Genera el PDF de un presupuesto en memoria (sin escribir a disco)
- */
-async function generateBudgetPDF(budgetId) {
-  try {
-    const budget = await BudgetModel.findById(budgetId)
-      .populate('client', 'name email phone company address taxId')
-      .populate('createdBy', 'name email');
-    
-    if (!budget) {
-      throw new Error("Presupuesto no encontrado");
-    }
-
-    // Crear un documento PDF en memoria
-    const doc = new PDFDocument({ 
-      margin: 50,
-      size: 'A4'
-    });
-    
-    const chunks = [];
-    
-    // Capturar el PDF en memoria
-    doc.on('data', chunk => chunks.push(chunk));
-    
-    // Configuración de fuentes y colores
-    const primaryColor = '#0047AB';
-    const secondaryColor = '#333333';
-    const accentColor = '#4682B4';
-    
-    // ----- ENCABEZADO DEL DOCUMENTO -----
-    
-    // Título del documento
-    doc.fontSize(22).fillColor(primaryColor).text('PRESUPUESTO', 250, 60, { align: 'right' });
-    doc.fontSize(14).fillColor(secondaryColor).text(`Nº ${budget.budgetNumber}`, 250, 85, { align: 'right' });
-    
-    // Línea divisoria
-    doc.strokeColor(accentColor)
-       .lineWidth(1)
-       .moveTo(50, 120)
-       .lineTo(550, 120)
-       .stroke();
-    
-    // ----- INFORMACIÓN DE CABECERA -----
-    
-    // Información de la empresa - columna izquierda
-    doc.fontSize(12).fillColor(primaryColor).text('DATOS DE LA EMPRESA', 50, 140);
-    doc.fontSize(9).fillColor(secondaryColor);
-    doc.text('Zenn EAS', 50, 160);
-    doc.text('Avda Mariscal Lopez casi Libertad Paseo Dylan 2do Piso', 50, 175, { width: 200 });
-    doc.text('Teléfono: +595 973 345 284', 50, 200);
-    doc.text('Email: ventas@zenn.com.py', 50, 215);
-    doc.text('RUC: 80136342-0', 50, 230);
-    
-    // Información del cliente - columna derecha
-    doc.fontSize(12).fillColor(primaryColor).text('CLIENTE', 350, 140);
-    doc.fontSize(9).fillColor(secondaryColor);
-    
-    let clientYPos = 160;
-    if (budget.client) {
-      doc.text(`${budget.client.name}`, 350, clientYPos, { width: 200 });
-      clientYPos += 15;
-      
-      if (budget.client.company) {
-        doc.text(`${budget.client.company}`, 350, clientYPos, { width: 200 });
-        clientYPos += 15;
-      }
-      
-      // Manejo seguro de la dirección
-      if (budget.client.address) {
-        if (typeof budget.client.address === 'object') {
-          const { street, city, state, zip, country } = budget.client.address;
-          if (street) {
-            doc.text(street, 350, clientYPos, { width: 200 });
-            clientYPos += 15;
-          }
-          
-          let locationLine = '';
-          if (city) locationLine += city;
-          if (state) locationLine += locationLine ? `, ${state}` : state;
-          if (zip) locationLine += locationLine ? ` ${zip}` : zip;
-          
-          if (locationLine) {
-            doc.text(locationLine, 350, clientYPos, { width: 200 });
-            clientYPos += 15;
-          }
-          
-          if (country) {
-            doc.text(country, 350, clientYPos, { width: 200 });
-            clientYPos += 15;
-          }
-        } else {
-          doc.text(budget.client.address, 350, clientYPos, { width: 200 });
-          clientYPos += 15;
-        }
-      }
-      
-      if (budget.client.phone) {
-        doc.text(`Teléfono: ${budget.client.phone}`, 350, clientYPos, { width: 200 });
-        clientYPos += 15;
-      }
-      
-      if (budget.client.email) {
-        doc.text(`Email: ${budget.client.email}`, 350, clientYPos, { width: 200 });
-        clientYPos += 15;
-      }
-      
-      if (budget.client.taxId) {
-        doc.text(`RUC/CI: ${budget.client.taxId}`, 350, clientYPos, { width: 200 });
-        clientYPos += 15;
-      }
-    } else {
-      doc.text('Cliente no especificado', 350, clientYPos);
-    }
-    
-    // ----- INFORMACIÓN DEL PRESUPUESTO -----
-    
-    const infoY = Math.max(clientYPos + 20, 260);
-    doc.strokeColor(accentColor)
-       .lineWidth(0.5)
-       .moveTo(50, infoY)
-       .lineTo(550, infoY)
-       .stroke();
-       
-    const infoStartY = infoY + 20;
-    
-    // Columna 1
-    doc.fontSize(9).fillColor(primaryColor).text('Fecha:', 50, infoStartY);
-    doc.fontSize(9).fillColor(secondaryColor).text(`${new Date(budget.createdAt).toLocaleDateString()}`, 120, infoStartY);
-    
-    doc.fontSize(9).fillColor(primaryColor).text('Estado:', 50, infoStartY + 20);
-    doc.fontSize(9).fillColor(secondaryColor).text(`${budget.status.toUpperCase()}`, 120, infoStartY + 20);
-    
-    // Columna 2
-    doc.fontSize(9).fillColor(primaryColor).text('Válido hasta:', 300, infoStartY);
-    doc.fontSize(9).fillColor(secondaryColor).text(`${new Date(budget.validUntil).toLocaleDateString()}`, 370, infoStartY);
-    
-    if (budget.paymentTerms) {
-      doc.fontSize(9).fillColor(primaryColor).text('Condiciones:', 300, infoStartY + 20);
-      doc.fontSize(9).fillColor(secondaryColor).text(`${budget.paymentTerms}`, 370, infoStartY + 20, { width: 180 });
-    }
-    
-    if (budget.deliveryMethod) {
-      doc.fontSize(9).fillColor(primaryColor).text('Entrega:', 300, infoStartY + 40);
-      doc.fontSize(9).fillColor(secondaryColor).text(`${budget.deliveryMethod}`, 370, infoStartY + 40, { width: 180 });
-    }
-    
-    // ----- TABLA DE PRODUCTOS -----
-    
-    const tableStartY = infoStartY + 80;
-    doc.fontSize(11).fillColor(primaryColor).text('PRODUCTOS Y SERVICIOS', 50, tableStartY);
-    
-    const tableConfig = {
-      headers: [
-        { label: 'Descripción', property: 'name', width: 230, align: 'left' },
-        { label: 'Cant.', property: 'quantity', width: 50, align: 'center' },
-        { label: 'Precio', property: 'unitPrice', width: 85, align: 'right' },
-        { label: 'Dto.', property: 'discount', width: 40, align: 'center' },
-        { label: 'Importe', property: 'subtotal', width: 95, align: 'right' }
-      ],
-      rows: []
-    };
-    
-    // Llenar datos de la tabla
-    if (budget.items && Array.isArray(budget.items)) {
-      budget.items.forEach(item => {
-        const name = item.productSnapshot ? item.productSnapshot.name : 'Producto';
-        
-        const formatCurrency = (value) => {
-          return value.toLocaleString('es-ES') + ' PYG';
-        };
-        
-        tableConfig.rows.push({
-          name,
-          quantity: item.quantity.toString(),
-          unitPrice: formatCurrency(item.unitPrice),
-          discount: item.discount ? `${item.discount}%` : '0%',
-          subtotal: formatCurrency(item.subtotal || (item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100)))
-        });
-      });
-    }
-    
-    // Dibujar cabecera de tabla
-    const tableHeaderY = tableStartY + 20;
-    
-    doc.fillColor(primaryColor)
-       .rect(50, tableHeaderY, 500, 20)
-       .fill();
-    
-    doc.fontSize(9).fillColor('#FFFFFF');
-    
-    // Headers
-    doc.text(tableConfig.headers[0].label, 55, tableHeaderY + 5, { 
-      width: tableConfig.headers[0].width - 10, 
-      align: tableConfig.headers[0].align 
-    });
-    
-    doc.text(tableConfig.headers[1].label, 55 + tableConfig.headers[0].width, tableHeaderY + 5, { 
-      width: tableConfig.headers[1].width - 10, 
-      align: tableConfig.headers[1].align 
-    });
-    
-    doc.text(tableConfig.headers[2].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width, tableHeaderY + 5, { 
-      width: tableConfig.headers[2].width - 10, 
-      align: tableConfig.headers[2].align 
-    });
-    
-    doc.text(tableConfig.headers[3].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width + tableConfig.headers[2].width, tableHeaderY + 5, { 
-      width: tableConfig.headers[3].width - 10, 
-      align: tableConfig.headers[3].align 
-    });
-    
-    doc.text(tableConfig.headers[4].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width + tableConfig.headers[2].width + tableConfig.headers[3].width, tableHeaderY + 5, { 
-      width: tableConfig.headers[4].width - 10, 
-      align: tableConfig.headers[4].align 
-    });
-    
-    // Dibujar filas
-    let yPos = tableHeaderY + 25;
-    let rowCounter = 0;
-    
-    tableConfig.rows.forEach((row, rowIndex) => {
-      // Altura máxima útil de la página antes de salto
-      const maxContentY = doc.page.height - 150;
-
-      // Texto completo de la descripción (sin cortar)
-      const nameText = row.name || '';
-
-      // Calcular altura necesaria para la descripción con ajuste de línea
-      const descriptionWidth = tableConfig.headers[0].width - 10;
-      const nameHeight = doc.heightOfString(nameText, {
-        width: descriptionWidth,
-        align: 'left'
-      });
-
-      // Altura mínima por fila (para que no quede demasiado comprimido)
-      const rowHeight = Math.max(nameHeight, 12);
-
-      // Verificar si necesitamos una nueva página antes de dibujar la fila
-      if (yPos + rowHeight + 10 > maxContentY) {
-        doc.addPage();
-        yPos = 50;
-        
-        // Redibujar cabecera en nueva página
-        doc.fillColor(primaryColor)
-           .rect(50, yPos, 500, 20)
-           .fill();
-        
-        doc.fontSize(9).fillColor('#FFFFFF');
-        
-        doc.text(tableConfig.headers[0].label, 55, yPos + 5, { 
-          width: tableConfig.headers[0].width - 10, 
-          align: tableConfig.headers[0].align 
-        });
-        
-        doc.text(tableConfig.headers[1].label, 55 + tableConfig.headers[0].width, yPos + 5, { 
-          width: tableConfig.headers[1].width - 10, 
-          align: tableConfig.headers[1].align 
-        });
-        
-        doc.text(tableConfig.headers[2].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width, yPos + 5, { 
-          width: tableConfig.headers[2].width - 10, 
-          align: tableConfig.headers[2].align 
-        });
-        
-        doc.text(tableConfig.headers[3].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width + tableConfig.headers[2].width, yPos + 5, { 
-          width: tableConfig.headers[3].width - 10, 
-          align: tableConfig.headers[3].align 
-        });
-        
-        doc.text(tableConfig.headers[4].label, 55 + tableConfig.headers[0].width + tableConfig.headers[1].width + tableConfig.headers[2].width + tableConfig.headers[3].width, yPos + 5, { 
-          width: tableConfig.headers[4].width - 10, 
-          align: tableConfig.headers[4].align 
-        });
-        
-        yPos += 25;
-      }
-      
-      // Fondo alternado para filas (adaptado a la altura real de la fila)
-      if (rowCounter % 2 === 0) {
-        doc.fillColor('#F7F7F7')
-           .rect(50, yPos - 5, 500, rowHeight + 10)
-           .fill();
-      }
-      rowCounter++;
-      
-      // Texto de la fila
-      doc.fontSize(8).fillColor(secondaryColor);
-      
-      const col1 = 55;
-      const col2 = col1 + tableConfig.headers[0].width;
-      const col3 = col2 + tableConfig.headers[1].width;
-      const col4 = col3 + tableConfig.headers[2].width;
-      const col5 = col4 + tableConfig.headers[3].width;
-      
-      // Descripción: mostrar texto completo con salto de línea automático
-      doc.text(nameText, col1, yPos, { 
-        width: descriptionWidth,
-        align: 'left'
-      });
-      
-      doc.text(row.quantity || '', col2, yPos, { 
-        width: tableConfig.headers[1].width - 10,
-        align: 'center',
-        lineBreak: false
-      });
-      
-      doc.text(row.unitPrice || '', col3, yPos, { 
-        width: tableConfig.headers[2].width - 10,
-        align: 'right',
-        lineBreak: false
-      });
-      
-      doc.text(row.discount || '', col4, yPos, { 
-        width: tableConfig.headers[3].width - 10,
-        align: 'center',
-        lineBreak: false
-      });
-      
-      doc.text(row.subtotal || '', col5, yPos, { 
-        width: tableConfig.headers[4].width - 10,
-        align: 'right',
-        lineBreak: false
-      });
-
-      // Avanzar en Y según la altura real de la fila
-      yPos += rowHeight + 10;
-    });
-    
-    // ----- RESUMEN DE TOTALES -----
-    
-    doc.strokeColor('#CCCCCC')
-       .lineWidth(1)
-       .moveTo(50, yPos - 5)
-       .lineTo(550, yPos - 5)
-       .stroke();
-    
-    const totalsBoxX = 380;
-    const totalsBoxY = yPos + 10;
-    const totalsBoxWidth = 170;
-    
-    doc.strokeColor('#CCCCCC')
-       .lineWidth(0.5)
-       .moveTo(totalsBoxX, totalsBoxY)
-       .lineTo(totalsBoxX + totalsBoxWidth, totalsBoxY)
-       .stroke();
-    
-    const formatCurrency = (value) => {
-      return value.toLocaleString('es-ES') + ' PYG';
-    };
-    
-    yPos = totalsBoxY + 15;
-    doc.fontSize(9).fillColor(secondaryColor).text('Subtotal:', totalsBoxX, yPos, { width: 80, align: 'left' });
-    doc.fontSize(9).fillColor(secondaryColor).text(
-      formatCurrency(budget.totalAmount), 
-      totalsBoxX + 90, yPos, { width: 80, align: 'right' }
-    );
-    
-    if (budget.discount > 0) {
-      yPos += 20;
-      doc.fontSize(9).fillColor(secondaryColor).text(
-        `Descuento (${budget.discount}%):`, 
-        totalsBoxX, yPos, { width: 80, align: 'left' }
-      );
-      
-      const discountAmount = budget.totalAmount * (budget.discount / 100);
-      doc.fontSize(9).fillColor(secondaryColor).text(
-        '-' + formatCurrency(discountAmount), 
-        totalsBoxX + 90, yPos, { width: 80, align: 'right' }
-      );
-    }
-    
-    if (budget.tax > 0) {
-      yPos += 20;
-      doc.fontSize(9).fillColor(secondaryColor).text(
-        `IVA (${budget.tax}%):`, 
-        totalsBoxX, yPos, { width: 80, align: 'left' }
-      );
-      
-      const taxAmount = (budget.totalAmount - budget.totalAmount * (budget.discount / 100)) * (budget.tax / 100);
-      doc.fontSize(9).fillColor(secondaryColor).text(
-        formatCurrency(taxAmount), 
-        totalsBoxX + 90, yPos, { width: 80, align: 'right' }
-      );
-    }
-    
-    yPos += 20;
-    doc.strokeColor('#CCCCCC')
-       .lineWidth(1)
-       .moveTo(totalsBoxX, yPos)
-       .lineTo(totalsBoxX + totalsBoxWidth, yPos)
-       .stroke();
-    
-    // Total final destacado
-    yPos += 15;
-    doc.fontSize(11).fillColor(primaryColor).text('TOTAL:', totalsBoxX, yPos, { width: 80, align: 'left' });
-    doc.fontSize(11).fillColor(primaryColor).text(
-      formatCurrency(budget.finalAmount), 
-      totalsBoxX + 90, yPos, { width: 80, align: 'right' }
-    );
-    
-    // ----- NOTAS Y CONDICIONES -----
-    
-    if (budget.notes) {
-      const notesY = Math.min(yPos + 60, doc.page.height - 150);
-      
-      if (notesY > doc.page.height - 120) {
-        doc.addPage();
-        yPos = 50;
-      } else {
-        yPos = notesY;
-      }
-      
-      doc.fontSize(11).fillColor(primaryColor).text('NOTAS:', 50, yPos);
-      doc.fontSize(9).fillColor(secondaryColor).text(budget.notes, 50, yPos + 20, { width: 500 });
-    }
-    
-    // ----- PIE DE PÁGINA -----
-    
-    try {
-      const pageCount = doc.bufferedPageRange().count;
-      for (let i = 0; i < pageCount; i++) {
-        doc.switchToPage(i);
-        
-        const footerLineY = doc.page.height - 50;
-        doc.strokeColor('#CCCCCC')
-           .lineWidth(0.5)
-           .moveTo(50, footerLineY)
-           .lineTo(550, footerLineY)
-           .stroke();
-        
-        const footerY = footerLineY + 10;
-        doc.fontSize(8).fillColor('#999999').text(
-          `Este presupuesto ha sido generado por ${budget.createdBy && budget.createdBy.name ? budget.createdBy.name : 'un administrador'} | Página ${i + 1} de ${pageCount}`,
-          50, footerY, { align: 'center', width: 500 }
-        );
-      }
-    } catch (footerError) {
-      // console.error removed for production
-    }
-
-    // Finalizar el PDF
-    doc.end();
-    
-    return new Promise((resolve, reject) => {
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        resolve(pdfBuffer);
-      });
-      
-      doc.on('error', (error) => {
-        // console.error removed for production
-        reject(error);
-      });
-    });
-    
-  } catch (error) {
-    // console.error removed for production
-    throw error;
-  }
-}
-
-/**
- * Descarga el PDF de un presupuesto - VERSIÓN CORREGIDA PARA VERCEL
+ * Descarga el PDF de un presupuesto
  */
 async function getBudgetPDFController(req, res) {
   try {
@@ -879,8 +417,10 @@ async function getBudgetPDFController(req, res) {
       throw new Error("Presupuesto no encontrado");
     }
 
-    // Generar el PDF en memoria
-    const pdfBuffer = await generateBudgetPDF(budgetId);
+    const pdfBuffer = await generateBudgetPDF(budgetId, {
+      generatedByName: req.user?.name || req.user?.email || null,
+      generatedById: req.user?._id || req.userId || null
+    });
     
     // Establecer encabezados para forzar la descarga
     res.setHeader('Content-Type', 'application/pdf');
@@ -919,8 +459,7 @@ async function sendBudgetEmailController(req, res) {
     let destinationEmail = emailTo;
     
     const budget = await BudgetModel.findById(budgetId)
-      .populate('client', 'name email')
-      .populate('createdBy', 'name email');
+      .populate('client', 'name email');
 
     if (!budget) {
       throw new Error("Presupuesto no encontrado");
@@ -934,8 +473,12 @@ async function sendBudgetEmailController(req, res) {
       throw new Error("No se ha proporcionado un email de destino y el cliente no tiene email registrado");
     }
 
-    // Generar PDF en memoria
-    const pdfBuffer = await generateBudgetPDF(budgetId);
+    const loggedName = req.user?.name || req.user?.email || null;
+    const authorName = loggedName || await resolvePersonName(budget.createdBy) || 'El equipo comercial';
+    const pdfBuffer = await generateBudgetPDF(budgetId, {
+      generatedByName: loggedName,
+      generatedById: req.user?._id || req.userId || null
+    });
 
     // Configuración de nodemailer
     const transporter = nodemailer.createTransporter({
@@ -961,7 +504,7 @@ DETALLES:
 Para cualquier consulta o aclaración, no dude en contactarnos.
 
 Atentamente,
-${budget.createdBy?.name || 'El equipo comercial'}
+${authorName || 'El equipo comercial'}
 Zenn EAS
 `;
 

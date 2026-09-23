@@ -23,7 +23,9 @@ const budgetSchema = new mongoose.Schema({
             description: String,
             category: String,
             subcategory: String,
-            brandName: String
+            brandName: String,
+            codigo: String,
+            image: String
         },
         quantity: {
             type: Number,

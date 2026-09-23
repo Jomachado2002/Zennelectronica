@@ -8,7 +8,12 @@
             "config": {
                 "maxDuration": 300,
                 "memory": 3008,
-                "includeFiles": "node_modules/@sparticuz/chromium/**"
+                "includeFiles": [
+                    "node_modules/@sparticuz/chromium/**",
+                    "assets/logozenn.svg",
+                    "assets/fonts/Inter-Regular.ttf",
+                    "assets/fonts/Inter-SemiBold.ttf"
+                ]
             }
         }
     ],
