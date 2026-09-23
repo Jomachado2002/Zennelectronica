@@ -11,6 +11,8 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../config/axiosInstance';
+import { siteUrl } from '../../config/siteUrl';
+import { productPath } from '../../helpers/productPath';
 import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
 import {
   collectLeafSubcategoryValues,
@@ -426,6 +428,7 @@ const CreativeStudioPage = () => {
   };
 
   const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, detailDraft) : '';
+  const productUrl = activeProduct ? siteUrl(productPath(activeProduct)) : '';
 
   const copyActiveCaption = () => {
     if (!activeCaption) return;
@@ -1101,6 +1104,25 @@ const CreativeStudioPage = () => {
                     {ios
                       ? 'En el iPhone se abre el menú del sistema. Tocá Guardar imagen y la foto queda en el carrete, lista para subir.'
                       : 'Las que ya guardaste quedan al final de la lista para no repetir la misma imagen.'}
+                  </p>
+                  <label className="block text-xs font-medium text-gray-600 mt-4 mb-1">
+                    Link del producto para la historia
+                  </label>
+                  <input
+                    readOnly
+                    value={productUrl}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 text-xs bg-gray-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyText(productUrl, 'Link copiado para la historia')}
+                    className="w-full py-2.5 rounded-lg font-semibold border flex items-center justify-center gap-2 mb-1"
+                    style={{ color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                  >
+                    <FaCopy /> Copiar link
+                  </button>
+                  <p className="text-xs text-gray-500 mb-2">
+                    En la historia, en el sticker de enlace o en Mostrar más, pegá este link de la página del producto.
                   </p>
                   <label className="block text-xs font-medium text-gray-600 mt-4 mb-1">
                     Pie de foto para Instagram (esta imagen)
