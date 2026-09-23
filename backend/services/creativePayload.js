@@ -242,22 +242,70 @@ const FAMILY_LABEL = {
   general: 'TECNOLOGÍA'
 };
 
-function collectSpecs(product, family, hasGpu) {
-  const specFamily = family === 'notebook' && hasGpu ? 'notebookGamer' : family;
-  const flat = flattenSpecs(product);
-  const rules = FAMILY_SPECS[specFamily] || FAMILY_SPECS.general;
-  const seen = new Set();
-  const specs = [];
-  for (const rule of rules) {
-    const text = pickSpec(flat, rule.aliases);
-    if (!text) continue;
-    const key = text.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    specs.push({ icon: rule.icon, text });
-    if (specs.length >= 4) break;
+function readSpec(product, name) {
+  if (!name) return '';
+  const maps = [product.technicalSpecifications, product.specifications];
+  const candidates = [product[name]];
+  for (const map of maps) {
+    if (!map || typeof map !== 'object' || Array.isArray(map)) continue;
+    if (map[name] != null) candidates.push(map[name]);
+    const found = Object.keys(map).find((key) => key.toLowerCase() === String(name).toLowerCase());
+    if (found) candidates.push(map[found]);
   }
-  return specs;
+  for (const value of candidates) {
+    if (value == null || typeof value === 'object') continue;
+    const text = norm(value);
+    if (!text || text === 'undefined' || text === 'null' || text === '-') continue;
+    return text;
+  }
+  return '';
+}
+
+function pageSpecs(product, schema) {
+  const fields = Array.isArray(schema) ? schema : [];
+  if (fields.length) {
+    return fields.map((field) => ({
+      label: field.label,
+      name: field.name,
+      text: readSpec(product, field.name)
+    }));
+  }
+  const flat = flattenSpecs(product);
+  return Object.entries(flat).slice(0, 18).map(([key, value]) => ({
+    label: key.replace(/_/g, ' '),
+    name: key,
+    text: norm(value)
+  }));
+}
+
+let specSchemaCache = null;
+let specSchemaAt = 0;
+
+async function loadSpecSchemaMap() {
+  if (specSchemaCache && Date.now() - specSchemaAt < 5 * 60 * 1000) return specSchemaCache;
+  const Category = require('../models/categoryModel');
+  const categories = await Category.find({})
+    .select('value subcategories.value subcategories.specifications')
+    .lean();
+  const map = new Map();
+  for (const category of categories) {
+    for (const sub of category.subcategories || []) {
+      const specs = (sub.specifications || [])
+        .slice()
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .filter((spec) => spec && spec.name && spec.label)
+        .map((spec) => ({ name: spec.name, label: spec.label }));
+      map.set(`${category.value}::${sub.value}`, specs);
+    }
+  }
+  specSchemaCache = map;
+  specSchemaAt = Date.now();
+  return map;
+}
+
+function schemaFor(map, product) {
+  if (!map || !product) return [];
+  return map.get(`${product.category}::${product.subcategory}`) || [];
 }
 
 function shortTitle(product, maxChars = 42) {
@@ -296,6 +344,12 @@ function displayTitle(title, brand) {
       return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
     })
     .join(' ');
+}
+
+function clipDetail(text) {
+  const value = norm(text);
+  if (value.length <= 320) return value;
+  return `${value.slice(0, 317).trim()}…`;
 }
 
 function formatGs(n) {
@@ -338,30 +392,29 @@ function firstImages(product, max = 5) {
 
 function instagramCaption(payload) {
   let title = payload.title || payload.productName || 'Zenn';
-  if (title.length > 28) title = `${title.slice(0, 27).trim()}…`;
-
-  const specs = payload.specs || [];
-  const prefer = payload.family === 'notebook' && payload.hasGpu
-    ? ['gpu', 'ram', 'ssd']
-    : payload.family === 'notebook'
-      ? ['cpu', 'ram', 'ssd']
-      : payload.family === 'monitor'
-        ? ['screen', 'hz', 'res']
-        : payload.family === 'celular'
-          ? ['ssd', 'ram', 'cpu']
-          : [];
-  const picked = (prefer.length
-    ? prefer.map((k) => specs.find((s) => s.icon === k)).filter(Boolean)
-    : specs
-  ).slice(0, 3);
-  const specLine = picked.map(punchSpec).filter(Boolean).join(' · ');
-
+  if (title.length > 80) title = `${title.slice(0, 79).trim()}…`;
+  const specs = (payload.specs || [])
+    .filter((spec) => spec && spec.text)
+    .map((spec) => `${spec.label}: ${spec.text}`);
   return [
     title,
-    specLine,
-    `${payload.price} · 24 h`,
+    payload.detail || '',
+    ...specs,
+    'Precio de hoy por WhatsApp · Entrega 24 h',
     'WhatsApp 0973 345 284'
   ].filter(Boolean).join('\n');
+}
+
+const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo'];
+
+function pickScene(requested, family, theme, id) {
+  const asked = String(requested || '').toLowerCase();
+  if (SCENES.includes(asked)) return asked;
+  const pool = theme === 'gamer'
+    ? ['neon', 'haz', 'malla', 'orbita']
+    : ['cielo', 'orbita', 'haz', 'malla'];
+  const n = String(id || family || '').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return pool[n % pool.length];
 }
 
 function resolveTheme(requested, product, family) {
@@ -386,13 +439,15 @@ function buildCreativePayload(product, options = {}) {
     family,
     hasGpu,
     theme,
+    scene: pickScene(options.scene, family, theme, product._id),
     categoryLabel: hasGpu && family === 'notebook' ? 'GAMING' : (FAMILY_LABEL[family] || 'TECNOLOGÍA'),
     kicker: categoryKicker(product, family, hasGpu),
     title,
-    specs: collectSpecs(product, family, hasGpu),
+    specs: pageSpecs(product, options.specSchema),
+    detail: options.detail !== undefined ? norm(options.detail).slice(0, 700) : clipDetail(product.description),
     price: formatGs(product.sellingPrice || product.price),
     sellingPrice: product.sellingPrice || product.price || 0,
-    cta: options.cta || (options.format === 'story' ? 'Escribí al WhatsApp' : 'Comprá en zenn.com.py'),
+    cta: options.cta || 'Pedí el precio de hoy',
     imageUrl: images[imageIndex] || images[0] || '',
     images,
     imageIndex,
@@ -416,7 +471,7 @@ function listSelectFields() {
     'ramCapacity', 'keyboardSwitches', 'mouseDPI',
     'caseFormFactor', 'caseMaterial', 'caseIncludedFans', 'caseBacklight',
     'headphoneConnectionType', 'headphoneTechnology', 'headphoneNoiseCancel', 'headphoneBatteryLife',
-    'specifications', 'technicalSpecifications'
+    'specifications', 'technicalSpecifications', 'description'
   ].join(' ');
 }
 
@@ -429,6 +484,8 @@ module.exports = {
   hasDedicatedGpu,
   instagramCaption,
   listSelectFields,
+  loadSpecSchemaMap,
+  schemaFor,
   FORMATS: {
     feed: { w: 1080, h: 1350, label: 'Feed IG 4:5' },
     story: { w: 1080, h: 1920, label: 'Story 9:16' },

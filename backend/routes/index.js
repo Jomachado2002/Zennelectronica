@@ -1872,7 +1872,8 @@ const {
     previewCreativeHtml,
     previewCreativePng,
     downloadCreativePng,
-    exportCreativeZip
+    exportCreativeZip,
+    markCreativeDownloaded
 } = require('../controller/product/creativeStudioController');
 const {
     listBrandStories,
@@ -1960,6 +1961,7 @@ router.get('/creativos/categorias', authToken, getCreativeCategories);
 router.get('/creativos/productos', authToken, listCreativeProducts);
 router.get('/creativos/html/:id', authToken, previewCreativeHtml);
 router.get('/creativos/png/:id', authToken, previewCreativePng);
+router.post('/creativos/marcado/:id', authToken, markCreativeDownloaded);
 router.get('/creativos/descargar/:id', authToken, downloadCreativePng);
 router.post('/creativos/exportar', authToken, (req, res, next) => {
     req.setTimeout(5 * 60 * 1000);

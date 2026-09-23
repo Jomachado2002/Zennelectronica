@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FaBullhorn,
   FaCheck,
@@ -12,6 +12,37 @@ import {
 import { toast } from 'react-toastify';
 import axiosInstance from '../../config/axiosInstance';
 import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
+import {
+  collectLeafSubcategoryValues,
+  getSortedTreeChildEntries,
+  getTreeNodeAtPath,
+  leafLabelFromStoredLabel,
+  usableVisaoTree
+} from '../../helpers/visaoNavigationTree';
+
+function subsForCategory(cat) {
+  if (!cat) return [];
+  if (usableVisaoTree(cat.visaoNavigationTree)) {
+    const seen = new Set();
+    return collectLeafSubcategoryValues(cat.visaoNavigationTree)
+      .filter((leaf) => {
+        if (!leaf.subcategoryValue || seen.has(leaf.subcategoryValue)) return false;
+        seen.add(leaf.subcategoryValue);
+        return true;
+      })
+      .map((leaf) => ({
+        value: leaf.subcategoryValue,
+        label: leafLabelFromStoredLabel(leaf.label) || leaf.subcategoryValue
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }
+  return (cat.subcategories || [])
+    .map((sub) => ({
+      value: sub.value,
+      label: leafLabelFromStoredLabel(sub.label || sub.name) || sub.value
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'es'));
+}
 
 const QUICK = [
   { label: 'Notebooks oficina', category: 'notebook_y_computadoras', subcategory: 'notebook__20_03', lane: 'office' },
@@ -36,17 +67,19 @@ const PREVIEW_SIZE = {
 };
 
 async function saveBlob(blob, fileName) {
-  const type = blob.type || (fileName.endsWith('.zip') ? 'application/zip' : 'image/png');
+  const type = fileName.endsWith('.zip') ? 'application/zip' : 'image/png';
+  const fileBlob = blob.type === type ? blob : new Blob([blob], { type });
   try {
-    const file = new File([blob], fileName, { type });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: fileName });
-      return;
+    const file = new File([fileBlob], fileName, { type });
+    const shareData = { files: [file], title: fileName };
+    if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+      await navigator.share(shareData);
+      return 'shared';
     }
   } catch (err) {
-    if (err && err.name === 'AbortError') return;
+    if (err && err.name === 'AbortError') return 'cancel';
   }
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(fileBlob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
@@ -55,6 +88,7 @@ async function saveBlob(blob, fileName) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
+  return 'download';
 }
 
 async function errorFromAxios(err, fallback) {
@@ -70,18 +104,20 @@ async function errorFromAxios(err, fallback) {
   return data?.message || fallback;
 }
 
-function captionFor(product, title) {
+function captionFor(product, title, detail) {
   if (!product) return '';
-  const rest = String(product.instagramCaption || '')
-    .split('\n')
-    .slice(1)
-    .join('\n')
-    .trim();
   const head = title || product.title || '';
-  const shortTitle = head.length > 28 ? `${head.slice(0, 27).trim()}…` : head;
-  if (rest) return `${shortTitle}\n${rest}`.trim();
-  const specs = (product.specs || []).map((s) => s.text).filter(Boolean).slice(0, 3).join(' · ');
-  return [shortTitle, specs, `${product.price} · 24 h`, 'WhatsApp 0973 345 284'].filter(Boolean).join('\n');
+  const specs = (product.specs || [])
+    .filter((spec) => spec && spec.text)
+    .map((spec) => `${spec.label || 'Detalle'}: ${spec.text}`);
+  const extra = detail != null ? String(detail).trim() : String(product.detail || '').trim();
+  return [
+    head,
+    extra,
+    ...specs,
+    'Precio de hoy por WhatsApp · Entrega 24 h',
+    'WhatsApp 0973 345 284'
+  ].filter(Boolean).join('\n');
 }
 
 async function copyText(text, okMsg) {
@@ -91,6 +127,24 @@ async function copyText(text, okMsg) {
   } catch {
     toast.error('No se pudo copiar');
   }
+}
+
+function isIosDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function savedAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return 'ya guardada';
+  const mins = Math.round(diff / 60000);
+  if (mins < 2) return 'guardada recién';
+  if (mins < 60) return `guardada hace ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `guardada hace ${hours} h`;
+  return `guardada hace ${Math.round(hours / 24)} d`;
 }
 
 const CreativeStudioPage = () => {
@@ -105,11 +159,15 @@ const CreativeStudioPage = () => {
   const [formats, setFormats] = useState(['feed']);
   const [previewFormat, setPreviewFormat] = useState('feed');
   const [theme, setTheme] = useState('auto');
+  const [scene, setScene] = useState('auto');
   const [lane, setLane] = useState('all');
+  const [treePath, setTreePath] = useState([]);
+  const [subsQuery, setSubsQuery] = useState('');
   const [group, setGroup] = useState('');
   const [listTotal, setListTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [detailDraft, setDetailDraft] = useState('');
   const [imageIndex, setImageIndex] = useState(0);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -118,6 +176,11 @@ const CreativeStudioPage = () => {
   const [overrides, setOverrides] = useState({});
   const [studioMode, setStudioMode] = useState('flyers');
   const [brandsReady, setBrandsReady] = useState(false);
+  const [photoReady, setPhotoReady] = useState(false);
+  const [frameW, setFrameW] = useState(340);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const photoRef = useRef({ key: '', file: null });
+  const ios = isIosDevice();
 
   const openBrands = () => {
     setStudioMode('brands');
@@ -137,18 +200,24 @@ const CreativeStudioPage = () => {
     });
   };
 
-  const subcategories = useMemo(() => {
-    const cat = categories.find((c) => c.value === category);
-    return cat?.subcategories || [];
-  }, [categories, category]);
+  const selectedCategory = categories.find((cat) => cat.value === category) || null;
+  const treeRoot = usableVisaoTree(selectedCategory?.visaoNavigationTree)
+    ? selectedCategory.visaoNavigationTree
+    : null;
+  const treeNode = treeRoot ? (getTreeNodeAtPath(treeRoot, treePath) || treeRoot) : null;
+  const treeEntries = treeNode ? getSortedTreeChildEntries(treeNode.children) : [];
+  const flatSubs = treeRoot ? [] : subsForCategory(selectedCategory);
 
   const activeProduct = products.find((p) => p.id === activeId);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axiosInstance.get('/api/creativos/categorias');
-        if (res.data?.success) setCategories(res.data.data || []);
+        const res = await axiosInstance.get('/api/admin/categories/menu/complete-structure');
+        if (res.data?.success) {
+          const menu = (res.data.data || []).filter((cat) => subsForCategory(cat).length > 0);
+          setCategories(menu);
+        }
       } catch (err) {
         console.error(err);
         toast.error('No se pudieron cargar las categorías');
@@ -163,6 +232,9 @@ const CreativeStudioPage = () => {
     const query = next.q ?? q;
     const nextLane = next.lane ?? lane;
     const nextGroup = next.group !== undefined ? next.group : group;
+    let nextSubs = subsQuery;
+    if (next.subcategories !== undefined) nextSubs = next.subcategories;
+    else if (next.subcategory !== undefined || next.group !== undefined) nextSubs = '';
     const append = Boolean(next.append);
     const skip = Number(next.skip) || 0;
     if (!cat && !nextGroup) {
@@ -174,7 +246,8 @@ const CreativeStudioPage = () => {
       const res = await axiosInstance.get('/api/creativos/productos', {
         params: {
           category: nextGroup ? undefined : cat,
-          subcategory: nextGroup ? undefined : (sub || undefined),
+          subcategory: nextGroup || nextSubs ? undefined : (sub || undefined),
+          subcategories: nextGroup ? undefined : (nextSubs || undefined),
           group: nextGroup || undefined,
           q: query || undefined,
           theme,
@@ -189,10 +262,12 @@ const CreativeStudioPage = () => {
         setListTotal(res.data.total || incoming.length);
         setHasMore(Boolean(res.data.hasMore));
         if (!append) {
+          setSubsQuery(nextSubs || '');
           setSelected([]);
           const first = incoming[0];
           setActiveId(first?.id || '');
           setTitleDraft(first?.title || '');
+          setDetailDraft(first?.detail || '');
           setImageIndex(0);
         }
         const shown = (append ? skip : 0) + incoming.length;
@@ -206,7 +281,7 @@ const CreativeStudioPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [category, subcategory, q, theme, lane, group]);
+  }, [category, subcategory, q, theme, lane, group, subsQuery]);
 
   useEffect(() => {
     if (!activeId) {
@@ -223,7 +298,9 @@ const CreativeStudioPage = () => {
           params: {
             format: previewFormat,
             theme: theme === 'auto' ? undefined : theme,
+            scene: scene === 'auto' ? undefined : scene,
             title: titleDraft || product.title,
+            detail: detailDraft,
             imageIndex
           },
           responseType: 'text',
@@ -242,7 +319,66 @@ const CreativeStudioPage = () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [activeId, previewFormat, theme, titleDraft, imageIndex, products]);
+  }, [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex, products]);
+
+  useEffect(() => {
+    const fit = () => setFrameW(Math.min(460, Math.max(280, window.innerWidth - 48)));
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+
+  useEffect(() => {
+    if (!activeId) {
+      photoRef.current = { key: '', file: null };
+      setPhotoReady(false);
+      return undefined;
+    }
+    const key = [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex].join('|');
+    let cancelled = false;
+    setPhotoReady(false);
+    photoRef.current = { key: '', file: null };
+    const timer = setTimeout(async () => {
+      try {
+        const res = await axiosInstance.get(`/api/creativos/descargar/${activeId}`, {
+          params: {
+            format: previewFormat,
+            theme: theme === 'auto' ? undefined : theme,
+            scene: scene === 'auto' ? undefined : scene,
+            title: titleDraft,
+            detail: detailDraft,
+            imageIndex
+          },
+          responseType: 'blob',
+          timeout: 180000
+        });
+        if (cancelled) return;
+        const blob = res.data && res.data.type === 'image/png'
+          ? res.data
+          : new Blob([res.data], { type: 'image/png' });
+        photoRef.current = { key, file: new File([blob], 'zenn-flyer.png', { type: 'image/png' }) };
+        setPhotoReady(true);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          photoRef.current = { key: '', file: null };
+          setPhotoReady(false);
+        }
+      }
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex]);
+
+  const openProduct = (product) => {
+    if (!product) return;
+    setActiveId(product.id);
+    setTitleDraft(overrides[product.id]?.title || product.title);
+    setDetailDraft(overrides[product.id]?.detail ?? product.detail ?? '');
+    setImageIndex(overrides[product.id]?.imageIndex || 0);
+  };
 
   const applyQuick = (pack) => {
     setCategory(pack.category);
@@ -250,6 +386,7 @@ const CreativeStudioPage = () => {
     setQ('');
     setLane(pack.lane || 'all');
     setGroup(pack.group || '');
+    setTreePath([]);
     fetchProducts({
       category: pack.category,
       subcategory: pack.subcategory,
@@ -280,10 +417,15 @@ const CreativeStudioPage = () => {
 
   const onTitleChange = (value) => {
     setTitleDraft(value);
-    if (activeId) persistOverride(activeId, { title: value, imageIndex });
+    if (activeId) persistOverride(activeId, { title: value, imageIndex, detail: detailDraft });
   };
 
-  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft) : '';
+  const onDetailChange = (value) => {
+    setDetailDraft(value);
+    if (activeId) persistOverride(activeId, { title: titleDraft, imageIndex, detail: value });
+  };
+
+  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, detailDraft) : '';
 
   const copyActiveCaption = () => {
     if (!activeCaption) return;
@@ -300,30 +442,94 @@ const CreativeStudioPage = () => {
       const p = products.find((x) => x.id === id);
       if (!p) return '';
       const title = overrides[id]?.title || (id === activeId ? titleDraft : p.title);
-      return `—— Foto ${i + 1} ——\n${captionFor(p, title)}`;
+      const detail = overrides[id]?.detail ?? (id === activeId ? detailDraft : p.detail);
+      return `—— Foto ${i + 1} ——\n${captionFor(p, title, detail)}`;
     }).filter(Boolean).join('\n\n');
     copyText(block, `${ids.length} textos listos para el carrusel`);
   };
 
   const downloadOne = async () => {
     if (!activeId) return;
+    const key = [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex].join('|');
+    const cached = photoRef.current;
+
+    const rememberAndNext = async () => {
+      const id = activeId;
+      try {
+        await axiosInstance.post(`/api/creativos/marcado/${id}`, {
+          format: previewFormat,
+          imageIndex
+        });
+      } catch (err) {
+        console.error(err);
+      }
+      const idx = products.findIndex((p) => p.id === id);
+      const next = products[idx + 1] || products.find((p) => p.id !== id);
+      setProducts((prev) => {
+        const current = prev.find((p) => p.id === id);
+        if (!current) return prev;
+        const updated = {
+          ...current,
+          lastDownloadedAt: new Date().toISOString(),
+          downloadCount: (current.downloadCount || 0) + 1
+        };
+        return [...prev.filter((p) => p.id !== id), updated];
+      });
+      if (next && next.id !== id) openProduct(next);
+    };
+
+    if (ios && cached.file && cached.key === key && navigator.share) {
+      try {
+        await navigator.share({ files: [cached.file] });
+        toast.success('Elegiste dónde guardarla. Si fue Guardar imagen, ya está en Fotos. Siguiente.');
+        await rememberAndNext();
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        toast.error('No se abrió el menú de Fotos. Tocá el botón otra vez.');
+      }
+      return;
+    }
+
     try {
       setDownloadingOne(true);
-      const res = await axiosInstance.get(`/api/creativos/descargar/${activeId}`, {
-        params: {
-          format: previewFormat,
-          theme: theme === 'auto' ? undefined : theme,
-          title: titleDraft,
-          imageIndex
-        },
-        responseType: 'blob',
-        timeout: 180000
-      });
-      const name = `zenn-${(titleDraft || 'producto').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-${previewFormat}.png`;
-      await saveBlob(res.data, name);
+      let file = cached.file && cached.key === key ? cached.file : null;
+      if (!file) {
+        const res = await axiosInstance.get(`/api/creativos/descargar/${activeId}`, {
+          params: {
+            format: previewFormat,
+            theme: theme === 'auto' ? undefined : theme,
+            scene: scene === 'auto' ? undefined : scene,
+            title: titleDraft,
+            detail: detailDraft,
+            imageIndex
+          },
+          responseType: 'blob',
+          timeout: 180000
+        });
+        const blob = res.data && res.data.type === 'image/png'
+          ? res.data
+          : new Blob([res.data], { type: 'image/png' });
+        file = new File([blob], 'zenn-flyer.png', { type: 'image/png' });
+        photoRef.current = { key, file };
+        setPhotoReady(true);
+      }
+      if (ios) {
+        toast.info('La foto ya está lista. Tocá Guardar en Fotos y después Guardar imagen.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `zenn-${(titleDraft || 'producto').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-${previewFormat}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      toast.success('Imagen descargada. Siguiente producto.');
+      await rememberAndNext();
     } catch (err) {
       console.error(err);
-      toast.error(await errorFromAxios(err, 'No se pudo descargar el PNG'));
+      toast.error(await errorFromAxios(err, 'No se pudo guardar la imagen'));
     } finally {
       setDownloadingOne(false);
     }
@@ -347,6 +553,7 @@ const CreativeStudioPage = () => {
           productIds: ids,
           formats,
           theme: theme === 'auto' ? undefined : theme,
+          scene: scene === 'auto' ? undefined : scene,
           overrides
         },
         { responseType: 'blob', timeout: 300000 }
@@ -362,10 +569,14 @@ const CreativeStudioPage = () => {
   };
 
   const size = PREVIEW_SIZE[previewFormat] || PREVIEW_SIZE.feed;
-  const scale = Math.min(360 / size.w, 520 / size.h);
+  const scale = Math.min(frameW / size.w, 560 / size.h);
+  const saveLabel = downloadingOne || (ios && !photoReady)
+    ? 'Preparando foto…'
+    : (ios ? 'Guardar en Fotos' : 'Descargar imagen');
+  const activeIndex = products.findIndex((p) => p.id === activeId);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6 pb-28 xl:pb-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -423,8 +634,8 @@ const CreativeStudioPage = () => {
           </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-6 ${studioMode === 'flyers' ? '' : 'hidden'}`}>
-          <div className="xl:col-span-4 space-y-6">
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'flyers' ? '' : 'hidden'}`}>
+          <div className={`xl:col-span-4 space-y-4 sm:space-y-6 ${products.length ? 'order-3' : 'order-1'} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FaFilter className="mr-2" style={{ color: '#00B5D8' }} />
@@ -477,6 +688,9 @@ const CreativeStudioPage = () => {
                   setCategory(e.target.value);
                   setSubcategory('');
                   setGroup('');
+                  setLane('all');
+                  setTreePath([]);
+                  setSubsQuery('');
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
               >
@@ -486,23 +700,122 @@ const CreativeStudioPage = () => {
                 ))}
               </select>
 
-              {subcategories.length > 0 && (
-                <>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Subcategoría</label>
-                  <select
-                    value={subcategory}
-                    onChange={(e) => {
-                      setSubcategory(e.target.value);
-                      setGroup('');
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
-                  >
-                    <option value="">Todas</option>
-                    {subcategories.map((sub) => (
-                      <option key={sub.value} value={sub.value}>{sub.label}</option>
-                    ))}
-                  </select>
-                </>
+              {category && (treeEntries.length > 0 || flatSubs.length > 0) && (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      {treePath.length ? (treeNode?.label || 'Subcategoría') : 'Subcategoría'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGroup('');
+                        setLane('all');
+                        if (treePath.length && treeNode) {
+                          const values = [...new Set(
+                            collectLeafSubcategoryValues(treeNode)
+                              .map((leaf) => leaf.subcategoryValue)
+                              .filter(Boolean)
+                          )];
+                          setSubcategory(values.length === 1 ? values[0] : '');
+                          fetchProducts({
+                            category,
+                            subcategory: values.length === 1 ? values[0] : '',
+                            subcategories: values.length > 1 ? values.join(',') : '',
+                            group: '',
+                            lane: 'all',
+                            skip: 0
+                          });
+                          return;
+                        }
+                        setSubcategory('');
+                        setTreePath([]);
+                        fetchProducts({ subcategory: '', subcategories: '', group: '', lane: 'all', skip: 0 });
+                      }}
+                      className="text-xs font-semibold shrink-0"
+                      style={{ color: '#7B2CBF' }}
+                    >
+                      {treePath.length ? `Todos de ${treeNode?.label || 'esta carpeta'}` : 'Todos de esta categoría'}
+                    </button>
+                  </div>
+                  {treePath.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTreePath((prev) => prev.slice(0, -1))}
+                      className="mb-2 text-xs font-semibold"
+                      style={{ color: '#0369A1' }}
+                    >
+                      ← Volver
+                    </button>
+                  )}
+                  <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto">
+                    {treeEntries.map(({ key, node }) => {
+                      const leaf = Boolean(node.subcategoryValue);
+                      const on = leaf && !group && !subsQuery && subcategory === node.subcategoryValue;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            if (!leaf) {
+                              setTreePath((prev) => [...prev, key]);
+                              return;
+                            }
+                            setSubcategory(node.subcategoryValue);
+                            setGroup('');
+                            setLane('all');
+                            fetchProducts({
+                              category,
+                              subcategory: node.subcategoryValue,
+                              subcategories: '',
+                              group: '',
+                              lane: 'all',
+                              skip: 0
+                            });
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-full border"
+                          style={
+                            on
+                              ? { background: '#00B5D8', color: '#fff', borderColor: '#00B5D8' }
+                              : { color: '#1E1B4B', borderColor: '#E5E7EB', background: '#F8FAFC' }
+                          }
+                        >
+                          {node.label}{leaf ? '' : ' ›'}
+                        </button>
+                      );
+                    })}
+                    {flatSubs.map((sub) => {
+                      const on = !group && !subsQuery && subcategory === sub.value;
+                      return (
+                        <button
+                          key={sub.value}
+                          type="button"
+                          onClick={() => {
+                            setSubcategory(sub.value);
+                            setGroup('');
+                            setLane('all');
+                            fetchProducts({
+                              category,
+                              subcategory: sub.value,
+                              subcategories: '',
+                              group: '',
+                              lane: 'all',
+                              skip: 0
+                            });
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-full border"
+                          style={
+                            on
+                              ? { background: '#00B5D8', color: '#fff', borderColor: '#00B5D8' }
+                              : { color: '#1E1B4B', borderColor: '#E5E7EB', background: '#F8FAFC' }
+                          }
+                        >
+                          {sub.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               <div className="relative mb-3">
@@ -528,7 +841,15 @@ const CreativeStudioPage = () => {
               </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <button
+              type="button"
+              onClick={() => setToolsOpen((open) => !open)}
+              className="xl:hidden w-full py-2.5 rounded-lg font-semibold border bg-white"
+              style={{ color: '#1E1B4B', borderColor: '#C7D2FE' }}
+            >
+              {toolsOpen ? 'Ocultar formato y fondo' : 'Formato y fondo'}
+            </button>
+            <div className={`${toolsOpen ? '' : 'hidden'} xl:block bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6`}>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Formato</h2>
               <div className="space-y-2 mb-4">
                 {FORMAT_OPTIONS.map((opt) => (
@@ -552,11 +873,11 @@ const CreativeStudioPage = () => {
                   </div>
                 ))}
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Fondo</h2>
-              <div className="grid grid-cols-3 gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Estilo</h2>
+              <div className="grid grid-cols-3 gap-2 mb-4">
                 {[
                   { id: 'auto', label: 'Auto' },
-                  { id: 'studio', label: 'Studio' },
+                  { id: 'studio', label: 'Oficina' },
                   { id: 'gamer', label: 'Gamer' }
                 ].map((opt) => (
                   <button
@@ -572,13 +893,36 @@ const CreativeStudioPage = () => {
                   </button>
                 ))}
               </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Fondo</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'auto', label: 'Variar' },
+                  { id: 'orbita', label: 'Órbita' },
+                  { id: 'neon', label: 'Neón' },
+                  { id: 'haz', label: 'Haces' },
+                  { id: 'malla', label: 'Malla' },
+                  { id: 'cielo', label: 'Azul claro' }
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setScene(opt.id)}
+                    className={`py-2 text-sm font-semibold rounded-lg border ${
+                      scene === opt.id ? 'text-white' : 'text-gray-700 bg-white'
+                    }`}
+                    style={scene === opt.id ? { background: '#7B2CBF', borderColor: '#7B2CBF' } : {}}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
               <p className="text-xs text-gray-500 mt-3">
-                La foto se usa tal cual, con su fondo blanco, en una ficha limpia. Sin recorte ni distorsión.
+                Elegí la categoría y después la subcategoría, igual que en el menú: Informática muestra Notebook, Memoria muestra Memoria RAM, y así con todo el catálogo. El precio no se imprime en el flyer.
               </p>
             </div>
           </div>
 
-          <div className="xl:col-span-5">
+          <div className="xl:col-span-5 order-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-900">
@@ -588,16 +932,17 @@ const CreativeStudioPage = () => {
                   Seleccionar hasta 30
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mb-3">Primero los que todavía no guardaste. Los ya publicados van al final.</p>
               {loading && products.length === 0 ? (
                 <div className="py-16 flex items-center justify-center text-gray-500">
                   <FaSpinner className="animate-spin mr-2" /> Cargando catálogo…
                 </div>
               ) : products.length === 0 ? (
                 <div className="py-16 text-center text-gray-500">
-                  Tocá <strong>Notebooks</strong> o cargá una categoría para armar flyers.
+                  Elegí una categoría y una subcategoría para ver los productos.
                 </div>
               ) : (
-                <div className="max-h-[760px] overflow-y-auto divide-y">
+                <div className="max-h-[52vh] xl:max-h-[760px] overflow-y-auto divide-y">
                   {products.map((p) => {
                     const isActive = p.id === activeId;
                     const isSel = selected.includes(p.id);
@@ -608,6 +953,7 @@ const CreativeStudioPage = () => {
                         onClick={() => {
                           setActiveId(p.id);
                           setTitleDraft(overrides[p.id]?.title || p.title);
+                          setDetailDraft(overrides[p.id]?.detail ?? p.detail ?? '');
                           setImageIndex(overrides[p.id]?.imageIndex || 0);
                         }}
                         className={`w-full text-left flex items-center gap-3 p-3 ${isActive ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
@@ -637,10 +983,13 @@ const CreativeStudioPage = () => {
                             ) : null}
                           </div>
                           <div className="text-xs text-gray-500 truncate">
-                            {p.kicker} · {p.specs.map((s) => s.text).join(' · ') || 'Sin specs'}
+                            {p.kicker} · {p.specs.filter((s) => s.text).slice(0, 3).map((s) => s.text).join(' · ') || 'Sin specs'}
                             {p.imageCount > 1 ? ` · ${p.imageCount} fotos` : ''}
                           </div>
                           <div className="text-sm font-bold" style={{ color: '#00B5D8' }}>{p.price}</div>
+                          {p.lastDownloadedAt ? (
+                            <div className="text-[11px] font-semibold text-amber-700">{savedAgo(p.lastDownloadedAt)} · al final para no repetir</div>
+                          ) : null}
                         </div>
                       </button>
                     );
@@ -661,15 +1010,44 @@ const CreativeStudioPage = () => {
             </div>
           </div>
 
-          <div className="xl:col-span-3">
+          <div className={`xl:col-span-3 ${products.length ? 'order-1' : 'order-2'} xl:order-3`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4">
-              <h2 className="font-semibold text-gray-900 mb-3">Preview y ajuste</h2>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="font-semibold text-gray-900">Preview</h2>
+                {products.length > 1 && (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 text-sm font-semibold rounded-lg border"
+                      onClick={() => openProduct(products[activeIndex > 0 ? activeIndex - 1 : products.length - 1])}
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 text-sm font-semibold rounded-lg text-white"
+                      style={{ background: '#1E1B4B' }}
+                      onClick={() => openProduct(products[activeIndex >= 0 && activeIndex < products.length - 1 ? activeIndex + 1 : 0])}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                )}
+              </div>
               {activeProduct ? (
                 <>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Título en el flyer</label>
                   <input
                     value={titleDraft}
                     onChange={(e) => onTitleChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
+                  />
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Detalles en el flyer y en el texto</label>
+                  <textarea
+                    value={detailDraft}
+                    onChange={(e) => onDetailChange(e.target.value)}
+                    rows={4}
+                    placeholder="Sumá detalles. Si una spec no tiene dato, el cuadro queda en blanco."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
                   />
                   {activeProduct.images.length > 1 && (
@@ -712,13 +1090,18 @@ const CreativeStudioPage = () => {
                   <button
                     type="button"
                     onClick={downloadOne}
-                    disabled={downloadingOne}
-                    className="w-full py-2.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                    disabled={downloadingOne || (ios && !photoReady)}
+                    className="w-full py-3.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 text-base"
                     style={{ background: '#00B5D8' }}
                   >
-                    {downloadingOne ? <FaSpinner className="animate-spin" /> : <FaDownload />}
-                    Descargar este PNG
+                    {downloadingOne || (ios && !photoReady) ? <FaSpinner className="animate-spin" /> : <FaDownload />}
+                    {saveLabel}
                   </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {ios
+                      ? 'En el iPhone se abre el menú del sistema. Tocá Guardar imagen y la foto queda en el carrete, lista para subir.'
+                      : 'Las que ya guardaste quedan al final de la lista para no repetir la misma imagen.'}
+                  </p>
                   <label className="block text-xs font-medium text-gray-600 mt-4 mb-1">
                     Pie de foto para Instagram (esta imagen)
                   </label>
@@ -726,7 +1109,7 @@ const CreativeStudioPage = () => {
                     readOnly
                     value={activeCaption}
                     rows={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 text-sm bg-gray-50"
+                    className="hidden md:block w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 text-sm bg-gray-50"
                   />
                   <button
                     type="button"
@@ -754,6 +1137,20 @@ const CreativeStudioPage = () => {
             </div>
           </div>
         </div>
+        {studioMode === 'flyers' && activeProduct ? (
+          <div className="xl:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-white border-t border-gray-200 shadow-lg">
+            <button
+              type="button"
+              onClick={downloadOne}
+              disabled={downloadingOne || (ios && !photoReady)}
+              className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 text-lg"
+              style={{ background: '#00B5D8' }}
+            >
+              {downloadingOne || (ios && !photoReady) ? <FaSpinner className="animate-spin" /> : <FaDownload />}
+              {saveLabel}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

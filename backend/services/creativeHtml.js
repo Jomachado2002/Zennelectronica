@@ -21,13 +21,53 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 
-function specsHtml(specs) {
-  if (!specs.length) return '';
-  return `<div class="specs">${specs.map((s) => `
-    <div class="spec ${s.icon === 'gpu' ? 'gpu' : ''}">
-      <span class="ico">${ICONS[s.icon] || ICONS.cpu}</span>
-      <span>${esc(s.text)}</span>
-    </div>`).join('')}</div>`;
+const SPEC_FIRST = [
+  'procesador', 'processor', 'cpu',
+  'memoria', 'ram',
+  'almacen', 'storage', 'ssd', 'disco',
+  'pantalla', 'screen',
+  'gpu', 'grafi', 'video',
+  'resoluc', 'frecuencia', 'refresh',
+  'panel', 'bateria', 'sistema',
+  'conex', 'bluetooth', 'wifi', 'teclado', 'peso'
+];
+
+function filledSpecs(specs) {
+  const rows = (Array.isArray(specs) ? specs : []).filter((spec) => spec && String(spec.text || '').trim());
+  return rows
+    .map((spec, index) => {
+      const blob = `${spec.label || ''} ${spec.name || ''}`.toLowerCase();
+      const rank = SPEC_FIRST.findIndex((key) => blob.includes(key));
+      return { spec, index, rank: rank === -1 ? 100 : rank };
+    })
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((row) => row.spec);
+}
+
+function specLayout(count, format) {
+  const band = format === 'story' ? 300 : format === 'square' ? 100 : 150;
+  let cols = count <= 2 ? 1 : 2;
+  if (count > 5 && Math.ceil(count / 2) * 34 > band) cols = 3;
+  const rows = Math.ceil(count / cols);
+  const lines = rows * 2 * 15 > band ? 1 : 2;
+  const lineH = band / Math.max(1, rows * lines);
+  const font = Math.max(11, Math.min(format === 'square' ? 14 : 18, Math.floor(lineH * 0.7)));
+  return { cols, lines, font };
+}
+
+function specsHtml(specs, format) {
+  const items = filledSpecs(specs);
+  if (!items.length) return '';
+  const { cols, lines, font } = specLayout(items.length, format);
+  const size = Math.ceil(items.length / cols);
+  const columns = [];
+  for (let i = 0; i < cols; i += 1) {
+    const slice = items.slice(i * size, (i + 1) * size);
+    if (slice.length) columns.push(slice);
+  }
+  return `<div class="specs" style="--spec-size:${font}px;--spec-lines:${lines}">${columns.map((col) => `
+    <div class="col">${col.map((spec) => `<p class="sp"><span class="k">${esc(spec.label)}:</span> ${esc(spec.text)}</p>`).join('')}</div>`).join('')}
+  </div>`;
 }
 
 function galleryHtml(gallery) {
@@ -42,6 +82,7 @@ function galleryHtml(gallery) {
 function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   const size = FORMATS[format] || FORMATS.feed;
   const theme = payload.theme === 'gamer' ? 'gamer' : 'studio';
+  const scene = ['orbita', 'neon', 'haz', 'malla', 'cielo'].includes(payload.scene) ? payload.scene : 'orbita';
   const logo = assets.logoDataUri || '';
   const gallery = Array.isArray(assets.gallery) ? assets.gallery.filter((g) => g && g.uri) : [];
   const photo = assets.photoDataUri || gallery.find((g) => g.active)?.uri || payload.imageUrl || '';
@@ -82,10 +123,74 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     position: relative; overflow: hidden;
     font-family: Outfit, Helvetica, sans-serif;
     color: #fff;
+    background: #1E1B4B;
+  }
+  .scene-orbita {
     background:
-      radial-gradient(1200px 700px at 50% -10%, rgba(123,44,191,.38), transparent 58%),
-      radial-gradient(900px 520px at 110% 18%, rgba(0,181,216,.28), transparent 62%),
-      linear-gradient(180deg, #16143A 0%, #1E1B4B 42%, #14122F 100%);
+      radial-gradient(980px 640px at 18% 8%, rgba(0,181,216,.42), transparent 58%),
+      radial-gradient(820px 560px at 100% 18%, rgba(123,44,191,.48), transparent 62%),
+      radial-gradient(700px 480px at 50% 100%, rgba(30,27,75,.2), transparent 70%),
+      linear-gradient(165deg, #24165A 0%, #1E1B4B 46%, #12102C 100%);
+  }
+  .scene-neon {
+    background:
+      radial-gradient(760px 520px at 88% -8%, rgba(236,72,153,.55), transparent 56%),
+      radial-gradient(680px 480px at -10% 78%, rgba(0,181,216,.4), transparent 60%),
+      linear-gradient(180deg, #070414 0%, #16082E 52%, #05030F 100%);
+  }
+  .scene-haz {
+    background:
+      radial-gradient(900px 500px at 50% 0%, rgba(123,44,191,.4), transparent 62%),
+      linear-gradient(155deg, #071428 0%, #1A0C3C 42%, #08141C 100%);
+  }
+  .scene-malla {
+    background:
+      radial-gradient(640px 420px at 0% 0%, rgba(0,181,216,.28), transparent 62%),
+      radial-gradient(720px 480px at 100% 100%, rgba(123,44,191,.4), transparent 64%),
+      linear-gradient(180deg, #101628 0%, #0C1020 100%);
+  }
+  .scene-cielo {
+    color: #1E293B;
+    background:
+      radial-gradient(900px 520px at 0% 0%, rgba(125,211,252,.85), transparent 62%),
+      radial-gradient(760px 480px at 100% 100%, rgba(186,230,253,.9), transparent 58%),
+      linear-gradient(180deg, #F3FAFF 0%, #D7EEFB 48%, #C5E6F8 100%);
+  }
+  .deco { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .mesh, .dots, .beam, .ring { display: none; }
+  .scene-neon .mesh {
+    display: block;
+    background-image:
+      linear-gradient(rgba(0,181,216,.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(196,181,253,.14) 1px, transparent 1px);
+    background-size: 78px 78px;
+    mask-image: radial-gradient(circle at 50% 38%, #000 10%, transparent 72%);
+  }
+  .scene-haz .beam { display: block; position: absolute; width: 160px; height: 160%; top: -20%; filter: blur(1px); }
+  .scene-haz .b1 {
+    left: 8%;
+    background: linear-gradient(180deg, transparent, rgba(0,181,216,.22), transparent);
+    transform: rotate(18deg);
+  }
+  .scene-haz .b2 {
+    right: 6%;
+    background: linear-gradient(180deg, transparent, rgba(123,44,191,.32), transparent);
+    transform: rotate(18deg);
+  }
+  .scene-malla .dots {
+    display: block;
+    background-image: radial-gradient(rgba(255,255,255,.22) 1.3px, transparent 1.4px);
+    background-size: 26px 26px;
+    mask-image: radial-gradient(circle at 50% 42%, #000 25%, transparent 78%);
+  }
+  .scene-orbita .ring {
+    display: block;
+    position: absolute; left: 50%; top: 38%;
+    width: 860px; height: 860px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.08);
+    box-shadow: inset 0 0 0 46px rgba(0,181,216,.05), 0 0 0 80px rgba(123,44,191,.05);
   }
   .glow { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(2px); }
   .studio .g1 {
@@ -207,29 +312,29 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     padding: 7px 12px; border-radius: 999px;
   }
   .specs {
-    position: absolute; left: 48px; right: 48px; z-index: 5;
-    display: flex; align-items: stretch; justify-content: center; gap: 12px;
+    position: absolute; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
   }
-  .spec {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 16px; color: #fff;
-    font-size: 15px; font-weight: 700; letter-spacing: .02em;
-    background: rgba(255,255,255,.08);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 999px;
-    backdrop-filter: blur(10px);
+  .col {
+    flex: 1; min-width: 0;
+    text-align: center;
+    padding: 0 18px;
   }
-  .spec .ico { width: 18px; height: 18px; color: #00B5D8; display: flex; }
-  .spec .ico svg { width: 18px; height: 18px; }
-  .spec.gpu {
-    color: #EDE9FE;
-    border-color: rgba(123,44,191,.55);
-    background: rgba(123,44,191,.28);
+  .col + .col { border-left: 1px solid rgba(255,255,255,.4); }
+  .sp {
+    margin: 0 0 3px;
+    font-size: var(--spec-size);
+    line-height: 1.28;
+    font-weight: 500;
+    color: rgba(226,232,240,.86);
+    display: -webkit-box;
+    -webkit-line-clamp: var(--spec-lines);
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-  .gamer .spec.gpu .ico { color: #C4B5FD; }
+  .sp .k { font-weight: 700; color: rgba(255,255,255,.96); }
   footer {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
-    background: linear-gradient(180deg, rgba(20,18,47,0) 0%, rgba(20,18,47,.88) 22%, #14122F 62%);
   }
   .brand {
     display: inline-flex; align-items: center; gap: 8px;
@@ -260,17 +365,46 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     line-height: 1.06; letter-spacing: -.03em;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
+  .detail {
+    margin-top: 8px;
+    font-size: 15px; line-height: 1.35; font-weight: 500; color: #D1D5DB;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .scene-cielo .sp, .scene-cielo .sp .k { color: #64748B; }
+  .scene-cielo .sp .k { color: #475569; }
+  .scene-cielo .col + .col { border-color: rgba(15,23,42,.2); }
+  .scene-cielo .detail { color: #475569; }
+  .scene-cielo .seal {
+    color: #0F172A;
+    background: rgba(255,255,255,.78);
+    border-color: rgba(14,116,144,.18);
+  }
+  .scene-cielo .kicker { color: #0369A1; }
+  .scene-cielo .title, .scene-cielo .wa { color: #0F172A; }
+  .scene-cielo .mark { color: #0369A1; opacity: .08; }
+  .scene-cielo .promises span {
+    color: #0F172A;
+    background: rgba(255,255,255,.72);
+    border-color: rgba(14,116,144,.2);
+  }
   .rule {
     width: 72px; height: 4px; border-radius: 4px;
     background: linear-gradient(90deg, #00B5D8, #7B2CBF);
     margin: 14px 0 0;
   }
-  .price {
-    font-family: Unbounded, sans-serif; font-weight: 800;
-    color: #5CE1F6;
-    text-shadow: 0 0 28px rgba(0,181,216,.35);
+  .price { display: none; }
+  .promises {
+    display: flex; flex-wrap: wrap; gap: 8px;
   }
-  .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+  .promises span {
+    font-size: 14px; font-weight: 700; letter-spacing: .04em;
+    color: #E0F2FE;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 999px;
+    padding: 8px 12px;
+  }
+  .row { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
   .cta {
     display: inline-flex; align-items: center; justify-content: center;
     font-weight: 800; color: #fff; white-space: nowrap;
@@ -282,12 +416,11 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
 
   .fmt-feed .hero { top: 108px; height: 690px; }
   .fmt-feed .plate { width: 690px; height: 620px; }
-  .fmt-feed .specs { top: 812px; }
-  .fmt-feed footer { height: 478px; padding: 92px 52px 42px; }
-  .fmt-feed .title { margin-top: 10px; font-size: 50px; }
-  .fmt-feed .price { font-size: 54px; }
-  .fmt-feed .cta { height: 58px; padding: 0 28px; font-size: 19px; min-width: 300px; }
-  .fmt-feed .row { margin-top: 22px; }
+  .fmt-feed .specs { top: 788px; height: 150px; left: 48px; right: 48px; }
+  .fmt-feed footer { height: 400px; padding: 28px 52px 28px; }
+  .fmt-feed .title { margin-top: 8px; font-size: 40px; }
+  .fmt-feed .cta { height: 52px; padding: 0 24px; font-size: 18px; min-width: 280px; }
+  .fmt-feed .row { margin-top: 12px; }
 
   .fmt-story .hero { top: 118px; height: 1080px; }
   .fmt-story .plate { width: 760px; height: 800px; border-radius: 40px; }
@@ -297,35 +430,38 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     flex-direction: row;
   }
   .fmt-story .shots { left: auto; right: 28px; bottom: 28px; }
-  .fmt-story .specs { top: 1214px; }
-  .fmt-story footer { height: 690px; padding: 128px 56px 70px; text-align: center; }
-  .fmt-story .brand, .fmt-story .kicker, .fmt-story .title { text-align: center; }
+  .fmt-story .specs { top: 1088px; height: 300px; left: 56px; right: 56px; }
+  .fmt-story footer { height: 500px; padding: 24px 56px 48px; text-align: center; }
+  .fmt-story .brand, .fmt-story .kicker, .fmt-story .title, .fmt-story .detail { text-align: center; }
   .fmt-story .brand { margin-left: auto; margin-right: auto; }
   .fmt-story .rule { margin-left: auto; margin-right: auto; }
-  .fmt-story .title { margin-top: 14px; font-size: 54px; }
-  .fmt-story .price { font-size: 60px; }
-  .fmt-story .row { flex-direction: column; align-items: center; margin-top: 28px; }
-  .fmt-story .cta { height: 64px; padding: 0 34px; font-size: 22px; min-width: 400px; }
-  .fmt-story .wa { margin-top: 16px; }
+  .fmt-story .title { margin-top: 8px; font-size: 46px; }
+  .fmt-story .promises { justify-content: center; }
+  .fmt-story .row { flex-direction: column; align-items: center; margin-top: 14px; }
+  .fmt-story .cta { height: 56px; padding: 0 28px; font-size: 20px; min-width: 340px; }
+  .fmt-story .wa { margin-top: 12px; }
 
   .fmt-square .hero { top: 92px; height: 560px; }
   .fmt-square .plate { width: 620px; height: 500px; border-radius: 30px; }
   .fmt-square .thumb { width: 74px; height: 72px; border-radius: 16px; }
   .fmt-square .thumbs { left: 22px; }
-  .fmt-square .specs { top: 662px; }
-  .fmt-square .spec { padding: 10px 13px; font-size: 13px; }
+  .fmt-square .specs { top: 640px; height: 100px; left: 36px; right: 36px; }
   .fmt-square header { padding: 24px 36px 0 44px; }
-  .fmt-square footer { height: 368px; padding: 68px 40px 30px; }
-  .fmt-square .title { margin-top: 8px; font-size: 36px; }
-  .fmt-square .price { font-size: 42px; }
-  .fmt-square .cta { height: 50px; padding: 0 20px; font-size: 16px; min-width: 240px; }
-  .fmt-square .row { margin-top: 14px; }
+  .fmt-square footer { height: 320px; padding: 16px 40px 22px; }
+  .fmt-square .title { margin-top: 6px; font-size: 32px; }
+  .fmt-square .cta { height: 46px; padding: 0 18px; font-size: 15px; min-width: 220px; }
+  .fmt-square .row { margin-top: 10px; }
   .fmt-square .mark { font-size: 112px; top: 120px; }
 </style>
 </head>
 <body>
-  <div class="art ${theme} fmt-${format}">
+  <div class="art ${theme} fmt-${format} scene-${scene}">
     <div class="line"></div>
+    <div class="deco mesh"></div>
+    <div class="deco dots"></div>
+    <div class="deco beam b1"></div>
+    <div class="deco beam b2"></div>
+    <div class="deco ring"></div>
     <div class="glow g1"></div>
     <div class="glow g2"></div>
     <div class="mark">${mark}</div>
@@ -344,19 +480,22 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
         ${img}
       </div>
     </div>
-    ${specsHtml(payload.specs || [])}
+    ${specsHtml(payload.specs || [], format)}
     <footer>
       ${brand}
       <div class="kicker">${esc(payload.kicker)}</div>
       <div class="title">${esc(payload.title)}</div>
+      ${payload.detail ? `<div class="detail">${esc(payload.detail)}</div>` : ''}
       <div class="rule"></div>
       <div class="row">
-        <div>
-          <div class="price">${esc(payload.price)}</div>
-          <div class="wa" style="margin-top:10px">${format === 'story' ? `${esc(payload.site)}  ·  ${esc(payload.whatsapp)}` : `WhatsApp ${esc(payload.whatsapp)}`}</div>
+        <div class="promises">
+          <span>Stock disponible</span>
+          <span>Entrega 24 h</span>
+          <span>Precio por WhatsApp</span>
         </div>
         <div class="cta">${esc(payload.cta)}</div>
       </div>
+      <div class="wa" style="margin-top:14px">${format === 'story' ? `${esc(payload.site)}  ·  ${esc(payload.whatsapp)}` : `WhatsApp ${esc(payload.whatsapp)}`}</div>
     </footer>
     <div class="grain"></div>
   </div>

@@ -4,14 +4,18 @@ const archiver = require('archiver');
 const sharp = require('sharp');
 const Product = require('../../models/productModel');
 const Category = require('../../models/categoryModel');
+const CreativeDownload = require('../../models/creativeDownloadModel');
 const { getSharedBrowser } = require('../../helpers/sharedChrome');
 const {
   buildCreativePayload,
   listSelectFields,
+  loadSpecSchemaMap,
+  schemaFor,
+  instagramCaption,
   FORMATS
 } = require('../../services/creativePayload');
 const { renderCreativeHtml } = require('../../services/creativeHtml');
-const { getLogoWhiteDataUri, getPhotoDataUri, getBrandLogoDataUri } = require('../../services/creativeImage');
+const { getLogoWhiteDataUri, getLogoColorDataUri, getPhotoDataUri, getBrandLogoDataUri } = require('../../services/creativeImage');
 const { getLogoMap, normalizeBrandSlug } = require('../../services/brandLogoService');
 
 const MAX_LIST = 500;
@@ -81,7 +85,7 @@ async function renderCreativeDocument(payload, format) {
   const logoMap = await getLogoMap();
   const brandHit = payload.brandName ? logoMap[normalizeBrandSlug(payload.brandName)] : null;
   const [logoDataUri, brandLogoDataUri, ...uris] = await Promise.all([
-    getLogoWhiteDataUri(),
+    payload.scene === 'cielo' ? getLogoColorDataUri() : getLogoWhiteDataUri(),
     brandHit?.logoUrl ? getBrandLogoDataUri(brandHit.logoUrl) : Promise.resolve(''),
     ...urls.map((url) => getPhotoDataUri(url))
   ]);
@@ -132,7 +136,17 @@ function buildListFilter(query) {
     and.push({ $or: group });
   } else {
     if (category && category !== 'all') filter.category = category;
-    if (subcategory && subcategory !== 'all') filter.subcategory = subcategory;
+    const subList = String(query.subcategories || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (subList.length > 1) {
+      filter.subcategory = { $in: subList };
+    } else if (subcategory && subcategory !== 'all') {
+      filter.subcategory = subcategory;
+    } else if (subList.length === 1) {
+      filter.subcategory = subList[0];
+    }
   }
 
   if (q) {
@@ -148,8 +162,8 @@ function buildListFilter(query) {
   return filter;
 }
 
-function toListItem(p, theme) {
-  const payload = buildCreativePayload(p, { theme });
+function toListItem(p, theme, schemaMap) {
+  const payload = buildCreativePayload(p, { theme, specSchema: schemaFor(schemaMap, p) });
   return {
     id: payload.id,
     codigo: payload.codigo,
@@ -168,8 +182,34 @@ function toListItem(p, theme) {
     imageUrl: payload.imageUrl,
     images: payload.images,
     imageCount: payload.images.length,
+    detail: payload.detail,
     instagramCaption: payload.instagramCaption
   };
+}
+
+function sortByLastDownload(items) {
+  return items.slice().sort((a, b) => {
+    const ta = a.lastDownloadedAt ? new Date(a.lastDownloadedAt).getTime() : 0;
+    const tb = b.lastDownloadedAt ? new Date(b.lastDownloadedAt).getTime() : 0;
+    if (ta !== tb) return ta - tb;
+    return String(a.brandName || '').localeCompare(String(b.brandName || ''), 'es');
+  });
+}
+
+async function withDownloadDates(items) {
+  if (!items.length) return items;
+  const rows = await CreativeDownload.find({ product: { $in: items.map((item) => item.id) } })
+    .select('product lastDownloadedAt count')
+    .lean();
+  const map = new Map(rows.map((row) => [String(row.product), row]));
+  return items.map((item) => {
+    const row = map.get(String(item.id));
+    return {
+      ...item,
+      lastDownloadedAt: row?.lastDownloadedAt || null,
+      downloadCount: row?.count || 0
+    };
+  });
 }
 
 const listCreativeProducts = async (req, res) => {
@@ -180,6 +220,7 @@ const listCreativeProducts = async (req, res) => {
     const lane = String(req.query.lane || 'all').toLowerCase();
     const needsGpuFilter = lane === 'gamer' || lane === 'office';
 
+    const schemaMap = await loadSpecSchemaMap();
     let data;
     let total;
 
@@ -189,20 +230,46 @@ const listCreativeProducts = async (req, res) => {
         .sort({ brandName: 1, sellingPrice: 1 })
         .limit(MAX_SCAN)
         .lean();
-      data = products.map((p) => toListItem(p, req.query.theme));
+      data = products.map((p) => toListItem(p, req.query.theme, schemaMap));
       if (lane === 'gamer') data = data.filter((p) => p.hasGpu);
       if (lane === 'office') data = data.filter((p) => !p.hasGpu);
+      data = sortByLastDownload(await withDownloadDates(data));
       total = data.length;
       data = data.slice(skip, skip + limit);
     } else {
       total = await Product.countDocuments(filter);
-      const products = await Product.find(filter)
-        .select(listSelectFields())
-        .sort({ brandName: 1, sellingPrice: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      data = products.map((p) => toListItem(p, req.query.theme));
+      const ranked = await Product.aggregate([
+        { $match: filter },
+        {
+          $lookup: {
+            from: 'creativedownloads',
+            localField: '_id',
+            foreignField: 'product',
+            as: 'dl'
+          }
+        },
+        {
+          $addFields: {
+            downloadedAt: { $ifNull: [{ $arrayElemAt: ['$dl.lastDownloadedAt', 0] }, null] }
+          }
+        },
+        { $sort: { downloadedAt: 1, brandName: 1, sellingPrice: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        { $project: { _id: 1, downloadedAt: 1 } }
+      ]);
+      const ids = ranked.map((row) => row._id);
+      const products = ids.length
+        ? await Product.find({ _id: { $in: ids } }).select(listSelectFields()).lean()
+        : [];
+      const byId = new Map(products.map((product) => [String(product._id), product]));
+      data = ranked.map((row) => {
+        const product = byId.get(String(row._id));
+        if (!product) return null;
+        const item = toListItem(product, req.query.theme, schemaMap);
+        item.lastDownloadedAt = row.downloadedAt || null;
+        return item;
+      }).filter(Boolean);
     }
 
     return res.json({
@@ -245,18 +312,25 @@ const getCreativeCategories = async (req, res) => {
 };
 
 function applyOverrides(payload, body = {}) {
-  return {
+  const next = {
     ...payload,
     title: body.title ? String(body.title).trim() : payload.title,
     cta: body.cta ? String(body.cta).trim() : payload.cta,
     theme: body.theme === 'studio' || body.theme === 'gamer' ? body.theme : payload.theme
   };
+  if (body.detail !== undefined) next.detail = String(body.detail).slice(0, 700);
+  next.instagramCaption = instagramCaption(next);
+  return next;
 }
 
 async function loadProductPayload(id, options) {
   const product = await Product.findById(id).select(listSelectFields()).lean();
   if (!product) return null;
-  return buildCreativePayload(product, options);
+  const schemaMap = await loadSpecSchemaMap();
+  return buildCreativePayload(product, {
+    ...options,
+    specSchema: schemaFor(schemaMap, product)
+  });
 }
 
 const previewCreativeHtml = async (req, res) => {
@@ -264,7 +338,9 @@ const previewCreativeHtml = async (req, res) => {
     const format = parseFormat(req.query.format);
     const payload = await loadProductPayload(req.params.id, {
       theme: req.query.theme,
+      scene: req.query.scene,
       title: req.query.title,
+      detail: req.query.detail,
       cta: req.query.cta,
       imageIndex: req.query.imageIndex,
       format
@@ -284,7 +360,9 @@ const previewCreativePng = async (req, res) => {
     const format = parseFormat(req.query.format);
     const payload = await loadProductPayload(req.params.id, {
       theme: req.query.theme,
+      scene: req.query.scene,
       title: req.query.title,
+      detail: req.query.detail,
       cta: req.query.cta,
       imageIndex: req.query.imageIndex,
       format
@@ -307,7 +385,9 @@ const downloadCreativePng = async (req, res) => {
     const format = parseFormat(req.query.format);
     const payload = await loadProductPayload(req.params.id, {
       theme: req.query.theme,
+      scene: req.query.scene,
       title: req.query.title,
+      detail: req.query.detail,
       cta: req.query.cta,
       imageIndex: req.query.imageIndex,
       format
@@ -383,7 +463,10 @@ const exportCreativeZip = async (req, res) => {
         const payload = applyOverrides(
           buildCreativePayload(product, {
             theme: extra.theme || theme,
+            scene: extra.scene || req.body.scene,
+            specSchema: schemaFor(await loadSpecSchemaMap(), product),
             title: extra.title,
+            detail: extra.detail,
             cta: extra.cta,
             imageIndex: extra.imageIndex,
             format
@@ -406,6 +489,31 @@ const exportCreativeZip = async (req, res) => {
   }
 };
 
+const markCreativeDownloaded = async (req, res) => {
+  try {
+    const productId = String(req.params.id || '');
+    if (!/^[a-f0-9]{24}$/i.test(productId)) {
+      return res.status(400).json({ success: false, message: 'Producto inválido' });
+    }
+    const doc = await CreativeDownload.findOneAndUpdate(
+      { product: productId },
+      {
+        $set: {
+          format: parseFormat(req.body?.format),
+          imageIndex: Math.max(0, Number(req.body?.imageIndex) || 0),
+          lastDownloadedAt: new Date()
+        },
+        $inc: { count: 1 }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    return res.json({ success: true, lastDownloadedAt: doc.lastDownloadedAt, count: doc.count });
+  } catch (error) {
+    console.error('[creativos] mark', error);
+    return res.status(500).json({ success: false, message: 'No se pudo registrar la descarga' });
+  }
+};
+
 module.exports = {
   listCreativeProducts,
   getCreativeCategories,
@@ -413,5 +521,6 @@ module.exports = {
   previewCreativePng,
   downloadCreativePng,
   exportCreativeZip,
+  markCreativeDownloaded,
   MAX_EXPORT
 };
