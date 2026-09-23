@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../config/axiosInstance';
+import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
 
 const QUICK = [
   { label: 'Notebooks oficina', category: 'notebook_y_computadoras', subcategory: 'notebook__20_03', lane: 'office' },
@@ -115,6 +116,13 @@ const CreativeStudioPage = () => {
   const [exporting, setExporting] = useState(false);
   const [downloadingOne, setDownloadingOne] = useState(false);
   const [overrides, setOverrides] = useState({});
+  const [studioMode, setStudioMode] = useState('flyers');
+  const [brandsReady, setBrandsReady] = useState(false);
+
+  const openBrands = () => {
+    setStudioMode('brands');
+    setBrandsReady(true);
+  };
 
   const toggleFormat = (id) => {
     setFormats((prev) => {
@@ -367,23 +375,55 @@ const CreativeStudioPage = () => {
                 Estudio de creativos
               </h1>
               <p className="text-gray-600 mt-1">
-                Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Logo, precio, specs y sello de 24 h ya van en la plantilla.
+                {studioMode === 'brands'
+                  ? 'Historias con fondo blanco: ícono de la subcategoría y los logos de las marcas que tenemos en stock.'
+                  : 'Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Logo, precio, specs y sello de 24 h ya van en la plantilla.'}
               </p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setStudioMode('flyers')}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'flyers'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Flyers de producto
+                </button>
+                <button
+                  type="button"
+                  onClick={openBrands}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'brands'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Historias de marcas
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={exportZip}
-              disabled={exporting || (!selected.length && !activeId)}
-              className="px-5 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: '#7B2CBF' }}
-            >
-              {exporting ? <FaSpinner className="animate-spin" /> : <FaDownload />}
-              {exporting ? 'Generando ZIP…' : `Descargar ZIP (${selected.length || (activeId ? 1 : 0)})`}
-            </button>
+            {studioMode === 'flyers' ? (
+              <button
+                type="button"
+                onClick={exportZip}
+                disabled={exporting || (!selected.length && !activeId)}
+                className="px-5 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: '#7B2CBF' }}
+              >
+                {exporting ? <FaSpinner className="animate-spin" /> : <FaDownload />}
+                {exporting ? 'Generando ZIP…' : `Descargar ZIP (${selected.length || (activeId ? 1 : 0)})`}
+              </button>
+            ) : null}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {brandsReady ? (
+          <div className={studioMode === 'brands' ? '' : 'hidden'}>
+            <BrandStoriesPanel />
+          </div>
+        ) : null}
+
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-6 ${studioMode === 'flyers' ? '' : 'hidden'}`}>
           <div className="xl:col-span-4 space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">

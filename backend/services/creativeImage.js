@@ -6,6 +6,19 @@ const sharp = require('sharp');
 const LOGO_SVG = path.join(__dirname, '../../frontend/public/logozenn.svg');
 const photoCache = new Map();
 let logoWhitePromise = null;
+let logoColorPromise = null;
+
+async function getLogoColorDataUri() {
+  if (!logoColorPromise) {
+    logoColorPromise = sharp(LOGO_SVG, { density: 360 })
+      .resize({ width: 520 })
+      .png()
+      .toBuffer()
+      .then((buf) => `data:image/png;base64,${buf.toString('base64')}`)
+      .catch(() => '');
+  }
+  return logoColorPromise;
+}
 
 async function getLogoWhiteDataUri() {
   if (!logoWhitePromise) {
@@ -106,6 +119,7 @@ async function getBrandLogoDataUri(url) {
 
 module.exports = {
   getLogoWhiteDataUri,
+  getLogoColorDataUri,
   getPhotoDataUri,
   getBrandLogoDataUri,
   getCutoutDataUri: getPhotoDataUri
