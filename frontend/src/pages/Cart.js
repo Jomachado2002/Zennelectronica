@@ -5,9 +5,7 @@ import Context from '../context';
 import displayINRCurrency from '../helpers/displayCurrency';
 import { MdDelete, MdShoppingCart, MdDownload, MdWhatsapp } from "react-icons/md";
 import { FaArrowLeft, FaTrash, FaCreditCard, FaUser, FaLock, FaShieldAlt, FaPlus, FaCheckCircle, FaMapMarkerAlt, FaWallet } from "react-icons/fa";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
-import logo from '../helpers/logo.png';
+import { downloadCartQuotePdf } from '../helpers/cartQuotePdf';
 import { toast } from 'react-toastify';
 import { localCartHelper } from '../helpers/addToCart';
 import BancardPayButton from '../components/BancardPayButton';
@@ -575,208 +573,61 @@ const Cart = () => {
         }
     };
 
-    // Generar PDF
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (!hasValidCustomerDataForBudget()) {
             toast.error("Por favor ingrese al menos el nombre del cliente");
             return;
         }
-    
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        
-        // Colores corporativos de 
-        const primaryColor = [42, 49, 144]; // Azul 
-        const secondaryColor = [0, 0, 0]; // Negro
-        
-        // Agregar logo
-        const imgWidth = 30;
-        const imgHeight = 15;
-        doc.addImage(logo, 'PNG', 10, 10, imgWidth, imgHeight);
-        
-        // Agregar encabezado
-        doc.setFontSize(22);
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setFont("helvetica", "bold");
-        doc.text("PRESUPUESTO", pageWidth - 10, 20, { align: "right" });
-        
-        // Línea divisoria
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setLineWidth(0.5);
-        doc.line(10, 30, pageWidth - 10, 30);
-        
-        // Agregar información de la empresa
-        doc.setFontSize(10);
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.setFont("helvetica", "normal");
-        doc.text([
-            "Zenn",
-            "Tel: +595 973 345284",
-            "Email: ventas@zenn.com.py",
-            "Web: www.zenn.com.py"
-        ], pageWidth - 10, 40, { align: "right" });
-        
-        // Número de presupuesto y fecha
-        const presupuestoNo = `PRE-${Math.floor(100000 + Math.random() * 900000)}`;
-        const currentDate = new Date().toLocaleDateString('es-PY', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-        });
-        
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text("N° PRESUPUESTO:", 10, 45);
-        doc.text("FECHA:", 10, 52);
-        doc.text("VALIDEZ:", 10, 59);
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(presupuestoNo, 50, 45);
-        doc.text(currentDate, 50, 52);
-        doc.text("5 días hábiles", 50, 59);
-        
-        // Información del cliente
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text("DATOS DEL CLIENTE", 10, 70);
-        
-        doc.setFontSize(11);
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.setFont("helvetica", "bold");
-        doc.text("NOMBRE:", 10, 80);
-        
-        if (customerData.phone) {
-            doc.text("TELÉFONO:", 10, 87);
-        }
-        
-        if (customerData.email) {
-            doc.text("EMAIL:", 10, customerData.phone ? 94 : 87);
-        }
-        
-        doc.setFont("helvetica", "normal");
-        doc.text(customerData.name, 50, 80);
-        
-        if (customerData.phone) {
-            doc.text(customerData.phone, 50, 87);
-        }
-        
-        if (customerData.email) {
-            doc.text(customerData.email, 50, customerData.phone ? 94 : 87);
-        }
-        
-        // Encabezado de productos
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text("DETALLE DE PRODUCTOS", 10, customerData.email ? 105 : (customerData.phone ? 98 : 91));
-        
-        // Tabla de productos
-        const tableColumn = ["#", "Descripción", "Cant.", "Precio Unitario", "Subtotal"];
-        const tableRows = [];
-        
-        validProducts.forEach((product, index) => {
-            const subtotal = product.quantity * product.productId.sellingPrice;
-            tableRows.push([
-                (index + 1).toString(),
-                product.productId.productName,
-                product.quantity.toString(),
-                displayINRCurrency(product.productId.sellingPrice),
-                displayINRCurrency(subtotal),
-            ]);
-        });
-        
-        doc.autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: customerData.email ? 110 : (customerData.phone ? 103 : 96),
-            theme: 'grid',
-            headStyles: {
-                fillColor: primaryColor,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                halign: 'center'
-            },
-            styles: {
-                fontSize: 9,
-                cellPadding: 3,
-                lineColor: [200, 200, 200],
-                lineWidth: 0.1
-            },
-            columnStyles: {
-                0: { cellWidth: 15, halign: 'center' },
-                1: { cellWidth: 'auto' },
-                2: { cellWidth: 25, halign: 'center' },
-                3: { cellWidth: 35, halign: 'right' },
-                4: { cellWidth: 35, halign: 'right' }
-            },
-            alternateRowStyles: {
-                fillColor: [240, 240, 240]
-            }
-        });
-        
-        // Resumen del presupuesto
-        const finalY = doc.lastAutoTable.finalY + 15;
-        
-        // Recuadro para totales
-        doc.setFillColor(248, 248, 248);
-        doc.rect(pageWidth - 90, finalY - 5, 80, 30, 'F');
-        
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.text("TOTAL GUARANÍES:", pageWidth - 85, finalY + 5);
-        doc.text("TOTAL USD (referencial):", pageWidth - 85, finalY + 15);
-        
-        const totalInUSD = totalPrice / 7850;
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text(displayINRCurrency(totalPrice), pageWidth - 10, finalY + 5, { align: "right" });
-        doc.text(`$${totalInUSD.toFixed(2)}`, pageWidth - 10, finalY + 15, { align: "right" });
-        
-        // Información adicional
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setLineWidth(0.5);
-        doc.line(10, finalY + 30, pageWidth - 10, finalY + 30);
-        
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 100, 100);
-        
-        const infoText = [
-            "• Forma de Pago: A convenir",
-            "• Tiempo de entrega: 48 horas hábiles",
-            "• Garantía según políticas del fabricante",
-            "• Precios válidos por 5 días hábiles"
-        ];
-        
-        infoText.forEach((text, index) => {
-            doc.text(text, 10, finalY + 40 + (index * 7));
-        });
-        
-        // Pie de página
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text("Este presupuesto no constituye una factura. Para realizar el pedido, contáctenos al WhatsApp +595 973 345284.", pageWidth/2, pageHeight - 15, { align: "center" });
-        doc.text("Zenn - Tecnología Profesional", pageWidth/2, pageHeight - 10, { align: "center" });
-        
-        // Numeración de páginas
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150, 150, 150);
-            doc.text(`Página ${i} de ${pageCount}`, pageWidth - 20, pageHeight - 10);
-        }
-    
-        // Guardar el PDF
-        doc.save(`Presupuesto-Zenn-${presupuestoNo}.pdf`);
-        toast.success("Presupuesto generado exitosamente");
 
-        // Tracking del PDF
-        trackPDFDownload(customerData, totalPrice, validProducts);
+        if (validProducts.length === 0) {
+            toast.error("No hay productos válidos en el carrito");
+            return;
+        }
+
+        const toastId = toast.loading("Generando cotización...");
+        try {
+            await downloadCartQuotePdf({
+                customer: {
+                    name: customerData.name.trim(),
+                    phone: customerData.phone.trim(),
+                    email: customerData.email.trim(),
+                    address: customerData.address
+                },
+                items: validProducts.map((product) => {
+                    const unit = Number(product.productId.sellingPrice) || 0;
+                    const quantity = Number(product.quantity) || 0;
+                    const brand = product.productId.brandName || '';
+                    const code = product.productId.codigo || '';
+                    return {
+                        name: product.productId.productName,
+                        meta: [brand, code ? `Cód. ${code}` : ''].filter(Boolean).join('   ·   '),
+                        quantity,
+                        unitPrice: displayINRCurrency(unit),
+                        subtotal: displayINRCurrency(quantity * unit),
+                        imageUrl: Array.isArray(product.productId.productImage)
+                            ? product.productId.productImage.find(Boolean)
+                            : ''
+                    };
+                }),
+                totalLabel: displayINRCurrency(totalPrice)
+            });
+            toast.update(toastId, {
+                render: "Cotización generada",
+                type: "success",
+                isLoading: false,
+                autoClose: 2500
+            });
+            trackPDFDownload(customerData, totalPrice, validProducts);
+        } catch (error) {
+            toast.update(toastId, {
+                render: "No se pudo generar la cotización",
+                type: "error",
+                isLoading: false,
+                autoClose: 3000
+            });
+        }
     };
+
 
     // Función para enviar presupuesto por WhatsApp
     const sendToWhatsApp = () => {
