@@ -25,7 +25,7 @@ function sleep(ms) {
 
 async function waitUntilReady(containerId, token) {
   const url = `https://graph.instagram.com/${IG_VERSION}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`;
-  for (let attempt = 0; attempt < 15; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
     const code = data.status_code;
@@ -35,7 +35,7 @@ async function waitUntilReady(containerId, token) {
     }
     await sleep(2000);
   }
-  throw new Error('Instagram tardó demasiado en preparar la historia');
+  throw new Error('Instagram tardó demasiado en preparar la imagen');
 }
 
 async function graph(url, body) {
@@ -78,6 +78,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
       alt_text: alts[0] || '',
       access_token: token
     });
+    await waitUntilReady(created.id, token);
     const published = await graph(`${base}/media_publish`, {
       creation_id: created.id,
       access_token: token
@@ -92,6 +93,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
       alt_text: alts[i] || '',
       access_token: token
     });
+    await waitUntilReady(child.id, token);
     children.push(child.id);
   }
   const parent = await graph(`${base}/media`, {
@@ -100,6 +102,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
     caption,
     access_token: token
   });
+  await waitUntilReady(parent.id, token);
   const published = await graph(`${base}/media_publish`, {
     creation_id: parent.id,
     access_token: token
