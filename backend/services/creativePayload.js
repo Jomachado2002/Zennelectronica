@@ -446,7 +446,14 @@ function buildCreativePayload(product, options = {}) {
     specs: pageSpecs(product, options.specSchema),
     detail: options.detail !== undefined ? norm(options.detail).slice(0, 700) : clipDetail(product.description),
     price: formatGs(product.sellingPrice || product.price),
+    listPrice: formatGs(product.price),
     sellingPrice: product.sellingPrice || product.price || 0,
+    listPriceValue: Number(product.price) || 0,
+    onOffer: Number(product.price) > Number(product.sellingPrice) && Number(product.sellingPrice) > 0
+      && Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100) >= 1,
+    discountPercent: (Number(product.price) > Number(product.sellingPrice) && Number(product.price) > 0)
+      ? Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100)
+      : 0,
     cta: options.cta || 'Pedí el precio de hoy',
     imageUrl: images[imageIndex] || images[0] || '',
     images,

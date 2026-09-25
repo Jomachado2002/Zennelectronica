@@ -392,7 +392,26 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     background: linear-gradient(90deg, #00B5D8, #7B2CBF);
     margin: 14px 0 0;
   }
-  .price { display: none; }
+  .offer {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .offer .off {
+    font-family: Unbounded, Outfit, sans-serif;
+    font-weight: 800; font-size: 22px; color: #fff;
+    background: #E11D48; border-radius: 999px;
+    padding: 8px 14px; letter-spacing: -.02em;
+  }
+  .offer .before {
+    font-size: 22px; font-weight: 700; color: rgba(255,255,255,.55);
+    text-decoration: line-through;
+  }
+  .offer .now {
+    font-family: Unbounded, Outfit, sans-serif;
+    font-size: 40px; font-weight: 800; color: #67E8F9; letter-spacing: -.03em;
+  }
+  .scene-cielo .offer .before { color: #64748B; }
+  .scene-cielo .offer .now { color: #0369A1; }
   .promises {
     display: flex; flex-wrap: wrap; gap: 8px;
   }
@@ -422,20 +441,25 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .fmt-feed .cta { height: 52px; padding: 0 24px; font-size: 18px; min-width: 280px; }
   .fmt-feed .row { margin-top: 12px; }
 
-  .fmt-story .hero { top: 118px; height: 1080px; }
-  .fmt-story .plate { width: 760px; height: 800px; border-radius: 40px; }
+  .fmt-story .hero { top: 112px; height: 880px; }
+  .fmt-story .plate { width: 760px; height: 760px; border-radius: 40px; }
+  .fmt-story .hero.has-thumbs .plate { width: 700px; height: 640px; top: 44%; }
   .fmt-story .thumbs {
-    left: 50%; top: auto; bottom: 22px;
+    left: 50%; top: auto; bottom: 10px;
     transform: translateX(-50%);
     flex-direction: row;
+    z-index: 6;
   }
+  .fmt-story .thumb { width: 86px; height: 86px; }
   .fmt-story .shots { left: auto; right: 28px; bottom: 28px; }
-  .fmt-story .specs { top: 1088px; height: 300px; left: 56px; right: 56px; }
-  .fmt-story footer { height: 500px; padding: 24px 56px 48px; text-align: center; }
+  .fmt-story .specs { top: 1012px; height: 300px; left: 56px; right: 56px; z-index: 6; }
+  .fmt-story footer { height: 584px; padding: 16px 56px 40px; text-align: center; }
   .fmt-story .brand, .fmt-story .kicker, .fmt-story .title, .fmt-story .detail { text-align: center; }
   .fmt-story .brand { margin-left: auto; margin-right: auto; }
   .fmt-story .rule { margin-left: auto; margin-right: auto; }
   .fmt-story .title { margin-top: 8px; font-size: 46px; }
+  .fmt-story .offer { justify-content: center; }
+  .fmt-story .offer .now { font-size: 42px; }
   .fmt-story .promises { justify-content: center; }
   .fmt-story .row { flex-direction: column; align-items: center; margin-top: 14px; }
   .fmt-story .cta { height: 56px; padding: 0 28px; font-size: 20px; min-width: 340px; }
@@ -469,7 +493,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       ${logo ? `<img class="logo" src="${logo}" alt="Zenn" />` : '<div></div>'}
       <div class="seal">${esc(seal)}</div>
     </header>
-    <div class="hero">
+    <div class="hero${gallery.length > 1 ? ' has-thumbs' : ''}">
       ${galleryHtml(gallery)}
       <div class="plate">
         <div class="orb"></div>
@@ -487,11 +511,12 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       <div class="title">${esc(payload.title)}</div>
       ${payload.detail ? `<div class="detail">${esc(payload.detail)}</div>` : ''}
       <div class="rule"></div>
+      ${payload.onOffer ? `<div class="offer"><span class="off">-${payload.discountPercent}%</span><span class="before">${esc(payload.listPrice)}</span><span class="now">${esc(payload.price)}</span></div>` : ''}
       <div class="row">
         <div class="promises">
           <span>Stock disponible</span>
           <span>Entrega 24 h</span>
-          <span>Precio por WhatsApp</span>
+          <span>${payload.onOffer ? 'Oferta de hoy' : 'Precio en la web'}</span>
         </div>
         <div class="cta">${esc(payload.cta)}</div>
       </div>

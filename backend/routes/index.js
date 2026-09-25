@@ -1867,14 +1867,20 @@ const {
     postWorkerCancelController,
 } = require('../controller/product/workerAdminController');
 const {
-    listCreativeProducts,
-    getCreativeCategories,
-    previewCreativeHtml,
-    previewCreativePng,
-    downloadCreativePng,
-    exportCreativeZip,
-    markCreativeDownloaded
+  listCreativeProducts,
+  getCreativeCategories,
+  previewCreativeHtml,
+  previewCreativePng,
+  downloadCreativePng,
+  exportCreativeZip,
+  markCreativeDownloaded
 } = require('../controller/product/creativeStudioController');
+const {
+  composeSocialCaption,
+  publishSocialPost,
+  listSocialCalendar,
+  cancelSocialPost
+} = require('../controller/product/socialStudioController');
 const {
     listBrandStories,
     previewBrandStoryHtml,
@@ -1967,6 +1973,29 @@ router.post('/creativos/exportar', authToken, (req, res, next) => {
     req.setTimeout(5 * 60 * 1000);
     res.setTimeout(5 * 60 * 1000);
     return exportCreativeZip(req, res, next);
+});
+
+router.post('/creativos/texto', authToken, composeSocialCaption);
+router.post('/creativos/publicar', authToken, (req, res, next) => {
+  req.setTimeout(5 * 60 * 1000);
+  res.setTimeout(5 * 60 * 1000);
+  return publishSocialPost(req, res, next);
+});
+router.get('/creativos/calendario', authToken, listSocialCalendar);
+router.delete('/creativos/calendario/:id', authToken, cancelSocialPost);
+router.get('/creativos/calendario/tick', async (req, res) => {
+  const secret = process.env.CRON_SECRET || '';
+  const header = String(req.headers.authorization || '');
+  if (!secret || header !== `Bearer ${secret}`) {
+    return res.status(401).json({ success: false, message: 'No autorizado' });
+  }
+  try {
+    const { runDueSocialPosts } = require('../controller/product/socialStudioController');
+    await runDueSocialPosts();
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo correr el calendario' });
+  }
 });
 
 router.get('/creativos/historias-marcas', authToken, listBrandStories);

@@ -149,6 +149,21 @@ function buildListFilter(query) {
     }
   }
 
+  if (String(query.offers || '') === '1') {
+    and.push({
+      $expr: {
+        $and: [
+          { $gt: ['$price', '$sellingPrice'] },
+          { $gt: ['$sellingPrice', 0] },
+          { $gte: [
+            { $multiply: [{ $divide: [{ $subtract: ['$price', '$sellingPrice'] }, '$price'] }, 100] },
+            1
+          ] }
+        ]
+      }
+    });
+  }
+
   if (q) {
     and.push({
       $or: [
@@ -177,6 +192,9 @@ function toListItem(p, theme, schemaMap) {
     theme: payload.theme,
     specs: payload.specs,
     price: payload.price,
+    listPrice: payload.listPrice,
+    onOffer: payload.onOffer,
+    discountPercent: payload.discountPercent,
     sellingPrice: payload.sellingPrice,
     stock: payload.stock,
     imageUrl: payload.imageUrl,
@@ -253,7 +271,18 @@ const listCreativeProducts = async (req, res) => {
             downloadedAt: { $ifNull: [{ $arrayElemAt: ['$dl.lastDownloadedAt', 0] }, null] }
           }
         },
-        { $sort: { downloadedAt: 1, brandName: 1, sellingPrice: 1 } },
+        { $addFields: {
+          discountRank: {
+            $cond: [
+              { $gt: ['$price', 0] },
+              { $divide: [{ $subtract: ['$price', '$sellingPrice'] }, '$price'] },
+              0
+            ]
+          }
+        } },
+        { $sort: String(req.query.offers || '') === '1'
+          ? { discountRank: -1, sellingPrice: 1 }
+          : { downloadedAt: 1, brandName: 1, sellingPrice: 1 } },
         { $skip: skip },
         { $limit: limit },
         { $project: { _id: 1, downloadedAt: 1 } }
@@ -522,5 +551,9 @@ module.exports = {
   downloadCreativePng,
   exportCreativeZip,
   markCreativeDownloaded,
+  renderPngBuffer,
+  buildCreativePayload,
+  schemaFor,
+  loadSpecSchemaMap,
   MAX_EXPORT
 };

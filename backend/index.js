@@ -170,6 +170,12 @@ const startServer = async () => {
     } catch (e) {
       console.warn('[Visão schedule] No se pudo inicializar:', e.message || e);
     }
+    try {
+      const { startSocialScheduleIfEnabled } = require('./services/socialScheduleService');
+      startSocialScheduleIfEnabled();
+    } catch (e) {
+      console.warn('[social schedule] No se pudo inicializar:', e.message || e);
+    }
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {

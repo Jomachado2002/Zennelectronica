@@ -14,6 +14,7 @@ import axiosInstance from '../../config/axiosInstance';
 import { siteUrl } from '../../config/siteUrl';
 import { productPath } from '../../helpers/productPath';
 import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
+import PublishPanel from '../../components/admin/PublishPanel';
 import {
   collectLeafSubcategoryValues,
   getSortedTreeChildEntries,
@@ -47,6 +48,7 @@ function subsForCategory(cat) {
 }
 
 const QUICK = [
+  { label: 'Promociones', offers: true, lane: 'all' },
   { label: 'Notebooks oficina', category: 'notebook_y_computadoras', subcategory: 'notebook__20_03', lane: 'office' },
   { label: 'Notebooks gamer', category: 'notebook_y_computadoras', subcategory: 'notebook__20_03', lane: 'gamer' },
   { label: 'Monitores', category: 'monitores', subcategory: 'monitores__27', lane: 'all' },
@@ -163,6 +165,7 @@ const CreativeStudioPage = () => {
   const [theme, setTheme] = useState('auto');
   const [scene, setScene] = useState('auto');
   const [lane, setLane] = useState('all');
+  const [offersOnly, setOffersOnly] = useState(false);
   const [treePath, setTreePath] = useState([]);
   const [subsQuery, setSubsQuery] = useState('');
   const [group, setGroup] = useState('');
@@ -233,27 +236,29 @@ const CreativeStudioPage = () => {
     const sub = next.subcategory ?? subcategory;
     const query = next.q ?? q;
     const nextLane = next.lane ?? lane;
+    const nextOffers = next.offers !== undefined ? next.offers : offersOnly;
     const nextGroup = next.group !== undefined ? next.group : group;
     let nextSubs = subsQuery;
     if (next.subcategories !== undefined) nextSubs = next.subcategories;
     else if (next.subcategory !== undefined || next.group !== undefined) nextSubs = '';
     const append = Boolean(next.append);
     const skip = Number(next.skip) || 0;
-    if (!cat && !nextGroup) {
-      toast.info('Elegí una categoría o un atajo (Notebooks, iPhone, Gabinetes…)');
+    if (!cat && !nextGroup && !nextOffers) {
+      toast.info('Elegí una categoría o un atajo (Promociones, Notebooks, iPhone…)');
       return;
     }
     try {
       setLoading(true);
       const res = await axiosInstance.get('/api/creativos/productos', {
         params: {
-          category: nextGroup ? undefined : cat,
+          category: nextOffers || nextGroup ? undefined : cat,
           subcategory: nextGroup || nextSubs ? undefined : (sub || undefined),
           subcategories: nextGroup ? undefined : (nextSubs || undefined),
           group: nextGroup || undefined,
           q: query || undefined,
           theme,
           lane: nextLane,
+          offers: nextOffers ? '1' : undefined,
           limit: 400,
           skip
         }
@@ -273,7 +278,7 @@ const CreativeStudioPage = () => {
           setImageIndex(0);
         }
         const shown = (append ? skip : 0) + incoming.length;
-        toast.success(`${res.data.total || shown} productos con stock${shown < (res.data.total || shown) ? ` · mostrando ${shown}` : ''}`);
+        toast.success(`${res.data.total || shown} ${nextOffers ? 'ofertas' : 'productos'} con stock${shown < (res.data.total || shown) ? ` · mostrando ${shown}` : ''}`);
       } else {
         toast.error(res.data?.message || 'Error cargando productos');
       }
@@ -283,7 +288,7 @@ const CreativeStudioPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [category, subcategory, q, theme, lane, group, subsQuery]);
+  }, [category, subcategory, q, theme, lane, group, subsQuery, offersOnly]);
 
   useEffect(() => {
     if (!activeId) {
@@ -383,23 +388,28 @@ const CreativeStudioPage = () => {
   };
 
   const applyQuick = (pack) => {
-    setCategory(pack.category);
-    setSubcategory(pack.subcategory);
+    const offers = Boolean(pack.offers);
+    setOffersOnly(offers);
+    setCategory(offers ? '' : pack.category);
+    setSubcategory(offers ? '' : pack.subcategory);
     setQ('');
     setLane(pack.lane || 'all');
-    setGroup(pack.group || '');
+    setGroup(offers ? '' : (pack.group || ''));
     setTreePath([]);
     fetchProducts({
-      category: pack.category,
-      subcategory: pack.subcategory,
+      category: offers ? '' : pack.category,
+      subcategory: offers ? '' : pack.subcategory,
       q: '',
       lane: pack.lane || 'all',
-      group: pack.group || '',
+      group: offers ? '' : (pack.group || ''),
+      offers,
       skip: 0
     });
   };
 
   const isQuickOn = (pack) => {
+    if (pack.offers) return offersOnly && !category && !group;
+    if (offersOnly) return false;
     if (pack.group) return group === pack.group && lane === (pack.lane || 'all');
     return !group && category === pack.category && subcategory === pack.subcategory && lane === (pack.lane || 'all');
   };
@@ -614,6 +624,16 @@ const CreativeStudioPage = () => {
                 >
                   Historias de marcas
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setStudioMode('publish')}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'publish'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Publicar
+                </button>
               </div>
             </div>
             {studioMode === 'flyers' ? (
@@ -637,8 +657,8 @@ const CreativeStudioPage = () => {
           </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'flyers' ? '' : 'hidden'}`}>
-          <div className={`xl:col-span-4 space-y-4 sm:space-y-6 ${products.length ? 'order-3' : 'order-1'} xl:order-1`}>
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' ? 'hidden' : ''}`}>
+          <div className={`xl:col-span-4 space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FaFilter className="mr-2" style={{ color: '#00B5D8' }} />
@@ -920,12 +940,12 @@ const CreativeStudioPage = () => {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                Elegí la categoría y después la subcategoría, igual que en el menú: Informática muestra Notebook, Memoria muestra Memoria RAM, y así con todo el catálogo. El precio no se imprime en el flyer.
+                Promociones muestra cada producto que tiene precio anterior, con el mayor descuento arriba. En la foto y en el texto van el precio tachado, el de ahora y el porcentaje. Si no hay promoción, el precio no se imprime.
               </p>
             </div>
           </div>
 
-          <div className="xl:col-span-5 order-2">
+          <div className={`xl:col-span-5 order-2 ${studioMode === 'publish' ? 'hidden' : ''}`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-900">
@@ -989,7 +1009,15 @@ const CreativeStudioPage = () => {
                             {p.kicker} · {p.specs.filter((s) => s.text).slice(0, 3).map((s) => s.text).join(' · ') || 'Sin specs'}
                             {p.imageCount > 1 ? ` · ${p.imageCount} fotos` : ''}
                           </div>
-                          <div className="text-sm font-bold" style={{ color: '#00B5D8' }}>{p.price}</div>
+                          {p.onOffer ? (
+                            <div className="text-sm font-bold flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-bold text-white px-1.5 py-0.5 rounded" style={{ background: '#E11D48' }}>-{p.discountPercent}%</span>
+                              <span className="text-gray-400 line-through font-medium">{p.listPrice}</span>
+                              <span style={{ color: '#00B5D8' }}>{p.price}</span>
+                            </div>
+                          ) : (
+                            <div className="text-sm font-bold" style={{ color: '#00B5D8' }}>{p.price}</div>
+                          )}
                           {p.lastDownloadedAt ? (
                             <div className="text-[11px] font-semibold text-amber-700">{savedAgo(p.lastDownloadedAt)} · al final para no repetir</div>
                           ) : null}
@@ -1013,8 +1041,11 @@ const CreativeStudioPage = () => {
             </div>
           </div>
 
-          <div className={`xl:col-span-3 ${products.length ? 'order-1' : 'order-2'} xl:order-3`}>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4">
+          <div className={`${studioMode === 'publish' ? 'xl:col-span-8 order-2' : 'xl:col-span-3'} ${products.length && studioMode !== 'publish' ? 'order-1' : 'order-2'} xl:order-3`}>
+            {studioMode === 'publish' ? (
+              <PublishPanel selected={selected} products={products} />
+            ) : null}
+            <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4 ${studioMode === 'publish' ? 'hidden' : ''}`}>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <h2 className="font-semibold text-gray-900">Preview</h2>
                 {products.length > 1 && (
