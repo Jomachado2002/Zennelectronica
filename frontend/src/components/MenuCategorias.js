@@ -2,11 +2,21 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { BiCategoryAlt } from "react-icons/bi";
 import { FaWhatsapp, FaPhone } from "react-icons/fa";
+import { FiSearch } from "react-icons/fi";
 import { IoMdClose } from "react-icons/io";
 import productCategory from '../helpers/productCategory';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import SubcategoryTreePicker from './SubcategoryTreePicker';
-import { leafLabelFromStoredLabel, usableVisaoTree } from '../helpers/visaoNavigationTree';
+import {
+  breadcrumbLabelsForPath,
+  collectLeafSubcategoryValues,
+  getSortedTreeChildEntries,
+  getTreeNodeAtPath,
+  hasTreeChildren,
+  isTreeLeaf,
+  leafLabelFromStoredLabel,
+  usableVisaoTree
+} from '../helpers/visaoNavigationTree';
 import { useSubcategoryPreviewMap } from '../hooks/useSubcategoryPreviewMap';
 import { categoriaProductoHref } from '../config/homeSlotRoutes';
 
@@ -46,6 +56,53 @@ const scrollTop = () => {
   }, 200);
 };
 
+function collectMenuSearchHits(categories, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (q.length < 2) return [];
+  const hits = [];
+
+  for (const category of categories) {
+    const categoryLabel = category.label || '';
+    if (categoryLabel.toLowerCase().includes(q)) {
+      hits.push({
+        key: `cat-${category.value}`,
+        label: categoryLabel,
+        hint: 'Categoría',
+        href: categoriaProductoHref(category.value)
+      });
+    }
+
+    if (usableVisaoTree(category.visaoNavigationTree)) {
+      for (const leaf of collectLeafSubcategoryValues(category.visaoNavigationTree)) {
+        const label = leafLabelFromStoredLabel(leaf.label);
+        const haystack = `${label} ${leaf.label || ''}`.toLowerCase();
+        if (!haystack.includes(q)) continue;
+        hits.push({
+          key: `leaf-${category.value}-${leaf.subcategoryValue}`,
+          label,
+          hint: categoryLabel,
+          href: categoriaProductoHref(category.value, leaf.subcategoryValue)
+        });
+        if (hits.length >= 20) return hits;
+      }
+    } else {
+      for (const sub of category.subcategories || []) {
+        const label = leafLabelFromStoredLabel(sub.label);
+        if (!label.toLowerCase().includes(q)) continue;
+        hits.push({
+          key: `sub-${sub.id || sub.value}`,
+          label,
+          hint: categoryLabel,
+          href: categoriaProductoHref(category.value, sub.value)
+        });
+        if (hits.length >= 20) return hits;
+      }
+    }
+  }
+
+  return hits.slice(0, 20);
+}
+
 const MenuCategorias = ({ 
   isOpen, 
   onClose, 
@@ -54,7 +111,8 @@ const MenuCategorias = ({
   const navigate = useNavigate();
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(null);
   const [activeSubcategories, setActiveSubcategories] = useState([]);
-  const [expandedCategories, setExpandedCategories] = useState([]); // Para móvil
+  const [menuQuery, setMenuQuery] = useState('');
+  const [mobileLevel, setMobileLevel] = useState({ kind: 'root' });
   const menuRef = useRef(null);
   const overlayRef = useRef(null);
 
@@ -112,18 +170,35 @@ const MenuCategorias = ({
     };
   }, [isOpen]);
 
-  const handleCategoryClick = (index) => {
-    if (isMobile) {
-      // En móvil: toggle accordion
-      if (expandedCategories.includes(index)) {
-        setExpandedCategories(expandedCategories.filter(i => i !== index));
-      } else {
-        setExpandedCategories([...expandedCategories, index]);
-      }
-    } else {
-      // En desktop: cambiar categoría activa
-      setActiveCategoryIndex(index);
+  useEffect(() => {
+    if (!isOpen) {
+      setMenuQuery('');
+      setMobileLevel({ kind: 'root' });
     }
+  }, [isOpen]);
+
+  const handleCategoryClick = (index) => {
+    setActiveCategoryIndex(index);
+  };
+
+  const openCategoryLevel = (category) => {
+    if (usableVisaoTree(category.visaoNavigationTree)) {
+      setMobileLevel({ kind: 'tree', category, pathKeys: [] });
+      return;
+    }
+    setMobileLevel({ kind: 'category', category });
+  };
+
+  const goMobileBack = () => {
+    if (mobileLevel.kind === 'tree' && mobileLevel.pathKeys.length > 0) {
+      setMobileLevel({
+        kind: 'tree',
+        category: mobileLevel.category,
+        pathKeys: mobileLevel.pathKeys.slice(0, -1)
+      });
+      return;
+    }
+    setMobileLevel({ kind: 'root' });
   };
 
   const handleNavigateWithReload = (url) => {
@@ -141,142 +216,234 @@ const MenuCategorias = ({
   const desktopVisaoTree = desktopCategory?.visaoNavigationTree;
   const desktopPreviewEnabled = !!desktopCategory && usableVisaoTree(desktopVisaoTree);
   const desktopPreviewBySub = useSubcategoryPreviewMap(desktopVisaoTree, desktopPreviewEnabled);
+  const menuSearchHits = useMemo(
+    () => collectMenuSearchHits(categories, menuQuery),
+    [categories, menuQuery]
+  );
+  const trimmedMenuQuery = menuQuery.trim();
 
   if (!isOpen) return null;
 
-  // ============ VERSIÓN MÓVIL MEJORADA ============
+  // ============ VERSIÓN MÓVIL ============
   if (isMobile) {
-    return (
-      <>
-        {/* Overlay */}
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[140] transition-opacity duration-300"
-          onClick={onClose}
-        />
+    const searching = trimmedMenuQuery.length >= 2;
+    let title = 'Menú';
+    let showBack = false;
+    const rows = [];
 
-        {/* Menú Lateral */}
-        <div
-          className="fixed top-0 left-0 h-screen bg-white w-[85%] max-w-sm shadow-2xl z-[150] overflow-y-auto"
-          style={{
-            animation: 'slideInLeft 0.3s ease-out'
-          }}
-        >
-          {/* Header del Menú */}
-          <div 
-            className="sticky top-0 z-10 p-5 flex items-center justify-between shadow-md"
-            style={{
-              background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-            }}
-          >
-            <div>
-              <h1 className="text-xl font-bold text-white">Menú</h1>
-              <p className="text-xs text-white/80 mt-0.5">Explora nuestras categorías</p>
-            </div>
-            <button 
-              onClick={onClose} 
-              className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+    if (searching) {
+      title = 'Buscar';
+    } else if (mobileLevel.kind === 'category') {
+      title = mobileLevel.category.label;
+      showBack = true;
+      rows.push({
+        key: 'all',
+        label: 'Ver todo',
+        hint: mobileLevel.category.label,
+        onSelect: () => handleNavigateWithReload(categoriaProductoHref(mobileLevel.category.value))
+      });
+      (mobileLevel.category.subcategories || []).forEach((sub) => {
+        rows.push({
+          key: sub.id || sub.value,
+          label: leafLabelFromStoredLabel(sub.label),
+          onSelect: () => handleNavigateWithReload(
+            categoriaProductoHref(mobileLevel.category.value, sub.value)
+          )
+        });
+      });
+    } else if (mobileLevel.kind === 'tree') {
+      const node = getTreeNodeAtPath(mobileLevel.category.visaoNavigationTree, mobileLevel.pathKeys);
+      const crumbs = breadcrumbLabelsForPath(mobileLevel.category.visaoNavigationTree, mobileLevel.pathKeys);
+      title = crumbs[crumbs.length - 1] || mobileLevel.category.label;
+      showBack = true;
+      if (mobileLevel.pathKeys.length === 0) {
+        rows.push({
+          key: 'all',
+          label: 'Ver todo',
+          hint: mobileLevel.category.label,
+          onSelect: () => handleNavigateWithReload(categoriaProductoHref(mobileLevel.category.value))
+        });
+      }
+      getSortedTreeChildEntries(node?.children).forEach(({ key, node: child }) => {
+        if (hasTreeChildren(child)) {
+          rows.push({
+            key,
+            label: child.label,
+            onSelect: () => setMobileLevel({
+              kind: 'tree',
+              category: mobileLevel.category,
+              pathKeys: [...mobileLevel.pathKeys, key]
+            })
+          });
+        } else if (isTreeLeaf(child)) {
+          rows.push({
+            key,
+            label: leafLabelFromStoredLabel(child.label),
+            onSelect: () => handleNavigateWithReload(
+              categoriaProductoHref(mobileLevel.category.value, child.subcategoryValue)
+            )
+          });
+        }
+      });
+    }
+
+    const submitCatalogSearch = (event) => {
+      event.preventDefault();
+      if (trimmedMenuQuery.length < 2) return;
+      handleNavigateWithReload(`/buscar?q=${encodeURIComponent(trimmedMenuQuery)}`);
+    };
+
+    return (
+      <div className="fixed inset-0 z-[160] bg-white flex flex-col">
+        <div className="flex-shrink-0 bg-white border-b border-gray-100">
+          <div className="flex items-center h-14 px-2">
+            {showBack ? (
+              <button
+                type="button"
+                onClick={goMobileBack}
+                className="w-10 h-10 flex items-center justify-center text-gray-800"
+                aria-label="Volver"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            ) : (
+              <span className="w-10" />
+            )}
+            <h1 className="flex-1 text-center text-[15px] font-semibold text-gray-900 truncate px-2">
+              {title}
+            </h1>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-10 h-10 flex items-center justify-center text-gray-700"
+              aria-label="Cerrar menú"
             >
               <IoMdClose className="text-2xl" />
             </button>
           </div>
+          <form onSubmit={submitCatalogSearch} className="px-4 pb-3">
+            <label className="flex items-center gap-2 h-11 px-4 rounded-full bg-gray-50 border border-gray-200">
+              <FiSearch className="text-gray-400 flex-shrink-0" />
+              <input
+                type="search"
+                value={menuQuery}
+                onChange={(event) => setMenuQuery(event.target.value)}
+                placeholder="Buscar productos o categorías"
+                className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+              />
+            </label>
+          </form>
+        </div>
 
-          {/* Contenido del Menú */}
-          <div className="p-4 space-y-3">
-            
-            {/* Categorías con Acordeón */}
-            <div className="space-y-3">
-              {categoriesLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
-                  <span className="ml-3 text-gray-600">Cargando categorías...</span>
-                </div>
-              ) : categoriesError ? (
-                <div className="text-center p-8 text-red-600">
-                  <p>Error al cargar categorías</p>
-                  <button 
-                    onClick={() => window.location.reload()} 
-                    className="mt-2 text-sm text-blue-600 hover:underline"
-                  >
-                    Recargar página
-                  </button>
-                </div>
+        <div className="flex-1 overflow-y-auto">
+          {categoriesLoading ? (
+            <div className="flex items-center justify-center p-10 text-sm text-gray-500">
+              Cargando categorías...
+            </div>
+          ) : categories.length === 0 && categoriesError ? (
+            <div className="text-center p-8 text-red-600">
+              <p>Error al cargar categorías</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-2 text-sm text-[#002060] underline"
+              >
+                Recargar página
+              </button>
+            </div>
+          ) : searching ? (
+            <>
+              <button
+                type="button"
+                onClick={submitCatalogSearch}
+                className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left active:bg-gray-50"
+              >
+                <span>
+                  <span className="block text-[15px] font-medium text-gray-900">
+                    Buscar “{trimmedMenuQuery}”
+                  </span>
+                  <span className="block text-xs text-gray-500 mt-0.5">En todo el catálogo</span>
+                </span>
+                <MenuChevron />
+              </button>
+              {menuSearchHits.length === 0 ? (
+                <p className="px-5 py-8 text-sm text-gray-500 text-center">
+                  No hay categorías con ese nombre. Podés buscarlo en productos.
+                </p>
               ) : (
-                categories.map((category, index) => (
-                  <CategoryAccordion
-                    key={category.id}
-                    category={category}
-                    index={index}
-                    expandedCategories={expandedCategories}
-                    onCategoryClick={handleCategoryClick}
-                    onNavigateWithReload={handleNavigateWithReload}
-                    loadSubcategories={loadSubcategories}
-                  />
+                menuSearchHits.map((hit) => (
+                  <button
+                    key={hit.key}
+                    type="button"
+                    onClick={() => handleNavigateWithReload(hit.href)}
+                    className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left active:bg-gray-50"
+                  >
+                    <span className="min-w-0 pr-3">
+                      <span className="block text-[15px] font-medium text-gray-900 truncate">{hit.label}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5 truncate">{hit.hint}</span>
+                    </span>
+                    <MenuChevron />
+                  </button>
                 ))
               )}
-            </div>
-
-            {/* Separador */}
-            <div className="border-t border-gray-200 my-4"></div>
-
-            {/* Enlaces de Contacto */}
-            <div className="space-y-2">
-              <a 
-                href="https://wa.me/595973345284?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center p-4 rounded-xl bg-green-50 border-2 border-green-200 transition-all duration-200 hover:bg-green-100 group"
+            </>
+          ) : mobileLevel.kind === 'root' ? (
+            <>
+              {categories.map((category) => (
+                <button
+                  key={category.id || category.value}
+                  type="button"
+                  onClick={() => openCategoryLevel(category)}
+                  className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left active:bg-gray-50"
+                >
+                  <span className="text-[15px] font-medium text-gray-900">{category.label}</span>
+                  <MenuChevron />
+                </button>
+              ))}
+              <div className="mt-2 border-t border-gray-100">
+                <p className="px-5 pt-5 pb-1 text-[11px] font-semibold tracking-[0.16em] uppercase text-gray-400">
+                  Contacto
+                </p>
+                <a
+                  href="https://wa.me/595973345284?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 text-[15px] font-medium text-gray-900"
+                >
+                  <FaWhatsapp className="text-green-600 text-lg" />
+                  WhatsApp
+                </a>
+                <a
+                  href="tel:+595973345284"
+                  className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 text-[15px] font-medium text-gray-900"
+                >
+                  <FaPhone className="text-[#002060] text-sm" />
+                  Llamar
+                </a>
+              </div>
+            </>
+          ) : (
+            rows.map((row) => (
+              <button
+                key={row.key}
+                type="button"
+                onClick={row.onSelect}
+                className="w-full flex items-center justify-between px-5 py-4 border-b border-gray-100 text-left active:bg-gray-50"
               >
-                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
-                  <FaWhatsapp className="text-white text-xl" />
-                </div>
-                <div>
-                  <span className="font-bold text-gray-800 block">WhatsApp</span>
-                  <span className="text-xs text-gray-600">Chatea con nosotros</span>
-                </div>
-              </a>
-
-              <a 
-                href="tel:+595973345284" 
-                className="flex items-center p-4 rounded-xl bg-blue-50 border-2 border-blue-200 transition-all duration-200 hover:bg-blue-100 group"
-              >
-                <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
-                  <FaPhone className="text-white text-lg" />
-                </div>
-                <div>
-                  <span className="font-bold text-gray-800 block">Llamar</span>
-                  <span className="text-xs text-gray-600">+595 973345284</span>
-                </div>
-              </a>
-            </div>
-
-            {/* Espaciador inferior */}
-            <div className="h-4"></div>
-          </div>
-
-          {/* Estilos de animación */}
-          <style jsx>{`
-            @keyframes slideInLeft {
-              from {
-                transform: translateX(-100%);
-              }
-              to {
-                transform: translateX(0);
-              }
-            }
-
-            @keyframes slideDown {
-              from {
-                opacity: 0;
-                max-height: 0;
-              }
-              to {
-                opacity: 1;
-                max-height: 1000px;
-              }
-            }
-          `}</style>
+                <span className="min-w-0 pr-3">
+                  <span className="block text-[15px] font-medium text-gray-900">{row.label}</span>
+                  {row.hint ? (
+                    <span className="block text-xs text-gray-500 mt-0.5">{row.hint}</span>
+                  ) : null}
+                </span>
+                <MenuChevron />
+              </button>
+            ))
+          )}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -312,7 +479,7 @@ const MenuCategorias = ({
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
                     <p className="text-sm text-gray-600 mt-2">Cargando categorías...</p>
                   </div>
-                ) : categoriesError ? (
+                ) : categories.length === 0 && categoriesError ? (
                   <div className="px-4 py-8 text-center text-red-600">
                     <p className="text-sm">Error al cargar categorías</p>
                   </div>
@@ -471,174 +638,13 @@ const MenuCategorias = ({
   );
 };
 
-// Componente para el acordeón de categorías móvil
-const CategoryAccordion = ({ 
-  category, 
-  index, 
-  expandedCategories, 
-  onCategoryClick, 
-  onNavigateWithReload,
-  loadSubcategories 
-}) => {
-  const [subcategories, setSubcategories] = useState([]);
-  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
-  const mobileTreePreviewEnabled =
-    expandedCategories.includes(index) && usableVisaoTree(category.visaoNavigationTree);
-  const mobilePreviewBySub = useSubcategoryPreviewMap(
-    category.visaoNavigationTree,
-    mobileTreePreviewEnabled
-  );
-
-  const handleCategoryClick = async () => {
-    if (!expandedCategories.includes(index)) {
-      if (!usableVisaoTree(category.visaoNavigationTree)) {
-        setLoadingSubcategories(true);
-        const subs = await loadSubcategories(category.value);
-        setSubcategories(subs);
-        setLoadingSubcategories(false);
-      } else {
-        setSubcategories([]);
-      }
-    }
-    onCategoryClick(index);
-  };
-
+function MenuChevron() {
   return (
-    <div 
-      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md"
-    >
-      {/* Header de Categoría */}
-      <button
-        className="w-full p-4 flex items-center justify-between transition-colors duration-200"
-        style={{
-          background: expandedCategories.includes(index)
-            ? 'linear-gradient(135deg, rgba(0, 181, 216, 0.1) 0%, rgba(123, 44, 191, 0.1) 100%)'
-            : 'white'
-        }}
-        onClick={handleCategoryClick}
-      >
-        <div className="flex items-center">
-          <div 
-            className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
-            style={{
-              background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-            }}
-          >
-            <BiCategoryAlt className="text-white" />
-          </div>
-          <span className="font-bold text-gray-800 text-left">
-            {category.label}
-          </span>
-        </div>
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className={`h-5 w-5 transition-transform duration-300 ${
-            expandedCategories.includes(index) ? 'rotate-180' : ''
-          }`}
-          style={{ color: '#00B5D8' }}
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {/* Subcategorías (Acordeón) */}
-      {expandedCategories.includes(index) && (
-        <div 
-          className="border-t border-gray-100 bg-gray-50"
-          style={{
-            animation: 'slideDown 0.3s ease-out'
-          }}
-        >
-          {loadingSubcategories ? (
-            <div className="flex items-center justify-center p-4">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-500"></div>
-              <span className="ml-2 text-sm text-gray-600">Cargando...</span>
-            </div>
-          ) : usableVisaoTree(category.visaoNavigationTree) ? (
-            <>
-              <div className="p-3">
-                <SubcategoryTreePicker
-                  tree={category.visaoNavigationTree}
-                  categoryValue={category.value}
-                  mode="navigate"
-                  gridColsClass="grid grid-cols-1 gap-2"
-                  previewBySubcategoryValue={mobilePreviewBySub}
-                  onLeafNavigate={({ categoryValue, subcategoryValue }) =>
-                    onNavigateWithReload(categoriaProductoHref(categoryValue, subcategoryValue))
-                  }
-                />
-              </div>
-              <button
-                type="button"
-                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg w-full"
-                style={{
-                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigateWithReload(categoriaProductoHref(category.value));
-                }}
-              >
-                Ver toda la colección →
-              </button>
-            </>
-          ) : (
-            <>
-              {subcategories.map((subcategory) => (
-                <button
-                  key={subcategory.id}
-                  type="button"
-                  className="flex items-center justify-between p-3.5 border-b border-gray-100 last:border-b-0 hover:bg-white transition-all duration-200 group w-full text-left"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigateWithReload(
-                      categoriaProductoHref(category.value, subcategory.value)
-                    );
-                  }}
-                >
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 rounded-full mr-3 group-hover:scale-150 transition-transform"
-                      style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
-                    />
-                    <span className="text-sm text-gray-700 group-hover:text-cyan-600 font-medium transition-colors">
-                      {leafLabelFromStoredLabel(subcategory.label)}
-                    </span>
-                  </div>
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 transition-colors" 
-                    viewBox="0 0 20 20" 
-                    fill="currentColor"
-                  >
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              ))}
-              
-              {/* Botón "Ver Todo" */}
-              <button
-                type="button"
-                className="block p-3.5 text-center text-sm font-bold text-white transition-all duration-200 hover:shadow-lg w-full"
-                style={{
-                  background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigateWithReload(categoriaProductoHref(category.value));
-                }}
-              >
-                Ver toda la colección →
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 5l7 7-7 7" />
+    </svg>
   );
-};
+}
 
 export default MenuCategorias;

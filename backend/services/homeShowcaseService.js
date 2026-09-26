@@ -75,7 +75,7 @@ function assembleHomeShowcase(categoryDocs, previewsByCategory = {}) {
                 }));
         }
 
-        carousels[value] = items.filter((it) => it.value);
+        carousels[value] = items.filter((it) => it.value && it.image);
     }
 
     return { categories, carousels };

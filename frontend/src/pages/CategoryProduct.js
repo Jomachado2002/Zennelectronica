@@ -1,17 +1,18 @@
 // src/pages/CategoryProduct.js
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { IoGridOutline, IoMenuOutline } from 'react-icons/io5';
 import { BiX, BiFilter } from 'react-icons/bi';
 import { FilterProvider, useFilters } from '../context/FilterContext';
 
-import DesktopFilters from '../components/filters/DesktopFilters';
 import SideDrawerFilters from '../components/filters/SideDrawerFilters';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
 import VerticalCardGrid from '../components/VerticalCardGrid';
 import { siteUrl, SITE_ORIGIN } from '../config/siteUrl';
+import { findShopperDepartment } from '../config/shopperNav';
+import { categoriaProductoHref } from '../config/homeSlotRoutes';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -416,6 +417,7 @@ const CategoryProductContent = () => {
     clearAllFilters,
     filterCount,
     setMobileFilterOpen,
+    setDesktopFilterOpen,
     filterCategoryList,
     filterSubcategoryList,
     onlyDiscounted
@@ -433,6 +435,9 @@ const CategoryProductContent = () => {
   } = usePreloadedCategories();
   
   const categories = getCategories();
+
+  const department = findShopperDepartment(filterCategoryList[0], filterSubcategoryList[0]);
+  const mobileTitle = !filterSubcategoryList[0] && department ? department.label : null;
 
   const pageHeading = onlyDiscounted
     ? (filterCategoryList[0] || filterSubcategoryList[0]
@@ -493,33 +498,61 @@ const CategoryProductContent = () => {
         </script>
       </Helmet>
 
+      <div className="lg:hidden bg-white px-4 pt-6 pb-4 text-center">
+        <h1 className="text-[22px] font-semibold tracking-[0.08em] uppercase text-gray-900">
+          {mobileTitle || pageHeading}
+        </h1>
+        {department?.chips?.length > 0 && (
+          <div className="mt-4 -mx-4 px-4 flex gap-2 overflow-x-auto scrollbar-none">
+            {department.chips.map((chip) => {
+              const chipActive = filterCategoryList[0] === chip.category
+                && (!chip.subcategory || filterSubcategoryList[0] === chip.subcategory);
+              return (
+                <Link
+                  key={chip.label}
+                  to={categoriaProductoHref(chip.category, chip.subcategory)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${
+                    chipActive ? 'text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                  style={chipActive ? { background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' } : undefined}
+                >
+                  {chip.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+        <button
+          type="button"
+          className="mt-4 inline-flex items-center justify-center gap-2 h-10 px-6 rounded-md text-white text-xs font-semibold tracking-[0.16em] uppercase shadow-md"
+          style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
+          onClick={() => setMobileFilterOpen(true)}
+        >
+          <BiFilter size={16} />
+          Filtrar por
+          {filterCount > 0 && (
+            <span className="min-w-5 h-5 px-1 rounded-full bg-white text-[#7B2CBF] text-[11px] flex items-center justify-center">
+              {filterCount}
+            </span>
+          )}
+        </button>
+        <div className="mt-3 text-left">
+          <InlineActiveFilters categories={categories} />
+        </div>
+      </div>
+
       {/* Barra de filtros con auto-hide */}
       <div 
-        className={`sticky top-12 z-22 bg-white shadow-sm border-b border-gray-200 px-4 py-2 transition-transform duration-300 ${
+        className={`hidden lg:block sticky top-[108px] z-22 bg-white shadow-sm border-b border-gray-200 px-4 py-2 transition-transform duration-300 ${
           isVisible ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
         <div className="container mx-auto">
           <div className="flex flex-col sm:flex-row items-center">
             <div className="flex items-center w-full">
-              {/* Botón de filtros móvil */}
-              <button 
-                className="lg:hidden flex items-center py-1.5 px-3 bg-[#002060] text-white text-sm rounded-lg shadow-sm mr-3 hover:bg-[#1565C0] transition-colors"
-                onClick={() => setMobileFilterOpen(true)}
-              >
-                <BiFilter className="mr-1" />
-                Filtros
-                {filterCount > 0 && (
-                  <span className="ml-1 px-1.5 bg-white text-[#002060] rounded-full text-xs">
-                    {filterCount}
-                  </span>
-                )}
-              </button>
-              
-              {/* Título de página reducido */}
-              <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
+              <p className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
                 {pageHeading}
-              </h1>
+              </p>
               {onlyDiscounted && (
                 <button
                   type="button"
@@ -545,14 +578,26 @@ const CategoryProductContent = () => {
       {/* Contenido principal */}
       <div className="container mx-auto px-4 pt-2">
         {/* Controles de visualización */}
-        <div className="flex items-center justify-end mb-4">
-          {/* Contador de resultados */}
-          <span className="text-sm text-gray-600 mr-auto">
+        <div className="flex items-center mb-4 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3">
+          <span className="text-sm text-gray-600 mr-auto lg:mr-0">
             {data.length} {data.length === 1 ? 'producto' : 'productos'}
           </span>
+          <button
+            type="button"
+            className="hidden lg:inline-flex items-center justify-center gap-2 h-10 px-6 rounded-md text-white text-xs font-semibold tracking-[0.16em] uppercase shadow-md"
+            style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
+            onClick={() => setDesktopFilterOpen(true)}
+          >
+            <BiFilter size={16} />
+            Filtrar por
+            {filterCount > 0 && (
+              <span className="min-w-5 h-5 px-1 rounded-full bg-white text-[#7B2CBF] text-[11px] flex items-center justify-center">
+                {filterCount}
+              </span>
+            )}
+          </button>
           
-          {/* Botones de vista cuadrícula/lista (solo desktop) */}
-          <div className="hidden lg:flex items-center bg-blue-50 rounded-lg p-1">
+          <div className="hidden lg:flex items-center justify-self-end bg-blue-50 rounded-lg p-1">
             <button 
               className={`p-2 rounded ${gridView ? 'bg-white shadow-sm text-[#002060]' : 'text-gray-600'}`}
               onClick={() => setGridView(true)}
@@ -571,24 +616,17 @@ const CategoryProductContent = () => {
         </div>
 
         {/* Contenido principal grid */}
-        <div className="flex flex-col lg:flex-row lg:space-x-6">
-          {/* Sidebar filtros (solo desktop) */}
-          <div className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-24 max-h-[calc(100vh-150px)] overflow-y-auto bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <DesktopFilters 
-                categories={categories} 
-                categoriesLoading={categoriesLoading}
-                getSubcategories={getSubcategories}
-                getSpecifications={getSpecifications}
-              />
-            </div>
-          </div>
-
-          {/* Lista de productos - Incluye el drawer de filtros en móvil */}
+        <div className="flex flex-col">
           <div className="flex-grow relative mb-20">
-            {/* Drawer lateral para filtros en móvil */}
             <SideDrawerFilters 
               categories={categories} 
+              categoriesLoading={categoriesLoading}
+              getSubcategories={getSubcategories}
+              getSpecifications={getSpecifications}
+            />
+            <SideDrawerFilters
+              presentation="sidebar"
+              categories={categories}
               categoriesLoading={categoriesLoading}
               getSubcategories={getSubcategories}
               getSpecifications={getSpecifications}

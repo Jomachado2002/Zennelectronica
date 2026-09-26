@@ -9,7 +9,7 @@ import scrollTop from '../helpers/scrollTop';
  * Mobile &lt;640px: 1545×1329 | Desktop: 1374×438
  */
 export const BANNER_SHELL_CLASS =
-  'w-full overflow-hidden rounded-none sm:rounded-xl bg-gray-200 ' +
+  'w-full overflow-hidden rounded-none bg-gray-200 ' +
   '[aspect-ratio:1545/1329] sm:[aspect-ratio:1374/438] sm:min-h-[180px] sm:max-h-[60vh]';
 
 /**
@@ -121,7 +121,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   if (!banners.length) {
     if (!pending && Array.isArray(bannersProp)) return null;
     return (
-      <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
+      <div className="w-full mt-0">
         <div
           className={`${BANNER_SHELL_CLASS} animate-pulse`}
           aria-hidden
@@ -131,7 +131,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   }
 
   return (
-    <div className="w-full mt-0 sm:mx-auto sm:max-w-7xl sm:px-4">
+    <div className="w-full mt-0">
       <div className={`relative shadow-lg ${BANNER_SHELL_CLASS} bg-gray-100`}>
         <div
           className={`relative w-full h-full touch-pan-y ${

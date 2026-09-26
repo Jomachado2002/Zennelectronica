@@ -12,7 +12,7 @@ const Footer = () => {
         background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)'
       }}
     >
-      <div className="container mx-auto px-4">
+      <div className="w-full px-4 lg:px-10">
         <div className="grid md:grid-cols-3 gap-8">
           {/* Información de Contacto */}
           <div className="text-center md:text-left">

@@ -30,7 +30,7 @@ export const FilterProvider = ({
   // Estados principales
   const [filterCategoryList, setFilterCategoryList] = useState(urlSearch.get("category") ? [urlSearch.get("category")] : []);
   const [filterSubcategoryList, setFilterSubcategoryList] = useState(urlSearch.get("subcategory") ? [urlSearch.get("subcategory")] : []);
-  const [filterBrands, setFilterBrands] = useState([]);
+  const [filterBrands, setFilterBrands] = useState(urlSearch.get("brand") ? [urlSearch.get("brand")] : []);
   const [specFilters, setSpecFilters] = useState({});
   const [sortBy, setSortBy] = useState("");
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
@@ -53,6 +53,7 @@ export const FilterProvider = ({
   
   // Estado para móvil
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [desktopFilterOpen, setDesktopFilterOpen] = useState(false);
   const [activeMobileFilter, setActiveMobileFilter] = useState('categories');
   const [tempPriceRange, setTempPriceRange] = useState({ min: '', max: '' });
   const [gridView, setGridView] = useState(true);
@@ -64,7 +65,7 @@ export const FilterProvider = ({
   
   // Controlar overflow del body cuando el filtro móvil está abierto
   useEffect(() => {
-    if (mobileFilterOpen) {
+    if (mobileFilterOpen || desktopFilterOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -72,7 +73,7 @@ export const FilterProvider = ({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [mobileFilterOpen]);
+  }, [mobileFilterOpen, desktopFilterOpen]);
   
   // Contar filtros activos
   useEffect(() => {
@@ -126,10 +127,12 @@ export const FilterProvider = ({
   useEffect(() => {
     const currentCategory = urlSearch.get("category");
     const currentSubcategory = urlSearch.get("subcategory");
+    const currentBrand = urlSearch.get("brand") || "";
     
     // Si cambia la categoría o subcategoría en la URL, actualizar estados y limpiar filtros específicos
     const categoryChanged = currentCategory !== filterCategoryList[0];
     const subcategoryChanged = currentSubcategory !== filterSubcategoryList[0];
+    const brandChanged = currentBrand !== (filterBrands[0] || "");
     
     if (categoryChanged || subcategoryChanged) {
       if (categoryChanged) {
@@ -143,7 +146,9 @@ export const FilterProvider = ({
       // Limpiar filtros de especificaciones y precio al cambiar categoría/subcategoría
       setSpecFilters({});
       setPriceRange({ min: '', max: '' });
-      setFilterBrands([]);
+      setFilterBrands(currentBrand ? [currentBrand] : []);
+    } else if (brandChanged) {
+      setFilterBrands(currentBrand ? [currentBrand] : []);
     }
   }, [location.search]);
   
@@ -449,6 +454,7 @@ useEffect(() => {
     filterCount,
     activeAccordions,
     mobileFilterOpen,
+    desktopFilterOpen,
     activeMobileFilter,
     gridView,
     
@@ -461,6 +467,7 @@ useEffect(() => {
     setPriceRange,
     setTempPriceRange,
     setMobileFilterOpen,
+    setDesktopFilterOpen,
     setActiveMobileFilter,
     setGridView,
     

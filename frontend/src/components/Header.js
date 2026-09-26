@@ -20,9 +20,11 @@ import {
   FaCog
 } from "react-icons/fa";
 import { clearAuthToken } from '../helpers/getAuthToken';
+import { shopperHrefForQuery } from '../config/shopperNav';
+import ShopperNavBar from './ShopperNavBar';
 
-const MenuCategorias = lazy(() => import('./MenuCategorias'));
 const SearchPreview = lazy(() => import('./SearchPreview'));
+const MenuCategorias = lazy(() => import('./MenuCategorias'));
 
 const scrollTop = () => {
   if ('scrollBehavior' in document.documentElement.style) {
@@ -63,8 +65,6 @@ const scrollTop = () => {
 const Header = () => {
   const user = useSelector(state => state?.user?.user);
   const dispatch = useDispatch();
-  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
-  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const context = useContext(Context);
   const navigate = useNavigate();
@@ -74,31 +74,31 @@ const Header = () => {
   const searchQuery = URLSearch.getAll("q");
   const [search, setSearch] = useState(searchQuery);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showSearchPreview, setShowSearchPreview] = useState(false);
   
   const userDropdownRef = useRef(null);
 
   const isAdminRoute = location.pathname.includes('/panel-admin');
-  const menuOpen = isMobile ? categoryMenuOpen : desktopMenuOpen;
+
+  useEffect(() => {
+    const applyHeaderOffset = () => {
+      document.body.style.paddingTop = window.innerWidth >= 1024 ? '108px' : '56px';
+    };
+    applyHeaderOffset();
+    window.addEventListener('resize', applyHeaderOffset);
+    return () => {
+      window.removeEventListener('resize', applyHeaderOffset);
+      document.body.style.paddingTop = '';
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      import('./MenuCategorias');
       import('./SearchPreview');
     }, 1200);
     return () => clearTimeout(t);
-  }, []);
-
-  // Detectar cambios en el tamaño de pantalla
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Efecto para cerrar dropdown al hacer clic fuera
@@ -173,18 +173,18 @@ const Header = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const trimmedSearch = String(search || '').trim();
-    if (trimmedSearch) {
-      setShowSearchPreview(false);
-      navigate(`/buscar?q=${encodeURIComponent(trimmedSearch)}`);
-    }
+    if (!trimmedSearch) return;
+    setShowSearchPreview(false);
+    setShowMobileSearch(false);
+    const shortcut = shopperHrefForQuery(trimmedSearch);
+    navigate(shortcut || `/buscar?q=${encodeURIComponent(trimmedSearch)}`);
+    scrollTop();
   };
 
   const handleCloseSearchPreview = () => {
     setShowSearchPreview(false);
   };
 
-  const toggleCategoryMenu = () => setCategoryMenuOpen(!categoryMenuOpen);
-  const toggleDesktopMenu = () => setDesktopMenuOpen(!desktopMenuOpen);
   const toggleMobileSearch = () => setShowMobileSearch(!showMobileSearch);
   const toggleUserDropdown = () => setUserDropdownOpen(!userDropdownOpen);
 
@@ -210,7 +210,7 @@ const Header = () => {
         }`}
       >
         {/* ============ VERSIÓN DESKTOP ============ */}
-        <div className="container mx-auto px-6 lg:px-8 h-16 hidden lg:flex items-center justify-between">
+        <div className="w-full px-6 lg:px-10 h-16 hidden lg:flex items-center justify-between">
           
           {/* LOGO SVG */}
           <Link 
@@ -465,22 +465,6 @@ const Header = () => {
               Promociones
             </Link>
 
-            {/* BOTÓN MENÚ CATEGORÍAS */}
-            <button 
-              onClick={toggleDesktopMenu}
-              className="flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 text-gray-700 hover:shadow-lg"
-              style={{
-                border: '2px solid #f3f4f6',
-                background: 'white'
-              }}
-              aria-label="Abrir menú de categorías"
-              aria-expanded={desktopMenuOpen}
-              aria-haspopup="true"
-            >
-              <BiCategoryAlt className="text-xl" />
-              <span className="font-medium text-[14px]">Menú</span>
-            </button>
-
             {/* CARRITO */}
             <Link 
               to="/carrito" 
@@ -557,6 +541,7 @@ const Header = () => {
             </div>
           </div>
         </div>
+        <ShopperNavBar />
       </header>
 
       {/* ============ BARRA DE BÚSQUEDA MÓVIL EXPANDIBLE ============ */}
@@ -622,16 +607,6 @@ const Header = () => {
         </>
       )}
 
-      {menuOpen ? (
-        <Suspense fallback={null}>
-          <MenuCategorias
-            isOpen={menuOpen}
-            onClose={isMobile ? toggleCategoryMenu : toggleDesktopMenu}
-            isMobile={isMobile}
-          />
-        </Suspense>
-      ) : null}
-
       {/* ============ BARRA DE NAVEGACIÓN MÓVIL INFERIOR ============ */}
       <div 
         className="lg:hidden fixed bottom-0 w-full bg-white shadow-2xl border-t border-gray-200 p-2 flex justify-around z-[100]"
@@ -648,14 +623,15 @@ const Header = () => {
           <span className="text-xs font-medium mt-1">Inicio</span>
         </Link>
         
-        <button 
-          onClick={() => { toggleCategoryMenu(); scrollTop(); }} 
-          className="flex flex-col items-center text-gray-600 hover:text-purple-600 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-purple-50 group"
+        <button
+          type="button"
+          onClick={() => setCategoryMenuOpen(true)}
+          className="flex flex-col items-center text-gray-600 hover:text-cyan-500 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-cyan-50 group"
         >
           <BiCategoryAlt className="text-2xl group-hover:scale-110 transition-transform" />
           <span className="text-xs font-medium mt-1">Menú</span>
         </button>
-        
+
         <Link 
           to="/carrito" 
           className="flex flex-col items-center text-gray-600 hover:text-cyan-500 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-cyan-50 group relative" 
@@ -707,6 +683,16 @@ const Header = () => {
           )}
         </button>
       </div>
+
+      {categoryMenuOpen && (
+        <Suspense fallback={null}>
+          <MenuCategorias
+            isOpen={categoryMenuOpen}
+            onClose={() => setCategoryMenuOpen(false)}
+            isMobile
+          />
+        </Suspense>
+      )}
       
       {/* Estilos globales */}
       <style>{`

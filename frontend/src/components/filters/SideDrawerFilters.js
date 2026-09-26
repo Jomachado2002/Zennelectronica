@@ -1,23 +1,32 @@
 // src/components/filters/SideDrawerFilters.js
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { BiX, BiFilter, BiChevronDown, BiChevronUp } from 'react-icons/bi';
+import { BiX } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
-import { useFilters } from '../../context/FilterContext'; // Ajustada la ruta a context sin 's'
-import SubcategoryTreePicker from '../SubcategoryTreePicker';
-import { usableVisaoTree } from '../../helpers/visaoNavigationTree';
+import { useFilters } from '../../context/FilterContext';
+import productCategory from '../../helpers/productCategory';
+import {
+  getSortedTreeChildEntries,
+  getTreeNodeAtPath,
+  hasTreeChildren,
+  isTreeLeaf,
+  leafLabelFromStoredLabel,
+  usableVisaoTree
+} from '../../helpers/visaoNavigationTree';
 
 const SideDrawerFilters = ({ 
   categories = [], 
   categoriesLoading = false,
   getSubcategories,
-  getSpecifications
+  getSpecifications,
+  presentation = 'modal'
 }) => {
+  const isSidebar = presentation === 'sidebar';
   const { 
     mobileFilterOpen, 
-    setMobileFilterOpen, 
-    activeMobileFilter, 
-    setActiveMobileFilter,
+    setMobileFilterOpen,
+    desktopFilterOpen,
+    setDesktopFilterOpen, 
     filterCategoryList,
     filterSubcategoryList,
     filterBrands,
@@ -31,16 +40,26 @@ const SideDrawerFilters = ({
     handleSelectSubcategory,
     handleSpecFilterChange,
     handlePriceChange,
-    applyPriceFilter,
     availableFilters,
     filterCount,
-    clearAllFilters
+    clearAllFilters,
+    data,
+    loading,
+    setPriceRange
   } = useFilters();
   
+  const panelOpen = isSidebar ? desktopFilterOpen : mobileFilterOpen;
+  const closePanel = useCallback(() => {
+    if (isSidebar) setDesktopFilterOpen(false);
+    else setMobileFilterOpen(false);
+  }, [isSidebar, setDesktopFilterOpen, setMobileFilterOpen]);
+
   const [searchBrand, setSearchBrand] = useState('');
   const [searchSpecification, setSearchSpecification] = useState('');
   const drawerRef = useRef(null);
   const [expandedSpecs, setExpandedSpecs] = useState({});
+  const [openSection, setOpenSection] = useState(null);
+  const [categoryDrill, setCategoryDrill] = useState(null);
   
   // Obtener subcategorías para una categoría (datos precargados)
   const getSubcategoriesForCategory = useCallback((categoryValue) => {
@@ -312,17 +331,17 @@ const SideDrawerFilters = ({
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (drawerRef.current && !drawerRef.current.contains(event.target)) {
-        setMobileFilterOpen(false);
+        closePanel();
       }
     };
     
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setMobileFilterOpen(false);
+        closePanel();
       }
     };
     
-    if (mobileFilterOpen) {
+    if (panelOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscape);
     }
@@ -331,463 +350,475 @@ const SideDrawerFilters = ({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [mobileFilterOpen, setMobileFilterOpen]);
+  }, [panelOpen, closePanel]);
+
+  useEffect(() => {
+    if (!panelOpen) {
+      setOpenSection(null);
+      setExpandedSpecs({});
+    }
+  }, [panelOpen]);
   
-  // Renderizado del botón para abrir filtros en móvil
-  const renderFilterButton = () => (
-    <button 
-      className="lg:hidden fixed bottom-24 left-4 z-40 flex items-center justify-center py-2 px-4 bg-blue-600 text-white rounded-full shadow-lg"
-      onClick={() => setMobileFilterOpen(true)}
-      style={{ minWidth: '120px' }}
-    >
-      <BiFilter className="mr-2" size={20} />
-      Filtros
-      {filterCount > 0 && (
-        <span className="ml-1 px-1.5 bg-white text-blue-800 rounded-full text-xs">
-          {filterCount}
-        </span>
-      )}
-    </button>
+  const categorySource = categories.length > 0 ? categories : productCategory;
+  const drilledCategory = categoryDrill
+    ? categorySource.find((category) => category.value === categoryDrill.value) || null
+    : null;
+
+  const toggleSection = (id) => {
+    if (openSection === id) {
+      setOpenSection(null);
+      return;
+    }
+    if (id === 'categories') {
+      const selected = filterCategoryList[0];
+      setCategoryDrill(selected ? { value: selected, pathKeys: [] } : null);
+    }
+    setOpenSection(id);
+  };
+
+  const selectWholeCategory = (value) => {
+    if (!filterCategoryList.includes(value)) {
+      handleSelectCategory(value);
+      return;
+    }
+    if (filterSubcategoryList.length > 0) {
+      handleSelectSubcategory(filterSubcategoryList[0]);
+      return;
+    }
+    handleSelectCategory(value);
+  };
+
+  const goCategoryBack = () => {
+    if (!categoryDrill) return;
+    if (categoryDrill.pathKeys.length > 0) {
+      setCategoryDrill({
+        value: categoryDrill.value,
+        pathKeys: categoryDrill.pathKeys.slice(0, -1)
+      });
+      return;
+    }
+    setCategoryDrill(null);
+  };
+
+  const sortMeta = sortBy === 'asc' ? 'Menor precio' : sortBy === 'dsc' ? 'Mayor precio' : '';
+  const priceMeta = (priceRange.min || priceRange.max)
+    ? `Gs. ${priceRange.min || '0'} – ${priceRange.max || 'máx.'}`
+    : '';
+  const selectedCategory = categorySource.find((category) => category.value === filterCategoryList[0]);
+  const categoryMeta = selectedCategory ? selectedCategory.label : '';
+  const specCount = Object.values(specFilters).reduce((sum, values) => sum + (values?.length || 0), 0);
+  const resultCount = Array.isArray(data) ? data.length : 0;
+
+  const showResults = () => {
+    setPriceRange(tempPriceRange);
+    closePanel();
+  };
+
+  const specCatalog = [];
+  if (filterCategoryList[0]) {
+    const groups = filterSubcategoryList[0]
+      ? [filterSubcategoryList[0]]
+      : getSubcategoriesForCategory(filterCategoryList[0]).map((sub) => sub.value);
+    const seen = new Set();
+    groups.forEach((subValue) => {
+      getSpecificationsForSubcategory(filterCategoryList[0], subValue).forEach((spec) => {
+        if (!spec?.name || seen.has(spec.name)) return;
+        seen.add(spec.name);
+        specCatalog.push(spec);
+      });
+    });
+  }
+
+  const optionsForSpec = (specName) => {
+    const fromApi = availableFilters.specifications?.[specName] || [];
+    if (fromApi.length > 0) return fromApi;
+    const values = new Set();
+    (Array.isArray(data) ? data : []).forEach((product) => {
+      const value = product?.[specName];
+      if (value == null || String(value).trim() === '') return;
+      values.add(String(value));
+    });
+    return [...values].sort((a, b) => a.localeCompare(b, 'es'));
+  };
+
+  const filteredSpecs = specCatalog.filter((spec) =>
+    optionsForSpec(spec.name).length > 0 &&
+    String(spec.label || spec.name || '').toLowerCase().includes(searchSpecification.toLowerCase())
   );
-  
+
+  let categoryOptions = [];
+  if (drilledCategory && usableVisaoTree(drilledCategory.visaoNavigationTree)) {
+    const node = getTreeNodeAtPath(drilledCategory.visaoNavigationTree, categoryDrill.pathKeys);
+    categoryOptions = getSortedTreeChildEntries(node?.children).map(({ key, node: child }) => {
+      if (hasTreeChildren(child)) {
+        return {
+          key,
+          label: child.label,
+          kind: 'folder',
+          onOpen: () => setCategoryDrill({
+            value: drilledCategory.value,
+            pathKeys: [...categoryDrill.pathKeys, key]
+          })
+        };
+      }
+      if (isTreeLeaf(child)) {
+        return {
+          key,
+          label: leafLabelFromStoredLabel(child.label),
+          kind: 'leaf',
+          checked: filterSubcategoryList.includes(child.subcategoryValue),
+          onToggle: () => handleSelectSubcategory(child.subcategoryValue)
+        };
+      }
+      return null;
+    }).filter(Boolean);
+  } else if (drilledCategory) {
+    const liveSubs = categories.length > 0 ? getSubcategoriesForCategory(drilledCategory.value) : [];
+    const fallbackSubs = productCategory.find((category) => category.value === drilledCategory.value)?.subcategories || [];
+    categoryOptions = (liveSubs.length > 0 ? liveSubs : fallbackSubs).map((subcat) => ({
+      key: subcat.value,
+      label: leafLabelFromStoredLabel(subcat.label),
+      kind: 'leaf',
+      checked: filterSubcategoryList.includes(subcat.value),
+      onToggle: () => handleSelectSubcategory(subcat.value)
+    }));
+  }
+
   return (
-    <>
-      {/* Botón para abrir filtros */}
-      {renderFilterButton()}
-      
-      {/* Panel lateral con overlay */}
-      <div 
-        className={`fixed inset-0 z-40 ${mobileFilterOpen ? 'visible' : 'invisible'} transition-all duration-300`}
-        style={{ 
-          backgroundColor: mobileFilterOpen ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0)',
-          pointerEvents: mobileFilterOpen ? 'auto' : 'none'
-        }}
+    <div
+      className={`${isSidebar ? 'hidden lg:block' : 'lg:hidden'} fixed inset-0 z-[160] ${panelOpen ? '' : 'pointer-events-none'}`}
+    >
+      <div
+        className={`absolute inset-0 bg-black/45 transition-opacity duration-300 ${isSidebar ? '' : 'hidden'} ${panelOpen ? 'opacity-100' : 'opacity-0'}`}
+        onClick={closePanel}
+      />
+      <div
+        ref={drawerRef}
+        className={`absolute left-0 top-0 h-full bg-white shadow-2xl flex flex-col overflow-hidden transition-transform duration-300 ${
+          isSidebar ? 'w-[min(100%,380px)]' : 'w-full'
+        } ${panelOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Drawer lateral del 70% */}
-        <div 
-          ref={drawerRef}
-          className={`fixed top-0 left-0 h-full w-[70%] bg-white z-50 shadow-xl flex flex-col transition-transform duration-300 transform ${
-            mobileFilterOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-          style={{ 
-            maxWidth: '350px',
-            paddingBottom: '60px' // Espacio para la barra inferior
-          }}
+        <div
+          className="relative flex items-center justify-center h-14 px-12 flex-shrink-0 text-white"
+          style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
         >
-          {/* Cabecera del panel */}
-          <div className="flex-shrink-0 border-b border-gray-200 py-3 px-4 flex items-center justify-between bg-white sticky top-0 z-10">
-            <h2 className="text-xl font-semibold text-gray-800">Filtros</h2>
-            <button 
-              onClick={() => setMobileFilterOpen(false)}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-500"
-              aria-label="Cerrar filtros"
-            >
-              <BiX size={24} />
-            </button>
-          </div>
-          
-          {/* Pestañas para navegación entre filtros */}
-          <div className="flex-shrink-0 overflow-x-auto bg-white border-b border-gray-200 sticky top-[60px] z-10">
-            <div className="flex p-2 space-x-1">
-              <button 
-                onClick={() => setActiveMobileFilter('categories')}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium ${
-                  activeMobileFilter === 'categories' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Categorías
-                {(filterCategoryList.length || filterSubcategoryList.length) > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white text-blue-800 text-xs rounded-full">
-                    {filterCategoryList.length + filterSubcategoryList.length}
-                  </span>
-                )}
-              </button>
-              
-              <button 
-                onClick={() => setActiveMobileFilter('price')}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium ${
-                  activeMobileFilter === 'price' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Precio
-                {(priceRange.min || priceRange.max) && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white text-blue-800 text-xs rounded-full">
-                    1
-                  </span>
-                )}
-              </button>
-              
-              <button 
-                onClick={() => setActiveMobileFilter('brands')}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium ${
-                  activeMobileFilter === 'brands' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Marcas
-                {filterBrands.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white text-blue-800 text-xs rounded-full">
-                    {filterBrands.length}
-                  </span>
-                )}
-              </button>
-              
-              <button 
-                onClick={() => setActiveMobileFilter('specs')}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium ${
-                  activeMobileFilter === 'specs' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Espec.
-                {Object.values(specFilters).flat().length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white text-blue-800 text-xs rounded-full">
-                    {Object.values(specFilters).flat().length}
-                  </span>
-                )}
-              </button>
-              
-              <button 
-                onClick={() => setActiveMobileFilter('sort')}
-                className={`px-3 py-1.5 whitespace-nowrap rounded-md text-sm font-medium ${
-                  activeMobileFilter === 'sort' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                Ordenar
-                {sortBy && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-white text-blue-800 text-xs rounded-full">
-                    1
-                  </span>
-                )}
-              </button>
+          <h2 className="text-[16px] font-semibold tracking-wide">Filtrar por</h2>
+          <button
+            type="button"
+            onClick={closePanel}
+            className="absolute right-2 w-10 h-10 flex items-center justify-center text-white"
+            aria-label="Cerrar filtros"
+          >
+            <BiX size={26} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <FilterSection
+            title="Ordenar por"
+            meta={sortMeta}
+            open={openSection === 'sort'}
+            onToggle={() => toggleSection('sort')}
+          >
+            {[
+              { value: 'asc', label: 'Precio: menor a mayor' },
+              { value: 'dsc', label: 'Precio: mayor a menor' },
+              { value: '', label: 'Sin ordenar' }
+            ].map((option) => (
+              <label key={option.label} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-b-0">
+                <input
+                  type="radio"
+                  name={`sortByDrawer-${isSidebar ? 'desktop' : 'mobile'}`}
+                  value={option.value}
+                  checked={sortBy === option.value}
+                  onChange={() => setSortBy(option.value)}
+                  className="h-4 w-4 text-[#7B2CBF] focus:ring-[#00B5D8]"
+                />
+                <span className="text-sm text-gray-800">{option.label}</span>
+              </label>
+            ))}
+          </FilterSection>
+
+          <FilterSection
+            title="Precio"
+            meta={priceMeta}
+            open={openSection === 'price'}
+            onToggle={() => toggleSection('price')}
+          >
+            <div className="space-y-3">
+              <label className="block">
+                <span className="block text-xs text-gray-500 mb-1">Mínimo</span>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">Gs.</span>
+                  <input
+                    id={`${isSidebar ? 'desktop' : 'mobile'}-min-price`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    className="w-full h-11 pl-10 pr-3 border border-gray-200 rounded-lg text-sm"
+                    value={tempPriceRange.min}
+                    onChange={(e) => handlePriceChange('min', e.target.value)}
+                  />
+                </div>
+              </label>
+              <label className="block">
+                <span className="block text-xs text-gray-500 mb-1">Máximo</span>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">Gs.</span>
+                  <input
+                    id={`${isSidebar ? 'desktop' : 'mobile'}-max-price`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Sin límite"
+                    className="w-full h-11 pl-10 pr-3 border border-gray-200 rounded-lg text-sm"
+                    value={tempPriceRange.max}
+                    onChange={(e) => handlePriceChange('max', e.target.value)}
+                  />
+                </div>
+              </label>
+              <p className="text-xs text-gray-400">Se aplica al mostrar los artículos.</p>
             </div>
-          </div>
-          
-          {/* Contenido de los filtros con scroll */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
-            {/* Categorías */}
-            {activeMobileFilter === 'categories' && (
+          </FilterSection>
+
+          <FilterSection
+            title="Marcas"
+            meta={filterBrands.length > 0 ? String(filterBrands.length) : ''}
+            open={openSection === 'brands'}
+            onToggle={() => toggleSection('brands')}
+          >
+            <div className="relative mb-2">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                placeholder="Buscar marca"
+                className="w-full h-11 pl-10 pr-3 border border-gray-200 rounded-full text-sm"
+                value={searchBrand}
+                onChange={(e) => setSearchBrand(e.target.value)}
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {filteredBrands.length > 0 ? (
+                filteredBrands.map((brand) => (
+                  <DrawerCheck
+                    key={brand}
+                    label={brand}
+                    checked={filterBrands.includes(brand)}
+                    onChange={() => {
+                      const next = filterBrands.includes(brand)
+                        ? filterBrands.filter((item) => item !== brand)
+                        : [...filterBrands, brand];
+                      setFilterBrands(next);
+                    }}
+                  />
+                ))
+              ) : (
+                <p className="py-3 text-sm text-gray-500 text-center">No se encontraron marcas</p>
+              )}
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Categoría"
+            meta={categoryMeta}
+            open={openSection === 'categories'}
+            onToggle={() => toggleSection('categories')}
+          >
+            {categoriesLoading && categorySource.length === 0 ? (
+              <p className="py-3 text-sm text-gray-500">Cargando categorías...</p>
+            ) : !drilledCategory ? (
+              categorySource.length > 0 ? (
+                categorySource.map((category) => (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => setCategoryDrill({ value: category.value, pathKeys: [] })}
+                    className="w-full flex items-center justify-between py-3 border-b border-gray-100 text-left last:border-b-0"
+                  >
+                    <span className={`text-sm ${filterCategoryList.includes(category.value) ? 'font-semibold text-[#002060]' : 'text-gray-800'}`}>
+                      {category.label}
+                    </span>
+                    <DrawerChevron />
+                  </button>
+                ))
+              ) : (
+                <p className="py-3 text-sm text-gray-500">No hay categorías disponibles</p>
+              )
+            ) : (
               <div>
-                {categoriesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                    <span className="ml-3 text-gray-600">Cargando categorías...</span>
-                  </div>
-                ) : categories.length > 0 ? (
-                  <div className="space-y-2">
-                    {categories.map((category) => (
-                      <div key={category.value} className="mb-3">
-                        <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-                          <div 
-                            className={`flex items-center justify-between py-2.5 px-3 cursor-pointer ${
-                              filterCategoryList.includes(category.value) ? 'bg-blue-50' : ''
-                            }`}
-                            onClick={() => handleSelectCategory(category.value)}
-                          >
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                                checked={filterCategoryList.includes(category.value)}
-                                onChange={() => {}} // Manejado por onClick del div
-                              />
-                              <span className="text-gray-800 font-medium">{category.label}</span>
-                            </div>
-                          </div>
-                          
-                          {filterCategoryList.includes(category.value) && (
-                            <div className="border-t border-gray-100 bg-gray-50 p-2">
-                              {usableVisaoTree(category.visaoNavigationTree) ? (
-                                <SubcategoryTreePicker
-                                  tree={category.visaoNavigationTree}
-                                  categoryValue={category.value}
-                                  mode="filter"
-                                  selectedSubcategoryValues={filterSubcategoryList}
-                                  onToggleSubcategory={handleSelectSubcategory}
-                                  gridColsClass="grid grid-cols-1 gap-2"
-                                />
-                              ) : (
-                                (() => {
-                                  const subcategories = getSubcategoriesForCategory(category.value);
-                                  return subcategories.length > 0 ? (
-                                    subcategories.map((subcat) => (
-                                      <div
-                                        key={subcat.value}
-                                        className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                                          checked={filterSubcategoryList.includes(subcat.value)}
-                                          onChange={() => handleSelectSubcategory(subcat.value)}
-                                        />
-                                        <span className="text-gray-700">{subcat.label}</span>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <div className="py-2.5 px-3 text-xs text-gray-500 italic">
-                                      No hay subcategorías disponibles
-                                    </div>
-                                  );
-                                })()
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <button
+                  type="button"
+                  onClick={goCategoryBack}
+                  className="mb-2 text-sm font-medium text-[#002060]"
+                >
+                  ← {categoryDrill.pathKeys.length > 0 ? 'Atrás' : 'Categorías'}
+                </button>
+                {categoryDrill.pathKeys.length === 0 && (
+                  <DrawerCheck
+                    label={`Todo ${drilledCategory.label}`}
+                    checked={filterCategoryList.includes(drilledCategory.value) && filterSubcategoryList.length === 0}
+                    onChange={() => selectWholeCategory(drilledCategory.value)}
+                  />
+                )}
+                {categoryOptions.length > 0 ? (
+                  categoryOptions.map((option) => (
+                    option.kind === 'folder' ? (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={option.onOpen}
+                        className="w-full flex items-center justify-between py-3 border-b border-gray-100 text-left"
+                      >
+                        <span className="text-sm text-gray-800">{option.label}</span>
+                        <DrawerChevron />
+                      </button>
+                    ) : (
+                      <DrawerCheck
+                        key={option.key}
+                        label={option.label}
+                        checked={option.checked}
+                        onChange={option.onToggle}
+                      />
+                    )
+                  ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No hay categorías disponibles</p>
-                  </div>
+                  <p className="py-3 text-sm text-gray-500">No hay subcategorías en este nivel</p>
                 )}
               </div>
             )}
-            
-            {/* Precio */}
-            {activeMobileFilter === 'price' && (
-              <div className="bg-white rounded-md shadow-sm border border-gray-200 p-4 space-y-4">
-                <div>
-                  <label htmlFor="mobile-min-price" className="block text-sm text-gray-600 mb-1">Precio mínimo</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Gs.</span>
-                    <input
-                      id="mobile-min-price"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="Mínimo"
-                      className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm"
-                      value={tempPriceRange.min}
-                      onChange={(e) => handlePriceChange('min', e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="mobile-max-price" className="block text-sm text-gray-600 mb-1">Precio máximo</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Gs.</span>
-                    <input
-                      id="mobile-max-price"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="Máximo"
-                      className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md shadow-sm"
-                      value={tempPriceRange.max}
-                      onChange={(e) => handlePriceChange('max', e.target.value)}
-                    />
-                  </div>
-                </div>
-                <button
-                  className="w-full py-2.5 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition"
-                  onClick={applyPriceFilter}
-                >
-                  Aplicar filtro de precio
-                </button>
-              </div>
-            )}
-            
-            {/* Marcas */}
-            {activeMobileFilter === 'brands' && (
-              <div>
-                <div className="bg-white rounded-md shadow-sm border border-gray-200 p-4">
-                  <div className="relative mb-3">
-                    <input
-                      type="text"
-                      placeholder="Buscar marca..."
-                      className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm"
-                      value={searchBrand}
-                      onChange={(e) => setSearchBrand(e.target.value)}
-                    />
-                    <FiSearch className="absolute right-3 top-2.5 text-gray-400" />
-                  </div>
-                  
-                  <div className="max-h-[40vh] overflow-y-auto bg-white rounded-md">
-                    {filteredBrands.length > 0 ? (
-                      filteredBrands.map((brand) => (
-                        <label key={brand} className="flex items-center py-2.5 px-3 border-b border-gray-100 last:border-b-0">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
-                            checked={filterBrands.includes(brand)}
-                            onChange={() => {
-                              const newBrands = filterBrands.includes(brand)
-                                ? filterBrands.filter(b => b !== brand)
-                                : [...filterBrands, brand];
-                              setFilterBrands(newBrands);
-                            }}
-                          />
-                          <span className="text-gray-700">{brand}</span>
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 py-3 text-center">No se encontraron marcas</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-           {/* Especificaciones */}
-{activeMobileFilter === 'specs' && (
-  <div>
-    <div className="bg-white rounded-md shadow-sm border border-gray-200 p-4">
-      <div className="relative mb-3">
-        <input
-          type="text"
-          placeholder="Buscar especificación..."
-          className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-md shadow-sm"
-          value={searchSpecification}
-          onChange={(e) => setSearchSpecification(e.target.value)}
-        />
-        <FiSearch className="absolute right-3 top-2.5 text-gray-400" />
-      </div>
-      
-      <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-        {(() => {
-          // Obtener especificaciones de la subcategoría actual (datos precargados)
-          const currentSpecifications = [];
-          if (filterCategoryList.length > 0 && filterSubcategoryList.length > 0) {
-            currentSpecifications.push(...getSpecificationsForSubcategory(
-              filterCategoryList[0], 
-              filterSubcategoryList[0]
-            ));
-          }
+          </FilterSection>
 
-          const filteredSpecs = currentSpecifications
-            .filter(spec => spec.label.toLowerCase().includes(searchSpecification.toLowerCase()));
-
-          return filteredSpecs.length > 0 ? (
-            filteredSpecs.map(spec => {
-              const hasActiveFilters = specFilters[spec.name] && specFilters[spec.name].length > 0;
-              
-              return (
-                <div key={spec.name} className="border border-gray-200 rounded-md overflow-hidden">
-                  <button 
-                    onClick={() => {
-                      setExpandedSpecs(prev => ({
-                        ...prev,
-                        [spec.name]: !prev[spec.name]
-                      }));
-                    }}
-                    className={`w-full flex items-center justify-between p-3 text-left ${
-                      hasActiveFilters ? 'bg-blue-50 text-blue-700 font-medium' : 'bg-gray-50 text-gray-800'
-                    }`}
-                  >
-                    <span>{spec.label}</span>
-                    {hasActiveFilters && (
-                      <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {specFilters[spec.name].length}
-                      </span>
-                    )}
-                    <span className="ml-auto text-gray-500">
-                      {expandedSpecs[spec.name] ? <BiChevronUp size={20} /> : <BiChevronDown size={20} />}
-                    </span>
-                  </button>
-                  
-                  {expandedSpecs[spec.name] && (
-                    <div className="p-3 border-t border-gray-100 bg-white">
-                      <div className="space-y-2">
-                        {(availableFilters.specifications[spec.name] || []).map(value => (
-                          <label key={`${spec.name}-${value}`} className="flex items-center py-2 px-2 rounded hover:bg-gray-50">
-                            <input
-                              type="checkbox"
-                              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 mr-3"
+          <FilterSection
+            title="Especificaciones"
+            meta={specCount > 0 ? String(specCount) : ''}
+            open={openSection === 'specs'}
+            onToggle={() => toggleSection('specs')}
+          >
+            {filteredSpecs.length === 0 ? (
+              <p className="py-2 text-sm text-gray-500">
+                {filterCategoryList.length === 0
+                  ? 'Elegí una categoría para ver las especificaciones.'
+                  : 'No hay especificaciones con valores en este listado.'}
+              </p>
+            ) : (
+              <>
+                <div className="relative mb-2">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="search"
+                    placeholder="Buscar especificación"
+                    className="w-full h-11 pl-10 pr-3 border border-gray-200 rounded-full text-sm"
+                    value={searchSpecification}
+                    onChange={(e) => setSearchSpecification(e.target.value)}
+                  />
+                </div>
+                {filteredSpecs.map((spec) => {
+                  const activeCount = (specFilters[spec.name] || []).length;
+                  const open = !!expandedSpecs[spec.name];
+                  return (
+                    <div key={spec.name} className="border-b border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSpecs((prev) => ({ ...prev, [spec.name]: !prev[spec.name] }))}
+                        className="w-full flex items-center justify-between py-3 text-left"
+                      >
+                        <span className="text-sm text-gray-800">
+                          {spec.label || spec.name}
+                          {activeCount > 0 ? (
+                            <span className="ml-2 text-xs font-medium text-[#00B5D8]">{activeCount}</span>
+                          ) : null}
+                        </span>
+                        <span className="text-lg font-light text-[#7B2CBF]" aria-hidden>{open ? '−' : '+'}</span>
+                      </button>
+                      {open && (
+                        <div className="pb-2">
+                          {optionsForSpec(spec.name).map((value) => (
+                            <DrawerCheck
+                              key={`${spec.name}-${value}`}
+                              label={value}
                               checked={(specFilters[spec.name] || []).includes(value)}
                               onChange={() => handleSpecFilterChange(spec.name, value)}
                             />
-                            <span className="text-sm text-gray-700">{value}</span>
-                          </label>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-sm text-gray-500 py-2 text-center italic">
-              {filterSubcategoryList.length > 0 
-                ? "No hay especificaciones disponibles para esta subcategoría" 
-                : "Selecciona una subcategoría para ver las especificaciones disponibles"
-              }
-            </p>
-          );
-        })()}
-      </div>
-    </div>
-  </div>
-)}
-            
-            {/* Ordenar */}
-            {activeMobileFilter === 'sort' && (
-              <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-                <label className="flex items-center py-3 px-4 cursor-pointer border-b border-gray-100">
-                  <input
-                    type="radio"
-                    name="sortByMobile"
-                    value="asc"
-                    checked={sortBy === 'asc'}
-                    onChange={() => setSortBy('asc')}
-                    className="text-blue-600 focus:ring-blue-500 mr-3"
-                  />
-                  <span className="text-gray-700">Precio: Menor a mayor</span>
-                </label>
-                <label className="flex items-center py-3 px-4 cursor-pointer border-b border-gray-100">
-                  <input
-                    type="radio"
-                    name="sortByMobile"
-                    value="dsc"
-                    checked={sortBy === 'dsc'}
-                    onChange={() => setSortBy('dsc')}
-                    className="text-blue-600 focus:ring-blue-500 mr-3"
-                  />
-                  <span className="text-gray-700">Precio: Mayor a menor</span>
-                </label>
-                <label className="flex items-center py-3 px-4 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="sortByMobile"
-                    value=""
-                    checked={!sortBy}
-                    onChange={() => setSortBy('')}
-                    className="text-blue-600 focus:ring-blue-500 mr-3"
-                  />
-                  <span className="text-gray-700">Sin ordenar</span>
-                </label>
-              </div>
+                  );
+                })}
+              </>
             )}
-          </div>
-          
-          {/* Pie con botones de acción */}
-          <div className="flex-shrink-0 border-t border-gray-200 p-3 bg-white shadow-inner sticky bottom-0">
-            <div className="flex justify-between">
-              <button
-                onClick={clearAllFilters}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 flex-1 mr-2 text-sm"
-              >
-                Limpiar filtros
-              </button>
-              <button
-                onClick={() => setMobileFilterOpen(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex-1 ml-2 text-sm"
-              >
-                Ver resultados {filterCount > 0 ? `(${filterCount})` : ''}
-              </button>
-            </div>
-          </div>
+          </FilterSection>
+        </div>
+
+        <div className="flex-shrink-0 border-t border-gray-100 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white">
+          {filterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="w-full mb-2 h-9 text-sm font-medium text-[#7B2CBF]"
+            >
+              Limpiar filtros
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={showResults}
+            className="w-full h-12 rounded-full text-white text-sm font-semibold shadow-md"
+            style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
+          >
+            {loading ? 'Cargando…' : `Mostrar ${resultCount} ${resultCount === 1 ? 'artículo' : 'artículos'}`}
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 };
+
+function FilterSection({ title, meta, open, onToggle, children }) {
+  return (
+    <div className="border-b border-gray-200 bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-5 py-4 text-left"
+        aria-expanded={open}
+      >
+        <span className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#002060] pr-4">
+          {title}
+          {meta ? (
+            <span className="ml-2 normal-case tracking-normal text-[11px] font-semibold text-[#7B2CBF] truncate max-w-[9rem] inline-block align-bottom">
+              {meta}
+            </span>
+          ) : null}
+        </span>
+        <span className="text-2xl font-light leading-none text-[#7B2CBF]" aria-hidden>
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open ? <div className="px-5 pb-4">{children}</div> : null}
+    </div>
+  );
+}
+
+function DrawerCheck({ label, checked, onChange }) {
+  return (
+    <label className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-b-0">
+      <input
+        type="checkbox"
+        checked={!!checked}
+        onChange={onChange}
+        className="h-4 w-4 rounded border-gray-300 text-[#7B2CBF] focus:ring-[#00B5D8]"
+      />
+      <span className="text-sm text-gray-800">{label}</span>
+    </label>
+  );
+}
+
+function DrawerChevron() {
+  return (
+    <svg className="w-4 h-4 text-[#7B2CBF] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
 
 export default SideDrawerFilters;

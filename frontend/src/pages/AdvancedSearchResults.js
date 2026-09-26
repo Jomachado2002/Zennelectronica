@@ -213,10 +213,10 @@ const SearchResultsContent = () => {
               {/* Botón de filtros */}
               <button
                 onClick={() => setShowMobileFilters(true)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#002060] text-white text-sm rounded-lg"
               >
                 <FaFilter className="text-sm" />
-                <span className="font-medium">Filtros por Categoría</span>
+                <span className="font-medium">Filtrar</span>
                 {hasActiveFilters && (
                   <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
                     !

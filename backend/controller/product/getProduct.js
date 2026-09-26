@@ -272,7 +272,9 @@ const getHomeProductsController = async(req, res) => {
         if (homeShowcase?.carousels && typeof homeShowcase.carousels === 'object') {
             const trimmed = {};
             for (const [k, arr] of Object.entries(homeShowcase.carousels)) {
-                trimmed[k] = Array.isArray(arr) ? arr.slice(0, 24) : [];
+                trimmed[k] = Array.isArray(arr)
+                    ? arr.filter((it) => it && it.image).slice(0, 24)
+                    : [];
             }
             homeShowcase = { ...homeShowcase, carousels: trimmed };
         }

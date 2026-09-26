@@ -30,6 +30,13 @@ export function categoriaProductoHref(categoryValue, subcategoryValue) {
   return `/categoria-producto?${p.toString()}`;
 }
 
+export function categoriaConMarcaHref(categoryValue, brandName) {
+  const p = new URLSearchParams();
+  p.set('category', categoryValue);
+  if (brandName) p.set('brand', brandName);
+  return `/categoria-producto?${p.toString()}`;
+}
+
 /** Listado principal de celulares (mismo par que `HOME_SLOT_ROUTES.celulares` / backend homeFeaturedSlots). */
 export function getCelularesListingHref() {
   return categoriaProductoHref(HOME_SLOT_ROUTES.celulares.category, HOME_SLOT_ROUTES.celulares.subcategory);

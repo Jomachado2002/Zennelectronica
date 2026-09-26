@@ -23,7 +23,11 @@ const filterProductController = async (req, res) => {
     // Filtros básicos
     if (category.length > 0) query.category = { $in: category };
     if (subcategory.length > 0) query.subcategory = { $in: subcategory };
-    if (brandName.length > 0) query.brandName = { $in: brandName };
+    if (brandName.length > 0) {
+      query.brandName = {
+        $in: brandName.map((name) => new RegExp(`^${String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'))
+      };
+    }
 
     // Solo productos con precio tachado > precio de venta (promociones / % descuento)
     if (onlyDiscounted) {
@@ -330,6 +334,12 @@ controles_consola: [
           filters.specifications[specKey] = [...new Set(specValues)];
         }
       });
+    } else if (category.length > 0) {
+      filters.brands = await productModel.distinct("brandName", {
+        category: { $in: category },
+        brandName: { $nin: [null, ""] }
+      });
+      filters.brands.sort((a, b) => String(a).localeCompare(String(b), "es"));
     } else if (onlyDiscounted) {
       filters.brands = [...new Set(products.map((p) => p.brandName).filter(Boolean))].sort();
     }

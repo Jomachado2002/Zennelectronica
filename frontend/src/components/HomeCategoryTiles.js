@@ -15,7 +15,7 @@ const HomeCategoryTiles = ({ tiles = [], pending = false }) => {
   if (pending && !list.length) {
     return (
       <section className="w-full bg-white py-4 sm:py-6" aria-hidden>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+        <div className="w-full px-4 lg:px-10">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {Array.from({ length: TILE_SKELETON_COUNT }).map((_, i) => (
               <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
@@ -33,7 +33,7 @@ const HomeCategoryTiles = ({ tiles = [], pending = false }) => {
 
   return (
     <section className="w-full bg-white py-4 sm:py-6">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+      <div className="w-full px-4 lg:px-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {list.map((tile, idx) => {
             const href = tile.href || '/categoria-producto';

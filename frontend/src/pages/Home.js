@@ -178,8 +178,8 @@ const Home = () => {
             />
           </div>
           {homePending ? (
-            <div className="w-full bg-white py-4 sm:py-6 min-h-[22rem] sm:min-h-[20rem]" aria-hidden>
-              <div className="max-w-7xl mx-auto px-3 sm:px-4">
+            <div className="w-full bg-white py-3 sm:py-6" aria-hidden>
+              <div className="w-full px-4 lg:px-10">
               <div className="flex gap-2 mb-4 overflow-hidden min-h-[36px]">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-gray-200 animate-pulse" />
@@ -196,7 +196,7 @@ const Home = () => {
               </div>
             </div>
           ) : (
-            <Suspense fallback={<div className="w-full min-h-[22rem] sm:min-h-[20rem] bg-white" aria-hidden />}>
+            <Suspense fallback={<div className="w-full min-h-[16rem] bg-white" aria-hidden />}>
               <CategoryShowcase
                 showcasePreviewsByCategory={showcasePreviewsByCategory}
                 homeShowcase={homeShowcase}
@@ -214,7 +214,7 @@ const Home = () => {
           </p>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 space-y-8 sm:space-y-16 py-8 sm:py-16">
+        <div className="w-full px-4 lg:px-10 space-y-8 sm:space-y-16 py-8 sm:py-16">
           <Suspense fallback={<div className="min-h-[280px]" aria-hidden />}>
             <HomeDynamicSections
               sections={sections}
