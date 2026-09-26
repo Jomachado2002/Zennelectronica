@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaAngleRight } from 'react-icons/fa';
 import VerticalCardProductOptimized from '../VerticalCardProductOptimized';
-import NotebookBanner from '../NotebookBanner';
 import LazyWhenVisible from '../LazyWhenVisible';
 import scrollTop from '../../helpers/scrollTop';
 import { categoriaProductoHref } from '../../config/homeSlotRoutes';
@@ -44,69 +43,6 @@ function groupSections(sections) {
   }
   flushGrid();
   return groups;
-}
-
-function HeroSection({ section, products, loading, eager, prioritizeImages }) {
-  return (
-    <section className="w-full">
-      <div className="flex flex-col lg:flex-row items-stretch gap-8">
-        <div className="w-full lg:w-1/3">
-          <div className="h-full relative overflow-hidden rounded-2xl shadow-2xl group">
-            <NotebookBanner />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6 transform translate-y-2 group-hover:translate-y-0 transition duration-300 pointer-events-none">
-              <Link
-                to={verMasHref(section)}
-                onClick={() => scrollTop()}
-                className="pointer-events-auto text-white font-semibold text-sm hover:underline"
-              >
-                Ver catálogo →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full lg:w-2/3">
-          <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2
-                  className="text-2xl sm:text-3xl font-bold mb-4 flex items-center bg-clip-text text-transparent"
-                  style={gradientText}
-                >
-                  {section.title}
-                </h2>
-                {section.subtitle ? (
-                  <p className="mt-2 text-sm text-gray-600 max-w-xl">{section.subtitle}</p>
-                ) : null}
-                <div className="h-1 w-32 mb-6 rounded-full" style={gradientBtn} />
-              </div>
-              <Link to={verMasHref(section)} onClick={() => scrollTop()}>
-                <button
-                  type="button"
-                  className="px-6 py-3 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center group/btn"
-                  style={gradientBtn}
-                >
-                  Ver más{' '}
-                  <FaAngleRight className="ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                </button>
-              </Link>
-            </div>
-            <LazyWhenVisible eager={eager} minHeight={300}>
-              <VerticalCardProductOptimized
-                category={section.verMas?.category || section.pairs?.[0]?.category}
-                subcategory={section.verMas?.subcategory || section.pairs?.[0]?.subcategory}
-                carouselKey={section.key}
-                heading=""
-                products={products}
-                loading={loading}
-                prioritizeImages={prioritizeImages}
-              />
-            </LazyWhenVisible>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
 }
 
 function FullSection({ section, products, loading, eager, prioritizeImages }) {
@@ -197,14 +133,9 @@ function GridCard({ section, products, loading, eager, prioritizeImages }) {
 function SectionsSkeleton() {
   return (
     <div className="w-full space-y-8" aria-hidden>
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="w-full lg:w-1/3 h-64 rounded-2xl bg-gray-200 animate-pulse" />
-        <div className="w-full lg:w-2/3 space-y-4">
-          <div className="h-8 w-2/3 max-w-md rounded bg-gray-200 animate-pulse" />
-          <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
-          <div className="h-48 rounded-xl bg-gray-100 animate-pulse" />
-        </div>
-      </div>
+      <div className="h-8 w-2/3 max-w-md rounded bg-gray-200 animate-pulse" />
+      <div className="h-4 w-40 rounded bg-gray-100 animate-pulse" />
+      <div className="h-48 rounded-xl bg-gray-100 animate-pulse" />
     </div>
   );
 }
@@ -228,18 +159,6 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
           const products = slotProducts(section.key);
           const prioritizeImages = sectionIndex === 0;
           sectionIndex += 1;
-          if (section.layout === 'hero') {
-            return (
-              <HeroSection
-                key={section.key}
-                section={section}
-                products={products}
-                loading={loading}
-                eager
-                prioritizeImages={prioritizeImages}
-              />
-            );
-          }
           return (
             <FullSection
               key={section.key}
