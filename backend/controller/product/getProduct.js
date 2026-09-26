@@ -125,6 +125,16 @@ const HOME_STOCK_OR = [
     { stock: { $gte: 1 } }
 ];
 
+const HOME_CACHE_CONTROL = 'public, max-age=120, s-maxage=900, stale-while-revalidate=86400';
+const HOME_CDN_CACHE_CONTROL = 'public, s-maxage=900, stale-while-revalidate=86400';
+
+function setPublicHomeCache(res, state) {
+    res.set('Cache-Control', HOME_CACHE_CONTROL);
+    res.set('CDN-Cache-Control', HOME_CDN_CACHE_CONTROL);
+    res.set('Vercel-CDN-Cache-Control', HOME_CDN_CACHE_CONTROL);
+    res.set('X-Home-Cache', state);
+}
+
 function queryForPairs(pairs, stockClause = STOCK_OR, extraFilters = {}) {
     const pairOr = pairs.map(({ category, subcategory }) => ({ category, subcategory }));
     const and = [
@@ -191,8 +201,7 @@ const getHomeProductsController = async(req, res) => {
             const cached = getHomePayloadCache();
             if (cached) {
                 const meta = homeCacheMeta();
-                res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800');
-                res.set('X-Home-Cache', `HIT age=${meta.ageMs || 0}`);
+                setPublicHomeCache(res, `HIT age=${meta.ageMs || 0}`);
                 return res.json(cached);
             }
         }
@@ -303,9 +312,11 @@ const getHomeProductsController = async(req, res) => {
             }
         };
 
-        setHomePayloadCache(body, 180 * 1000);
-        res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800');
-        res.set('X-Home-Cache', 'MISS');
+        setHomePayloadCache(body, 10 * 60 * 1000);
+        setPublicHomeCache(res, 'MISS');
+        const { publishHomeSnapshot } = require('../../services/homeSnapshotService');
+        const snapshotWrite = publishHomeSnapshot(body).catch(() => {});
+        if (String(req.query.refresh || '') === '1') await snapshotWrite;
         res.json(body);
     } catch (err) {
         res.status(400).json({
@@ -352,15 +363,16 @@ async function buildShowcasePreviewsByCategory(categoryValues) {
     const cats = [...new Set((categoryValues || []).map(String).filter(Boolean))];
     if (!cats.length) return {};
 
+    // Sin $sort de todo el catálogo: esa ordenación era ~3s en cada miss.
+    // Para la miniatura de la subcategoría alcanza cualquier foto con stock.
     const rows = await productModel.aggregate([
         {
             $match: {
                 category: { $in: cats },
-                $or: HOME_STOCK_OR,
-                productImage: { $exists: true, $ne: [] }
+                stock: { $gte: 1 },
+                'productImage.0': { $exists: true }
             }
         },
-        { $sort: { createdAt: -1 } },
         {
             $group: {
                 _id: { category: '$category', subcategory: '$subcategory' },

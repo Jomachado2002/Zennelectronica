@@ -46,7 +46,7 @@ function groupSections(sections) {
   return groups;
 }
 
-function HeroSection({ section, products, loading, eager }) {
+function HeroSection({ section, products, loading, eager, prioritizeImages }) {
   return (
     <section className="w-full">
       <div className="flex flex-col lg:flex-row items-stretch gap-8">
@@ -99,6 +99,7 @@ function HeroSection({ section, products, loading, eager }) {
                 heading=""
                 products={products}
                 loading={loading}
+                prioritizeImages={prioritizeImages}
               />
             </LazyWhenVisible>
           </div>
@@ -108,7 +109,7 @@ function HeroSection({ section, products, loading, eager }) {
   );
 }
 
-function FullSection({ section, products, loading, eager }) {
+function FullSection({ section, products, loading, eager, prioritizeImages }) {
   return (
     <section className="w-full">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -145,6 +146,7 @@ function FullSection({ section, products, loading, eager }) {
                 heading=""
                 products={products}
                 loading={loading}
+                prioritizeImages={prioritizeImages}
               />
             </LazyWhenVisible>
           </div>
@@ -154,7 +156,7 @@ function FullSection({ section, products, loading, eager }) {
   );
 }
 
-function GridCard({ section, products, loading, eager }) {
+function GridCard({ section, products, loading, eager, prioritizeImages }) {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
       <div className="p-6 text-white" style={gradientBtn}>
@@ -173,6 +175,7 @@ function GridCard({ section, products, loading, eager }) {
             heading=""
             products={products}
             loading={loading}
+            prioritizeImages={prioritizeImages}
           />
         </LazyWhenVisible>
       </div>
@@ -223,7 +226,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
         if (group.type === 'single') {
           const { section } = group;
           const products = slotProducts(section.key);
-          const eager = sectionIndex < 2;
+          const prioritizeImages = sectionIndex === 0;
           sectionIndex += 1;
           if (section.layout === 'hero') {
             return (
@@ -232,7 +235,8 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
                 section={section}
                 products={products}
                 loading={loading}
-                eager={eager}
+                eager
+                prioritizeImages={prioritizeImages}
               />
             );
           }
@@ -242,7 +246,8 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
               section={section}
               products={products}
               loading={loading}
-              eager={eager}
+              eager
+              prioritizeImages={prioritizeImages}
             />
           );
         }
@@ -251,7 +256,7 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
           <section key={`grid-${gi}`} className="w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {group.sections.map((section) => {
-                const eager = sectionIndex < 2;
+                const prioritizeImages = sectionIndex === 0;
                 sectionIndex += 1;
                 return (
                   <GridCard
@@ -259,7 +264,8 @@ const HomeDynamicSections = ({ sections = [], slotProducts, loading }) => {
                     section={section}
                     products={slotProducts(section.key)}
                     loading={loading}
-                    eager={eager}
+                    eager
+                    prioritizeImages={prioritizeImages}
                   />
                 );
               })}

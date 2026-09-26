@@ -16,7 +16,8 @@ const VerticalCardProductOptimized = ({
   carouselKey,
   heading, 
   products = [],
-  loading = false
+  loading = false,
+  prioritizeImages = false
 }) => {
   const [data, setData] = useState([]);
   const [showLeftButton, setShowLeftButton] = useState(false);
@@ -210,7 +211,7 @@ const VerticalCardProductOptimized = ({
                 const secondImage = !isMobile ? product.productImage?.[1] : null;
                 const showSecondImage = isHovered && secondImage;
                 // Solo las 2–3 primeras del carrusel compiten por el ancho de banda (above-fold).
-                const isAboveFold = index < (isMobile ? 2 : 3);
+                const isAboveFold = prioritizeImages && index < (isMobile ? 2 : 4);
                 
                 // Funciones para manejar hover con delay
                 const handleMouseEnter = () => {
@@ -259,7 +260,7 @@ const VerticalCardProductOptimized = ({
                               showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                             }`}
                             loading={isAboveFold ? 'eager' : 'lazy'}
-                            fetchPriority={index === 0 ? 'high' : isAboveFold ? 'auto' : 'low'}
+                            fetchPriority={isAboveFold ? 'high' : 'low'}
                             sizes="(max-width: 640px) 150px, 210px"
                             onError={() => handleImageError(product._id)}
                             decoding="async"

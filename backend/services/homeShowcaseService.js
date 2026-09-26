@@ -78,7 +78,8 @@ function assembleHomeShowcase(categoryDocs, previewsByCategory = {}) {
         carousels[value] = items.filter((it) => it.value && it.image);
     }
 
-    return { categories, carousels };
+    const withProducts = categories.filter((cat) => (carousels[cat.value] || []).length > 0);
+    return { categories: withProducts, carousels };
 }
 
 /**

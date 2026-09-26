@@ -3,7 +3,20 @@ import { useQuery } from '@tanstack/react-query';
 import SummaryApi from '../common';
 
 const HOME_LS_KEY = 'zenn_home_payload_v8';
-const HOME_LS_MAX_AGE_MS = 30 * 60 * 1000; // 30 min en el dispositivo
+const HOME_LS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 días en el dispositivo
+const HOME_CDN_URL = 'https://cdn.zenn.com.py/cache/home.json';
+
+async function readHomeJson(response) {
+  if (!response.ok) return null;
+  const result = await response.json();
+  if (result?.data?.slots && typeof result.data.slots === 'object') {
+    return { success: true, data: result.data };
+  }
+  if (result?.slots && typeof result.slots === 'object') {
+    return { success: true, data: result };
+  }
+  return null;
+}
 
 function readHomeLocalCache() {
   try {
@@ -45,28 +58,32 @@ export const useHomeProducts = () => {
   return useQuery({
     queryKey: ['category-products', 'home', 'slots-v8-fast'],
     queryFn: async () => {
+      try {
+        const fromCdn = await readHomeJson(await fetch(HOME_CDN_URL, {
+          credentials: 'omit',
+          cache: 'default',
+          headers: { Accept: 'application/json' }
+        }));
+        if (fromCdn) {
+          writeHomeLocalCache(fromCdn.data);
+          return fromCdn;
+        }
+      } catch {
+        // Si el CDN no responde, sigue el API.
+      }
+
       const response = await fetch(SummaryApi.baseURL + '/api/obtener-productos', {
         method: SummaryApi.allProduct.method,
-        credentials: 'include',
+        credentials: 'omit',
+        cache: 'default',
         headers: { Accept: 'application/json' }
       });
-
-      if (!response.ok) {
+      const fromApi = await readHomeJson(response);
+      if (!fromApi) {
         throw new Error('Error al cargar productos');
       }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || 'Error en la respuesta');
-      }
-
-      if (result.data && result.data.slots && typeof result.data.slots === 'object') {
-        writeHomeLocalCache(result.data);
-        return { success: true, data: result.data };
-      }
-
-      throw new Error('Respuesta home inválida');
+      writeHomeLocalCache(fromApi.data);
+      return fromApi;
     },
     // Pinta al instante con lo último visto; refresca en background
     initialData: local || undefined,

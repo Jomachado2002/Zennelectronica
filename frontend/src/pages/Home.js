@@ -13,7 +13,6 @@ import {
   getCelularesListingHref
 } from '../config/homeSlotRoutes';
 import { useSeedHomeShowcasePreviews } from '../hooks/useSubcategoryPreviewMap';
-import { cdnThumbUrl, warmImageUrls } from '../helpers/cdnImageUrl';
 import { SITE_ORIGIN } from '../config/siteUrl';
 
 const CategoryShowcase = lazy(() => import('../components/CategoryShowcase'));
@@ -92,23 +91,6 @@ const Home = () => {
       : first.imageDesktop || first.image || first.imageMobile;
   }, [homeBanners]);
 
-  useEffect(() => {
-    const urls = [];
-    const carousels = homeShowcase?.carousels;
-    if (carousels && typeof carousels === 'object') {
-      const preferred =
-        typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-          ? HOME_SLOT_ROUTES.celulares.category
-          : homeShowcase?.categories?.[0]?.value;
-      const first = (preferred && carousels[preferred]) || Object.values(carousels)[0] || [];
-      first.slice(0, 4).forEach((item) => {
-        if (item?.image) urls.push(cdnThumbUrl(item.image, { width: 384, quality: 70 }));
-      });
-    }
-    const timer = setTimeout(() => warmImageUrls(urls, 4), 1200);
-    return () => clearTimeout(timer);
-  }, [homeShowcase]);
-
   const slots = homeData?.data?.slots;
   const slotProducts = (slotKey) =>
     Array.isArray(slots?.[slotKey]) ? slots[slotKey] : [];
@@ -119,6 +101,33 @@ const Home = () => {
     if (!homeData) return [];
     return buildFallbackSections();
   }, [homeData]);
+
+  useEffect(() => {
+    const urls = [];
+    const carousels = homeShowcase?.carousels;
+    if (carousels && typeof carousels === 'object') {
+      const preferred =
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+          ? HOME_SLOT_ROUTES.celulares.category
+          : homeShowcase?.categories?.[0]?.value;
+      const first = (preferred && carousels[preferred]) || Object.values(carousels)[0] || [];
+      first.slice(0, 4).forEach((item) => {
+        if (item?.image) urls.push(item.image);
+      });
+    }
+    const firstKey = sections[0]?.key;
+    const firstProducts = firstKey && Array.isArray(slots?.[firstKey]) ? slots[firstKey] : [];
+    firstProducts.slice(0, 4).forEach((product) => {
+      const src = product?.productImage?.[0];
+      if (src) urls.push(src);
+    });
+    urls.slice(0, 8).forEach((src, index) => {
+      const img = new Image();
+      img.decoding = 'async';
+      if ('fetchPriority' in img) img.fetchPriority = index < 4 ? 'high' : 'auto';
+      img.src = src;
+    });
+  }, [homeShowcase, sections, slots]);
 
   const [novedadesVerTodosHref, setNovedadesVerTodosHref] = useState('/categoria-producto');
   useEffect(() => {

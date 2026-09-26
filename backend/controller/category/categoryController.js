@@ -1,4 +1,9 @@
 const Category = require('../../models/categoryModel');
+const {
+  getStockedCatalog,
+  hasStockedSubcategory,
+  pruneVisaoTree
+} = require('../../services/stockedCatalog');
 
 // Obtener todas las categorías
 const getAllCategories = async (req, res) => {
@@ -586,16 +591,21 @@ const updateProductsWithSpecificationChanges = async (categoryValue, subcategory
 // Obtener todas las categorías para el menú (optimizado)
 const getCategoriesForMenu = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true }, 'name label value')
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
+    const [categories, stocked] = await Promise.all([
+      Category.find({ isActive: true }, 'name label value')
+        .sort({ order: 1, createdAt: 1 })
+        .lean(),
+      getStockedCatalog()
+    ]);
 
-    const formattedCategories = categories.map(category => ({
-      id: category._id,
-      value: category.value,
-      label: category.label,
-      name: category.name
-    }));
+    const formattedCategories = categories
+      .filter((category) => stocked.categories.has(category.value))
+      .map(category => ({
+        id: category._id,
+        value: category.value,
+        label: category.label,
+        name: category.name
+      }));
 
     res.status(200).json({
       success: true,
@@ -628,8 +638,9 @@ const getSubcategoriesForMenu = async (req, res) => {
       });
     }
 
+    const stocked = await getStockedCatalog();
     const subcategories = category.subcategories
-      .filter((sub) => sub.isActive !== false)
+      .filter((sub) => sub.isActive !== false && hasStockedSubcategory(stocked, category.value, sub.value))
       .map((sub) => ({
       id: sub._id,
       value: sub.value,
@@ -697,42 +708,61 @@ const getSpecificationsForMenu = async (req, res) => {
 // Obtener TODA la estructura de categorías de una vez (optimizado para precarga)
 const getAllCategoriesStructure = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true })
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
+    const [categories, stocked] = await Promise.all([
+      Category.find({ isActive: true }).sort({ order: 1, createdAt: 1 }).lean(),
+      getStockedCatalog()
+    ]);
 
-    const structuredData = categories.map((category) => ({
-      id: category._id,
-      value: category.value,
-      label: category.label,
-      name: category.name,
-      visaoNavigationTree: category.visaoNavigationTree || null,
-      subcategories: [...(category.subcategories || [])]
-        .filter((sub) => sub.isActive !== false)
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .map((subcategory) => ({
-        id: subcategory._id,
-        value: subcategory.value,
-        label: subcategory.label,
-        name: subcategory.name,
-        specifications: [...(subcategory.specifications || [])]
+    const structuredData = categories
+      .map((category) => {
+        const subcategories = [...(category.subcategories || [])]
+          .filter((sub) => sub.isActive !== false && hasStockedSubcategory(stocked, category.value, sub.value))
           .sort((a, b) => (a.order || 0) - (b.order || 0))
-          .map((specification) => ({
-          id: specification._id,
-          value: specification.name,
-          label: specification.label,
-          name: specification.name,
-          type: specification.type
-        }))
-      }))
-    }));
+          .map((subcategory) => ({
+            id: subcategory._id,
+            value: subcategory.value,
+            label: subcategory.label,
+            name: subcategory.name,
+            specifications: [...(subcategory.specifications || [])]
+              .sort((a, b) => (a.order || 0) - (b.order || 0))
+              .map((specification) => ({
+                id: specification._id,
+                value: specification.name,
+                label: specification.label,
+                name: specification.name,
+                type: specification.type
+              }))
+          }));
+
+        const visaoNavigationTree = pruneVisaoTree(
+          category.visaoNavigationTree || null,
+          category.value,
+          stocked
+        );
+        const treeHasItems = !!(
+          visaoNavigationTree &&
+          visaoNavigationTree.children &&
+          Object.keys(visaoNavigationTree.children).length
+        );
+
+        if (!subcategories.length && !treeHasItems) return null;
+
+        return {
+          id: category._id,
+          value: category.value,
+          label: category.label,
+          name: category.name,
+          visaoNavigationTree,
+          subcategories
+        };
+      })
+      .filter(Boolean);
 
     res.status(200).json({
       success: true,
       data: structuredData
     });
   } catch (error) {
-    // console.error removed for production
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

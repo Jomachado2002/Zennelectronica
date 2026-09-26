@@ -1991,13 +1991,37 @@ router.get('/creativos/calendario/tick', async (req, res) => {
   if (!secret || header !== `Bearer ${secret}`) {
     return res.status(401).json({ success: false, message: 'No autorizado' });
   }
+  let socialError = null;
   try {
     const { runDueSocialPosts } = require('../controller/product/socialStudioController');
     await runDueSocialPosts();
-    return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message || 'No se pudo correr el calendario' });
+    socialError = error.message || 'No se pudo correr el calendario';
   }
+  let homeSnapshot = null;
+  try {
+    const { getHomeProductsController } = require('../controller/product/getProduct');
+    await new Promise((resolve, reject) => {
+      const fakeRes = {
+        set() { return this; },
+        status(code) { this.statusCode = code; return this; },
+        json(body) {
+          this.body = body;
+          if (this.statusCode && this.statusCode >= 400) reject(new Error(body?.message || 'home'));
+          else resolve(body);
+          return this;
+        }
+      };
+      Promise.resolve(getHomeProductsController({ query: { refresh: '1' } }, fakeRes)).catch(reject);
+    });
+    homeSnapshot = true;
+  } catch (error) {
+    homeSnapshot = error.message || false;
+  }
+  if (socialError) {
+    return res.status(500).json({ success: false, message: socialError, homeSnapshot });
+  }
+  return res.json({ success: true, homeSnapshot });
 });
 
 router.get('/creativos/historias-marcas', authToken, listBrandStories);
