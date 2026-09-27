@@ -1128,15 +1128,15 @@ const Nosotros = () => {
                   <div className="map-container h-full">
                     {/* Google Maps iframe */}
                    <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d67695.23063226297!2d-57.529639424448426!3d-25.314952781028982!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x945da9831c090b5b%3A0x448b0dc581658acb!2sZenn!5e0!3m2!1ses-419!2spy!4v1748808634875!5m2!1ses-419!2spy"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3607.055977740805!2d-57.60310962513129!3d-25.30232327764337!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x945da9a2020311ab%3A0xd411b1ad1ab43b1b!2sZenn%20Electronicos!5e0!3m2!1ses-419!2spy!4v1790529374784!5m2!1ses-419!2spy"
                     width="100%" 
                     height="100%" 
                     style={{border: 0, filter: 'contrast(1.1) saturate(1.2)'}} 
                     allowFullScreen 
                     loading="lazy" 
-                    referrerPolicy="no-referrer-when-downgrade"
+                    referrerPolicy="strict-origin-when-cross-origin"
                     className="absolute inset-0"
-                    title="Ubicación de Zenn"
+                    title="Ubicación de Zenn Electronicos"
                   ></iframe>
                     
                     {/* Overlay de estilo tech */}
@@ -1159,7 +1159,7 @@ const Nosotros = () => {
                     
                     {/* Coordenadas de estilo tech */}
                     <div className="map-coordinates">
-                      LAT: -25.303494 | LONG: -57.601144
+                      LAT: -25.302323 | LONG: -57.603110
                     </div>
                     
                     {/* Etiqueta con el nombre de la empresa */}
