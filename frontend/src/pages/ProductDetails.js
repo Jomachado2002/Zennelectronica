@@ -87,6 +87,22 @@ const ProductDetails = () => {
 const { data: productData } = useQuery({
   queryKey: ['product-details', params?.id],
   queryFn: async () => {
+    const param = String(params?.id || '');
+    const prefetched = typeof window !== 'undefined' ? window.__ZENN_PRODUCT_PREFETCH__ : null;
+    if (prefetched && prefetched.slug === param && prefetched.promise) {
+      window.__ZENN_PRODUCT_PREFETCH__ = null;
+      try {
+        const early = await prefetched.promise;
+        const earlyId = early?._id ? String(early._id) : '';
+        const earlySlug = early?.slug ? String(early.slug) : '';
+        if (early && (earlySlug === param || earlyId === param)) {
+          return early;
+        }
+      } catch {
+        /* Si el adelanto falla, se pide el producto como siempre. */
+      }
+    }
+
     const response = await fetch(SummaryApi.productDetails.url, {
       method: SummaryApi.productDetails.method,
       headers: { "content-type": "application/json" },

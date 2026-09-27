@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { SITE_ORIGIN } from '../config/siteUrl';
 
 const Nosotros = () => {
   // Estado para controlar efectos interactivos
@@ -128,6 +129,8 @@ const Nosotros = () => {
           name="description"
           content="Somos Zenn, la tienda e-commerce líder de insumos informáticos en Paraguay. Descubre nuestra misión, visión y los servicios que ofrecemos."
         />
+        <link rel="canonical" href={`${SITE_ORIGIN}/nosotros`} />
+        <meta property="og:url" content={`${SITE_ORIGIN}/nosotros`} />
         <style>
           {`
             /* Efectos de botones */

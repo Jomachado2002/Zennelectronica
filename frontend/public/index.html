@@ -17,7 +17,84 @@
     <!-- Preconnect CDN de imágenes (R2 / Cloudflare) -->
     <link rel="preconnect" href="https://cdn.zenn.com.py" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.zenn.com.py" />
-    <link rel="preload" as="fetch" href="https://cdn.zenn.com.py/cache/home.json" crossorigin="anonymous" />
+    <!--
+      Adelanta la foto grande mientras baja la aplicación.
+      Portada: banner. Ficha: primera imagen del producto.
+      No cambia el diseño: solo empieza antes la descarga.
+    -->
+    <script>
+      (function () {
+        try {
+          var path = location.pathname || '/';
+          if (path.length > 1 && path.charAt(path.length - 1) === '/') path = path.slice(0, -1);
+          var mobile = window.matchMedia('(max-width: 639px)').matches;
+
+          var preloaded = {};
+          function preloadImage(url) {
+            if (!url || typeof url !== 'string') return;
+            var abs = url.indexOf('http') === 0 ? url : (location.origin + (url.charAt(0) === '/' ? url : '/' + url));
+            if (preloaded[abs]) return;
+            preloaded[abs] = true;
+            var link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'image';
+            link.href = abs;
+            link.setAttribute('fetchpriority', 'high');
+            document.head.appendChild(link);
+          }
+
+          function bannerFromList(banners) {
+            if (!banners || !banners.length) return '';
+            var first = null;
+            for (var i = 0; i < banners.length; i++) {
+              var b = banners[i];
+              if (b && (b.imageMobile || b.imageDesktop || b.image)) { first = b; break; }
+            }
+            if (!first) return '';
+            return mobile
+              ? (first.imageMobile || first.imageDesktop || first.image)
+              : (first.imageDesktop || first.image || first.imageMobile);
+          }
+
+          if (path === '/' || path === '') {
+            try {
+              var raw = localStorage.getItem('zenn_home_payload_v8');
+              if (raw) {
+                var saved = JSON.parse(raw);
+                preloadImage(bannerFromList(saved && saved.data && saved.data.homeBanners));
+              }
+            } catch (e) {}
+
+            fetch('https://cdn.zenn.com.py/cache/home.json', { mode: 'cors', credentials: 'omit' })
+              .then(function (r) { return r.ok ? r.json() : null; })
+              .then(function (json) {
+                if (!json) return;
+                var data = json.data && json.data.homeBanners ? json.data : json;
+                preloadImage(bannerFromList(data && data.homeBanners));
+              })
+              .catch(function () {});
+            return;
+          }
+
+          if (path.indexOf('/producto/') !== 0) return;
+          var slug = decodeURIComponent(path.slice('/producto/'.length).split('/')[0] || '');
+          if (!slug || /^[a-fA-F0-9]{24}$/.test(slug)) return;
+
+          var promise = fetch('/api/producto-por-slug/' + encodeURIComponent(slug), {
+            credentials: 'omit',
+            headers: { Accept: 'application/json' }
+          }).then(function (r) { return r.ok ? r.json() : null; }).then(function (body) {
+            var data = body && body.success && body.data ? body.data : null;
+            if (!data) return null;
+            var img = data.productImage && data.productImage[0];
+            if (typeof img === 'string') preloadImage(img);
+            return data;
+          }).catch(function () { return null; });
+
+          window.__ZENN_PRODUCT_PREFETCH__ = { slug: slug, promise: promise };
+        } catch (e) {}
+      })();
+    </script>
     <!-- Open Graph Meta Tags for Better Social Sharing -->
     <meta property="og:title" content="Zenn - Soluciones Tecnológicas en Paraguay"/>
     <meta property="og:description" content="Expertos en computadoras gamer y soluciones IT. Encuentra tu equipo perfecto en Paraguay."/>
@@ -49,9 +126,45 @@
     <!-- Additional SEO Keywords in Meta Tags -->
     <meta name="keywords" content="computadoras gamer Paraguay, equipos de computo, venta de PC, componentes tecnológicos, soluciones IT, computadoras para trabajo, computadoras para gaming, notebooks Paraguay, procesadores, placas madre, memorias RAM"/>
       
-    <!-- Canonical URL (dominio único) -->
-    <link rel="canonical" href="https://www.zenn.com.py/"/>
-      
+    <!--
+      El canónico de cada URL lo pone la página (y un script de abajo).
+      No declarar acá el de la home: si no, Google lee todas las fichas como la portada.
+    -->
+    <script>
+      (function () {
+        try {
+          var origin = 'https://www.zenn.com.py';
+          var path = location.pathname || '/';
+          if (path.length > 1 && path.charAt(path.length - 1) === '/') path = path.slice(0, -1);
+          var canon = null;
+          if (path === '/' || path === '') canon = origin + '/';
+          else if (path.indexOf('/producto/') === 0) canon = origin + path;
+          else if (path === '/categoria-producto') {
+            var params = new URLSearchParams(location.search);
+            var clean = new URLSearchParams();
+            if (params.get('category')) clean.set('category', params.get('category'));
+            if (params.get('subcategory')) clean.set('subcategory', params.get('subcategory'));
+            var q = clean.toString();
+            canon = origin + path + (q ? '?' + q : '');
+          } else if (path === '/promociones') canon = origin + '/promociones';
+          else if (path === '/nosotros') canon = origin + '/nosotros';
+          else if (path === '/devoluciones' || path === '/politica-de-devoluciones' || path === '/garantia') {
+            canon = origin + '/devoluciones';
+          }
+          if (!canon) return;
+          var link = document.querySelector('link[rel="canonical"]');
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'canonical';
+            document.head.appendChild(link);
+          }
+          link.href = canon;
+          var og = document.querySelector('meta[property="og:url"]');
+          if (og) og.setAttribute('content', canon);
+        } catch (e) {}
+      })();
+    </script>
+
     <!-- Robots Meta Tag for Search Engine Indexing -->
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
     
@@ -59,8 +172,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
-    <!-- Optimized font loading with font-display: swap -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <!-- Inter, sin frenar el primer pantallazo. El texto queda igual cuando llega. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    </noscript>
     
     <!-- DNS prefetch for external resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com" />
@@ -89,31 +205,6 @@
       body { margin: 0; padding-top: 80px; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
       #root { min-height: 100vh; }
     </style>
-    <script>
-      (function () {
-        try {
-          var raw = localStorage.getItem('zenn_home_payload_v8');
-          if (!raw) return;
-          var parsed = JSON.parse(raw);
-          var banners = parsed && parsed.data && parsed.data.homeBanners;
-          if (!banners || !banners.length) return;
-          var first = banners.find(function (b) { return b && (b.imageMobile || b.imageDesktop || b.image); });
-          if (!first) return;
-          var mobile = window.matchMedia('(max-width: 639px)').matches;
-          var url = mobile
-            ? (first.imageMobile || first.imageDesktop || first.image)
-            : (first.imageDesktop || first.image || first.imageMobile);
-          if (!url) return;
-          var link = document.createElement('link');
-          link.rel = 'preload';
-          link.as = 'image';
-          link.href = url;
-          link.fetchPriority = 'high';
-          document.head.appendChild(link);
-        } catch (e) {}
-      })();
-    </script>
-    
     <!-- Schema.org JSON-LD - Organización -->
     <script type="application/ld+json">
     {
