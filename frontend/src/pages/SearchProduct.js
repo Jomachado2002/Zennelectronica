@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet'
 import SummaryApi from '../common'
 import VerticalCardGrid from '../components/VerticalCardGrid'
+import { rememberQuery } from '../helpers/searchMemory'
 
 const SearchProduct = () => {
     const query = useLocation()
@@ -46,6 +47,9 @@ const SearchProduct = () => {
     }
 
     useEffect(() => {
+        const params = new URLSearchParams(query.search || '')
+        const q = params.get('q')
+        if (q) rememberQuery(q)
         fetchProduct()
     }, [query.search, sortBy])
 

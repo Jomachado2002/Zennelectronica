@@ -6,6 +6,7 @@ import { BiCategoryAlt } from 'react-icons/bi';
 import SummaryApi from '../common';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { productPath } from '../helpers/productPath';
+import { getSearchMemory, rememberProduct, rememberQuery } from '../helpers/searchMemory';
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import { useContext } from 'react';
@@ -22,6 +23,9 @@ const SearchPreview = ({
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [memoryQueries, setMemoryQueries] = useState(() => getSearchMemory().queries);
+  const [memoryProducts, setMemoryProducts] = useState(() => getSearchMemory().products);
+  const [memoryLoading, setMemoryLoading] = useState(false);
   const dropdownRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
 
@@ -32,17 +36,20 @@ const SearchPreview = ({
     return Math.round(discount);
   }, []);
 
+  const trimmedSearchTerm = String(searchTerm || '').trim();
+  const memoryMode = trimmedSearchTerm.length < 2;
+
   // Búsqueda con debounce
   useEffect(() => {
+    if (memoryMode) return undefined;
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    const trimmedSearchTerm = String(searchTerm || '').trim();
     if (trimmedSearchTerm.length >= 2) {
       debounceTimeoutRef.current = setTimeout(async () => {
         await performSearch(trimmedSearchTerm);
-      }, 150); // Debounce más rápido para mejor UX
+      }, 150);
     } else {
       setSearchResults([]);
       setShowPreview(false);
@@ -53,13 +60,57 @@ const SearchPreview = ({
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [searchTerm]);
+  }, [searchTerm, memoryMode, trimmedSearchTerm]);
+
+  useEffect(() => {
+    if (!memoryMode || !isVisible) return undefined;
+    const memory = getSearchMemory();
+    setMemoryQueries(memory.queries);
+    const lastQuery = memory.queries[0]?.q || '';
+    const opened = memory.products || [];
+    if (!lastQuery && opened.length === 0) {
+      setMemoryProducts([]);
+      setMemoryLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setMemoryLoading(Boolean(lastQuery));
+    (async () => {
+      let fromQuery = [];
+      if (lastQuery) {
+        try {
+          const response = await fetch(`${SummaryApi.searchProduct.url}?q=${encodeURIComponent(lastQuery)}&limit=6`);
+          const dataResponse = await response.json();
+          fromQuery = dataResponse?.data || [];
+        } catch {
+          fromQuery = [];
+        }
+      }
+      const seen = new Set();
+      const merged = [];
+      for (const product of [...opened, ...fromQuery]) {
+        const id = String(product?._id || '');
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        merged.push(product);
+      }
+      if (!cancelled) {
+        setMemoryProducts(merged.slice(0, 6));
+        setMemoryLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [memoryMode, isVisible]);
 
   // Mostrar preview cuando hay resultados
   useEffect(() => {
-    const trimmedSearchTerm = String(searchTerm || '').trim();
+    if (memoryMode) return;
     setShowPreview(searchResults.length > 0 && trimmedSearchTerm.length >= 2);
-  }, [searchResults, searchTerm]);
+  }, [searchResults, searchTerm, memoryMode, trimmedSearchTerm]);
 
   const performSearch = useCallback(async (query) => {
     setLoading(true);
@@ -87,13 +138,13 @@ const SearchPreview = ({
   }, []);
 
   const handleProductClick = useCallback((product) => {
-    // Cerrar preview
+    rememberProduct(product, trimmedSearchTerm || memoryQueries[0]?.q || '');
     setShowPreview(false);
     onSearchChange('');
     onClose();
     
     navigate(productPath(product));
-  }, [onSearchChange, onClose, navigate]);
+  }, [onSearchChange, onClose, navigate, trimmedSearchTerm, memoryQueries]);
 
   const handleCategoryClick = useCallback((category) => {
     // Cerrar preview
@@ -106,11 +157,18 @@ const SearchPreview = ({
   }, [onSearchChange, onClose, navigate]);
 
   const handleViewAllResults = useCallback(() => {
+    const query = memoryMode ? (memoryQueries[0]?.q || '') : trimmedSearchTerm;
+    if (query) rememberQuery(query);
     setShowPreview(false);
     onClose();
-    const trimmedSearchTerm = String(searchTerm || '').trim();
-    navigate(`/buscar?q=${encodeURIComponent(trimmedSearchTerm)}`);
-  }, [onClose, searchTerm, navigate]);
+    if (!query) return;
+    navigate(`/buscar?q=${encodeURIComponent(query)}`);
+  }, [onClose, trimmedSearchTerm, navigate, memoryMode, memoryQueries]);
+
+  const handleRememberedQuery = useCallback((query) => {
+    rememberQuery(query);
+    onSearchChange(query);
+  }, [onSearchChange]);
 
   const handleAddToCart = useCallback(async (e, product) => {
     e.stopPropagation(); // Evitar que se ejecute handleProductClick
@@ -122,26 +180,36 @@ const SearchPreview = ({
   // Cerrar preview al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowPreview(false);
-      }
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setShowPreview(false);
+          if (memoryMode) onClose();
+        }
     };
 
-    if (showPreview) {
+    if (showPreview || memoryMode) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showPreview]);
+  }, [showPreview, memoryMode, onClose]);
 
-  if (!showPreview && !loading) {
+  const lastRememberedQuery = memoryQueries[0]?.q || '';
+  const visibleProducts = memoryMode ? memoryProducts : searchResults;
+  const busy = memoryMode ? memoryLoading : loading;
+
+  if (!isVisible) return null;
+  if (memoryMode) {
+    if (!memoryQueries.length && !memoryProducts.length && !memoryLoading) return null;
+  } else if (!showPreview && !loading) {
     return null;
   }
 
   // Obtener categorías únicas de los resultados
-  const uniqueCategories = [...new Set(searchResults.map(product => product.category))].slice(0, 3);
+  const uniqueCategories = memoryMode
+    ? []
+    : [...new Set(searchResults.map(product => product.category).filter(Boolean))].slice(0, 3);
 
   return (
     <div 
@@ -161,10 +229,16 @@ const SearchPreview = ({
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">
-              {loading ? 'Buscando...' : `Resultados para "${searchTerm}"`}
+              {busy
+                ? 'Buscando...'
+                : memoryMode
+                  ? (lastRememberedQuery ? `Para vos: ${lastRememberedQuery}` : 'Lo último que viste')
+                  : `Resultados para "${searchTerm}"`}
             </h3>
             <p className="text-sm text-gray-600">
-              {searchResults.length} productos encontrados
+              {memoryMode
+                ? 'Guardado en este teléfono'
+                : `${searchResults.length} productos encontrados`}
             </p>
           </div>
         </div>
@@ -178,13 +252,32 @@ const SearchPreview = ({
 
       {/* Contenido del preview */}
       <div className="max-h-96 overflow-y-auto">
-        {loading ? (
+        {busy ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             <span className="ml-3 text-gray-600 font-medium">Buscando productos...</span>
           </div>
-        ) : searchResults.length > 0 ? (
+        ) : visibleProducts.length > 0 ? (
           <>
+            {memoryMode && memoryQueries.length > 0 && (
+              <div className="p-4 border-b border-gray-100 bg-gray-50">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                  <BiCategoryAlt className="mr-2 text-blue-600" />
+                  Tus búsquedas
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {memoryQueries.slice(0, 6).map((item) => (
+                    <button
+                      key={item.q}
+                      onClick={() => handleRememberedQuery(item.q)}
+                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 shadow-sm"
+                    >
+                      {item.q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Categorías sugeridas */}
             {uniqueCategories.length > 0 && (
               <div className="p-4 border-b border-gray-100 bg-gray-50">
@@ -208,7 +301,7 @@ const SearchPreview = ({
 
             {/* Lista de productos */}
             <div className="p-2">
-              {searchResults.slice(0, 6).map((product) => {
+              {visibleProducts.slice(0, 6).map((product) => {
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
                 
                 return (
@@ -272,13 +365,13 @@ const SearchPreview = ({
             </div>
 
             {/* Botón para ver todos los resultados */}
-            {searchResults.length >= 6 && (
+            {(memoryMode ? Boolean(lastRememberedQuery) : searchResults.length >= 6) && (
               <div className="p-4 border-t border-gray-100" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
                 <button
                   onClick={handleViewAllResults}
                   className="w-full flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 rounded-lg hover:shadow-lg transition-all duration-200"
                 >
-                  Ver todos los resultados ({searchResults.length}+)
+                  {memoryMode ? `Ver ${lastRememberedQuery}` : `Ver todos los resultados (${searchResults.length}+)`}
                   <FaArrowRight className="ml-2" />
                 </button>
               </div>

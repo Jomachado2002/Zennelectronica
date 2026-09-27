@@ -21,6 +21,7 @@ import {
 } from "react-icons/fa";
 import { clearAuthToken } from '../helpers/getAuthToken';
 import { shopperHrefForQuery } from '../config/shopperNav';
+import { hasSearchMemory, rememberQuery } from '../helpers/searchMemory';
 import ShopperNavBar from './ShopperNavBar';
 
 const SearchPreview = lazy(() => import('./SearchPreview'));
@@ -163,10 +164,16 @@ const Header = () => {
     
     // Mostrar preview solo si hay texto
     const trimmedValue = String(value || '').trim();
-    if (trimmedValue.length >= 2) {
+    if (trimmedValue.length >= 2 || hasSearchMemory()) {
       setShowSearchPreview(true);
     } else {
       setShowSearchPreview(false);
+    }
+  };
+
+  const handleSearchFocus = () => {
+    if (hasSearchMemory() || String(search || '').trim().length >= 2) {
+      setShowSearchPreview(true);
     }
   };
 
@@ -174,6 +181,7 @@ const Header = () => {
     e.preventDefault();
     const trimmedSearch = String(search || '').trim();
     if (!trimmedSearch) return;
+    rememberQuery(trimmedSearch);
     setShowSearchPreview(false);
     setShowMobileSearch(false);
     const shortcut = shopperHrefForQuery(trimmedSearch);
@@ -250,6 +258,7 @@ const Header = () => {
                   placeholder="Busca tus productos..."
                   className="w-full outline-none py-2.5 px-6 text-gray-700 bg-transparent rounded-full text-base placeholder:text-gray-400"
                   onChange={handleSearch}
+                  onFocus={handleSearchFocus}
                   value={search}
                   style={{
                     fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
@@ -577,6 +586,7 @@ const Header = () => {
                   placeholder="Busca tus productos..."
                   className="w-full outline-none py-3 px-5 text-gray-700 bg-transparent text-base"
                   onChange={handleSearch}
+                  onFocus={handleSearchFocus}
                   value={search}
                   autoFocus
                 />

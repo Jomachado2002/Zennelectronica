@@ -13,6 +13,7 @@ import { trackWhatsAppContact, trackAddToCart, trackViewContent } from '../compo
 import { trackGAEvent, trackProductView, trackWhatsAppClick as trackGAWhatsApp } from '../components/GoogleAnalytics';
 import { useQuery } from '@tanstack/react-query';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
+import { getLastQuery, rememberProduct } from '../helpers/searchMemory';
 
 
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
@@ -138,6 +139,7 @@ useEffect(() => {
     setCurrentProductId(loadedId || null);
     setActiveImage(productData.productImage?.[0] || '');
     setLoading(false);
+    rememberProduct(productData, getLastQuery());
     trackViewContent(productData);
     trackProductView(productData);
     return;
