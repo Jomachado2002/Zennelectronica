@@ -1,4 +1,6 @@
 // backend/services/brevoService.js
+const fs = require('fs');
+const path = require('path');
 const SibApiV3Sdk = require('sib-api-v3-sdk');
 
 // Configurar Brevo API
@@ -45,9 +47,20 @@ function translatePaymentMethod(method) {
     return translations[method] || method;
 }
 
-/**
- * Traducir estado de pago
- */
+function getSender() {
+    return {
+        email: process.env.BREVO_SENDER_EMAIL || 'no-reply@zenn.com.py',
+        name: process.env.BREVO_SENDER_NAME || 'ZENN ELECTRONICOS'
+    };
+}
+
+function getReplyTo() {
+    return {
+        email: process.env.BREVO_REPLY_TO || 'ventas@zenn.com.py',
+        name: 'Zenn Ventas'
+    };
+}
+
 function translatePaymentStatus(status) {
     const translations = {
         'pendiente': '⏳ Pendiente',
@@ -135,11 +148,8 @@ async function sendPurchaseConfirmationEmail(saleData, clientData) {
             name: clientData.name
         }];
         
-        // Remitente (debe estar verificado en Brevo)
-        sendSmtpEmail.sender = {
-            email: process.env.BREVO_SENDER_EMAIL || 'ventas@zennelectronica.com',
-            name: process.env.BREVO_SENDER_NAME || 'ZennElectrónica'
-        };
+        sendSmtpEmail.sender = getSender();
+        sendSmtpEmail.replyTo = getReplyTo();
         
         // Parámetros de la plantilla
         sendSmtpEmail.params = templateParams;
@@ -199,10 +209,8 @@ async function sendPaymentReminderEmail(saleData, clientData) {
             name: clientData.name
         }];
         
-        sendSmtpEmail.sender = {
-            email: process.env.BREVO_SENDER_EMAIL || 'ventas@zennelectronica.com',
-            name: process.env.BREVO_SENDER_NAME || 'ZennElectrónica'
-        };
+        sendSmtpEmail.sender = getSender();
+        sendSmtpEmail.replyTo = getReplyTo();
         
         sendSmtpEmail.params = {
             clientName: clientData.name,
@@ -240,7 +248,8 @@ async function sendSimpleEmail(emailData) {
         const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
         
         sendSmtpEmail.to = emailData.to;
-        sendSmtpEmail.sender = emailData.sender;
+        sendSmtpEmail.sender = emailData.sender || getSender();
+        sendSmtpEmail.replyTo = emailData.replyTo || getReplyTo();
         sendSmtpEmail.subject = emailData.subject;
         sendSmtpEmail.htmlContent = emailData.htmlContent;
         
@@ -264,10 +273,176 @@ async function sendSimpleEmail(emailData) {
     }
 }
 
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+const PRODUCT_IMAGE_FALLBACK = 'https://www.zenn.com.py/logozenn.png';
+
+function storeUrl() {
+    return (process.env.FRONTEND_URL || 'https://www.zenn.com.py').replace(/\/$/, '');
+}
+
+function absoluteImage(url) {
+    const value = Array.isArray(url) ? url[0] : url;
+    if (!value) return PRODUCT_IMAGE_FALLBACK;
+    if (String(value).startsWith('http')) return String(value);
+    return `${storeUrl()}${String(value).startsWith('/') ? '' : '/'}${value}`;
+}
+
+function renderProductCard({ name, image, price, quantity, url }) {
+    const safeName = escapeHtml(name || 'Producto');
+    const safeImage = escapeHtml(absoluteImage(image));
+    const safeUrl = escapeHtml(url || storeUrl());
+    const safePrice = escapeHtml(formatToPYG(Number(price) || 0));
+    const safeQty = escapeHtml(quantity || 1);
+
+    return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e0e0e0; margin: 0 0 12px 0;">
+            <tr>
+                <td width="128" style="padding: 16px; vertical-align: middle;">
+                    <a href="${safeUrl}" style="text-decoration: none;">
+                        <img src="${safeImage}" alt="${safeName}" width="96" style="display: block; width: 96px; max-width: 96px; height: auto; border: 0;">
+                    </a>
+                </td>
+                <td style="padding: 16px 16px 16px 0; vertical-align: middle;">
+                    <a href="${safeUrl}" style="font-size: 15px; color: #222222; font-weight: 600; text-decoration: none; line-height: 1.4;">${safeName}</a>
+                    <p style="font-size: 13px; color: #777777; margin: 8px 0 0 0;">Cantidad: ${safeQty}</p>
+                    <p style="font-size: 16px; color: #373592; font-weight: 600; margin: 6px 0 0 0;">${safePrice}</p>
+                </td>
+            </tr>
+        </table>`;
+}
+
+async function resolveOrderItems(items) {
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) return [];
+
+    const ids = list
+        .map((item) => String(item.product_id || item.productId || item._id || ''))
+        .filter((id) => /^[a-f\d]{24}$/i.test(id));
+
+    let byId = new Map();
+    if (ids.length) {
+        try {
+            const mongoose = require('mongoose');
+            if (mongoose.connection.readyState === 1) {
+                const Product = require('../models/productModel');
+                const products = await Product.find({ _id: { $in: ids } })
+                    .select('productName productImage sellingPrice')
+                    .lean();
+                byId = new Map(products.map((product) => [String(product._id), product]));
+            }
+        } catch (error) {
+            console.error('No se pudieron cargar las imágenes del pedido:', error.message);
+        }
+    }
+
+    return list.map((item) => {
+        const id = String(item.product_id || item.productId || item._id || '');
+        const product = byId.get(id);
+        const price = item.unit_price || item.unitPrice || item.price || item.total || product?.sellingPrice || 0;
+        return {
+            name: item.name || item.productName || product?.productName || 'Producto',
+            image: absoluteImage(item.image || item.productImage || product?.productImage),
+            price,
+            quantity: item.quantity || 1,
+            url: id ? `${storeUrl()}/producto/${id}` : storeUrl()
+        };
+    });
+}
+
+/**
+ * Correo de recuperación de contraseña.
+ * Sale desde no-reply@ y las respuestas van a ventas@.
+ */
+async function sendPasswordResetEmail({ email, name, resetUrl }) {
+    const templatePath = path.join(__dirname, '../email-templates/recuperar-contrasena.html');
+    const clientName = escapeHtml(name || 'Cliente');
+    const safeUrl = escapeHtml(resetUrl);
+    const htmlContent = fs.readFileSync(templatePath, 'utf8')
+        .replaceAll('{{ params.clientName }}', clientName)
+        .replaceAll('{{ params.resetUrl }}', safeUrl);
+
+    return sendSimpleEmail({
+        to: [{ email, name: name || 'Cliente' }],
+        subject: 'Restablecé tu contraseña',
+        htmlContent
+    });
+}
+
+const ORDER_STATUS_MAIL = {
+    payment_confirmed: {
+        file: 'pedido-recibido.html',
+        subject: (orderNumber) => `Hemos recibido su pedido #${orderNumber}`
+    },
+    preparing_order: {
+        file: 'pedido-confirmado.html',
+        subject: (orderNumber) => `Su pedido #${orderNumber} fue confirmado`
+    },
+    in_transit: {
+        file: 'pedido-en-camino.html',
+        subject: (orderNumber) => `Su pedido #${orderNumber} está en camino`
+    },
+    delivered: {
+        file: 'pedido-entregado.html',
+        subject: (orderNumber) => `Su pedido #${orderNumber} fue entregado`
+    },
+    problem: {
+        file: 'pedido-problema.html',
+        subject: (orderNumber) => `Su pedido #${orderNumber} necesita atención`
+    }
+};
+
+/**
+ * Aviso de estado del pedido. Sale desde no-reply@ y las respuestas van a ventas@.
+ */
+async function sendOrderStatusEmail({ email, name, orderNumber, orderTotal, status, items }) {
+    const mail = ORDER_STATUS_MAIL[status];
+    if (!email || !mail) {
+        return { success: false, error: !email ? 'No email provided' : 'Estado de pedido no reconocido' };
+    }
+
+    const frontendUrl = storeUrl();
+    const resolvedItems = await resolveOrderItems(items);
+    const first = resolvedItems[0] || {
+        name: 'Su pedido',
+        image: PRODUCT_IMAGE_FALLBACK,
+        price: orderTotal,
+        quantity: 1,
+        url: `${frontendUrl}/pedido/${encodeURIComponent(orderNumber || '')}`
+    };
+    const extraItemsHtml = resolvedItems.slice(1).map(renderProductCard).join('');
+    const safeOrderNumber = escapeHtml(orderNumber || '');
+    const htmlContent = fs.readFileSync(path.join(__dirname, '../email-templates', mail.file), 'utf8')
+        .replaceAll('{{ params.clientName }}', escapeHtml(name || 'Cliente'))
+        .replaceAll('{{ params.orderNumber }}', safeOrderNumber)
+        .replaceAll('{{ params.orderTotal }}', escapeHtml(formatToPYG(Number(orderTotal) || 0)))
+        .replaceAll('{{ params.orderUrl }}', escapeHtml(`${frontendUrl}/pedido/${encodeURIComponent(orderNumber || '')}`))
+        .replaceAll('{{ params.productName }}', escapeHtml(first.name))
+        .replaceAll('{{ params.productImage }}', escapeHtml(first.image))
+        .replaceAll('{{ params.productPrice }}', escapeHtml(formatToPYG(Number(first.price) || 0)))
+        .replaceAll('{{ params.productQuantity }}', escapeHtml(first.quantity || 1))
+        .replaceAll('{{ params.productUrl }}', escapeHtml(first.url))
+        .replaceAll('{{ params.extraItemsHtml }}', extraItemsHtml);
+
+    return sendSimpleEmail({
+        to: [{ email, name: name || 'Cliente' }],
+        subject: mail.subject(orderNumber || ''),
+        htmlContent
+    });
+}
+
 module.exports = {
     sendPurchaseConfirmationEmail,
     sendPaymentReminderEmail,
     sendSimpleEmail,
+    sendPasswordResetEmail,
+    sendOrderStatusEmail,
     formatToPYG,
     formatDate
 };

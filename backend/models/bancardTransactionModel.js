@@ -515,8 +515,8 @@ const bancardTransactionSchema = mongoose.Schema({
     delivery_status: {
         type: String,
         enum: [
-            'payment_confirmed',  // ✅ Pago Confirmado (automático)
-            'preparing_order',    // 📦 Preparando Pedido
+            'payment_confirmed',  // ✅ Pedido recibido (automático)
+            'preparing_order',    // ✅ Pedido confirmado
             'in_transit',        // 🚚 En Camino  
             'delivered',         // 📍 Entregado
             'problem'            // ❌ Problema/Devuelto
@@ -713,7 +713,7 @@ bancardTransactionSchema.pre('save', function(next) {
                 status: 'payment_confirmed',
                 timestamp: new Date(),
                 automatic: true,
-                notes: 'Pago confirmado por Bancard'
+                notes: 'Pedido recibido. Aguarde la confirmación.'
             }];
         }
         
@@ -871,7 +871,7 @@ bancardTransactionSchema.pre('save', function(next) {
                 status: 'payment_confirmed',
                 timestamp: new Date(),
                 automatic: true,
-                notes: 'Pago confirmado por Bancard'
+                notes: 'Pedido recibido. Aguarde la confirmación.'
             }];
         }
         

@@ -480,9 +480,9 @@ function calculateDeliveryProgress(deliveryStatus) {
     const currentIndex = statuses.indexOf(deliveryStatus);
     
     const statusInfo = {
-        payment_confirmed: { icon: '✅', title: 'Pago Confirmado', color: '#28a745' },
-        preparing_order: { icon: '📦', title: 'Preparando Pedido', color: '#ffc107' },
-        in_transit: { icon: '🚚', title: 'En Camino', color: '#007bff' },
+        payment_confirmed: { icon: '✅', title: 'Pedido recibido', color: '#28a745' },
+        preparing_order: { icon: '✅', title: 'Pedido confirmado', color: '#ffc107' },
+        in_transit: { icon: '🚚', title: 'En camino', color: '#007bff' },
         delivered: { icon: '📍', title: 'Entregado', color: '#28a745' },
         problem: { icon: '⚠️', title: 'Requiere Atención', color: '#dc3545' }
     };

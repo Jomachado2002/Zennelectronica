@@ -154,7 +154,7 @@ const UserPurchases = ({ user }) => {
 📅 Fecha: ${formatDate(purchase.createdAt)}
 💰 Total: ${displayPYGCurrency(purchase.amount)}
 📋 Estado Pago: ${purchase.status === 'approved' ? 'Pago Aprobado ✅' : purchase.status === 'rejected' ? 'Pago Rechazado ❌' : 'Pendiente ⏳'}
-🚚 Estado Entrega: ${purchase.delivery_status === 'delivered' ? 'Entregado ✅' : purchase.delivery_status === 'in_transit' ? 'En Camino 🚚' : purchase.delivery_status === 'preparing_order' ? 'Preparando 📦' : 'Confirmado ✅'}
+🚚 Estado Entrega: ${purchase.delivery_status === 'delivered' ? 'Entregado ✅' : purchase.delivery_status === 'in_transit' ? 'En camino 🚚' : purchase.delivery_status === 'preparing_order' ? 'Pedido confirmado ✅' : 'Pedido recibido ✅'}
 
 ${purchase.items && purchase.items.length > 0 ? `
 📋 *Productos:*
@@ -301,9 +301,9 @@ Por favor, ¿me pueden ayudar?`;
                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2A3190]"
               >
                 <option value="">Todos</option>
-                <option value="payment_confirmed">✅ Confirmado</option>
-                <option value="preparing_order">📦 Preparando</option>
-                <option value="in_transit">🚚 En Camino</option>
+                <option value="payment_confirmed">✅ Pedido recibido</option>
+                <option value="preparing_order">✅ Pedido confirmado</option>
+                <option value="in_transit">🚚 En camino</option>
                 <option value="delivered">📍 Entregado</option>
               </select>
             </div>

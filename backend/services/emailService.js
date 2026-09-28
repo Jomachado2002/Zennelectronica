@@ -1,6 +1,7 @@
 // backend/services/emailService.js - SISTEMA COMPLETO DE EMAILS PARA 
 
 const nodemailer = require('nodemailer');
+const { sendOrderStatusEmail } = require('./brevoService');
 
 class EmailService {
     constructor() {
@@ -36,9 +37,18 @@ class EmailService {
                 return { success: false, error: 'No customer email provided' };
             }
 
-            const emailContent = isApproved 
-                ? this.getApprovedPurchaseTemplate(transactionData)
-                : this.getRejectedPurchaseTemplate(transactionData);
+            if (isApproved) {
+                return sendOrderStatusEmail({
+                    email: customerEmail,
+                    name: transactionData.customer_info?.name,
+                    orderNumber: transactionData.shop_process_id,
+                    orderTotal: transactionData.amount,
+                    status: 'payment_confirmed',
+                    items: transactionData.items
+                });
+            }
+
+            const emailContent = this.getRejectedPurchaseTemplate(transactionData);
             
             const mailOptions = {
                 from: `"Zenn" <${process.env.EMAIL_USER}>`,
@@ -435,29 +445,14 @@ class EmailService {
                 return { success: false, error: 'No email provided' };
             }
 
-            const emailContent = this.getEmailTemplate(newStatus, transactionData);
-            
-            const mailOptions = {
-                from: `"Zenn" <${process.env.EMAIL_USER}>`,
-                to: customerEmail,
-                bcc: this.adminEmails, // ✅ COPIA OCULTA A ADMINS TAMBIÉN
-                subject: emailContent.subject,
-                html: emailContent.html
-            };
-
-            
-            
-            
-            const result = await this.transporter.sendMail(mailOptions);
-            
-            
-            
-            return { 
-                success: true, 
-                messageId: result.messageId,
-                recipient: customerEmail,
-                adminNotified: true 
-            };
+            return sendOrderStatusEmail({
+                email: customerEmail,
+                name: transactionData.customer_info?.name,
+                orderNumber: transactionData.shop_process_id,
+                orderTotal: transactionData.amount,
+                status: newStatus,
+                items: transactionData.items
+            });
 
         } catch (error) {
             // console.error removed for production

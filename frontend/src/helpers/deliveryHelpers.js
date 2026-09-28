@@ -3,31 +3,31 @@
 export const deliveryStatuses = {
     payment_confirmed: {
         icon: '✅',
-        title: 'Pago Confirmado',
+        title: 'Pedido recibido',
         color: '#28a745',
         bgColor: '#d4edda',
-        description: 'Tu pago ha sido procesado exitosamente'
+        description: 'Hemos recibido tu pedido. Aguarde, lo confirmamos.'
     },
     preparing_order: {
-        icon: '📦',
-        title: 'Preparando Pedido',
+        icon: '✅',
+        title: 'Pedido confirmado',
         color: '#ffc107',
         bgColor: '#fff3cd',
-        description: 'Estamos empacando tus productos con cuidado'
+        description: 'Tu pedido ha sido confirmado.'
     },
     in_transit: {
         icon: '🚚',
-        title: 'En Camino',
+        title: 'En camino',
         color: '#007bff',
         bgColor: '#cce7ff',
-        description: 'Tu pedido está en camino hacia tu dirección'
+        description: 'Tu pedido está en camino. Llega en aproximadamente 1 día hábil.'
     },
     delivered: {
         icon: '📍',
         title: 'Entregado',
         color: '#28a745',
         bgColor: '#d4edda',
-        description: 'Tu pedido ha sido entregado exitosamente'
+        description: 'Tu pedido fue entregado.'
     },
     problem: {
         icon: '⚠️',

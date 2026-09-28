@@ -700,9 +700,9 @@ const BancardTransactions = () => {
                                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="">Todos los estados</option>
-                                <option value="payment_confirmed">Pago confirmado</option>
-                                <option value="preparing_order">Preparando</option>
-                                <option value="in_transit">En tránsito</option>
+                                <option value="payment_confirmed">Pedido recibido</option>
+                                <option value="preparing_order">Pedido confirmado</option>
+                                <option value="in_transit">En camino</option>
                                 <option value="delivered">Entregado</option>
                                 <option value="problem">Requiere atención</option>
                             </select>

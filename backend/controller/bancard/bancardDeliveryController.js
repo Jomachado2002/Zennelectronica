@@ -397,23 +397,23 @@ const getDeliveryProgressController = async (req, res) => {
         const statusDescriptions = {
             payment_confirmed: {
                 icon: '✅',
-                title: 'Pago Confirmado',
-                description: 'Tu pago ha sido procesado exitosamente'
+                title: 'Pedido recibido',
+                description: 'Hemos recibido tu pedido. Aguarde, lo confirmamos.'
             },
             preparing_order: {
-                icon: '📦',
-                title: 'Preparando Pedido',
-                description: 'Estamos empacando tus productos con cuidado'
+                icon: '✅',
+                title: 'Pedido confirmado',
+                description: 'Tu pedido ha sido confirmado.'
             },
             in_transit: {
                 icon: '🚚',
-                title: 'En Camino',
-                description: 'Tu pedido está en camino hacia tu dirección'
+                title: 'En camino',
+                description: 'Tu pedido está en camino. Llega en aproximadamente 1 día hábil.'
             },
             delivered: {
                 icon: '📍',
                 title: 'Entregado',
-                description: 'Tu pedido ha sido entregado exitosamente'
+                description: 'Tu pedido fue entregado.'
             },
             problem: {
                 icon: '⚠️',
@@ -994,9 +994,9 @@ const sendManualNotificationController = async (req, res) => {
  */
 function getDeliveryStatusDisplay(status) {
     const statusMap = {
-        'payment_confirmed': '✅ Pago Confirmado',
-        'preparing_order': '📦 Preparando Pedido',
-        'in_transit': '🚚 En Camino',
+        'payment_confirmed': '✅ Pedido recibido',
+        'preparing_order': '✅ Pedido confirmado',
+        'in_transit': '🚚 En camino',
         'delivered': '📍 Entregado',
         'problem': '⚠️ Requiere Atención'
     };

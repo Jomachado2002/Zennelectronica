@@ -60,9 +60,9 @@ const OrderSearchAndFilters = ({
 
     const deliveryStatusOptions = [
         { value: '', label: 'Todos los delivery' },
-        { value: 'payment_confirmed', label: '✅ Pago Confirmado' },
-        { value: 'preparing_order', label: '📦 Preparando' },
-        { value: 'in_transit', label: '🚚 En Camino' },
+        { value: 'payment_confirmed', label: '✅ Pedido recibido' },
+        { value: 'preparing_order', label: '✅ Pedido confirmado' },
+        { value: 'in_transit', label: '🚚 En camino' },
         { value: 'delivered', label: '📍 Entregado' },
         { value: 'problem', label: '⚠️ Problema' }
     ];
