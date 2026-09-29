@@ -313,4 +313,4 @@ async function processPendingEmails() {
     return sent;
 }
 
-module.exports = { processPendingEmails, sendCartEmail };
+module.exports = { processPendingEmails, sendCartEmail, sendSuggestionEmail };
