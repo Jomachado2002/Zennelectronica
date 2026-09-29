@@ -2066,4 +2066,40 @@ router.post('/meta/track-purchase', trackPurchaseController);
 const { testEventController } = require('../controller/meta/metaTrackingController');
 router.post('/meta/test-event', testEventController);
 
+const {
+    ingestEventsController,
+    captureEmailController,
+    emailStatusController,
+    adminOverviewController,
+    suggestionsController,
+    homeRowController,
+    preferredCategoryController,
+    restoreCartController,
+    sendPendingEmailsController
+} = require('../controller/analytics/analyticsController');
+
+router.post('/analitica/eventos', ingestEventsController);
+router.post('/analitica/correo', captureEmailController);
+router.get('/analitica/correo', emailStatusController);
+router.get('/analitica/sugerencias', suggestionsController);
+router.get('/analitica/inicio', homeRowController);
+router.get('/analitica/categoria', preferredCategoryController);
+router.get('/analitica/carrito/:token', restoreCartController);
+router.get('/analitica/panel', adminAuth, adminOverviewController);
+router.post('/analitica/enviar-pendientes', adminAuth, sendPendingEmailsController);
+router.get('/analitica/cron', async (req, res) => {
+    const secret = process.env.CRON_SECRET || '';
+    const header = String(req.headers.authorization || '');
+    if (!secret || header !== `Bearer ${secret}`) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+    try {
+        const { processPendingEmails } = require('../services/analyticsMailer');
+        const sent = await processPendingEmails();
+        return res.json({ success: true, data: sent });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+});
+
     module.exports = router;

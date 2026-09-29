@@ -7,11 +7,13 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import SummaryApi from './common';
 import Context from './context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUserDetails } from './store/userSlice';
 import { localCartHelper } from './helpers/addToCart'; // Importa el helper
 import MetaPixelTracker from './components/MetaPixelTracker'; // Importa el tracker
 import GoogleAnalytics from './components/GoogleAnalytics'; // Importa Google Analytics
+import EmailCaptureModal from './components/EmailCaptureModal';
+import { captureVisitorEmail, getStoredVisitorEmail, trackEvent } from './helpers/behaviorTracker';
 import { Analytics } from '@vercel/analytics/react'; // Importa Vercel Analytics
 import { SpeedInsights } from '@vercel/speed-insights/react'; // Importa Speed Insights para métricas de rendimiento
 
@@ -20,6 +22,7 @@ const Footer = lazy(() => import('./components/Footer'));
 
 function App() {
   const dispatch = useDispatch()
+  const accountEmail = useSelector((state) => state?.user?.user?.email || '')
   const location = useLocation()
   const isAdminRoute = location.pathname.includes('/panel-admin')
   const [cartProductCount, setCartProductCount] = useState(0)
@@ -68,6 +71,17 @@ function App() {
   }, [fetchUserDetails, fetchUserAddToCart])
 
   useEffect(() => {
+    if (isAdminRoute) return;
+    trackEvent({ type: 'page_view', path: location.pathname });
+  }, [isAdminRoute, location.pathname]);
+
+  useEffect(() => {
+    const email = String(accountEmail || '').trim().toLowerCase();
+    if (!email || isAdminRoute || getStoredVisitorEmail() === email) return;
+    captureVisitorEmail(email, 'cuenta').catch(() => {});
+  }, [accountEmail, isAdminRoute]);
+
+  useEffect(() => {
     const enable = () => setEnableTrackers(true)
     if (typeof window.requestIdleCallback === 'function') {
       const idleId = window.requestIdleCallback(enable, { timeout: 2500 })
@@ -98,6 +112,7 @@ function App() {
         />
         
         {!isAdminRoute && <Header/>}
+        {!isAdminRoute && <EmailCaptureModal />}
         <main className={isAdminRoute ? 'h-screen overflow-hidden' : 'min-h-[calc(100vh-120px)] pt-30'}>
           <Outlet/>
         </main>

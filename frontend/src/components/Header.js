@@ -22,6 +22,7 @@ import {
 import { clearAuthToken } from '../helpers/getAuthToken';
 import { shopperHrefForQuery } from '../config/shopperNav';
 import { hasSearchMemory, rememberQuery } from '../helpers/searchMemory';
+import { flushEvents, trackEvent } from '../helpers/behaviorTracker';
 import ShopperNavBar from './ShopperNavBar';
 
 const SearchPreview = lazy(() => import('./SearchPreview'));
@@ -182,6 +183,8 @@ const Header = () => {
     const trimmedSearch = String(search || '').trim();
     if (!trimmedSearch) return;
     rememberQuery(trimmedSearch);
+    trackEvent({ type: 'search', searchQuery: trimmedSearch });
+    flushEvents();
     setShowSearchPreview(false);
     setShowMobileSearch(false);
     const shortcut = shopperHrefForQuery(trimmedSearch);

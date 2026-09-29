@@ -19,6 +19,7 @@ const CategoryShowcase = lazy(() => import('../components/CategoryShowcase'));
 const HomeDynamicSections = lazy(() => import('../components/home/HomeDynamicSections'));
 const LatestProductsMix = lazy(() => import('../components/LatestProductsMix'));
 const BrandCarousel = lazy(() => import('../components/BrandCarousel'));
+const HomeInterest = lazy(() => import('../components/HomeInterest'));
 
 const BelowFoldFallback = () => (
   <div className="w-full h-40 rounded-xl bg-gray-100 animate-pulse" aria-hidden />
@@ -224,6 +225,9 @@ const Home = () => {
         </div>
 
         <div className="w-full px-4 lg:px-10 space-y-8 sm:space-y-16 py-8 sm:py-16">
+          <Suspense fallback={null}>
+            <HomeInterest />
+          </Suspense>
           <Suspense fallback={<div className="min-h-[280px]" aria-hidden />}>
             <HomeDynamicSections
               sections={sections}

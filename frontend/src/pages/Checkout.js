@@ -29,6 +29,7 @@ import {
     FaExclamationTriangle
 } from 'react-icons/fa';
 import { localCartHelper } from '../helpers/addToCart';
+import { getStoredVisitorEmail } from '../helpers/behaviorTracker';
 import { formatIVABreakdown } from '../helpers/taxCalculator';
 import displayINRCurrency from '../helpers/displayCurrency';
 import SimpleLocationSelector from '../components/location/SimpleLocationSelector';
@@ -199,10 +200,10 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
     }
 
     return (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6 shadow-sm">
-            <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2 text-lg">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                    <FaCreditCard className="text-blue-600" />
+        <div className="bg-gradient-to-r from-[#F7F4FC] to-white border border-[#E4D8F5] rounded-xl p-6 mb-6 shadow-sm">
+            <h3 className="font-semibold text-[#2A3190] mb-4 flex items-center gap-2 text-lg">
+                <div className="p-2 bg-[#F4F0FA] rounded-lg">
+                    <FaCreditCard className="text-[#7B2CBF]" />
                 </div>
                 Tus tarjetas guardadas
             </h3>
@@ -214,13 +215,13 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                         onClick={() => setSelectedCard(card)}
                         className={`w-full p-4 rounded-xl border-2 transition-all text-left transform hover:scale-[1.02]
                             ${selectedCard === card 
-                                ? 'border-blue-500 bg-white shadow-lg ring-2 ring-blue-100' 
-                                : 'border-gray-200 hover:border-blue-300 bg-white hover:shadow-md'}`}
+                                ? 'border-[#7B2CBF] bg-white shadow-lg ring-2 ring-[#E4D8F5]' 
+                                : 'border-gray-200 hover:border-[#C4B0E8] bg-white hover:shadow-md'}`}
                     >
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <div className={`p-3 rounded-lg ${selectedCard === card ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                                    <FaCreditCard className={`${selectedCard === card ? 'text-blue-600' : 'text-gray-600'}`} />
+                                <div className={`p-3 rounded-lg ${selectedCard === card ? 'bg-[#F4F0FA]' : 'bg-gray-100'}`}>
+                                    <FaCreditCard className={`${selectedCard === card ? 'text-[#7B2CBF]' : 'text-gray-600'}`} />
                                 </div>
                                 <div>
                                     <p className="font-medium text-gray-800">
@@ -232,8 +233,8 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                                 </div>
                             </div>
                             {selectedCard === card && (
-                                <div className="p-2 bg-blue-100 rounded-full">
-                                    <FaCheckCircle className="text-blue-600 text-lg" />
+                                <div className="p-2 bg-[#F4F0FA] rounded-full">
+                                    <FaCheckCircle className="text-[#7B2CBF] text-lg" />
                                 </div>
                             )}
                         </div>
@@ -245,7 +246,7 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                 <button
                     onClick={handlePayWithSavedCard}
                     disabled={processingPayment}
-                    className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-semibold 
+                    className="w-full mt-4 bg-[linear-gradient(135deg,#00B5D8_0%,#7B2CBF_100%)] text-white py-4 rounded-xl font-semibold 
                              disabled:opacity-50 flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] 
                              hover:shadow-lg disabled:transform-none"
                 >
@@ -338,6 +339,11 @@ const Checkout = () => {
                 phone: user.phone || ''
             }));
             loadUserLocation();
+            return;
+        }
+        const savedEmail = getStoredVisitorEmail();
+        if (savedEmail && savedEmail.includes('@')) {
+            setFormData(prev => ({ ...prev, email: prev.email || savedEmail }));
         }
     }, [isLoggedIn, user]);
 
@@ -490,9 +496,6 @@ ${selectedLocation.google_maps_url || 'No disponible'}
         
         if (!formData.name.trim()) newErrors.name = 'Nombre es requerido';
         if (!formData.phone.trim()) newErrors.phone = 'Teléfono es requerido';
-        if (!formData.address.trim()) newErrors.address = 'Dirección es requerida';
-        if (!formData.city.trim()) newErrors.city = 'Ciudad es requerida';
-        if (!formData.houseNumber.trim()) newErrors.houseNumber = 'Número de casa es requerido';
         
         if (needsInvoice) {
             if (!formData.companyName.trim()) newErrors.companyName = 'Razón social es requerida';
@@ -504,26 +507,9 @@ ${selectedLocation.google_maps_url || 'No disponible'}
 
     // ✅ Función separada para validar sin causar re-renders
     const isFormValid = () => {
-    const hasRequiredFields = 
-        formData.name.trim() && 
-        formData.phone.trim() && 
-        formData.address.trim() && 
-        formData.city.trim() && 
-        formData.houseNumber.trim();
-    
-    const hasInvoiceData = !needsInvoice || 
-        (formData.companyName.trim() && formData.ruc.trim());
-    
-    const hasLocation = hasValidLocation();
-    
-    console.log('🔍 Validación de formulario:', {
-        hasRequiredFields,
-        hasInvoiceData,
-        hasLocation,
-        selectedLocation
-    });
-    
-    return hasRequiredFields && hasInvoiceData && hasLocation;
+    const hasRequiredFields = formData.name.trim() && formData.phone.trim();
+    const hasInvoiceData = !needsInvoice || (formData.companyName.trim() && formData.ruc.trim());
+    return hasRequiredFields && hasInvoiceData;
 };
 
     // ✅ Función para validar y mostrar errores solo cuando sea necesario
@@ -672,9 +658,9 @@ const hasValidLocation = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#F7F4FC] flex items-center justify-center">
                 <div className="text-center bg-white p-8 rounded-xl shadow-lg">
-                    <FaSpinner className="animate-spin text-4xl text-blue-600 mx-auto mb-4" />
+                    <FaSpinner className="animate-spin text-4xl text-[#7B2CBF] mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-800 mb-2">Preparando tu checkout</h3>
                     <p className="text-gray-600">Cargando datos del carrito...</p>
                 </div>
@@ -683,15 +669,15 @@ const hasValidLocation = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
             <div className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Header mejorado */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <Link 
                             to="/carrito" 
-                            className="flex items-center gap-3 text-gray-600 hover:text-blue-600 transition-colors 
-                                     hover:bg-blue-50 px-3 py-2 rounded-lg group"
+                            className="flex items-center gap-3 text-gray-600 hover:text-[#7B2CBF] transition-colors 
+                                     hover:bg-[#F7F4FC] px-3 py-2 rounded-lg group"
                         >
                             <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
                             <span className="font-medium">Volver al carrito</span>
@@ -702,7 +688,7 @@ const hasValidLocation = () => {
                                 <FaShieldAlt className="text-sm" />
                                 <span className="text-sm font-medium">Compra 100% segura</span>
                             </div>
-                            <a href="/contacto" className="text-blue-600 hover:text-blue-800 text-sm font-medium 
+                            <a href="/contacto" className="text-[#7B2CBF] hover:text-[#2A3190] text-sm font-medium 
                                                          hover:underline transition-all">
                                 ¿Necesitas ayuda?
                             </a>
@@ -714,7 +700,7 @@ const hasValidLocation = () => {
                     {/* Columna izquierda - Formulario */}
                     <div className="flex-1">
                         {/* Header Simplificado - Sin pasos */}
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+                        <div className="bg-[linear-gradient(135deg,#00B5D8_0%,#7B2CBF_100%)] rounded-2xl shadow-xl p-8 mb-8 text-white">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
@@ -722,14 +708,14 @@ const hasValidLocation = () => {
                                     </div>
                                     <div>
                                         <h1 className="text-4xl font-bold">Finalizar Compra</h1>
-                                        <p className="text-blue-100 mt-1">Completa tus datos y realiza el pago de forma segura</p>
+                                        <p className="text-white/80 mt-1">Completa tus datos y realiza el pago de forma segura</p>
                                     </div>
                                 </div>
                                 <div className="hidden md:flex items-center gap-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
                                     <FaShieldAlt className="text-2xl" />
                                     <div className="text-left">
                                         <p className="font-semibold">100% Seguro</p>
-                                        <p className="text-xs text-blue-100">Certificado PCI DSS</p>
+                                        <p className="text-xs text-white/80">Certificado PCI DSS</p>
                                     </div>
                                 </div>
                             </div>
@@ -757,8 +743,8 @@ const hasValidLocation = () => {
                                 {/* Datos personales */}
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                     <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                                        <div className="p-2 bg-blue-100 rounded-lg">
-                                            <FaUser className="text-blue-600" />
+                                        <div className="p-2 bg-[#F4F0FA] rounded-lg">
+                                            <FaUser className="text-[#7B2CBF]" />
                                         </div>
                                         Información personal
                                     </h2>
@@ -788,13 +774,30 @@ const hasValidLocation = () => {
                                                     <p className="font-semibold text-gray-900">{user.phone || 'No registrado'}</p>
                                                 </div>
                                             </div>
+
+                                            {!formData.phone.trim() && (
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                        <FaPhone className="inline mr-2" />
+                                                        Teléfono *
+                                                    </label>
+                                                    <input
+                                                        type="tel"
+                                                        name="phone"
+                                                        value={formData.phone}
+                                                        onChange={handleInputChange}
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B2CBF]"
+                                                        placeholder="Ej: 0981234567"
+                                                    />
+                                                </div>
+                                            )}
                                             
                                             {/* Campos adicionales para usuarios logueados */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                         <FaCity className="inline mr-2" />
-                                                        Ciudad *
+                                                        Ciudad (opcional)
                                                     </label>
                                                     <input
                                                         type="text"
@@ -802,7 +805,7 @@ const hasValidLocation = () => {
                                                         value={formData.city}
                                                         onChange={handleInputChange}
                                                         className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                                 ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                                 ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                         placeholder="Ej: Asunción"
                                                     />
                                                     {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
@@ -811,7 +814,7 @@ const hasValidLocation = () => {
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                         <FaMapPin className="inline mr-2" />
-                                                        Dirección completa *
+                                                        Dirección (opcional)
                                                     </label>
                                                     <input
                                                         type="text"
@@ -819,7 +822,7 @@ const hasValidLocation = () => {
                                                         value={formData.address}
                                                         onChange={handleInputChange}
                                                         className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                                 ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                                 ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                         placeholder="Ej: Av. Mariscal López y Brasil"
                                                     />
                                                     {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
@@ -828,7 +831,7 @@ const hasValidLocation = () => {
                                                 <div>
                                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                         <FaHome className="inline mr-2" />
-                                                        Número de casa *
+                                                        Número de casa (opcional)
                                                     </label>
                                                     <input
                                                         type="text"
@@ -836,7 +839,7 @@ const hasValidLocation = () => {
                                                         value={formData.houseNumber}
                                                         onChange={handleInputChange}
                                                         className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                                 ${errors.houseNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                                 ${errors.houseNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                         placeholder="Ej: 1234, Edificio A - Piso 5"
                                                     />
                                                     {errors.houseNumber && <p className="text-red-500 text-xs mt-1">{errors.houseNumber}</p>}
@@ -852,7 +855,7 @@ const hasValidLocation = () => {
                                                         name="reference"
                                                         value={formData.reference}
                                                         onChange={handleInputChange}
-                                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B2CBF] transition-all"
                                                         placeholder="Ej: Cerca del shopping, portón azul"
                                                     />
                                                 </div>
@@ -872,7 +875,7 @@ const hasValidLocation = () => {
                                                     value={formData.name}
                                                     onChange={handleInputChange}
                                                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                             ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                             ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                     placeholder="Tu nombre completo"
                                                 />
                                                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
@@ -888,7 +891,7 @@ const hasValidLocation = () => {
                                                     name="email"
                                                     value={formData.email}
                                                     onChange={handleInputChange}
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B2CBF] transition-all"
                                                     placeholder="tu@email.com"
                                                 />
                                             </div>
@@ -904,7 +907,7 @@ const hasValidLocation = () => {
                                                     value={formData.phone}
                                                     onChange={handleInputChange}
                                                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                             ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                             ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                     placeholder="Ej: 0981234567"
                                                 />
                                                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
@@ -913,7 +916,7 @@ const hasValidLocation = () => {
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                     <FaCity className="inline mr-2" />
-                                                    Ciudad *
+                                                    Ciudad (opcional)
                                                 </label>
                                                 <input
                                                     type="text"
@@ -921,7 +924,7 @@ const hasValidLocation = () => {
                                                     value={formData.city}
                                                     onChange={handleInputChange}
                                                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                             ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                             ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                     placeholder="Ej: Asunción"
                                                 />
                                                 {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
@@ -930,7 +933,7 @@ const hasValidLocation = () => {
                                             <div className="md:col-span-2">
                                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                     <FaMapPin className="inline mr-2" />
-                                                    Dirección completa *
+                                                    Dirección (opcional)
                                                 </label>
                                                 <input
                                                     type="text"
@@ -938,7 +941,7 @@ const hasValidLocation = () => {
                                                     value={formData.address}
                                                     onChange={handleInputChange}
                                                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                             ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                             ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                     placeholder="Ej: Av. Mariscal López y Brasil"
                                                 />
                                                 {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
@@ -947,7 +950,7 @@ const hasValidLocation = () => {
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                     <FaHome className="inline mr-2" />
-                                                    Número de casa *
+                                                    Número de casa (opcional)
                                                 </label>
                                                 <input
                                                     type="text"
@@ -955,7 +958,7 @@ const hasValidLocation = () => {
                                                     value={formData.houseNumber}
                                                     onChange={handleInputChange}
                                                     className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all
-                                                             ${errors.houseNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                                                             ${errors.houseNumber ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-[#7B2CBF]'}`}
                                                     placeholder="Ej: 1234, Edificio A - Piso 5"
                                                 />
                                                 {errors.houseNumber && <p className="text-red-500 text-xs mt-1">{errors.houseNumber}</p>}
@@ -971,7 +974,7 @@ const hasValidLocation = () => {
                                                     name="reference"
                                                     value={formData.reference}
                                                     onChange={handleInputChange}
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7B2CBF] transition-all"
                                                     placeholder="Ej: Cerca del shopping, portón azul"
                                                 />
                                             </div>
@@ -982,7 +985,7 @@ const hasValidLocation = () => {
                                     <div className="mt-6">
                                             <label className="block text-sm font-semibold text-gray-700 mb-3">
                                                 <FaMapMarkerAlt className="inline mr-2" />
-                                                Ubicación en el mapa *
+                                                Ubicación en el mapa (opcional)
                                             </label>
                                             
                                             {selectedLocation ? (
@@ -1002,7 +1005,7 @@ const hasValidLocation = () => {
                                                                             href={selectedLocation.google_maps_url}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium bg-blue-100 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors"
+                                                                            className="inline-flex items-center gap-2 text-[#7B2CBF] hover:text-[#2A3190] font-medium bg-[#F4F0FA] px-3 py-2 rounded-lg hover:bg-[#E4D8F5] transition-colors"
                                                                         >
                                                                             <FaExternalLinkAlt />
                                                                             Ver en Google Maps
@@ -1026,21 +1029,21 @@ const hasValidLocation = () => {
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <div className="border-2 border-red-200 bg-red-50 rounded-xl p-6">
+                                                <div className="border border-[#E4D8F5] bg-[#F7F4FC] rounded-xl p-6">
                                                     <button
                                                         onClick={() => setShowLocationSelector(true)}
-                                                        className="w-full border-2 border-dashed border-red-300 rounded-xl p-8 
-                                                                hover:border-red-500 hover:bg-red-100 transition-all group"
+                                                        className="w-full border-2 border-dashed border-[#C4B0E8] rounded-xl p-8 
+                                                                hover:border-[#7B2CBF] hover:bg-white transition-all group"
                                                     >
                                                         <div className="text-center">
-                                                            <div className="p-4 bg-red-100 rounded-full w-fit mx-auto mb-4 group-hover:bg-red-200 transition-colors">
-                                                                <FaMapMarkerAlt className="text-3xl text-red-600" />
+                                                            <div className="p-4 bg-white rounded-full w-fit mx-auto mb-4">
+                                                                <FaMapMarkerAlt className="text-3xl text-[#7B2CBF]" />
                                                             </div>
-                                                            <h4 className="text-xl font-semibold text-red-900 mb-2">⚠️ Ubicación requerida</h4>
-                                                            <p className="text-red-700 mb-4">
-                                                                Es obligatorio marcar tu ubicación en el mapa para poder procesar el envío
+                                                            <h4 className="text-xl font-semibold text-gray-900 mb-2">Ubicación en el mapa</h4>
+                                                            <p className="text-gray-600 mb-4">
+                                                                Si querés, marcá el punto de entrega. No hace falta para pagar.
                                                             </p>
-                                                            <div className="inline-flex items-center gap-2 text-red-600 font-medium">
+                                                            <div className="inline-flex items-center gap-2 text-[#7B2CBF] font-medium">
                                                                 <span>Abrir mapa y marcar ubicación</span>
                                                                 <FaMapMarkerAlt />
                                                             </div>
@@ -1079,7 +1082,7 @@ const hasValidLocation = () => {
                                                 id="needsInvoice"
                                                 checked={needsInvoice}
                                                 onChange={(e) => setNeedsInvoice(e.target.checked)}
-                                                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                className="w-5 h-5 text-[#7B2CBF] bg-gray-100 border-gray-300 rounded focus:ring-[#7B2CBF]"
                                             />
                                             <label htmlFor="needsInvoice" className="text-lg font-medium text-gray-900 cursor-pointer">
                                                 Necesito factura
@@ -1177,10 +1180,10 @@ const hasValidLocation = () => {
                                                 <FaExclamationTriangle className="text-3xl text-yellow-600" />
                                             </div>
                                             <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                                Completa tus datos para continuar
+                                                Falta tu nombre o tu teléfono
                                             </h3>
                                             <p className="text-gray-600 mb-4">
-                                                Necesitamos tu información de contacto y ubicación para procesar el pedido
+                                                Con eso ya podés pagar. El resto es opcional.
                                             </p>
                                             <button
                                                 onClick={() => {
@@ -1214,12 +1217,12 @@ const hasValidLocation = () => {
                     <div className="w-full lg:w-96">
                         <div className="bg-white rounded-xl shadow-lg border border-gray-200 sticky top-6 overflow-hidden">
                             {/* Encabezado mejorado */}
-                            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                            <div className="bg-[linear-gradient(135deg,#00B5D8_0%,#7B2CBF_100%)] text-white p-6">
                                 <h3 className="text-xl font-bold flex items-center gap-3">
                                     <FaReceipt />
                                     Resumen del pedido
                                 </h3>
-                                <p className="text-blue-100 text-sm mt-1">{cartItems.length} productos</p>
+                                <p className="text-white/80 text-sm mt-1">{cartItems.length} productos</p>
                             </div>
                             
                             {/* Lista de productos mejorada */}
@@ -1242,7 +1245,7 @@ const hasValidLocation = () => {
                                                     <div className="flex items-center gap-2 bg-white rounded-lg border px-2 py-1">
                                                         <button 
                                                             onClick={() => updateQuantity(item._id, -1)}
-                                                            className="text-gray-500 hover:text-blue-600 p-1 rounded transition-colors"
+                                                            className="text-gray-500 hover:text-[#7B2CBF] p-1 rounded transition-colors"
                                                             disabled={item.quantity <= 1}
                                                         >
                                                             <FaMinus className="text-xs" />
@@ -1252,12 +1255,12 @@ const hasValidLocation = () => {
                                                         </span>
                                                         <button 
                                                             onClick={() => updateQuantity(item._id, 1)}
-                                                            className="text-gray-500 hover:text-blue-600 p-1 rounded transition-colors"
+                                                            className="text-gray-500 hover:text-[#7B2CBF] p-1 rounded transition-colors"
                                                         >
                                                             <FaPlus className="text-xs" />
                                                         </button>
                                                     </div>
-                                                    <span className="font-bold text-blue-600">
+                                                    <span className="font-bold text-[#7B2CBF]">
                                                         {displayINRCurrency(item.productId.sellingPrice * item.quantity)}
                                                     </span>
                                                 </div>
@@ -1339,7 +1342,7 @@ const hasValidLocation = () => {
                                 <div className="border-t border-gray-200 mt-6 pt-6">
                                     <div className="flex justify-between items-center">
                                         <span className="text-xl font-bold text-gray-900">Total</span>
-                                        <span className="text-2xl font-bold text-blue-600">{displayINRCurrency(totalPrice)}</span>                                    </div>
+                                        <span className="text-2xl font-bold text-[#7B2CBF]">{displayINRCurrency(totalPrice)}</span>                                    </div>
                                 </div>
                             </div>
                             
@@ -1361,7 +1364,7 @@ const hasValidLocation = () => {
                         {/* Políticas mejoradas */}
                         <div className="mt-6 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                             <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <FaInfoCircle className="text-blue-600" />
+                                <FaInfoCircle className="text-[#7B2CBF]" />
                                 Políticas de compra
                             </h4>
                             <div className="space-y-3 text-sm">
@@ -1372,7 +1375,7 @@ const hasValidLocation = () => {
                                     { icon: FaPhone, text: "Soporte técnico 24/7" }
                                 ].map((policy, index) => (
                                     <div key={index} className="flex items-center gap-3 text-gray-700">
-                                        <policy.icon className="text-blue-600 flex-shrink-0" />
+                                        <policy.icon className="text-[#7B2CBF] flex-shrink-0" />
                                         <span>{policy.text}</span>
                                     </div>
                                 ))}

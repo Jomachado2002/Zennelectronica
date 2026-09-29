@@ -107,6 +107,12 @@ export function getAdminNavGroups() {
       path: 'reportes'
     },
     {
+      id: 'visitantes',
+      label: 'Visitantes',
+      icon: FaUsers,
+      path: 'visitantes'
+    },
+    {
       id: 'config',
       label: 'Configuración',
       icon: FaCog,

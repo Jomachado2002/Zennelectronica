@@ -13,11 +13,12 @@ import BalanceService from '../services/balanceService';
 import SummaryApi from '../common';
 import { trackWhatsAppContact, trackPDFDownload, trackInitiateCheckout } from '../components/MetaPixelTracker';
 import { productPath } from '../helpers/productPath';
+import CartInterest from '../components/CartInterest';
 
 
 const Cart = () => {
     const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [customerData, setCustomerData] = useState({
         name: '',
         phone: '',
@@ -64,6 +65,12 @@ const Cart = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const refresh = () => setData(localCartHelper.getCart());
+        window.addEventListener('zenn-cart-updated', refresh);
+        return () => window.removeEventListener('zenn-cart-updated', refresh);
+    }, []);
 
     // ✅ CARGAR TARJETAS GUARDADAS SI EL USUARIO ESTÁ LOGUEADO
     const fetchUserCards = useCallback(async () => {
@@ -184,8 +191,59 @@ const Cart = () => {
     };
 
     useEffect(() => {
-        
-        fetchData();
+        let cancel = false;
+        const openCart = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const raw = params.get('recuperar');
+            if (raw) {
+                const token = /^[a-f0-9]{24,64}$/i.test(raw) ? raw : '';
+                if (token) {
+                    try {
+                        const response = await fetch(`${SummaryApi.baseURL}/api/analitica/carrito/${token}?formato=json`);
+                        const payload = await response.json();
+                        if (Array.isArray(payload?.data?.items) && payload.data.items.length) {
+                            localCartHelper.saveCart(payload.data.items);
+                        }
+                    } catch (error) {
+                        // Si el enlace no responde, el carrito de este equipo queda como está.
+                    }
+                } else {
+                    const pairs = raw.split(',').slice(0, 15).map((part) => {
+                        const [id, qty] = part.split(':');
+                        return { id, qty: Math.min(99, Math.max(1, parseInt(qty, 10) || 1)) };
+                    }).filter((pair) => /^[a-f\d]{24}$/i.test(pair.id));
+                    const restored = [];
+                    for (const pair of pairs) {
+                        try {
+                            const response = await fetch(SummaryApi.productDetails.url, {
+                                method: SummaryApi.productDetails.method,
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ productId: pair.id })
+                            });
+                            const payload = await response.json();
+                            if (payload?.data?._id) {
+                                restored.push({
+                                    _id: `mail-${payload.data._id}`,
+                                    productId: payload.data,
+                                    quantity: pair.qty,
+                                    addedAt: new Date().toISOString()
+                                });
+                            }
+                        } catch (error) {
+                            // Si un producto no carga, el resto del carrito sigue.
+                        }
+                    }
+                    if (restored.length) localCartHelper.saveCart(restored);
+                }
+                params.delete('recuperar');
+                const next = params.toString();
+                window.history.replaceState({}, '', `${window.location.pathname}${next ? `?${next}` : ''}`);
+                if (window.fetchUserAddToCart) window.fetchUserAddToCart();
+                window.dispatchEvent(new Event('zenn-cart-updated'));
+            }
+            if (!cancel) fetchData();
+        };
+        openCart();
         
         if (isLoggedIn && user?.bancardUserId) {
             
@@ -202,6 +260,9 @@ const Cart = () => {
         } else {
             
         }
+        return () => {
+            cancel = true;
+        };
     }, [isLoggedIn, user?.bancardUserId, fetchUserCards]);
 
     // Aumentar cantidad de producto
@@ -869,7 +930,7 @@ const Cart = () => {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between py-3 bg-blue-50 px-3 rounded-lg">
+                                    <div className="flex justify-between py-3 bg-[#F7F4FC] px-3 rounded-lg">
                                     <span className="text-lg font-medium text-[#2A3190]">Total</span>
                                     <span className="text-xl font-bold text-[#2A3190]">{displayINRCurrency(totalPrice)}</span>
                                 </div>
@@ -915,7 +976,7 @@ const Cart = () => {
                                             </p>
                                             <Link
                                                 to="/mi-perfil?tab=profile"
-                                                className="text-xs text-blue-600 hover:underline"
+                                                className="text-xs text-[#7B2CBF] hover:underline"
                                             >
                                                 Ver/cambiar ubicación
                                             </Link>
@@ -931,7 +992,7 @@ const Cart = () => {
                                             </p>
                                             <Link
                                                 to="/mi-perfil?tab=profile"
-                                                className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors"
+                                                className="text-xs text-white px-3 py-1 rounded-full transition-colors" style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
                                             >
                                                 Agregar ubicación
                                             </Link>
@@ -945,8 +1006,8 @@ const Cart = () => {
                                     
                                     {/* Opciones de Método de Pago */}
                                     {isLoggedIn && (
-                                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
-                                            <h4 className="font-medium text-blue-900 mb-3">Método de pago</h4>
+                                        <div className="bg-[#F7F4FC] rounded-lg p-4 border border-[#E4D8F5] mb-4">
+                                            <h4 className="font-medium text-[#2A3190] mb-3">Método de pago</h4>
                                             <div className="space-y-2">
                                                 <label className="flex items-center gap-3 cursor-pointer">
                                                     <input
@@ -955,10 +1016,10 @@ const Cart = () => {
                                                         value="bancard"
                                                         checked={paymentMethod === 'bancard'}
                                                         onChange={(e) => setPaymentMethod(e.target.value)}
-                                                        className="text-blue-600 focus:ring-blue-500"
+                                                        className="text-[#7B2CBF] focus:ring-[#7B2CBF]"
                                                     />
                                                     <div className="flex items-center gap-2">
-                                                        <FaCreditCard className="text-blue-600" />
+                                                        <FaCreditCard className="text-[#7B2CBF]" />
                                                         <span className="text-sm font-medium">Tarjeta de crédito/débito</span>
                                                     </div>
                                                 </label>
@@ -1014,27 +1075,17 @@ const Cart = () => {
                                             </div>
                                         </button>
                                     ) : (
-                                        /* Botón Finalizar Compra - Bancard */
                                         <button
                                             onClick={() => {
                                                     trackInitiateCheckout(validProducts, totalPrice);
                                                     navigate('/finalizar-compra');
                                                 }}
                                             disabled={validProducts.length === 0}
-                                            className="w-full bg-[#2A3190] text-white py-4 px-4 rounded-lg hover:bg-[#1e236b] transition-all duration-300 flex items-center justify-between group shadow-md disabled:opacity-50"
+                                            className="w-full text-white py-4 px-5 rounded-lg flex items-center justify-between shadow-md disabled:opacity-50"
+                                            style={{ background: 'linear-gradient(135deg, #00B5D8 0%, #7B2CBF 100%)' }}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-[#1e236b] p-2 rounded-full">
-                                                    <FaCreditCard className="text-white" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className="font-semibold">Finalizar Compra</p>
-                                                    <p className="text-sm text-blue-100">Pago seguro con Bancard</p>
-                                                </div>
-                                            </div>
-                                            <div className="bg-[#1e236b] px-3 py-1 rounded-full text-xs font-medium">
-                                                SEGURO
-                                            </div>
+                                            <span className="font-semibold">Pagar ahora</span>
+                                            <span className="font-bold">{displayINRCurrency(totalPrice)}</span>
                                         </button>
                                     )}
 
@@ -1070,7 +1121,7 @@ const Cart = () => {
 
                                     {/* Formulario para presupuestos */}
                                     {showCustomerForm && (
-                                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                        <div className="bg-[#F7F4FC] rounded-lg p-4 border border-[#E4D8F5]">
                                             <div className="flex justify-between items-center mb-3">
                                                 <h4 className="font-medium text-[#2A3190]">Datos para presupuesto</h4>
                                                 <button
@@ -1150,6 +1201,7 @@ const Cart = () => {
                         </div>
                     </div>
                 )}
+                {!loading && <CartInterest items={data} />}
             </div>
         </div>
     );

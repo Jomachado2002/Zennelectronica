@@ -32,8 +32,7 @@
                             </h2>
 
                             <p style="font-size: 14px; color: #555555; margin: 0 0 24px 0; line-height: 1.8;">
-                                Guardamos este producto en su carrito. Sigue disponible.
-                                Puede completar la compra ahora y lo preparamos para el envío.
+                                {{ params.reminderNote }}
                             </p>
 
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e0e0e0; margin: 0 0 24px 0;">
@@ -50,6 +49,8 @@
                                     </td>
                                 </tr>
                             </table>
+
+                            {{ params.extraItemsHtml }}
 
                             <p style="font-size: 14px; color: #555555; margin: 0 0 24px 0; line-height: 1.8;">
                                 El precio de la ficha es el que se aplica al pagar.

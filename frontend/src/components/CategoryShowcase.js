@@ -9,7 +9,9 @@ import {
   collectLeafSubcategoryValues
 } from '../helpers/visaoNavigationTree';
 import { useSubcategoryPreviewMap, useSubcategoryPreviewMapFromValues, useHomeShowcasePreviewFlat } from '../hooks/useSubcategoryPreviewMap';
-import { categoriaProductoHref, HOME_SLOT_ROUTES } from '../config/homeSlotRoutes';
+import { categoriaProductoHref } from '../config/homeSlotRoutes';
+import SummaryApi from '../common';
+import { getVisitorId } from '../helpers/behaviorTracker';
 import { warmImageUrls } from '../helpers/cdnImageUrl';
 
 const scrollTop = () => {
@@ -27,6 +29,7 @@ const CategoryShowcase = ({
   const navigate = useNavigate();
   const scrollElement = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [historyCategory, setHistoryCategory] = useState(undefined);
   const [showLeftButton, setShowLeftButton] = useState(false);
   const [showRightButton, setShowRightButton] = useState(false);
   const [brokenIds, setBrokenIds] = useState({});
@@ -74,17 +77,35 @@ const CategoryShowcase = ({
   }, [bootstrapReady, homeShowcase, menuFromApi]);
 
   useEffect(() => {
-    if (!categories.length) return;
-    const invalid = !selectedCategory || !categories.some((c) => c.value === selectedCategory);
-    if (!invalid) return;
-    const mobile =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(max-width: 767px)').matches;
-    const celValue = HOME_SLOT_ROUTES.celulares.category;
-    const preferMobile =
-      mobile && categories.some((c) => c.value === celValue) ? celValue : null;
-    setSelectedCategory(preferMobile || categories[0].value);
-  }, [categories, selectedCategory]);
+    const visitorId = getVisitorId();
+    if (!visitorId) {
+      setHistoryCategory('');
+      return undefined;
+    }
+    let ignore = false;
+    fetch(`${SummaryApi.baseURL}/api/analitica/categoria?visitorId=${encodeURIComponent(visitorId)}`)
+      .then((response) => response.json())
+      .then((body) => {
+        if (!ignore) setHistoryCategory(body?.data?.category || '');
+      })
+      .catch(() => {
+        if (!ignore) setHistoryCategory('');
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!categories.length || historyCategory === undefined) return;
+    const stillValid = selectedCategory && categories.some((c) => c.value === selectedCategory);
+    if (stillValid) return;
+    const fromHistory = historyCategory && categories.some((c) => c.value === historyCategory)
+      ? historyCategory
+      : '';
+    const peripherals = categories.find((c) => c.value === 'perifericos');
+    setSelectedCategory(fromHistory || peripherals?.value || categories[0].value);
+  }, [categories, historyCategory, selectedCategory]);
 
   const subcategories = useMemo(() => {
     const category = categories.find((cat) => cat.value === selectedCategory);
@@ -233,6 +254,7 @@ const CategoryShowcase = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 pr-10 text-sm sm:text-base font-medium text-gray-800 bg-white border border-gray-200 rounded-xl appearance-none cursor-pointer transition-colors duration-200 hover:border-[#00B5D8] focus:outline-none focus:border-[#7B2CBF]"
             >
+              {!selectedCategory && <option value="" disabled />}
               {categories.map((category) => (
                 <option key={category.id} value={category.value}>
                   {category.label}

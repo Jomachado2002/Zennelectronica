@@ -90,6 +90,7 @@ const ExportProductsPage = lazy(() => import('../pages/admin/ExportProductsPage'
 const AdminCatalogoPDF = lazy(() => import('../pages/admin/AdminCatalogoPDF'));
 const CreativeStudioPage = lazy(() => import('../pages/admin/CreativeStudioPage'));
 const AdminWorkerPage = lazy(() => import('../pages/admin/AdminWorkerPage'));
+const VisitantesPage = lazy(() => import('../pages/admin/VisitantesPage'));
 
 // Importar página de editor de imágenes
 const ImageEditorPage = lazy(() => import('../pages/ImageEditorPage'));
@@ -314,6 +315,10 @@ const router = createBrowserRouter([
                     {
                         path: "reportes",
                         element: <Lazy><FinancialReports /></Lazy>
+                    },
+                    {
+                        path: "visitantes",
+                        element: <Lazy><VisitantesPage /></Lazy>
                     },
                     
                     // Gestión de clientes

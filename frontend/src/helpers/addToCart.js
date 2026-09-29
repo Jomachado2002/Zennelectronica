@@ -111,6 +111,7 @@ const localCartHelper = {
     // Limpiar el carrito completo
     clearCart: () => {
         localStorage.removeItem('cartItems');
+        import('./behaviorTracker').then((tracker) => tracker.syncCart([])).catch(() => {});
     }
 };
 
@@ -135,13 +136,17 @@ const addToCart = (e, product) => {
         const success = localCartHelper.addItem(product);
         
         if (success) {
-            // Mostrar mensaje de éxito
             toast.success("Producto agregado al carrito");
+            import('./behaviorTracker').then((tracker) => {
+                tracker.trackProduct('add_to_cart', product);
+                tracker.syncCart(localCartHelper.getCart());
+            }).catch(() => {});
             
             // Actualizar contador del carrito
             if (window.fetchUserAddToCart) {
                 window.fetchUserAddToCart();
             }
+            window.dispatchEvent(new Event('zenn-cart-updated'));
             
             return { 
                 success: true, 

@@ -14,6 +14,7 @@ import { trackGAEvent, trackProductView, trackWhatsAppClick as trackGAWhatsApp }
 import { useQuery } from '@tanstack/react-query';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import { getLastQuery, rememberProduct } from '../helpers/searchMemory';
+import { flushEvents, trackProduct } from '../helpers/behaviorTracker';
 
 
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
@@ -150,6 +151,18 @@ useEffect(() => {
   setActiveImage('');
   setLoading(true);
 }, [params?.id, productData]);
+
+  useEffect(() => {
+    if (!data?._id || !data?.productName) return undefined;
+    const started = Date.now();
+    const product = data;
+    return () => {
+      const durationMs = Date.now() - started;
+      if (durationMs < 1500) return;
+      trackProduct('product_view', product, { durationMs });
+      flushEvents();
+    };
+  }, [data?._id]);
 
   useEffect(() => {
     const param = String(params?.id || '');

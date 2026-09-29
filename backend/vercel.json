@@ -18,7 +18,8 @@
         }
     ],
     "crons": [
-        { "path": "/api/creativos/calendario/tick", "schedule": "*/15 * * * *" }
+        { "path": "/api/creativos/calendario/tick", "schedule": "*/15 * * * *" },
+        { "path": "/api/analitica/cron", "schedule": "0 * * * *" }
     ],
     "routes" : [
         {
