@@ -388,8 +388,8 @@ const VerticalCardProduct = ({
                                                 {product?.productName}
                                             </h3>
                                             
-                                            <div className='text-xs text-gray-500 uppercase font-medium tracking-wide'>
-                                                {product?.subcategory || product?.brandName}
+                                            <div className='text-xs text-gray-500 uppercase font-medium tracking-wide truncate'>
+                                                {product?.brandName}
                                             </div>
                                         </div>
                                         

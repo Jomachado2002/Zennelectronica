@@ -355,6 +355,70 @@ function topBrand(brands) {
     return name;
 }
 
+const SIMILAR_FIELDS = 'productName productImage sellingPrice price category subcategory codigo brandName slug';
+const similarCache = new Map();
+
+function readSimilarCache(key) {
+    const hit = similarCache.get(key);
+    if (!hit || Date.now() - hit.at > 45 * 1000) return null;
+    return hit.value;
+}
+
+function writeSimilarCache(key, value) {
+    if (similarCache.size > 80) similarCache.clear();
+    similarCache.set(key, { at: Date.now(), value });
+}
+
+async function similarFromCartIds(cartIds) {
+    const ids = [...new Set(cartIds.map((value) => String(value || '').trim()))]
+        .filter((value) => /^[a-f\d]{24}$/i.test(value))
+        .slice(0, 8);
+    if (!ids.length) return [];
+    const cacheKey = ids.join(',');
+    const cached = readSimilarCache(cacheKey);
+    if (cached) return cached;
+
+    const seeds = await Product.find({ _id: { $in: ids } })
+        .select('category subcategory brandName sellingPrice')
+        .lean();
+    const byId = new Map(seeds.map((product) => [String(product._id), product]));
+    const focus = byId.get(ids[0]) || seeds[0];
+    if (!focus) return [];
+
+    const brand = String(focus.brandName || '').toLowerCase();
+    const price = Number(focus.sellingPrice) || 0;
+    const base = {
+        stock: { $gt: 0 },
+        _id: { $nin: ids }
+    };
+    if (focus.category) base.category = focus.category;
+    if (focus.subcategory) base.subcategory = focus.subcategory;
+    else if (!focus.category) return [];
+
+    const near = price > 0
+        ? { ...base, sellingPrice: { $gte: Math.round(price * 0.55), $lte: Math.round(price * 1.7) } }
+        : base;
+    let rows = await Product.find(near).select(SIMILAR_FIELDS).limit(24).lean();
+    if (rows.length < 8) {
+        const extra = await Product.find(base).select(SIMILAR_FIELDS).limit(24).lean();
+        const seen = new Set(rows.map((product) => String(product._id)));
+        extra.forEach((product) => {
+            if (!seen.has(String(product._id))) rows.push(product);
+        });
+    }
+
+    rows.sort((a, b) => {
+        const brandA = brand && String(a.brandName || '').toLowerCase() === brand ? 0 : 1;
+        const brandB = brand && String(b.brandName || '').toLowerCase() === brand ? 0 : 1;
+        if (brandA !== brandB) return brandA - brandB;
+        if (!price) return 0;
+        return Math.abs((a.sellingPrice || 0) - price) - Math.abs((b.sellingPrice || 0) - price);
+    });
+    const picked = rows.slice(0, 10).map(publicProduct);
+    writeSimilarCache(cacheKey, picked);
+    return picked;
+}
+
 async function suggestionsForVisitor(visitorId, ip = '', cartIds = []) {
     const id = cleanText(visitorId, 80);
     const cleanIp = cleanText(ip, 64);
@@ -362,13 +426,14 @@ async function suggestionsForVisitor(visitorId, ip = '', cartIds = []) {
     const match = [];
     if (id) match.push({ visitorId: id });
     if (cleanIp) match.push({ ip: cleanIp });
-    if (!match.length) return [];
 
     const liveCartIds = [...new Set(
         (Array.isArray(cartIds) ? cartIds : [])
             .map((value) => String(value || '').trim())
             .filter((value) => /^[a-f\d]{24}$/i.test(value))
     )].slice(0, 15);
+    if (liveCartIds.length) return similarFromCartIds(liveCartIds);
+    if (!match.length) return [];
 
     const [events, profile] = await Promise.all([
         BehaviorEvent.find({
@@ -465,7 +530,7 @@ async function suggestionsForVisitor(visitorId, ip = '', cartIds = []) {
     }).filter((item) => item.slots > 0);
     if (room > 0 && plan[0]) plan[0].slots += room;
 
-    const fields = 'productName productImage sellingPrice price category subcategory codigo brandName slug';
+    const fields = SIMILAR_FIELDS;
     const blocked = new Set(cartIdList);
     const picked = [];
 

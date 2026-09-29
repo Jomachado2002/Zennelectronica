@@ -85,9 +85,11 @@ export default function HomeInterest() {
                                         </span>
                                     )}
                                 </div>
-                                <div className="p-2.5 flex flex-col flex-grow min-h-0">
-                                    <h3 className="font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]">{product.productName}</h3>
-                                    <div className="text-xs text-gray-500 uppercase font-medium tracking-wide mt-1 truncate">{product.brandName}</div>
+                                <div className="p-2.5 flex flex-col flex-grow">
+                                    <div className="space-y-1.5">
+                                        <h3 className="font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem] break-words">{product.productName}</h3>
+                                        <div className="text-xs text-gray-500 uppercase font-medium tracking-wide truncate">{product.brandName}</div>
+                                    </div>
                                     <div className="mt-auto space-y-2">
                                         <div className="text-lg font-bold text-black text-center">{displayPYGCurrency(product.sellingPrice)}</div>
                                         <button

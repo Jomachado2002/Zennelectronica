@@ -36,16 +36,33 @@ export default function CartInterest({ items }) {
                 return String(source._id || item.productId || '');
             })
             .filter((value) => /^[a-f\d]{24}$/i.test(value));
-        const params = new URLSearchParams({ visitorId });
-        if (ids.length) params.set('cart', ids.join(','));
+        if (!ids.length) {
+            setSuggestions([]);
+            return undefined;
+        }
+        const params = new URLSearchParams({ visitorId, cart: ids.join(',') });
+        const cacheKey = `zenn_sugerencias_${ids.join(',')}`;
+        try {
+            const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+            if (Array.isArray(cached) && cached.length) setSuggestions(cached);
+        } catch (error) {
+            // Si el navegador bloquea la sesión, se pide igual al servidor.
+        }
         let ignore = false;
         fetch(`${SummaryApi.baseURL}/api/analitica/sugerencias?${params.toString()}`)
             .then((response) => response.json())
             .then((data) => {
-                if (!ignore) setSuggestions(Array.isArray(data.data) ? data.data : []);
+                const next = Array.isArray(data.data) ? data.data : [];
+                if (ignore) return;
+                setSuggestions(next);
+                try {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(next));
+                } catch (error) {
+                    // La fila igual queda en pantalla.
+                }
             })
             .catch(() => {
-                if (!ignore) setSuggestions([]);
+                if (!ignore) setSuggestions((current) => current);
             });
         return () => {
             ignore = true;
@@ -140,12 +157,14 @@ export default function CartInterest({ items }) {
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="p-2.5 flex flex-col flex-grow min-h-0">
-                                            <h3 className="font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem]">
-                                                {product.productName}
-                                            </h3>
-                                            <div className="text-xs text-gray-500 uppercase font-medium tracking-wide mt-1 truncate">
-                                                {product.brandName}
+                                        <div className="p-2.5 flex flex-col flex-grow">
+                                            <div className="space-y-1.5">
+                                                <h3 className="font-medium text-xs text-gray-600 leading-tight line-clamp-4 min-h-[2.8rem] break-words">
+                                                    {product.productName}
+                                                </h3>
+                                                <div className="text-xs text-gray-500 uppercase font-medium tracking-wide truncate">
+                                                    {product.brandName}
+                                                </div>
                                             </div>
                                             <div className="mt-auto space-y-2">
                                                 <div className="text-lg font-bold text-black text-center">

@@ -290,7 +290,7 @@ const CategoryWiseProductDisplay = ({ category, subcategory, heading, currentPro
                             />
                           )}
                           <div className='text-xs text-gray-500 uppercase font-medium tracking-wide truncate'>
-                            {product?.subcategory || product?.brandName}
+                            {product?.brandName}
                           </div>
                         </div>
                       </div>
