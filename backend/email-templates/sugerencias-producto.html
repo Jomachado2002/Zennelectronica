@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sigue disponible</title>
+    <title>Productos disponibles</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f6f6f6; line-height: 1.6; color: #333333;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f6f6f6; padding: 20px 0;">
@@ -17,38 +17,20 @@
                     </tr>
                     <tr>
                         <td style="background-color: #373592; color: #ffffff; padding: 12px 40px; text-align: center; font-size: 12px; letter-spacing: 0.08em;">
-                            PENSADO PARA USTED
+                            PARA USTED
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 36px 40px 20px 40px;">
                             <h2 style="font-size: 18px; color: #222222; margin: 0 0 16px 0; font-weight: 500;">Hola {{ params.clientName }},</h2>
                             <p style="font-size: 14px; color: #555555; margin: 0 0 24px 0; line-height: 1.8;">
-                                Vio este producto y sigue disponible. Lo dejamos primero.
-                                Debajo hay otros de la misma línea, por si le sirven para cerrar el pedido.
+                                {{ params.reminderNote }}
                             </p>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e0e0e0; margin: 0 0 12px 0;">
-                                <tr>
-                                    <td width="148" style="padding: 16px; vertical-align: middle;">
-                                        <a href="{{ params.productUrl }}" style="text-decoration: none;">
-                                            <img src="{{ params.productImage }}" alt="{{ params.productName }}" width="116" style="display: block; width: 116px; height: auto; border: 0;">
-                                        </a>
-                                    </td>
-                                    <td style="padding: 16px 16px 16px 0; vertical-align: middle;">
-                                        <a href="{{ params.productUrl }}" style="font-size: 16px; color: #222222; font-weight: 600; text-decoration: none;">{{ params.productName }}</a>
-                                        <p style="font-size: 13px; color: #888888; margin: 8px 0 0 0;">El que miró</p>
-                                        <p style="font-size: 18px; color: #373592; font-weight: 600; margin: 6px 0 0 0;">{{ params.productPrice }}</p>
-                                    </td>
-                                </tr>
-                            </table>
-                            {{ params.extraItemsHtml }}
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 28px 0;">
-                                <tr>
-                                    <td align="center">
-                                        <a href="{{ params.productUrl }}" style="display: inline-block; background-color: #373592; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 14px 32px;">Ver producto</a>
-                                    </td>
-                                </tr>
-                            </table>
+                            {{ params.viewedHtml }}
+                            {{ params.suggestedHtml }}
+                            <p style="font-size: 13px; color: #777777; margin: 8px 0 0 0; line-height: 1.7;">
+                                Comprar lo deja en el carrito. Después solo paga.
+                            </p>
                         </td>
                     </tr>
                     <tr>
@@ -56,7 +38,11 @@
                             <p style="font-size: 16px; font-weight: 600; margin: 0 0 15px 0; color: #ffffff;">ZENN Electrónicos</p>
                             <p style="margin: 8px 0; color: #cccccc; font-size: 13px;">Email: <a href="mailto:hola@zenn.com.py" style="color: #ffffff; text-decoration: none;">hola@zenn.com.py</a></p>
                             <p style="margin: 8px 0; color: #cccccc; font-size: 13px;">Web: <a href="https://www.zenn.com.py" style="color: #ffffff; text-decoration: none;">www.zenn.com.py</a></p>
-                            <p style="margin: 20px 0 0 0; padding: 20px 0 0 0; border-top: 1px solid #444; font-size: 11px; color: #999;">Recibe este correo porque dejó su correo en zenn.com.py.<br><br>© 2026 ZENN Electrónicos.</p>
+                            <p style="margin: 20px 0 0 0; padding: 20px 0 0 0; border-top: 1px solid #444; font-size: 11px; color: #999; line-height: 1.6;">
+                                Recibe este correo porque dejó su correo en zenn.com.py.
+                                <br><br>
+                                © 2026 ZENN Electrónicos. Todos los derechos reservados.
+                            </p>
                         </td>
                     </tr>
                 </table>

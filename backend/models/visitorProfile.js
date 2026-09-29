@@ -35,12 +35,16 @@ const visitorProfileSchema = new mongoose.Schema({
     cartEmailCount: { type: Number, default: 0, min: 0, max: 3 },
     cartRestoreToken: { type: String, maxlength: 64 },
     lastCartEmailAt: { type: Date },
+    suggestionFingerprint: { type: String, maxlength: 400, default: '' },
+    suggestionAnchorAt: { type: Date },
+    suggestionEmailCount: { type: Number, default: 0, min: 0, max: 3 },
     lastSuggestionEmailAt: { type: Date }
 }, { timestamps: true });
 
 visitorProfileSchema.index({ lastSeenAt: -1 });
 visitorProfileSchema.index({ email: 1, lastCartEmailAt: 1 });
 visitorProfileSchema.index({ email: 1, lastSuggestionEmailAt: 1 });
+visitorProfileSchema.index({ suggestionAnchorAt: 1, suggestionEmailCount: 1 });
 visitorProfileSchema.index({ cartRestoreToken: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('visitorProfile', visitorProfileSchema);

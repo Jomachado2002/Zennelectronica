@@ -4,15 +4,15 @@ const Product = require('../models/productModel');
 const VisitorProfile = require('../models/visitorProfile');
 const BancardTransaction = require('../models/bancardTransactionModel');
 const { sendSimpleEmail, formatToPYG } = require('./brevoService');
-const { ensureCartRestoreToken } = require('./analyticsService');
+const { ensureCartRestoreToken, similarFromCartIds } = require('./analyticsService');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CART_WAIT_MS = DAY_MS;
 const CART_WINDOW_MS = 4 * DAY_MS;
 const CART_GAP_MS = DAY_MS;
-const SUGGESTION_WAIT_MS = 2 * 60 * 60 * 1000;
-const DWELL_MS = 60 * 1000;
-const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const SUGGESTION_WAIT_MS = 12 * 60 * 60 * 1000;
+const SUGGESTION_WINDOW_MS = SUGGESTION_WAIT_MS + 3 * DAY_MS;
+const SUGGESTION_GAP_MS = DAY_MS;
 const BATCH = 15;
 
 const CART_NOTES = [
@@ -24,6 +24,16 @@ const CART_SUBJECTS = [
     'Su producto sigue disponible',
     'Puede terminar su compra hoy',
     'Último aviso: su producto sigue disponible'
+];
+const SUGGESTION_NOTES = [
+    'Lo que miró sigue en stock. Toque Comprar y el producto entra a su carrito para que pague ahora, sin volver a buscarlo.',
+    'Sigue disponible y el precio de la ficha es el que se cobra. Toque Comprar, revise el carrito y termine el pago hoy.',
+    'Es el último correo. Si lo quiere, toque Comprar ahora: queda en su carrito y puede pagarlo enseguida.'
+];
+const SUGGESTION_SUBJECTS = [
+    'Lléveselo hoy: sigue disponible',
+    'Todavía puede comprarlo hoy',
+    'Último aviso para comprarlo'
 ];
 
 function escapeHtml(value) {
@@ -65,6 +75,30 @@ function cartRestoreUrl(token) {
     return `${storeUrl()}/api/analitica/carrito/${token}`;
 }
 
+function buyUrl(productId) {
+    return `${storeUrl()}/api/analitica/comprar/${productId}`;
+}
+
+function newsletterCard(product) {
+    const brand = product.brandName ? `<p style="font-size: 12px; color: #888888; margin: 6px 0 0 0; letter-spacing: 0.04em;">${escapeHtml(product.brandName)}</p>` : '';
+    return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #e0e0e0; margin: 0 0 12px 0;">
+            <tr>
+                <td width="128" style="padding: 16px; vertical-align: middle;">
+                    <a href="${escapeHtml(buyUrl(product._id))}" style="text-decoration: none;">
+                        <img src="${escapeHtml(imageOf(product))}" alt="${escapeHtml(product.productName)}" width="96" style="display: block; width: 96px; height: auto; border: 0;">
+                    </a>
+                </td>
+                <td style="padding: 16px 16px 16px 0; vertical-align: middle;">
+                    <a href="${escapeHtml(buyUrl(product._id))}" style="font-size: 15px; color: #222222; font-weight: 600; text-decoration: none;">${escapeHtml(product.productName)}</a>
+                    ${brand}
+                    <p style="font-size: 16px; color: #373592; font-weight: 600; margin: 8px 0 12px 0;">${escapeHtml(formatToPYG(Number(product.sellingPrice) || 0))}</p>
+                    <a href="${escapeHtml(buyUrl(product._id))}" style="display: inline-block; background-color: #373592; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; padding: 10px 18px;">Comprar</a>
+                </td>
+            </tr>
+        </table>`;
+}
+
 function imageOf(product) {
     const image = Array.isArray(product?.productImage) ? product.productImage[0] : product?.image;
     return image || 'https://www.zenn.com.py/logozenn.png';
@@ -74,23 +108,10 @@ async function loadProducts(ids) {
     const valid = ids.filter((id) => /^[a-f\d]{24}$/i.test(String(id)));
     if (!valid.length) return [];
     const products = await Product.find({ _id: { $in: valid }, stock: { $gt: 0 } })
-        .select('productName productImage sellingPrice category slug')
+        .select('productName productImage sellingPrice category subcategory brandName slug')
         .lean();
     const byId = new Map(products.map((product) => [String(product._id), product]));
     return valid.map((id) => byId.get(String(id))).filter(Boolean);
-}
-
-async function relatedProducts(category, excludeIds) {
-    if (!category) return [];
-    return Product.find({
-        category,
-        stock: { $gt: 0 },
-        _id: { $nin: excludeIds }
-    })
-        .sort({ updatedAt: -1 })
-        .limit(3)
-        .select('productName productImage sellingPrice category slug')
-        .lean();
 }
 
 function fillTemplate(file, replacements) {
@@ -138,32 +159,29 @@ async function sendCartEmail(profile) {
 }
 
 async function sendSuggestionEmail(profile) {
-    const watched = [...(profile.recentProducts || [])]
-        .filter((item) => (item.durationMs || 0) >= DWELL_MS)
-        .sort((a, b) => (b.durationMs || 0) - (a.durationMs || 0))[0];
-    if (!watched?.productId) return false;
-    const [main] = await loadProducts([watched.productId]);
-    if (!main) return false;
-    const related = await relatedProducts(main.category, [main._id]);
-    const extra = related.map((product) => productCard({
-        name: product.productName,
-        image: imageOf(product),
-        price: product.sellingPrice,
-        url: productUrl(product)
-    })).join('');
+    const viewedIds = [...new Set((profile.recentProducts || [])
+        .map((item) => String(item.productId || ''))
+        .filter((id) => /^[a-f\d]{24}$/i.test(id)))].slice(0, 4);
+    const viewed = await loadProducts(viewedIds);
+    if (!viewed.length) return false;
+    const similar = await similarFromCartIds(viewed.map((product) => String(product._id)));
+    const seen = new Set(viewed.map((product) => String(product._id)));
+    const extras = similar.filter((product) => !seen.has(String(product._id))).slice(0, 3);
+    const day = Math.min(profile.suggestionEmailCount || 0, 2);
+    const suggestedHtml = extras.length
+        ? `<p style="font-size: 14px; color: #222222; font-weight: 600; margin: 8px 0 12px 0;">También le pueden servir</p>${extras.map(newsletterCard).join('')}`
+        : '';
     const html = fillTemplate('sugerencias-producto.html', {
         '{{ params.clientName }}': 'Cliente',
-        '{{ params.productName }}': escapeHtml(main.productName),
-        '{{ params.productImage }}': escapeHtml(imageOf(main)),
-        '{{ params.productPrice }}': escapeHtml(formatToPYG(main.sellingPrice || 0)),
-        '{{ params.productUrl }}': escapeHtml(productUrl(main)),
-        '{{ params.extraItemsHtml }}': extra
+        '{{ params.reminderNote }}': escapeHtml(SUGGESTION_NOTES[day]),
+        '{{ params.viewedHtml }}': viewed.map(newsletterCard).join(''),
+        '{{ params.suggestedHtml }}': suggestedHtml
     });
     const result = await sendSimpleEmail({
         to: [{ email: profile.email, name: 'Cliente' }],
         sender: { email: 'hola@zenn.com.py', name: 'ZENN' },
         replyTo: { email: 'hola@zenn.com.py', name: 'ZENN' },
-        subject: `${main.productName} sigue disponible`,
+        subject: SUGGESTION_SUBJECTS[day],
         htmlContent: html
     });
     return !!result.success;
@@ -191,7 +209,6 @@ async function processPendingEmails() {
     const cartBefore = new Date(now - CART_WAIT_MS);
     const cartAfter = new Date(now - CART_WINDOW_MS);
     const gap = new Date(now - CART_GAP_MS);
-    const cooldown = new Date(now - COOLDOWN_MS);
     const sent = { cart: 0, suggestions: 0, failed: 0 };
 
     const carts = await VisitorProfile.find({
@@ -237,22 +254,55 @@ async function processPendingEmails() {
         }
     }
 
+    const suggestionBefore = new Date(now - SUGGESTION_WAIT_MS);
+    const suggestionAfter = new Date(now - SUGGESTION_WINDOW_MS);
+    const suggestionGap = new Date(now - SUGGESTION_GAP_MS);
     const watchers = await VisitorProfile.find({
         email: { $nin: ['', null] },
         cartItems: { $size: 0 },
-        lastSeenAt: { $lte: new Date(now - SUGGESTION_WAIT_MS) },
-        recentProducts: { $elemMatch: { durationMs: { $gte: DWELL_MS } } },
-        $or: [{ lastSuggestionEmailAt: null }, { lastSuggestionEmailAt: { $exists: false } }, { lastSuggestionEmailAt: { $lte: cooldown } }]
+        'recentProducts.0': { $exists: true },
+        suggestionAnchorAt: { $lte: suggestionBefore, $gte: suggestionAfter },
+        $and: [
+            {
+                $or: [
+                    { suggestionEmailCount: { $lt: 3 } },
+                    { suggestionEmailCount: { $exists: false } },
+                    { suggestionEmailCount: null }
+                ]
+            },
+            {
+                $or: [
+                    { lastSuggestionEmailAt: null },
+                    { lastSuggestionEmailAt: { $exists: false } },
+                    { lastSuggestionEmailAt: { $lte: suggestionGap } }
+                ]
+            }
+        ]
     }).limit(BATCH);
 
     for (const profile of watchers) {
         try {
+            const watchedIds = (profile.recentProducts || []).map((item) => String(item.productId || '')).filter(Boolean);
+            const bought = watchedIds.length && profile.email
+                ? await BancardTransaction.findOne({
+                    status: 'approved',
+                    createdAt: { $gte: profile.suggestionAnchorAt || suggestionAfter },
+                    'customer_info.email': profile.email,
+                    'items.product_id': { $in: watchedIds }
+                }).select('_id').lean()
+                : null;
+            if (bought) {
+                profile.suggestionEmailCount = 3;
+                await profile.save();
+                continue;
+            }
             const ok = await sendSuggestionEmail(profile);
             if (!ok) {
                 sent.failed += 1;
                 continue;
             }
             profile.lastSuggestionEmailAt = new Date();
+            profile.suggestionEmailCount = Math.min(3, (profile.suggestionEmailCount || 0) + 1);
             await profile.save();
             sent.suggestions += 1;
         } catch (error) {

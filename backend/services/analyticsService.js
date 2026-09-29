@@ -107,6 +107,17 @@ async function touchProfile(visitorId, events, ip) {
         }
     }
 
+    const viewKey = [...new Set((profile.recentProducts || []).map((item) => String(item.productId || '')).filter(Boolean))]
+        .sort()
+        .join(',')
+        .slice(0, 400);
+    if (!(profile.cartItems || []).length && viewKey && viewKey !== (profile.suggestionFingerprint || '')) {
+        profile.suggestionFingerprint = viewKey;
+        profile.suggestionAnchorAt = now;
+        profile.suggestionEmailCount = 0;
+        profile.lastSuggestionEmailAt = undefined;
+    }
+
     await profile.save();
     return profile;
 }
@@ -645,6 +656,23 @@ async function cartRestorePayload(token) {
     }).filter(Boolean);
 }
 
+async function productCartPayload(productId) {
+    const id = String(productId || '').trim();
+    if (!/^[a-f\d]{24}$/i.test(id)) return null;
+    const product = await Product.findOne({ _id: id, stock: { $gt: 0 } }).select(SIMILAR_FIELDS).lean();
+    if (!product) return [];
+    const pub = publicProduct(product);
+    if (!Array.isArray(pub.productImage) || !pub.productImage.filter(Boolean).length) {
+        pub.productImage = ['https://www.zenn.com.py/logozenn.png'];
+    }
+    return [{
+        _id: `mail-${pub._id}`,
+        productId: pub,
+        quantity: 1,
+        addedAt: new Date().toISOString()
+    }];
+}
+
 async function preferredCategoryForVisitor(visitorId, ip = '') {
     const id = cleanText(visitorId, 80);
     const cleanIp = cleanText(ip, 64);
@@ -694,5 +722,7 @@ module.exports = {
     preferredCategoryForVisitor,
     ensureCartRestoreToken,
     cartRestorePayload,
+    productCartPayload,
+    similarFromCartIds,
     intentOf
 };

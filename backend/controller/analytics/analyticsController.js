@@ -6,7 +6,8 @@ const {
     suggestionsForVisitor,
     homeRowForVisitor,
     preferredCategoryForVisitor,
-    cartRestorePayload
+    cartRestorePayload,
+    productCartPayload
 } = require('../../services/analyticsService');
 const { processPendingEmails } = require('../../services/analyticsMailer');
 
@@ -138,6 +139,24 @@ const restoreCartController = async (req, res) => {
     }
 };
 
+const buyProductController = async (req, res) => {
+    try {
+        const ip = clientIp(req);
+        if (!allow(ip || 'local')) {
+            return res.status(429).json({ success: false, message: 'Demasiadas consultas' });
+        }
+        const items = await productCartPayload(req.params.productId);
+        if (req.query.formato === 'json') {
+            return res.json({ success: !!items, data: { items: items || [] } });
+        }
+        res.set('Cache-Control', 'no-store');
+        res.set('Content-Type', 'text/html; charset=utf-8');
+        return res.status(items && items.length ? 200 : 404).send(cartRestoreHtml(items && items.length ? items : []));
+    } catch (error) {
+        return res.status(500).json({ success: false, data: { items: [] } });
+    }
+};
+
 const sendPendingEmailsController = async (req, res) => {
     try {
         const sent = await processPendingEmails();
@@ -156,5 +175,6 @@ module.exports = {
     homeRowController,
     preferredCategoryController,
     restoreCartController,
+    buyProductController,
     sendPendingEmailsController
 };

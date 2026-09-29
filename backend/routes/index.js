@@ -2075,6 +2075,7 @@ const {
     homeRowController,
     preferredCategoryController,
     restoreCartController,
+    buyProductController,
     sendPendingEmailsController
 } = require('../controller/analytics/analyticsController');
 
@@ -2085,6 +2086,7 @@ router.get('/analitica/sugerencias', suggestionsController);
 router.get('/analitica/inicio', homeRowController);
 router.get('/analitica/categoria', preferredCategoryController);
 router.get('/analitica/carrito/:token', restoreCartController);
+router.get('/analitica/comprar/:productId', buyProductController);
 router.get('/analitica/panel', adminAuth, adminOverviewController);
 router.post('/analitica/enviar-pendientes', adminAuth, sendPendingEmailsController);
 router.get('/analitica/cron', async (req, res) => {
