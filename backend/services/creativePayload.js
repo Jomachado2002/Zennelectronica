@@ -390,17 +390,38 @@ function firstImages(product, max = 5) {
     .slice(0, max);
 }
 
+function wantsPrice(value) {
+  if (value === undefined || value === null || value === '') return true;
+  const flag = String(value).toLowerCase();
+  return flag !== '0' && flag !== 'false' && flag !== 'off' && flag !== 'no';
+}
+
+function priceAsOfLabel(date = new Date()) {
+  return new Intl.DateTimeFormat('es-PY', {
+    timeZone: 'America/Asuncion',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
+
 function instagramCaption(payload) {
   let title = payload.title || payload.productName || 'Zenn';
   if (title.length > 80) title = `${title.slice(0, 79).trim()}…`;
   const specs = (payload.specs || [])
     .filter((spec) => spec && spec.text)
     .map((spec) => `${spec.label}: ${spec.text}`);
+  const priceLine = payload.showPrice === false
+    ? 'Consultá el precio por WhatsApp'
+    : (payload.onOffer
+      ? `Precio al ${payload.priceAsOf}: ${payload.price} (antes ${payload.listPrice})`
+      : `Precio al ${payload.priceAsOf}: ${payload.price}`);
   return [
     title,
     payload.detail || '',
     ...specs,
-    'Precio de hoy por WhatsApp · Entrega 24 h',
+    priceLine,
+    'Entrega 24 h',
     'WhatsApp 0973 345 284'
   ].filter(Boolean).join('\n');
 }
@@ -455,6 +476,8 @@ function buildCreativePayload(product, options = {}) {
       ? Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100)
       : 0,
     cta: options.cta || 'Pedí el precio de hoy',
+    showPrice: wantsPrice(options.showPrice),
+    priceAsOf: priceAsOfLabel(),
     imageUrl: images[imageIndex] || images[0] || '',
     images,
     imageIndex,
@@ -490,6 +513,8 @@ module.exports = {
   formatGs,
   hasDedicatedGpu,
   instagramCaption,
+  wantsPrice,
+  priceAsOfLabel,
   listSelectFields,
   loadSpecSchemaMap,
   schemaFor,

@@ -108,18 +108,33 @@ async function errorFromAxios(err, fallback) {
   return data?.message || fallback;
 }
 
-function captionFor(product, title, detail) {
+function asOfLabel() {
+  return new Intl.DateTimeFormat('es-PY', {
+    timeZone: 'America/Asuncion',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(new Date());
+}
+
+function captionFor(product, title, detail, showPrice) {
   if (!product) return '';
   const head = title || product.title || '';
   const specs = (product.specs || [])
     .filter((spec) => spec && spec.text)
     .map((spec) => `${spec.label || 'Detalle'}: ${spec.text}`);
   const extra = detail != null ? String(detail).trim() : String(product.detail || '').trim();
+  const priceLine = showPrice
+    ? (product.onOffer
+      ? `Precio al ${asOfLabel()}: ${product.price} (antes ${product.listPrice})`
+      : `Precio al ${asOfLabel()}: ${product.price}`)
+    : 'Consultá el precio por WhatsApp';
   return [
     head,
     extra,
     ...specs,
-    'Precio de hoy por WhatsApp · Entrega 24 h',
+    priceLine,
+    'Entrega 24 h',
     'WhatsApp 0973 345 284'
   ].filter(Boolean).join('\n');
 }
@@ -164,6 +179,7 @@ const CreativeStudioPage = () => {
   const [previewFormat, setPreviewFormat] = useState('feed');
   const [theme, setTheme] = useState('auto');
   const [scene, setScene] = useState('auto');
+  const [showPrice, setShowPrice] = useState(true);
   const [lane, setLane] = useState('all');
   const [offersOnly, setOffersOnly] = useState(false);
   const [treePath, setTreePath] = useState([]);
@@ -306,6 +322,7 @@ const CreativeStudioPage = () => {
             format: previewFormat,
             theme: theme === 'auto' ? undefined : theme,
             scene: scene === 'auto' ? undefined : scene,
+            showPrice: showPrice ? '1' : '0',
             title: titleDraft || product.title,
             detail: detailDraft,
             imageIndex
@@ -326,7 +343,7 @@ const CreativeStudioPage = () => {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex, products]);
+  }, [activeId, previewFormat, theme, scene, showPrice, titleDraft, detailDraft, imageIndex, products]);
 
   useEffect(() => {
     const fit = () => setFrameW(Math.min(460, Math.max(280, window.innerWidth - 48)));
@@ -341,7 +358,7 @@ const CreativeStudioPage = () => {
       setPhotoReady(false);
       return undefined;
     }
-    const key = [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex].join('|');
+    const key = [activeId, previewFormat, theme, scene, showPrice ? '1' : '0', titleDraft, detailDraft, imageIndex].join('|');
     let cancelled = false;
     setPhotoReady(false);
     photoRef.current = { key: '', file: null };
@@ -352,6 +369,7 @@ const CreativeStudioPage = () => {
             format: previewFormat,
             theme: theme === 'auto' ? undefined : theme,
             scene: scene === 'auto' ? undefined : scene,
+            showPrice: showPrice ? '1' : '0',
             title: titleDraft,
             detail: detailDraft,
             imageIndex
@@ -377,7 +395,7 @@ const CreativeStudioPage = () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex]);
+  }, [activeId, previewFormat, theme, scene, showPrice, titleDraft, detailDraft, imageIndex]);
 
   const openProduct = (product) => {
     if (!product) return;
@@ -415,12 +433,16 @@ const CreativeStudioPage = () => {
   };
 
   const toggleSelected = (id) => {
+    if (!selected.includes(id) && selected.length >= 30) {
+      toast.info('Máximo 30 productos por vez');
+      return;
+    }
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const selectVisible = () => {
-    const ids = products.slice(0, 30).map((p) => p.id);
-    setSelected(ids);
+    const cap = studioMode === 'publish' ? 10 : 30;
+    setSelected(products.slice(0, cap).map((p) => p.id));
   };
 
   const persistOverride = (id, patch) => {
@@ -437,7 +459,7 @@ const CreativeStudioPage = () => {
     if (activeId) persistOverride(activeId, { title: titleDraft, imageIndex, detail: value });
   };
 
-  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, detailDraft) : '';
+  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, detailDraft, showPrice) : '';
   const productUrl = activeProduct ? siteUrl(productPath(activeProduct)) : '';
 
   const copyActiveCaption = () => {
@@ -456,14 +478,14 @@ const CreativeStudioPage = () => {
       if (!p) return '';
       const title = overrides[id]?.title || (id === activeId ? titleDraft : p.title);
       const detail = overrides[id]?.detail ?? (id === activeId ? detailDraft : p.detail);
-      return `—— Foto ${i + 1} ——\n${captionFor(p, title, detail)}`;
+      return `—— Foto ${i + 1} ——\n${captionFor(p, title, detail, showPrice)}`;
     }).filter(Boolean).join('\n\n');
     copyText(block, `${ids.length} textos listos para el carrusel`);
   };
 
   const downloadOne = async () => {
     if (!activeId) return;
-    const key = [activeId, previewFormat, theme, scene, titleDraft, detailDraft, imageIndex].join('|');
+    const key = [activeId, previewFormat, theme, scene, showPrice ? '1' : '0', titleDraft, detailDraft, imageIndex].join('|');
     const cached = photoRef.current;
 
     const rememberAndNext = async () => {
@@ -512,6 +534,7 @@ const CreativeStudioPage = () => {
             format: previewFormat,
             theme: theme === 'auto' ? undefined : theme,
             scene: scene === 'auto' ? undefined : scene,
+            showPrice: showPrice ? '1' : '0',
             title: titleDraft,
             detail: detailDraft,
             imageIndex
@@ -567,6 +590,7 @@ const CreativeStudioPage = () => {
           formats,
           theme: theme === 'auto' ? undefined : theme,
           scene: scene === 'auto' ? undefined : scene,
+          showPrice: showPrice ? '1' : '0',
           overrides
         },
         { responseType: 'blob', timeout: 300000 }
@@ -658,7 +682,7 @@ const CreativeStudioPage = () => {
         ) : null}
 
         <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' ? 'hidden' : ''}`}>
-          <div className={`xl:col-span-4 space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
+          <div className={`${studioMode === 'publish' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <FaFilter className="mr-2" style={{ color: '#00B5D8' }} />
@@ -896,6 +920,28 @@ const CreativeStudioPage = () => {
                   </div>
                 ))}
               </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Precio</h2>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {[
+                  { id: true, label: 'Con precio' },
+                  { id: false, label: 'Sin precio' }
+                ].map((opt) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => setShowPrice(opt.id)}
+                    className={`py-2 text-sm font-semibold rounded-lg border ${
+                      showPrice === opt.id ? 'text-white' : 'text-gray-700 bg-white'
+                    }`}
+                    style={showPrice === opt.id ? { background: '#1E1B4B', borderColor: '#1E1B4B' } : {}}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Con precio imprime el valor de cualquier producto y la fecha del día en que se genera la imagen. Sin precio deja el flyer sin monto.
+              </p>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Estilo</h2>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {[
@@ -940,22 +986,26 @@ const CreativeStudioPage = () => {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                Promociones muestra cada producto que tiene precio anterior, con el mayor descuento arriba. En la foto y en el texto van el precio tachado, el de ahora y el porcentaje. Si no hay promoción, el precio no se imprime.
+                Con precio, el flyer lleva el valor de hoy y la leyenda Precio al día en que se genera. Si hay promoción, también van el precio anterior y el porcentaje. Sin precio, el monto no se imprime.
               </p>
             </div>
           </div>
 
-          <div className={`xl:col-span-5 order-2 ${studioMode === 'publish' ? 'hidden' : ''}`}>
+          <div className={`${studioMode === 'publish' ? 'xl:col-span-4' : 'xl:col-span-5'} order-2`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-900">
                   Productos{listTotal ? ` · ${products.length} de ${listTotal}` : ''}
                 </h2>
                 <button type="button" onClick={selectVisible} className="text-sm font-semibold" style={{ color: '#7B2CBF' }}>
-                  Seleccionar hasta 30
+                  {studioMode === 'publish' ? 'Seleccionar hasta 10' : 'Seleccionar hasta 30'}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mb-3">Primero los que todavía no guardaste. Los ya publicados van al final.</p>
+              <p className={`text-xs mb-3 ${studioMode === 'publish' && selected.length > 10 ? 'text-red-600' : 'text-gray-500'}`}>
+                {studioMode === 'publish'
+                  ? `Marcados ${selected.length} de 10. El tilde elige qué sale en el post o en las historias.`
+                  : 'Primero los que todavía no guardaste. Los ya publicados van al final.'}
+              </p>
               {loading && products.length === 0 ? (
                 <div className="py-16 flex items-center justify-center text-gray-500">
                   <FaSpinner className="animate-spin mr-2" /> Cargando catálogo…
@@ -970,27 +1020,29 @@ const CreativeStudioPage = () => {
                     const isActive = p.id === activeId;
                     const isSel = selected.includes(p.id);
                     return (
-                      <button
+                      <div
                         key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveId(p.id);
-                          setTitleDraft(overrides[p.id]?.title || p.title);
-                          setDetailDraft(overrides[p.id]?.detail ?? p.detail ?? '');
-                          setImageIndex(overrides[p.id]?.imageIndex || 0);
-                        }}
-                        className={`w-full text-left flex items-center gap-3 p-3 ${isActive ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                        className={`w-full text-left flex items-center gap-3 p-3 ${isActive ? 'bg-indigo-50' : ''}`}
                       >
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelected(p.id);
-                          }}
-                          className={`w-5 h-5 rounded border flex items-center justify-center ${isSel ? 'text-white' : 'bg-white'}`}
+                        <button
+                          type="button"
+                          onClick={() => toggleSelected(p.id)}
+                          aria-label={isSel ? `Quitar ${p.title}` : `Seleccionar ${p.title}`}
+                          className={`w-7 h-7 rounded border flex items-center justify-center shrink-0 ${isSel ? 'text-white' : 'bg-white'}`}
                           style={isSel ? { background: '#7B2CBF', borderColor: '#7B2CBF' } : { borderColor: '#D1D5DB' }}
                         >
                           {isSel ? <FaCheck className="w-3 h-3" /> : null}
-                        </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveId(p.id);
+                            setTitleDraft(overrides[p.id]?.title || p.title);
+                            setDetailDraft(overrides[p.id]?.detail ?? p.detail ?? '');
+                            setImageIndex(overrides[p.id]?.imageIndex || 0);
+                          }}
+                          className={`flex-1 text-left flex items-center gap-3 min-w-0 ${isActive ? '' : 'hover:opacity-80'}`}
+                        >
                         {p.imageUrl ? (
                           <img src={p.imageUrl} alt="" className="w-14 h-14 object-contain bg-gray-100 rounded" />
                         ) : (
@@ -1022,7 +1074,8 @@ const CreativeStudioPage = () => {
                             <div className="text-[11px] font-semibold text-amber-700">{savedAgo(p.lastDownloadedAt)} · al final para no repetir</div>
                           ) : null}
                         </div>
-                      </button>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1041,9 +1094,16 @@ const CreativeStudioPage = () => {
             </div>
           </div>
 
-          <div className={`${studioMode === 'publish' ? 'xl:col-span-8 order-2' : 'xl:col-span-3'} ${products.length && studioMode !== 'publish' ? 'order-1' : 'order-2'} xl:order-3`}>
+          <div className={`${studioMode === 'publish' ? 'xl:col-span-5 order-3' : 'xl:col-span-3'} ${products.length && studioMode !== 'publish' ? 'order-1' : 'order-2'} xl:order-3`}>
             {studioMode === 'publish' ? (
-              <PublishPanel selected={selected} products={products} />
+              <PublishPanel
+                selected={selected}
+                products={products}
+                overrides={overrides}
+                theme={theme}
+                scene={scene}
+                showPrice={showPrice}
+              />
             ) : null}
             <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-4 ${studioMode === 'publish' ? 'hidden' : ''}`}>
               <div className="flex items-center justify-between gap-2 mb-3">

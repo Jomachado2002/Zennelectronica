@@ -25,17 +25,28 @@ function sleep(ms) {
 
 async function waitUntilReady(containerId, token) {
   const url = `https://graph.instagram.com/${IG_VERSION}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`;
-  for (let attempt = 0; attempt < 15; attempt += 1) {
+  let last = '';
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
+    if (data.error) {
+      throw new Error(data.error.error_user_msg || data.error.message || 'Instagram no pudo preparar la imagen');
+    }
     const code = data.status_code;
+    last = data.status || code || last;
     if (code === 'FINISHED' || code === 'PUBLISHED') return;
     if (code === 'ERROR' || code === 'EXPIRED') {
       throw new Error(data.status || 'Instagram no pudo preparar la imagen');
     }
     await sleep(2000);
   }
-  throw new Error('Instagram tardó demasiado en preparar la historia');
+  throw new Error(last ? `Instagram no dejó lista la imagen: ${last}` : 'Instagram tardó demasiado en preparar la imagen');
+}
+
+function metaErrorMessage(data, status) {
+  const err = data && data.error;
+  if (!err) return `Error ${status} en Meta`;
+  return err.error_user_msg || err.message || `Error ${status} en Meta`;
 }
 
 async function graph(url, body) {
@@ -46,12 +57,42 @@ async function graph(url, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
-    const message = data.error?.message || `Error ${res.status} en Meta`;
-    const err = new Error(message);
+    const err = new Error(metaErrorMessage(data, res.status));
     err.meta = data.error || null;
     throw err;
   }
   return data;
+}
+
+async function graphForm(url, fields) {
+  const params = fields instanceof URLSearchParams ? fields : new URLSearchParams();
+  if (!(fields instanceof URLSearchParams)) {
+    Object.entries(fields || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      params.set(key, String(value));
+    });
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    const err = new Error(metaErrorMessage(data, res.status));
+    err.meta = data.error || null;
+    throw err;
+  }
+  return data;
+}
+
+async function publishInstagramContainer(base, creationId, token) {
+  await waitUntilReady(creationId, token);
+  const published = await graph(`${base}/media_publish`, {
+    creation_id: creationId,
+    access_token: token
+  });
+  return published.id || creationId;
 }
 
 async function jpegFromPng(png) {
@@ -78,11 +119,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
       alt_text: alts[0] || '',
       access_token: token
     });
-    const published = await graph(`${base}/media_publish`, {
-      creation_id: created.id,
-      access_token: token
-    });
-    return published.id || created.id;
+    return publishInstagramContainer(base, created.id, token);
   }
   const children = [];
   for (let i = 0; i < urls.length; i += 1) {
@@ -92,6 +129,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
       alt_text: alts[i] || '',
       access_token: token
     });
+    await waitUntilReady(child.id, token);
     children.push(child.id);
   }
   const parent = await graph(`${base}/media`, {
@@ -100,11 +138,7 @@ async function publishInstagramFeed({ urls, caption, alts }) {
     caption,
     access_token: token
   });
-  const published = await graph(`${base}/media_publish`, {
-    creation_id: parent.id,
-    access_token: token
-  });
-  return published.id || parent.id;
+  return publishInstagramContainer(base, parent.id, token);
 }
 
 async function publishInstagramStories({ urls }) {
@@ -118,12 +152,7 @@ async function publishInstagramStories({ urls }) {
       media_type: 'STORIES',
       access_token: token
     });
-    await waitUntilReady(created.id, token);
-    const published = await graph(`${base}/media_publish`, {
-      creation_id: created.id,
-      access_token: token
-    });
-    ids.push(published.id || created.id);
+    ids.push(await publishInstagramContainer(base, created.id, token));
   }
   return ids.join(',');
 }
@@ -133,28 +162,30 @@ async function publishFacebookFeed({ urls, caption }) {
   if (!token || !pageId) throw new Error('Falta el token o el id de la página de Facebook');
   const base = `https://graph.facebook.com/${IG_VERSION}/${pageId}`;
   if (urls.length === 1) {
-    const photo = await graph(`${base}/photos`, {
+    const photo = await graphForm(`${base}/photos`, {
       url: urls[0],
       caption,
-      published: true,
+      published: 'true',
       access_token: token
     });
     return photo.post_id || photo.id;
   }
   const media = [];
   for (const url of urls) {
-    const photo = await graph(`${base}/photos`, {
+    const photo = await graphForm(`${base}/photos`, {
       url,
-      published: false,
+      published: 'false',
       access_token: token
     });
-    media.push({ media_fbid: photo.id });
+    media.push(photo.id);
   }
-  const post = await graph(`${base}/feed`, {
-    message: caption,
-    attached_media: media,
-    access_token: token
+  const params = new URLSearchParams();
+  params.set('message', caption);
+  params.set('access_token', token);
+  media.forEach((id, index) => {
+    params.set(`attached_media[${index}]`, JSON.stringify({ media_fbid: id }));
   });
+  const post = await graphForm(`${base}/feed`, params);
   return post.id;
 }
 
@@ -164,12 +195,12 @@ async function publishFacebookStories({ urls }) {
   const base = `https://graph.facebook.com/${IG_VERSION}/${pageId}`;
   const ids = [];
   for (const url of urls) {
-    const photo = await graph(`${base}/photos`, {
+    const photo = await graphForm(`${base}/photos`, {
       url,
-      published: false,
+      published: 'false',
       access_token: token
     });
-    const story = await graph(`${base}/photo_stories`, {
+    const story = await graphForm(`${base}/photo_stories`, {
       photo_id: photo.id,
       access_token: token
     });

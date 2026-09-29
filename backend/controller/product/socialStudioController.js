@@ -42,8 +42,13 @@ async function voiceMap() {
   return voices;
 }
 
-async function loadPayloads(ids, overrides) {
-  const unique = [...new Set((ids || []).map(String))].slice(0, MAX_ITEMS);
+async function loadPayloads(ids, overrides, theme, scene, showPrice) {
+  const unique = [...new Set((ids || []).map(String))];
+  if (unique.length > MAX_ITEMS) {
+    const error = new Error('Una publicación acepta hasta 10 fotos');
+    error.statusCode = 400;
+    throw error;
+  }
   if (!unique.length) return [];
   const products = await Product.find({ _id: { $in: unique } }).select(listSelectFields()).lean();
   const byId = new Map(products.map((p) => [String(p._id), p]));
@@ -54,10 +59,12 @@ async function loadPayloads(ids, overrides) {
     .map((product) => {
       const extra = overrides && overrides[String(product._id)];
       return buildCreativePayload(product, {
-        theme: extra?.theme,
+        theme: extra?.theme || theme,
+        scene: extra?.scene || scene,
         title: extra?.title,
         detail: extra?.detail,
         imageIndex: extra?.imageIndex,
+        showPrice,
         specSchema: schemaFor(schemaMap, product)
       });
     });
@@ -65,7 +72,7 @@ async function loadPayloads(ids, overrides) {
 
 const composeSocialCaption = async (req, res) => {
   try {
-    const payloads = await loadPayloads(req.body?.ids, req.body?.overrides);
+    const payloads = await loadPayloads(req.body?.ids, req.body?.overrides, req.body?.theme, req.body?.scene, req.body?.showPrice);
     if (!payloads.length) {
       return res.status(400).json({ success: false, message: 'Elegí al menos un producto' });
     }
@@ -77,7 +84,8 @@ const composeSocialCaption = async (req, res) => {
     });
   } catch (error) {
     console.error('[social] compose', error);
-    return res.status(500).json({ success: false, message: 'No se pudo armar el texto' });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ success: false, message: error.statusCode ? error.message : 'No se pudo armar el texto' });
   }
 };
 
@@ -97,17 +105,42 @@ async function publishNow(doc, payloads) {
   const alts = payloads.map((p) => `${p.title} ${p.brandName} en Zenn Electrónicos, Paraguay`.replace(/\s+/g, ' ').trim());
   let igMediaId = '';
   let fbPostId = '';
-  if (doc.kind === 'story') {
-    igMediaId = await publishInstagramStories({ urls });
-    fbPostId = await publishFacebookStories({ urls });
-  } else {
-    igMediaId = await publishInstagramFeed({ urls, caption: doc.caption, alts });
-    fbPostId = await publishFacebookFeed({ urls, caption: doc.caption });
+  let igError = '';
+  let fbError = '';
+  try {
+    igMediaId = doc.kind === 'story'
+      ? await publishInstagramStories({ urls })
+      : await publishInstagramFeed({ urls, caption: doc.caption, alts });
+  } catch (error) {
+    igError = error.message || 'Instagram no publicó';
+  }
+  try {
+    fbPostId = doc.kind === 'story'
+      ? await publishFacebookStories({ urls })
+      : await publishFacebookFeed({ urls, caption: doc.caption });
+  } catch (error) {
+    fbError = error.message || 'Facebook no publicó';
+  }
+  doc.igMediaId = igMediaId;
+  doc.fbPostId = fbPostId;
+  if (igError || fbError) {
+    const parts = [];
+    if (igMediaId && fbError) parts.push(`Salió en Instagram. Facebook: ${fbError}`);
+    else if (fbPostId && igError) parts.push(`Salió en Facebook. Instagram: ${igError}`);
+    else {
+      if (igError) parts.push(`Instagram: ${igError}`);
+      if (fbError) parts.push(`Facebook: ${fbError}`);
+    }
+    doc.status = 'failed';
+    doc.error = parts.join(' · ');
+    if (igMediaId || fbPostId) doc.publishedAt = new Date();
+    await doc.save();
+    const error = new Error(doc.error);
+    error.statusCode = 502;
+    throw error;
   }
   doc.status = 'published';
   doc.publishedAt = new Date();
-  doc.igMediaId = igMediaId;
-  doc.fbPostId = fbPostId;
   doc.error = '';
   await doc.save();
   return doc;
@@ -116,7 +149,9 @@ async function publishNow(doc, payloads) {
 const publishSocialPost = async (req, res) => {
   try {
     const kind = req.body?.kind === 'story' ? 'story' : 'feed';
-    const payloads = await loadPayloads(req.body?.ids, req.body?.overrides);
+    const theme = req.body?.theme;
+    const scene = req.body?.scene;
+    const payloads = await loadPayloads(req.body?.ids, req.body?.overrides, theme, scene, req.body?.showPrice);
     if (!payloads.length) {
       return res.status(400).json({ success: false, message: 'Elegí al menos un producto' });
     }
@@ -136,6 +171,10 @@ const publishSocialPost = async (req, res) => {
       titles: payloads.map((p) => p.title),
       kind,
       caption,
+      theme: theme || '',
+      scene: scene || '',
+      showPrice: req.body?.showPrice === undefined ? true : !['0', 'false', 'off', 'no'].includes(String(req.body.showPrice).toLowerCase()),
+      overrides: req.body?.overrides || undefined,
       status: later ? 'scheduled' : 'publishing',
       scheduledAt: later ? when : new Date()
     });
@@ -153,7 +192,8 @@ const publishSocialPost = async (req, res) => {
     }
   } catch (error) {
     console.error('[social] publish', error);
-    return res.status(500).json({ success: false, message: error.message || 'No se pudo publicar' });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ success: false, message: error.message || 'No se pudo publicar' });
   }
 };
 
@@ -194,7 +234,7 @@ async function runDueSocialPosts() {
     doc.status = 'publishing';
     await doc.save();
     try {
-      const payloads = await loadPayloads(doc.productIds);
+      const payloads = await loadPayloads(doc.productIds, doc.overrides, doc.theme, doc.scene, doc.showPrice);
       await publishNow(doc, payloads);
     } catch (error) {
       doc.status = 'failed';

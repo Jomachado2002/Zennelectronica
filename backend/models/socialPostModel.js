@@ -8,6 +8,10 @@ const socialPostSchema = new mongoose.Schema(
     titles: { type: [String], default: [] },
     kind: { type: String, enum: ['feed', 'story'], default: 'feed' },
     caption: { type: String, default: '' },
+    theme: { type: String, default: '' },
+    scene: { type: String, default: '' },
+    showPrice: { type: Boolean, default: true },
+    overrides: { type: mongoose.Schema.Types.Mixed, default: undefined },
     status: {
       type: String,
       enum: ['scheduled', 'publishing', 'published', 'failed', 'cancelled'],

@@ -412,6 +412,14 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   }
   .scene-cielo .offer .before { color: #64748B; }
   .scene-cielo .offer .now { color: #0369A1; }
+  .asof {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    color: rgba(255,255,255,.78);
+  }
+  .scene-cielo .asof { color: #475569; }
   .promises {
     display: flex; flex-wrap: wrap; gap: 8px;
   }
@@ -460,6 +468,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .fmt-story .title { margin-top: 8px; font-size: 46px; }
   .fmt-story .offer { justify-content: center; }
   .fmt-story .offer .now { font-size: 42px; }
+  .fmt-story .asof { text-align: center; }
   .fmt-story .promises { justify-content: center; }
   .fmt-story .row { flex-direction: column; align-items: center; margin-top: 14px; }
   .fmt-story .cta { height: 56px; padding: 0 28px; font-size: 20px; min-width: 340px; }
@@ -511,12 +520,12 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       <div class="title">${esc(payload.title)}</div>
       ${payload.detail ? `<div class="detail">${esc(payload.detail)}</div>` : ''}
       <div class="rule"></div>
-      ${payload.onOffer ? `<div class="offer"><span class="off">-${payload.discountPercent}%</span><span class="before">${esc(payload.listPrice)}</span><span class="now">${esc(payload.price)}</span></div>` : ''}
+      ${payload.showPrice === false ? '' : `<div class="offer">${payload.onOffer ? `<span class="off">-${payload.discountPercent}%</span><span class="before">${esc(payload.listPrice)}</span>` : ''}<span class="now">${esc(payload.price)}</span><span class="asof">Precio al ${esc(payload.priceAsOf)}</span></div>`}
       <div class="row">
         <div class="promises">
           <span>Stock disponible</span>
           <span>Entrega 24 h</span>
-          <span>${payload.onOffer ? 'Oferta de hoy' : 'Precio en la web'}</span>
+          <span>${payload.showPrice === false ? 'Consultá el precio' : (payload.onOffer ? 'Oferta de hoy' : 'Precio del día')}</span>
         </div>
         <div class="cta">${esc(payload.cta)}</div>
       </div>

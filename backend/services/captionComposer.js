@@ -95,11 +95,19 @@ function offerOf(product) {
 function lineOf(product) {
   const emoji = FAMILY_EMOJI[product.family] || FAMILY_EMOJI.general;
   const name = norm(product.title || product.productName);
-  const offer = offerOf(product);
-  if (offer) {
-    return `${emoji} ${name}\nAntes ${offer.before} · Ahora ${offer.now} · -${offer.percent}%`;
-  }
   const punch = punchOf(product);
+  if (product.showPrice === false) {
+    return punch ? `${emoji} ${name} · ${punch}` : `${emoji} ${name}`;
+  }
+  const offer = offerOf(product);
+  const asOf = product.priceAsOf ? `Precio al ${product.priceAsOf}` : 'Precio del día';
+  if (offer) {
+    return `${emoji} ${name}\nAntes ${offer.before} · Ahora ${offer.now} · -${offer.percent}% · ${asOf}`;
+  }
+  if (product.price) {
+    const extra = punch ? ` · ${punch}` : '';
+    return `${emoji} ${name}${extra}\n${asOf}: ${product.price}`;
+  }
   return punch ? `${emoji} ${name} · ${punch}` : `${emoji} ${name}`;
 }
 

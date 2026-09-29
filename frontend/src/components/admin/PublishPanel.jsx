@@ -22,7 +22,9 @@ function whenLabel(iso) {
   return d.toLocaleString('es-PY', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-export default function PublishPanel({ selected, products }) {
+const PUBLISH_MAX = 10;
+
+export default function PublishPanel({ selected, products, overrides, theme, scene, showPrice = true }) {
   const [variants, setVariants] = useState([]);
   const [caption, setCaption] = useState('');
   const [kind, setKind] = useState('feed');
@@ -56,7 +58,13 @@ export default function PublishPanel({ selected, products }) {
     const run = async () => {
       setLoadingText(true);
       try {
-        const res = await axiosInstance.post('/api/creativos/texto', { ids: selected });
+        const res = await axiosInstance.post('/api/creativos/texto', {
+          ids: selected.slice(0, PUBLISH_MAX),
+          overrides,
+          theme: theme === 'auto' ? undefined : theme,
+          scene: scene === 'auto' ? undefined : scene,
+          showPrice: showPrice ? '1' : '0'
+        });
         if (cancelled) return;
         const next = res.data.variants || [];
         setVariants(next);
@@ -71,7 +79,7 @@ export default function PublishPanel({ selected, products }) {
     return () => {
       cancelled = true;
     };
-  }, [idsKey]);
+  }, [idsKey, overrides, theme, scene, showPrice]);
 
   const chosen = selected
     .map((id) => products.find((p) => p.id === id))
@@ -90,7 +98,11 @@ export default function PublishPanel({ selected, products }) {
 
   const publish = async (schedule) => {
     if (!selected.length) {
-      toast.info('Elegí productos en la lista');
+      toast.info('Marcá productos con el tilde de la lista');
+      return;
+    }
+    if (selected.length > PUBLISH_MAX) {
+      toast.error('Instagram acepta hasta 10 fotos. Desmarcá algunas.');
       return;
     }
     setPublishing(true);
@@ -99,6 +111,10 @@ export default function PublishPanel({ selected, products }) {
         ids: selected,
         kind,
         caption,
+        overrides,
+        theme: theme === 'auto' ? undefined : theme,
+        scene: scene === 'auto' ? undefined : scene,
+        showPrice: showPrice ? '1' : '0',
         scheduledAt: schedule ? scheduledAt : undefined
       }, { timeout: 300000 });
       const post = res.data.post;
@@ -131,7 +147,10 @@ export default function PublishPanel({ selected, products }) {
         <p className="text-sm text-gray-500 mt-1">
           {chosen.length
             ? chosen.map((p) => p.title).join(' · ')
-            : 'Marcá hasta 10 productos. El texto se arma solo.'}
+            : 'Marcá hasta 10 productos con el tilde. El texto se arma solo.'}
+          {selected.length > PUBLISH_MAX ? (
+            <span className="block text-red-600 mt-1">Hay {selected.length} marcados. Para publicar, dejá 10 o menos.</span>
+          ) : null}
         </p>
       </div>
 
@@ -202,17 +221,17 @@ export default function PublishPanel({ selected, products }) {
       <button
         type="button"
         onClick={() => publish(false)}
-        disabled={publishing || !selected.length || (kind === 'feed' && !caption)}
+        disabled={publishing || !selected.length || selected.length > PUBLISH_MAX || (kind === 'feed' && !caption)}
         className="w-full py-4 rounded-xl font-bold text-white text-lg disabled:opacity-50 flex items-center justify-center gap-2"
         style={{ background: '#7B2CBF' }}
       >
         {publishing ? <FaSpinner className="animate-spin" /> : null}
-        {publishing ? 'Publicando…' : 'Publicar ahora en IG y Facebook'}
+        {publishing ? 'Publicando…' : (kind === 'story' ? 'Publicar historias ahora' : 'Publicar ahora en IG y Facebook')}
       </button>
       <button
         type="button"
         onClick={() => publish(true)}
-        disabled={publishing || !selected.length || !scheduledAt}
+        disabled={publishing || !selected.length || selected.length > PUBLISH_MAX || !scheduledAt}
         className="w-full py-3 rounded-xl font-semibold border flex items-center justify-center gap-2 disabled:opacity-40"
         style={{ color: '#1E1B4B', borderColor: '#C7D2FE' }}
       >

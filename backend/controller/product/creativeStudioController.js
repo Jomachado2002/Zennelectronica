@@ -12,6 +12,8 @@ const {
   loadSpecSchemaMap,
   schemaFor,
   instagramCaption,
+  wantsPrice,
+  priceAsOfLabel,
   FORMATS
 } = require('../../services/creativePayload');
 const { renderCreativeHtml } = require('../../services/creativeHtml');
@@ -348,6 +350,8 @@ function applyOverrides(payload, body = {}) {
     theme: body.theme === 'studio' || body.theme === 'gamer' ? body.theme : payload.theme
   };
   if (body.detail !== undefined) next.detail = String(body.detail).slice(0, 700);
+  if (body.showPrice !== undefined) next.showPrice = wantsPrice(body.showPrice);
+  next.priceAsOf = priceAsOfLabel();
   next.instagramCaption = instagramCaption(next);
   return next;
 }
@@ -498,9 +502,10 @@ const exportCreativeZip = async (req, res) => {
             detail: extra.detail,
             cta: extra.cta,
             imageIndex: extra.imageIndex,
+            showPrice: req.body.showPrice,
             format
           }),
-          extra
+          { ...extra, showPrice: req.body.showPrice }
         );
         const png = await renderPngBuffer(payload, format);
         archive.append(png, {
