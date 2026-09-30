@@ -673,6 +673,141 @@ async function findCategoryOwningSubValue(subValue) {
     return Category.findOne({ 'subcategories.value': sv });
 }
 
+/** Id de listado Visão (`24-02` → `24_02`) a partir de la URL de categoría. */
+function listingIdTokenFromUrl(url) {
+    const m = String(url || '').match(/\/categoria\/[^/]+\/([^/?#]+)/i);
+    if (!m) return '';
+    return String(m[1])
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_|_$/g, '');
+}
+
+/**
+ * Visão renombra hojas sin cambiar el id (`CPU AMD` → `Procesador (CPU) AMD`, id 24-02).
+ * El slug nuevo no coincide con el value ya guardado y la poda apaga la categoría vieja.
+ * Si el id ya existe, se reutiliza esa categoría y esa subcategoría.
+ * Procesadores queda inmediatamente después de Tarjetas Gráficas.
+ */
+const CATEGORY_ORDER_AFTER = {
+    procesadores: 'tarjetas_graficas'
+};
+
+async function buildSubcategoryIndexByListingId() {
+    const cats = await Category.find({})
+        .select('value label isActive subcategories.value subcategories.label subcategories.isActive')
+        .lean();
+    const byToken = new Map();
+    for (const cat of cats) {
+        for (const sub of cat.subcategories || []) {
+            const m = String(sub.value || '').match(/__(\d+(?:_\d+)*)$/);
+            if (!m) continue;
+            if (!byToken.has(m[1])) byToken.set(m[1], []);
+            byToken.get(m[1]).push({ cat, sub });
+        }
+    }
+    return byToken;
+}
+
+function chooseExistingSubcategory(candidates) {
+    if (!candidates || !candidates.length) return null;
+    const score = (item) => {
+        let n = 0;
+        if (item.sub.isActive !== false) n += 4;
+        if (item.cat.isActive !== false) n += 2;
+        return n;
+    };
+    return [...candidates].sort((a, b) => score(b) - score(a))[0];
+}
+
+function applyExistingTaxonomy(target, hit) {
+    if (!target || !hit) return false;
+    const nextCat = hit.cat.value;
+    const nextSub = hit.sub.value;
+    const catKey = target.categoryValue != null ? 'categoryValue' : '_categoryValue';
+    const subKey = target.subcategoryValue != null ? 'subcategoryValue' : '_subcategoryValue';
+    const labelKey = target.categoryLabel != null || catKey === 'categoryValue' ? 'categoryLabel' : '_categoryLabel';
+    const changed = target[catKey] !== nextCat || target[subKey] !== nextSub;
+    target[catKey] = nextCat;
+    target[subKey] = nextSub;
+    if (hit.cat.label) target[labelKey] = hit.cat.label;
+    return changed;
+}
+
+async function reactivateMatchedTaxonomy(hits) {
+    const byId = new Map();
+    for (const hit of hits) {
+        const id = String(hit.cat._id);
+        if (!byId.has(id)) byId.set(id, { id, value: hit.cat.value, subs: new Set() });
+        byId.get(id).subs.add(hit.sub.value);
+    }
+    for (const info of byId.values()) {
+        const doc = await Category.findById(info.id);
+        if (!doc) continue;
+        let changed = false;
+        if (doc.isActive !== true) {
+            doc.isActive = true;
+            changed = true;
+        }
+        for (const sub of doc.subcategories || []) {
+            if (info.subs.has(sub.value) && sub.isActive !== true) {
+                sub.isActive = true;
+                changed = true;
+            }
+        }
+        const afterValue = CATEGORY_ORDER_AFTER[doc.value];
+        if (afterValue) {
+            const after = await Category.findOne({ value: afterValue }).select('order').lean();
+            if (after && Number.isFinite(Number(after.order))) {
+                const targetOrder = Number(after.order) + 0.5;
+                if (doc.order !== targetOrder) {
+                    doc.order = targetOrder;
+                    changed = true;
+                }
+            }
+        }
+        if (changed) await doc.save();
+    }
+}
+
+/**
+ * Reescribe filas de menú y PDP para que apunten a la categoría/sub ya existente
+ * cuando Visão solo cambió el nombre y conservó el id de listado.
+ */
+async function canonicalizeMirrorTaxonomy(bundle) {
+    const byToken = await buildSubcategoryIndexByListingId();
+    const hits = [];
+    let remappedRows = 0;
+    let remappedProducts = 0;
+
+    const take = (url) => {
+        const token = listingIdTokenFromUrl(url);
+        if (!token) return null;
+        return chooseExistingSubcategory(byToken.get(token)) || null;
+    };
+
+    for (const row of bundle.menuRows || []) {
+        const hit = take(row.listingUrl);
+        if (!hit) continue;
+        hits.push(hit);
+        if (applyExistingTaxonomy(row, hit)) remappedRows += 1;
+    }
+    for (const product of bundle.products || []) {
+        const hit = take(product._listingUrl);
+        if (!hit) continue;
+        hits.push(hit);
+        if (applyExistingTaxonomy(product, hit)) remappedProducts += 1;
+    }
+
+    if (hits.length) await reactivateMatchedTaxonomy(hits);
+
+    if (remappedRows || remappedProducts) {
+        console.log(
+            `[ESTRUCTURA] Reutilicé categoría existente por id de listado: filas=${remappedRows} productos=${remappedProducts}`
+        );
+    }
+    return { remappedRows, remappedProducts };
+}
+
 /**
  * Asegura una categoría raíz por value (reutiliza si ya existe; tolera E11000 de name/value).
  */
@@ -1573,6 +1708,15 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
     console.log(
         `[Visão mirror] Scrape terminó: ${bundle.productsReturned} PDP, ${bundle.menuRows?.length || 0} filas menú.`
     );
+
+    try {
+        await canonicalizeMirrorTaxonomy(bundle);
+    } catch (err) {
+        console.warn(
+            '[ESTRUCTURA] No pude reutilizar categorías por id de listado:',
+            err && err.message ? err.message : err
+        );
+    }
 
     let catReport = { categoriesTouched: 0 };
     try {
