@@ -109,11 +109,14 @@ function convertUSDtoPYG(priceUSD, exchangeRate = 7300) {
     return parseFloat(priceUSD) * parseFloat(exchangeRate);
 }
 
-/** Visão Vip: margen vía divisor (0,73 = 27%) + envío fijo en Gs. */
+/** Visão Vip: margen vía divisor (0,87 = 13%) + IVA 10% + envío fijo en Gs. */
 const VISAO_VIP_MARGIN_DIVISOR =
     Number(process.env.VISAO_VIP_MARGIN_DIVISOR) > 0 && Number(process.env.VISAO_VIP_MARGIN_DIVISOR) < 1
         ? Number(process.env.VISAO_VIP_MARGIN_DIVISOR)
-        : 0.73;
+        : 0.87;
+
+/** El precio de Visão viene sin IVA. */
+const VISAO_VIP_IVA_FACTOR = 1.1;
 
 const VISAO_VIP_DELIVERY_PYG =
     Number(process.env.VISAO_VIP_DELIVERY_PYG) >= 0 && Number.isFinite(Number(process.env.VISAO_VIP_DELIVERY_PYG))
@@ -121,10 +124,14 @@ const VISAO_VIP_DELIVERY_PYG =
         : 30000;
 
 /**
- * Precio de venta Visão Vip:
- * - USD: (costoUSD / 0,73) × cotización + envío
- * - Gs.: (montoGs / 0,73) + envío
- * - Si hay precio lista (tachado): `price` usa la misma fórmula; si no, `price` = 0
+ * Precio de venta Visão Vip, en este orden:
+ * 1. IVA 10% sobre el precio de Visão
+ * 2. Margen (13% → divisor 0,87)
+ * 3. Cotización a guaraníes
+ * 4. Envío
+ * USD: ((dólar × 1,10) / divisor) × cotización + envío
+ * Gs.: (monto × 1,10) / divisor + envío
+ * Si hay precio lista (tachado): `price` usa la misma fórmula; si no, `price` = 0
  */
 function calculateVisaoVipPrices(opts = {}) {
     const {
@@ -159,7 +166,7 @@ function calculateVisaoVipPrices(opts = {}) {
             }
             return {
                 fuente: 'PYG',
-                basePyg: pyg,
+                basePyg: Math.round(pyg * VISAO_VIP_IVA_FACTOR),
                 purchasePriceUSD: Math.round((pyg / rate) * 100) / 100
             };
         }
@@ -169,7 +176,7 @@ function calculateVisaoVipPrices(opts = {}) {
         }
         return {
             fuente: 'USD',
-            basePyg: Math.round(usd * rate),
+            basePyg: Math.round(usd * VISAO_VIP_IVA_FACTOR * rate),
             purchasePriceUSD: usd
         };
     }
@@ -221,5 +228,6 @@ module.exports = {
     convertPYGtoUSD,
     convertUSDtoPYG,
     VISAO_VIP_MARGIN_DIVISOR,
-    VISAO_VIP_DELIVERY_PYG
+    VISAO_VIP_DELIVERY_PYG,
+    VISAO_VIP_IVA_FACTOR
 };

@@ -52,7 +52,7 @@ async function getSettings() {
       runHour: 3,
       runMinute: 0,
       intervalHours: 24,
-      profitMargin: 27,
+      profitMargin: 13,
       deliveryCost: 30000,
       cleanupMissingStock: true,
     });
@@ -255,7 +255,7 @@ function getPricingFromDoc(doc) {
   const deliveryCost = Number.isFinite(deliveryRaw) && deliveryRaw >= 0 ? deliveryRaw : 30000;
   const marginRaw = Number(doc?.profitMargin);
   const profitMargin =
-    Number.isFinite(marginRaw) && marginRaw > 0 && marginRaw < 100 ? marginRaw : 27;
+    Number.isFinite(marginRaw) && marginRaw > 0 && marginRaw < 100 ? marginRaw : 13;
   return {
     deliveryCost,
     profitMargin,

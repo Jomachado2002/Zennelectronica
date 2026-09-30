@@ -96,7 +96,7 @@ async function main() {
         )
     );
     console.log(
-        `[run-sync] Precios worker: envío=${deliveryCost} Gs, margen=${profitMargin}% (Visão ÷ ${((1 - profitMargin / 100) || 0).toFixed(2)}) × dólar + envío`
+        `[run-sync] Precios worker: ((dólar Visão × 1,10) ÷ ${((1 - profitMargin / 100) || 0).toFixed(2)}) × cotización + envío=${deliveryCost} Gs, margen=${profitMargin}%`
     );
 
     const useLegacy = has('--legacy');
