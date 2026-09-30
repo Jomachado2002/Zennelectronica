@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fa';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { localCartHelper } from '../helpers/addToCart';
+import GoogleCustomerReviewsOptIn from '../components/GoogleCustomerReviewsOptIn';
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
@@ -449,6 +450,20 @@ const PaymentSuccess = () => {
                         </div>
                     )}
                 </div>
+
+                {isPaymentSuccessful && !isLoading && (
+                    <GoogleCustomerReviewsOptIn
+                        orderId={
+                            shop_process_id ||
+                            paymentData?.shop_process_id ||
+                            transactionDetails?.transaction?.shop_process_id
+                        }
+                        email={
+                            transactionDetails?.transaction?.customer_info?.email ||
+                            paymentData?.customer?.email
+                        }
+                    />
+                )}
 
                 {/* Footer de soporte */}
                 <div className="mt-8 text-center">
