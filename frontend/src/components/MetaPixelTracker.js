@@ -4,31 +4,33 @@ import SummaryApi from '../common';
 
 const MetaPixelTracker = () => {
   useEffect(() => {
-    // Función para cargar Meta Pixel
-    const loadMetaPixel = () => {
-      // Meta Pixel Code - Versión actualizada con nuevo Pixel ID
-      const initPixel = function(f,b,e,v,n,t,s) {
-        if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s);
+    // La cola de eventos queda lista al toque. El archivo de Facebook (pesado)
+    // entra después de que la página ya pintó, para no pelear con la foto grande.
+    const arm = () => {
+      if (window.fbq) return;
+      const n = function () {
+        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
       };
-     
-      // Ejecutar la función
-      initPixel(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-     
-      // Inicializar pixel con el nuevo Pixel ID
-      if (typeof window.fbq !== 'undefined') {
-        window.fbq('init', '1535652171192853');
-        window.fbq('track', 'PageView');
-      }
+      if (!window._fbq) window._fbq = n;
+      window.fbq = n;
+      n.push = n;
+      n.loaded = true;
+      n.version = '2.0';
+      n.queue = [];
+      window.fbq('init', '1535652171192853');
+      window.fbq('track', 'PageView');
     };
-     
-    // Cargar el pixel
-    loadMetaPixel();
+    arm();
+
+    const inject = () => {
+      if (document.querySelector('script[src*="fbevents.js"]')) return;
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+      document.head.appendChild(script);
+    };
+    if (document.readyState === 'complete') inject();
+    else window.addEventListener('load', inject, { once: true });
   }, []);
 
   return null;

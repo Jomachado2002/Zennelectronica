@@ -65,12 +65,21 @@
               }
             } catch (e) {}
 
-            fetch('https://cdn.zenn.com.py/cache/home.json', { mode: 'cors', credentials: 'omit' })
+            // Archivo chico (solo la foto del banner). Si todavía no existe, se usa el home completo.
+            fetch('https://cdn.zenn.com.py/cache/lcp.json', { mode: 'cors', credentials: 'omit' })
               .then(function (r) { return r.ok ? r.json() : null; })
               .then(function (json) {
-                if (!json) return;
-                var data = json.data && json.data.homeBanners ? json.data : json;
-                preloadImage(bannerFromList(data && data.homeBanners));
+                if (json && (json.imageMobile || json.imageDesktop)) {
+                  preloadImage(mobile ? (json.imageMobile || json.imageDesktop) : (json.imageDesktop || json.imageMobile));
+                  return;
+                }
+                return fetch('https://cdn.zenn.com.py/cache/home.json', { mode: 'cors', credentials: 'omit' })
+                  .then(function (r) { return r.ok ? r.json() : null; })
+                  .then(function (full) {
+                    if (!full) return;
+                    var data = full.data && full.data.homeBanners ? full.data : full;
+                    preloadImage(bannerFromList(data && data.homeBanners));
+                  });
               })
               .catch(function () {});
             return;

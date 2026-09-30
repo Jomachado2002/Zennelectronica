@@ -25,6 +25,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 640
   );
+  const [activeLoaded, setActiveLoaded] = useState(false);
   const lastSwipeAtRef = useRef(0);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
 
   useEffect(() => {
     setActiveSlide(0);
+    setActiveLoaded(false);
   }, [isMobile, banners.length]);
 
   const nextSlide = useCallback(() => {
@@ -147,7 +149,7 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
           {banners.map((banner, index) => {
             const isActive = index === activeSlide;
             const isNext = banners.length > 1 && index === (activeSlide + 1) % banners.length;
-            if (!isActive && !isNext) return null;
+            if (!isActive && !(isNext && activeLoaded)) return null;
             return (
             <div
               key={banner.id}
@@ -164,7 +166,9 @@ const BannerProduct = ({ banners: bannersProp = null, pending = false }) => {
                 height={isMobile ? 1329 : 438}
                 loading={isActive ? 'eager' : 'lazy'}
                 fetchPriority={isActive ? 'high' : 'low'}
-                decoding={isActive ? 'async' : 'async'}
+                decoding="async"
+                onLoad={isActive ? () => setActiveLoaded(true) : undefined}
+                onError={isActive ? () => setActiveLoaded(true) : undefined}
               />
             </div>
             );
