@@ -2,6 +2,7 @@ const {
     recordEvents,
     captureEmail,
     emailAlreadyCaptured,
+    releaseCapturedEmail,
     adminOverview,
     suggestionsForVisitor,
     homeRowForVisitor,
@@ -53,13 +54,28 @@ const emailStatusController = async (req, res) => {
 
 const captureEmailController = async (req, res) => {
     try {
-        const result = await captureEmail(req.body || {});
+        const result = await captureEmail({
+            ...(req.body || {}),
+            userAgent: req.headers['user-agent'] || ''
+        });
         if (!result.success) {
             return res.status(400).json({ success: false, message: result.error });
         }
         return res.json({ success: true });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'No se pudo guardar el correo' });
+    }
+};
+
+const releaseEmailController = async (req, res) => {
+    try {
+        const result = await releaseCapturedEmail(req.params.visitorId);
+        if (!result.success) {
+            return res.status(404).json({ success: false, message: result.error });
+        }
+        return res.json({ success: true });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'No se pudo borrar el correo' });
     }
 };
 
@@ -170,6 +186,7 @@ module.exports = {
     ingestEventsController,
     captureEmailController,
     emailStatusController,
+    releaseEmailController,
     adminOverviewController,
     suggestionsController,
     homeRowController,

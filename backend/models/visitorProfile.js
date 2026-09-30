@@ -25,6 +25,7 @@ const visitorProfileSchema = new mongoose.Schema({
     email: { type: String, maxlength: 180, default: '', lowercase: true, trim: true },
     emailSource: { type: String, maxlength: 40, default: '' },
     emailCapturedAt: { type: Date },
+    deviceLabel: { type: String, maxlength: 80, default: '' },
     firstSeenAt: { type: Date, default: Date.now },
     lastSeenAt: { type: Date, default: Date.now },
     lastIp: { type: String, maxlength: 64, default: '' },

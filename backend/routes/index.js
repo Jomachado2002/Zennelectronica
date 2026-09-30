@@ -2070,6 +2070,7 @@ const {
     ingestEventsController,
     captureEmailController,
     emailStatusController,
+    releaseEmailController,
     adminOverviewController,
     suggestionsController,
     homeRowController,
@@ -2082,6 +2083,7 @@ const {
 router.post('/analitica/eventos', ingestEventsController);
 router.post('/analitica/correo', captureEmailController);
 router.get('/analitica/correo', emailStatusController);
+router.delete('/analitica/correo/:visitorId', adminAuth, releaseEmailController);
 router.get('/analitica/sugerencias', suggestionsController);
 router.get('/analitica/inicio', homeRowController);
 router.get('/analitica/categoria', preferredCategoryController);

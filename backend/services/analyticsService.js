@@ -208,7 +208,27 @@ async function recordEvents(visitorId, rawEvents, ip = '') {
     return { accepted: events.length };
 }
 
-async function captureEmail({ visitorId, email, source }) {
+function deviceLabelFromUserAgent(userAgent) {
+    const text = cleanText(userAgent, 400);
+    if (!text) return '';
+    let device = 'Computadora';
+    if (/iPad/i.test(text)) device = 'iPad';
+    else if (/iPhone/i.test(text)) device = 'iPhone';
+    else if (/Android/i.test(text) && /Mobile/i.test(text)) device = 'Celular Android';
+    else if (/Android/i.test(text)) device = 'Tablet Android';
+    else if (/Macintosh|Mac OS/i.test(text)) device = 'Mac';
+    else if (/Windows/i.test(text)) device = 'Windows';
+    else if (/Linux/i.test(text)) device = 'Linux';
+    let browser = '';
+    if (/Edg\//i.test(text)) browser = 'Edge';
+    else if (/OPR\/|Opera/i.test(text)) browser = 'Opera';
+    else if (/Chrome\//i.test(text)) browser = 'Chrome';
+    else if (/Firefox\//i.test(text)) browser = 'Firefox';
+    else if (/Safari/i.test(text)) browser = 'Safari';
+    return cleanText(browser ? `${device} · ${browser}` : device, 80);
+}
+
+async function captureEmail({ visitorId, email, source, userAgent }) {
     const id = cleanText(visitorId, 80);
     const normalized = cleanText(email, 180).toLowerCase();
     if (!id || !EMAIL_RE.test(normalized)) {
@@ -222,6 +242,7 @@ async function captureEmail({ visitorId, email, source }) {
                 email: normalized,
                 emailSource: cleanText(source, 40) || 'modal',
                 emailCapturedAt: now,
+                deviceLabel: deviceLabelFromUserAgent(userAgent),
                 lastSeenAt: now
             },
             $setOnInsert: { visitorId: id, firstSeenAt: now }
@@ -246,6 +267,22 @@ async function emailAlreadyCaptured(visitorId) {
     return Boolean(profile);
 }
 
+async function releaseCapturedEmail(visitorId) {
+    const id = cleanText(visitorId, 80);
+    if (!id) return { success: false, error: 'Visitante no válido' };
+    const profile = await VisitorProfile.findOne({
+        visitorId: id,
+        email: { $nin: ['', null] }
+    });
+    if (!profile) return { success: false, error: 'Ese correo ya no está en la lista' };
+    profile.email = '';
+    profile.emailSource = '';
+    profile.emailCapturedAt = undefined;
+    profile.deviceLabel = '';
+    await profile.save();
+    return { success: true };
+}
+
 function intentOf(profile) {
     const cartCount = profile.cartItems?.length || 0;
     const longest = (profile.recentProducts || []).reduce((max, item) => Math.max(max, item.durationMs || 0), 0);
@@ -258,7 +295,7 @@ function intentOf(profile) {
 async function adminOverview() {
     const day = asuncionDay();
     const start = startOfAsuncionDay(day);
-    const [visitorCount, intentCount, visitors, topProducts, topSearches, emailsToday, viewsToday, cartsToday, openCarts] = await Promise.all([
+    const [visitorCount, intentCount, visitors, topProducts, topSearches, emailsToday, viewsToday, cartsToday, openCarts, capturedEmails] = await Promise.all([
         VisitorProfile.countDocuments({ lastSeenAt: { $gte: start } }),
         VisitorProfile.countDocuments({
             lastSeenAt: { $gte: start },
@@ -279,7 +316,12 @@ async function adminOverview() {
         VisitorProfile.find({
             email: { $nin: ['', null] },
             'cartItems.0': { $exists: true }
-        }).sort({ cartUpdatedAt: -1 }).limit(80).select('email emailSource cartItems cartUpdatedAt cartEmailCount lastCartEmailAt').lean()
+        }).sort({ cartUpdatedAt: -1 }).limit(80).select('email emailSource cartItems cartUpdatedAt cartEmailCount lastCartEmailAt').lean(),
+        VisitorProfile.find({ email: { $nin: ['', null] } })
+            .sort({ emailCapturedAt: -1, lastSeenAt: -1 })
+            .limit(200)
+            .select('visitorId email emailSource emailCapturedAt deviceLabel lastSeenAt')
+            .lean()
     ]);
 
     const totals = viewsToday[0] || { views: 0, carts: 0 };
@@ -313,6 +355,13 @@ async function adminOverview() {
         })),
         topProducts,
         topSearches,
+        capturedEmails: capturedEmails.map((profile) => ({
+            visitorId: profile.visitorId,
+            email: profile.email,
+            source: profile.emailSource || '',
+            capturedAt: profile.emailCapturedAt || profile.lastSeenAt,
+            device: profile.deviceLabel || ''
+        })),
         carts: openCarts.map((profile) => ({
             email: profile.email,
             source: profile.emailSource || '',
@@ -716,6 +765,7 @@ module.exports = {
     recordEvents,
     captureEmail,
     emailAlreadyCaptured,
+    releaseCapturedEmail,
     adminOverview,
     suggestionsForVisitor,
     homeRowForVisitor,

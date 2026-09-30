@@ -78,30 +78,43 @@ export function rememberVisitorEmail(email) {
     writeCookie(COOKIE_MAIL, '1');
 }
 
+export function forgetVisitorEmail() {
+    try {
+        localStorage.removeItem(EMAIL_KEY);
+    } catch (error) {
+        // Sin almacenamiento local alcanza con borrar la cookie.
+    }
+    try {
+        document.cookie = `${COOKIE_MAIL}=; Max-Age=0; Path=/; SameSite=Lax`;
+    } catch (error) {
+        // La próxima consulta al servidor vuelve a decidir.
+    }
+}
+
 export function hasVisitorEmail() {
     return Boolean(getStoredVisitorEmail() || readCookie(COOKIE_MAIL) === '1');
 }
 
 export async function syncEmailCapture() {
-    if (hasVisitorEmail()) return true;
     const id = visitorId();
-    if (!id) return false;
+    if (!id) return hasVisitorEmail();
     try {
         const response = await fetch(`${SummaryApi.baseURL}/api/analitica/correo?visitorId=${encodeURIComponent(id)}`);
         const data = await response.json();
         if (data?.captured) {
             writeCookie(COOKIE_MAIL, '1');
             try {
-                localStorage.setItem(EMAIL_KEY, localStorage.getItem(EMAIL_KEY) || 'guardado');
+                if (!localStorage.getItem(EMAIL_KEY)) localStorage.setItem(EMAIL_KEY, 'guardado');
             } catch (error) {
                 // La cookie alcanza para no volver a preguntar.
             }
             return true;
         }
-    } catch (error) {
+        forgetVisitorEmail();
         return false;
+    } catch (error) {
+        return hasVisitorEmail();
     }
-    return false;
 }
 
 export function trackEvent(event) {

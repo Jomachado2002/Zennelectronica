@@ -14,6 +14,13 @@ function formatWhen(value) {
     });
 }
 
+function sourceLabel(source) {
+    if (source === 'producto') return 'Ficha del producto';
+    if (source === 'cuenta') return 'Sesión';
+    if (source === 'modal') return 'Aviso';
+    return source || 'Aviso';
+}
+
 function seconds(ms) {
     const value = Math.round((ms || 0) / 1000);
     if (value < 60) return `${value} s`;
@@ -25,6 +32,7 @@ export default function VisitantesPage() {
     const [error, setError] = useState('');
     const [sending, setSending] = useState(false);
     const [sendResult, setSendResult] = useState('');
+    const [removingId, setRemovingId] = useState('');
 
     const load = useCallback(async () => {
         setError('');
@@ -52,6 +60,28 @@ export default function VisitantesPage() {
             setSendResult(err.message);
         } finally {
             setSending(false);
+        }
+    };
+
+    const removeEmail = async (row) => {
+        const confirmed = window.confirm(
+            `Borrar ${row.email}?\n\nEsa visita va a volver a ver el aviso hasta que deje un correo de verdad. Los demás correos no se tocan.`
+        );
+        if (!confirmed) return;
+        setRemovingId(row.visitorId);
+        setError('');
+        try {
+            const response = await authFetch(
+                `${SummaryApi.baseURL}/api/analitica/correo/${encodeURIComponent(row.visitorId)}`,
+                { method: 'DELETE' }
+            );
+            const body = await response.json();
+            if (!response.ok || !body.success) throw new Error(body.message || 'No se pudo borrar');
+            await load();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setRemovingId('');
         }
     };
 
@@ -91,6 +121,51 @@ export default function VisitantesPage() {
                     </div>
                 ))}
             </div>
+
+            <section className="bg-white border border-gray-200 mb-6">
+                <div className="px-4 py-3 border-b">
+                    <h2 className="text-sm font-medium">Correos dejados</h2>
+                    <p className="text-xs text-gray-500 mt-1">
+                        Quien deja un correo de verdad no vuelve a ver el aviso. Si el correo es falso, borralo y a esa visita le aparece de nuevo.
+                    </p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead className="text-left text-gray-500">
+                            <tr>
+                                <th className="px-4 py-2 font-medium">Correo</th>
+                                <th className="px-4 py-2 font-medium">Dispositivo</th>
+                                <th className="px-4 py-2 font-medium">Dónde lo dejó</th>
+                                <th className="px-4 py-2 font-medium">Cuándo</th>
+                                <th className="px-4 py-2 font-medium"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(data?.capturedEmails || []).map((row) => (
+                                <tr key={row.visitorId} className="border-t align-top">
+                                    <td className="px-4 py-3">{row.email}</td>
+                                    <td className="px-4 py-3 text-gray-700">{row.device || 'No registrado'}</td>
+                                    <td className="px-4 py-3">{sourceLabel(row.source)}</td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatWhen(row.capturedAt)}</td>
+                                    <td className="px-4 py-3 text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeEmail(row)}
+                                            disabled={removingId === row.visitorId}
+                                            className="text-red-600 text-sm disabled:opacity-50"
+                                        >
+                                            {removingId === row.visitorId ? 'Borrando…' : 'Borrar'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {data && !data.capturedEmails?.length && (
+                                <tr><td className="px-4 py-6 text-gray-500" colSpan={5}>Todavía nadie dejó su correo.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
             <section className="bg-white border border-gray-200 mb-6">
                 <h2 className="px-4 py-3 border-b text-sm font-medium">Carritos con correo</h2>

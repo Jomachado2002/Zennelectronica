@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { X } from 'lucide-react';
-import { captureVisitorEmail, hasVisitorEmail, syncEmailCapture } from '../helpers/behaviorTracker';
+import { captureVisitorEmail, syncEmailCapture } from '../helpers/behaviorTracker';
 
 const SETUP_IMAGE = `${process.env.PUBLIC_URL || ''}/fondosetup.avif`;
 const PERKS = ['Promociones', 'Premios', 'Descuentos'];
@@ -13,23 +13,27 @@ function asksOnThisPage(pathname) {
 }
 
 function useEmailAlreadyCaptured(userEmail) {
-    const [checked, setChecked] = useState(() => Boolean(userEmail) || hasVisitorEmail());
+    const [ready, setReady] = useState(false);
+    const [captured, setCaptured] = useState(() => Boolean(userEmail));
 
     useEffect(() => {
-        if (userEmail || hasVisitorEmail()) {
-            setChecked(true);
+        if (userEmail) {
+            setCaptured(true);
+            setReady(true);
             return undefined;
         }
         let ignore = false;
-        syncEmailCapture().finally(() => {
-            if (!ignore) setChecked(true);
+        syncEmailCapture().then((isCaptured) => {
+            if (ignore) return;
+            setCaptured(Boolean(isCaptured));
+            setReady(true);
         });
         return () => {
             ignore = true;
         };
     }, [userEmail]);
 
-    return checked;
+    return { ready, captured: Boolean(userEmail) || captured };
 }
 
 function EmailOfferFields({ email, setEmail, status, onDismiss, compact }) {
@@ -65,7 +69,7 @@ function EmailOfferFields({ email, setEmail, status, onDismiss, compact }) {
 
 export function ProductEmailOffer() {
     const userEmail = useSelector((state) => state?.user?.user?.email || '');
-    const checked = useEmailAlreadyCaptured(userEmail);
+    const { ready, captured } = useEmailAlreadyCaptured(userEmail);
     const [hidden, setHidden] = useState(false);
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('');
@@ -81,7 +85,7 @@ export function ProductEmailOffer() {
         }
     };
 
-    if (!checked || hidden || userEmail || hasVisitorEmail()) return null;
+    if (!ready || captured || hidden) return null;
 
     return (
         <form onSubmit={submit} className="mt-4 bg-gray-50 p-4 rounded-lg">
@@ -93,7 +97,7 @@ export function ProductEmailOffer() {
 export default function EmailCaptureModal() {
     const { pathname } = useLocation();
     const userEmail = useSelector((state) => state?.user?.user?.email || '');
-    const checked = useEmailAlreadyCaptured(userEmail);
+    const { ready, captured } = useEmailAlreadyCaptured(userEmail);
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState('');
@@ -101,14 +105,14 @@ export default function EmailCaptureModal() {
     const [keyboardInset, setKeyboardInset] = useState(0);
 
     useEffect(() => {
-        if (!checked) return undefined;
-        if (userEmail || hasVisitorEmail() || !asksOnThisPage(pathname)) {
+        if (!ready) return undefined;
+        if (captured || !asksOnThisPage(pathname)) {
             setOpen(false);
             return undefined;
         }
         const timer = setTimeout(() => setOpen(true), 1200);
         return () => clearTimeout(timer);
-    }, [pathname, userEmail, checked]);
+    }, [pathname, captured, ready]);
 
     useEffect(() => {
         if (!open) return undefined;
@@ -155,7 +159,7 @@ export default function EmailCaptureModal() {
         }
     };
 
-    if (!open || userEmail || hasVisitorEmail()) return null;
+    if (!open || captured) return null;
 
     const keyboardOpen = keyboardInset > 0;
 
