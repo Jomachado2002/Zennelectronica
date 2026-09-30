@@ -1,0 +1,12 @@
+Motivo,Fuente,Validación,Páginas
+Duplicada: el usuario no ha indicado ninguna versión canónica,Sitio web,No iniciada,1317
+Página alternativa con etiqueta canónica adecuada,Sitio web,No iniciada,147
+Página con redirección,Sitio web,No iniciada,129
+No se ha encontrado (404),Sitio web,No iniciada,63
+Bloqueada por robots.txt,Sitio web,No iniciada,4
+Se ha bloqueado debido a otro problema de tipo 4xx,Sitio web,No iniciada,1
+Soft 404,Sitio web,No iniciada,1
+Error de servidor (5xx),Sitio web,No iniciada,1
+Rastreada: actualmente sin indexar,Sistemas de Google,No iniciada,421
+Descubierta: actualmente sin indexar,Sistemas de Google,No iniciada,247
+Duplicada: Google ha elegido una versión canónica diferente a la del usuario,Sistemas de Google,No iniciada,53
