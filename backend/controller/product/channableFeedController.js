@@ -9,8 +9,10 @@ const XML_CONFIG = {
     STORE_URL: 'https://www.zenn.com.py',
     STORE_DESCRIPTION: 'Tienda de informática y electrónica en Paraguay. Notebooks, PCs, componentes, periféricos y más.',
     CURRENCY: 'PYG',
-    SHIPPING_COST: 30000,
-    SHIPPING_SERVICE: 'Envío estándar',
+    // El precio publicado ya incluye los 30.000 Gs de envío. Si acá va 30000,
+    // Google lo suma otra vez y la ficha sale más cara que la tienda.
+    SHIPPING_COST: 0,
+    SHIPPING_SERVICE: 'Envío incluido',
     COUNTRY: 'PY',
     LANGUAGE: 'es',
     MIN_PRICE: 1000,
