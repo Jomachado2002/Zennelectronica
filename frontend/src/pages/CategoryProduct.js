@@ -1,5 +1,5 @@
 // src/pages/CategoryProduct.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { IoGridOutline, IoMenuOutline } from 'react-icons/io5';
 import { BiX, BiFilter } from 'react-icons/bi';
@@ -416,6 +416,7 @@ const CategoryProductContent = () => {
     setGridView,
     clearAllFilters,
     filterCount,
+    mobileFilterOpen,
     setMobileFilterOpen,
     setDesktopFilterOpen,
     filterCategoryList,
@@ -434,7 +435,10 @@ const CategoryProductContent = () => {
     loading: categoriesLoading 
   } = usePreloadedCategories();
   
-  const categories = getCategories();
+  const categories = useMemo(() => getCategories(), [getCategories]);
+  const listRef = useRef(data);
+  if (!mobileFilterOpen) listRef.current = data;
+  const listData = mobileFilterOpen ? listRef.current : data;
 
   const department = findShopperDepartment(filterCategoryList[0], filterSubcategoryList[0]);
   const mobileTitle = !filterSubcategoryList[0] && department ? department.label : null;
@@ -632,20 +636,18 @@ const CategoryProductContent = () => {
               getSpecifications={getSpecifications}
             />
             
-            {loading ? (
+            {loading && listData.length === 0 ? (
               <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-sm">
                 <div className="text-center">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#002060] mb-3"></div>
                   <p className="text-gray-600">Cargando productos...</p>
                 </div>
               </div>
-            ) : data.length > 0 ? (
-              <div className="transition-opacity duration-300" style={{ opacity: loading ? 0.5 : 1 }}>
-                <VerticalCardGrid 
-                  data={data} 
-                  loading={loading} 
-                />
-              </div>
+            ) : listData.length > 0 ? (
+              <VerticalCardGrid 
+                data={listData} 
+                loading={false} 
+              />
             ) : (
               <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-100">
                 <div className="mb-4 text-gray-400">

@@ -4,8 +4,29 @@ import axiosInstance from '../config/axiosInstance';
 import { queryClient } from '../queryClient';
 import { prefetchCategoryShowcasePreviews } from '../api/prefetchCategoryShowcasePreviews';
 
+const STRUCTURE_CACHE_KEY = 'zenn_category_structure_v1';
+
+function readStoredStructure() {
+  try {
+    const raw = sessionStorage.getItem(STRUCTURE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeStoredStructure(data) {
+  try {
+    sessionStorage.setItem(STRUCTURE_CACHE_KEY, JSON.stringify(data));
+  } catch (error) {
+    // Si el árbol no entra en sessionStorage, queda la caché en memoria.
+  }
+}
+
 // Cache global para evitar recargas innecesarias
-let globalCache = null;
+let globalCache = readStoredStructure();
 let loadingPromise = null;
 
 const usePreloadedCategories = (options = {}) => {
@@ -56,6 +77,7 @@ const usePreloadedCategories = (options = {}) => {
         
         // Guardar en caché global
         globalCache = structuredData;
+        writeStoredStructure(structuredData);
         setData(structuredData);
         setError(null);
         prefetchCategoryShowcasePreviews(queryClient, structuredData, 1);
@@ -103,6 +125,11 @@ const usePreloadedCategories = (options = {}) => {
   const clearCache = useCallback(() => {
     globalCache = null;
     loadingPromise = null;
+    try {
+      sessionStorage.removeItem(STRUCTURE_CACHE_KEY);
+    } catch (error) {
+      // La caché en memoria ya quedó vacía.
+    }
     setData([]);
   }, []);
 

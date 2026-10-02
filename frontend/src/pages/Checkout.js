@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
+import { toastCart } from '../helpers/toastLimit';
 import { 
     FaArrowLeft, 
     FaCreditCard, 
@@ -642,7 +643,7 @@ const hasValidLocation = () => {
                 // ✅ USAR localCartHelper.updateCart (que ya existe)
                 if (localCartHelper.updateCart(newItems)) {
                     setCartItems(newItems);
-                    toast.success('Cantidad actualizada');
+                    toastCart('success', 'Cantidad actualizada');
                     
                     // Actualizar también el localStorage individualmente para consistencia
                     localCartHelper.updateQuantity(itemId, newQuantity);

@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, startTransition } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import SummaryApi from '../common';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 
@@ -25,7 +25,7 @@ export const FilterProvider = ({
   };
   
   // Hook para categorías precargadas
-  const { getCategories, getSubcategories } = usePreloadedCategories();
+  const { getCategories, getSubcategories, getSpecifications } = usePreloadedCategories();
   
   // Estados principales
   const [filterCategoryList, setFilterCategoryList] = useState(urlSearch.get("category") ? [urlSearch.get("category")] : []);
@@ -194,9 +194,23 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
         filterSubcategoryList[0]
       ]);
       if (cachedData && cachedData.length > 0) {
+        const specDefs = getSpecifications(filterCategoryList[0], filterSubcategoryList[0]) || [];
+        const specifications = {};
+        specDefs.forEach((spec) => {
+          if (!spec?.name) return;
+          const values = [...new Set(
+            cachedData
+              .map((product) => product?.[spec.name])
+              .filter((value) => value != null && String(value).trim() !== '')
+              .map((value) => String(value))
+          )].sort((a, b) => a.localeCompare(b, 'es'));
+          if (values.length) specifications[spec.name] = values;
+        });
+        const brands = [...new Set(cachedData.map((product) => product?.brandName).filter(Boolean))]
+          .sort((a, b) => String(a).localeCompare(String(b), 'es'));
         return {
           data: cachedData,
-          filters: { brands: [], specifications: {} }
+          filters: { brands, specifications }
         };
       }
     }
@@ -235,8 +249,9 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
     
     throw new Error('Error al cargar productos');
   },
-  staleTime: 3 * 60 * 1000,
-  cacheTime: 10 * 60 * 1000,
+  staleTime: 10 * 60 * 1000,
+  gcTime: 30 * 60 * 1000,
+  placeholderData: keepPreviousData,
   retry: 1,
   refetchOnWindowFocus: false,
 });
@@ -244,27 +259,17 @@ const { data: queryData, isLoading: queryLoading } = useQuery({
 // ✅ SINCRONIZAR CON ESTADOS LOCALES
 useEffect(() => {
   if (queryData) {
-    // ✅ FILTRAR PRODUCTOS CON STOCK > 0 ANTES DE ESTABLECER LOS DATOS
     const productsWithStock = (queryData.data || []).filter(product => 
       product?.stock === undefined || product?.stock === null || product?.stock > 0
     );
-    
-    setRawData(productsWithStock);
-    setAvailableFilters(queryData.filters || { brands: [], specifications: {} });
-    
-    // Preestablecer los acordeones de especificaciones
-    if (queryData.filters?.specifications) {
-      const specKeys = Object.keys(queryData.filters.specifications);
-      const newAccordions = { ...activeAccordions };
-      
-      specKeys.slice(0, 3).forEach(key => {
-        newAccordions[`spec-${key}`] = true;
-      });
-      
-      setActiveAccordions(newAccordions);
-    }
+    const nextFilters = queryData.filters || { brands: [], specifications: {} };
+
+    startTransition(() => {
+      setRawData(productsWithStock);
+      setAvailableFilters(nextFilters);
+    });
   }
-  setLoading(queryLoading);
+  setLoading(queryLoading && !queryData);
 }, [queryData, queryLoading]);
   
   // Manejar selección de categoría

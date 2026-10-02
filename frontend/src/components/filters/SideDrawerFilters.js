@@ -1,6 +1,6 @@
 // src/components/filters/SideDrawerFilters.js
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { BiX } from 'react-icons/bi';
 import { FiSearch } from 'react-icons/fi';
 import { useFilters } from '../../context/FilterContext';
@@ -414,12 +414,13 @@ const SideDrawerFilters = ({
     closePanel();
   };
 
-  const specCatalog = [];
-  if (filterCategoryList[0]) {
+  const filteredSpecs = useMemo(() => {
+    if (!panelOpen || !filterCategoryList[0]) return [];
     const groups = filterSubcategoryList[0]
       ? [filterSubcategoryList[0]]
       : getSubcategoriesForCategory(filterCategoryList[0]).map((sub) => sub.value);
     const seen = new Set();
+    const specCatalog = [];
     groups.forEach((subValue) => {
       getSpecificationsForSubcategory(filterCategoryList[0], subValue).forEach((spec) => {
         if (!spec?.name || seen.has(spec.name)) return;
@@ -427,9 +428,27 @@ const SideDrawerFilters = ({
         specCatalog.push(spec);
       });
     });
-  }
+    const query = searchSpecification.toLowerCase();
+    return specCatalog.filter((spec) => {
+      const fromApi = availableFilters.specifications?.[spec.name] || [];
+      const hasOptions = fromApi.length > 0 || (Array.isArray(data) && data.some((product) => {
+        const value = product?.[spec.name];
+        return value != null && String(value).trim() !== '';
+      }));
+      return hasOptions && String(spec.label || spec.name || '').toLowerCase().includes(query);
+    });
+  }, [
+    panelOpen,
+    filterCategoryList,
+    filterSubcategoryList,
+    availableFilters.specifications,
+    data,
+    searchSpecification,
+    getSubcategoriesForCategory,
+    getSpecificationsForSubcategory
+  ]);
 
-  const optionsForSpec = (specName) => {
+  const optionsForSpec = useCallback((specName) => {
     const fromApi = availableFilters.specifications?.[specName] || [];
     if (fromApi.length > 0) return fromApi;
     const values = new Set();
@@ -439,50 +458,46 @@ const SideDrawerFilters = ({
       values.add(String(value));
     });
     return [...values].sort((a, b) => a.localeCompare(b, 'es'));
-  };
+  }, [availableFilters.specifications, data]);
 
-  const filteredSpecs = specCatalog.filter((spec) =>
-    optionsForSpec(spec.name).length > 0 &&
-    String(spec.label || spec.name || '').toLowerCase().includes(searchSpecification.toLowerCase())
-  );
-
-  let categoryOptions = [];
-  if (drilledCategory && usableVisaoTree(drilledCategory.visaoNavigationTree)) {
-    const node = getTreeNodeAtPath(drilledCategory.visaoNavigationTree, categoryDrill.pathKeys);
-    categoryOptions = getSortedTreeChildEntries(node?.children).map(({ key, node: child }) => {
-      if (hasTreeChildren(child)) {
-        return {
-          key,
-          label: child.label,
-          kind: 'folder',
-          onOpen: () => setCategoryDrill({
-            value: drilledCategory.value,
-            pathKeys: [...categoryDrill.pathKeys, key]
-          })
-        };
-      }
-      if (isTreeLeaf(child)) {
-        return {
-          key,
-          label: leafLabelFromStoredLabel(child.label),
-          kind: 'leaf',
-          checked: filterSubcategoryList.includes(child.subcategoryValue),
-          onToggle: () => handleSelectSubcategory(child.subcategoryValue)
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  } else if (drilledCategory) {
+  const categoryOptions = useMemo(() => {
+    if (!drilledCategory) return [];
+    if (usableVisaoTree(drilledCategory.visaoNavigationTree)) {
+      const node = getTreeNodeAtPath(drilledCategory.visaoNavigationTree, categoryDrill.pathKeys);
+      return getSortedTreeChildEntries(node?.children).map(({ key, node: child }) => {
+        if (hasTreeChildren(child)) {
+          return {
+            key,
+            label: child.label,
+            kind: 'folder',
+            onOpen: () => setCategoryDrill({
+              value: drilledCategory.value,
+              pathKeys: [...categoryDrill.pathKeys, key]
+            })
+          };
+        }
+        if (isTreeLeaf(child)) {
+          return {
+            key,
+            label: leafLabelFromStoredLabel(child.label),
+            kind: 'leaf',
+            checked: filterSubcategoryList.includes(child.subcategoryValue),
+            onToggle: () => handleSelectSubcategory(child.subcategoryValue)
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    }
     const liveSubs = categories.length > 0 ? getSubcategoriesForCategory(drilledCategory.value) : [];
     const fallbackSubs = productCategory.find((category) => category.value === drilledCategory.value)?.subcategories || [];
-    categoryOptions = (liveSubs.length > 0 ? liveSubs : fallbackSubs).map((subcat) => ({
+    return (liveSubs.length > 0 ? liveSubs : fallbackSubs).map((subcat) => ({
       key: subcat.value,
       label: leafLabelFromStoredLabel(subcat.label),
       kind: 'leaf',
       checked: filterSubcategoryList.includes(subcat.value),
       onToggle: () => handleSelectSubcategory(subcat.value)
     }));
-  }
+  }, [drilledCategory, categoryDrill, filterSubcategoryList, categories, getSubcategoriesForCategory, handleSelectSubcategory]);
 
   return (
     <div

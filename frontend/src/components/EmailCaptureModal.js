@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { X } from 'lucide-react';
-import { captureVisitorEmail, syncEmailCapture } from '../helpers/behaviorTracker';
+import { captureVisitorEmail, hasVisitorEmail, syncEmailCapture } from '../helpers/behaviorTracker';
 
 const SETUP_IMAGE = `${process.env.PUBLIC_URL || ''}/fondosetup.avif`;
 const PERKS = ['Promociones', 'Premios', 'Descuentos'];
@@ -13,27 +13,34 @@ function asksOnThisPage(pathname) {
 }
 
 function useEmailAlreadyCaptured(userEmail) {
-    const [ready, setReady] = useState(false);
-    const [captured, setCaptured] = useState(() => Boolean(userEmail));
+    const already = Boolean(userEmail) || hasVisitorEmail();
+    const [ready, setReady] = useState(already);
+    const [captured, setCaptured] = useState(already);
 
     useEffect(() => {
-        if (userEmail) {
+        if (userEmail || hasVisitorEmail()) {
             setCaptured(true);
             setReady(true);
-            return undefined;
         }
+        const markCaptured = () => {
+            setCaptured(true);
+            setReady(true);
+        };
+        window.addEventListener('zenn-email-captured', markCaptured);
         let ignore = false;
         syncEmailCapture().then((isCaptured) => {
             if (ignore) return;
-            setCaptured(Boolean(isCaptured));
+            if (isCaptured || hasVisitorEmail()) setCaptured(true);
+            else setCaptured(false);
             setReady(true);
         });
         return () => {
             ignore = true;
+            window.removeEventListener('zenn-email-captured', markCaptured);
         };
     }, [userEmail]);
 
-    return { ready, captured: Boolean(userEmail) || captured };
+    return { ready, captured: Boolean(userEmail) || captured || hasVisitorEmail() };
 }
 
 function EmailOfferFields({ email, setEmail, status, onDismiss, compact }) {
@@ -106,7 +113,7 @@ export default function EmailCaptureModal() {
 
     useEffect(() => {
         if (!ready) return undefined;
-        if (captured || !asksOnThisPage(pathname)) {
+        if (captured || hasVisitorEmail() || !asksOnThisPage(pathname)) {
             setOpen(false);
             return undefined;
         }

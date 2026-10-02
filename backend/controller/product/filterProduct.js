@@ -280,8 +280,23 @@ controles_consola: [
       }
     }
 
-    // Buscar productos según el filtro
-    let products = await productModel.find(query).lean();
+    // Solo los campos del listado y las especificaciones de la subcategoría.
+    // El documento completo (descripción, galería extra, etc.) frenaba el filtro en el móvil.
+    const listingFields = [
+      '_id', 'productName', 'slug', 'sellingPrice', 'price', 'brandName',
+      'productImage', 'stock', 'codigo', 'category', 'subcategory'
+    ];
+    const specFields = subcategory.length > 0
+      ? (dynamicSpecificationMappings[subcategory[0]] || [])
+      : [];
+    const selectFields = [...new Set([...listingFields, ...specFields])].join(' ');
+
+    let products = await productModel.find(query).select(selectFields).lean();
+    products.forEach((product) => {
+      if (Array.isArray(product.productImage) && product.productImage.length > 2) {
+        product.productImage = product.productImage.slice(0, 2);
+      }
+    });
 
     if (onlyDiscounted) {
       products.sort((a, b) => {

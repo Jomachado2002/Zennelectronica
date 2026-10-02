@@ -18,30 +18,6 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
     const [viewedProducts, setViewedProducts] = useState(new Set());
     const observerRef = useRef(null);
 
-    // ✅ PRELOAD INTELIGENTE - Solo las primeras 8 imágenes con timeout
-    useEffect(() => {
-        if (data.length > 0) {
-            // Precargar solo las primeras 8 imágenes para mejor performance
-            data.slice(0, 8).forEach((product) => {
-                if (product?.productImage?.[0]) {
-                    const img = new Image();
-                    img.src = product.productImage[0];
-                    img.onload = () => {
-                        // console.log removed for production
-                    };
-                    img.onerror = () => {
-                        // console.log removed for production
-                        // Intentar con la segunda imagen si existe
-                        if (product?.productImage?.[1]) {
-                            const img2 = new Image();
-                            img2.src = product.productImage[1];
-                        }
-                    };
-                }
-            });
-        }
-    }, [data]);
-
     // ✅ INTERSECTION OBSERVER PARA TRACKEAR VIEW CONTENT
     useEffect(() => {
         if (!data.length) return;
@@ -142,7 +118,8 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                     // Si stock es undefined, null o mayor a 0, mostrar el producto
                     return product?.stock === undefined || product?.stock === null || product?.stock > 0;
                 })
-                .map((product) => {
+                .map((product, index) => {
+                const eagerImage = index < 4;
                 const discount = calculateDiscount(product?.price, product?.sellingPrice);
                 const hasImageError = imageErrors.has(product._id);
                 const isHovered = hoveredProductId === product?._id;
@@ -202,8 +179,8 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
                                         className={`object-contain h-full w-full transition-all duration-500 ease-in-out ${
                                             showSecondImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
                                         }`}
-                                        loading="eager"
-                                        fetchpriority="high"
+                                        loading={eagerImage ? 'eager' : 'lazy'}
+                                        fetchpriority={eagerImage ? 'high' : 'low'}
                                         onError={() => handleImageError(product._id)}
                                         decoding="async"
                                     />
@@ -298,4 +275,4 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
     );
 };
 
-export default VerticalCardGrid;
+export default React.memo(VerticalCardGrid);

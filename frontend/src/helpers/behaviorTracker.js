@@ -24,6 +24,9 @@ function writeCookie(name, value) {
     }
 }
 
+let emailCapturedMemory = false;
+let captureSeq = 0;
+
 function visitorId() {
     try {
         let id = localStorage.getItem(VISITOR_KEY) || readCookie(COOKIE_ID);
@@ -70,19 +73,41 @@ export function getStoredVisitorEmail() {
 }
 
 export function rememberVisitorEmail(email) {
+    captureSeq += 1;
+    emailCapturedMemory = true;
     try {
         localStorage.setItem(EMAIL_KEY, email);
     } catch (error) {
         // Sin almacenamiento local el correo igual queda en el servidor.
     }
+    try {
+        sessionStorage.setItem(EMAIL_KEY, '1');
+    } catch (error) {
+        // En algunos Android el almacenamiento de sesión también puede fallar.
+    }
     writeCookie(COOKIE_MAIL, '1');
+    try {
+        sessionStorage.setItem('zenn_email_at', String(Date.now()));
+    } catch (error) {
+        // La marca de tiempo solo evita una carrera con el servidor.
+    }
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('zenn-email-captured'));
+    }
 }
 
 export function forgetVisitorEmail() {
+    emailCapturedMemory = false;
     try {
         localStorage.removeItem(EMAIL_KEY);
     } catch (error) {
         // Sin almacenamiento local alcanza con borrar la cookie.
+    }
+    try {
+        sessionStorage.removeItem(EMAIL_KEY);
+        sessionStorage.removeItem('zenn_email_at');
+    } catch (error) {
+        // Sigue el borrado de la cookie.
     }
     try {
         document.cookie = `${COOKIE_MAIL}=; Max-Age=0; Path=/; SameSite=Lax`;
@@ -92,19 +117,55 @@ export function forgetVisitorEmail() {
 }
 
 export function hasVisitorEmail() {
-    return Boolean(getStoredVisitorEmail() || readCookie(COOKIE_MAIL) === '1');
+    if (emailCapturedMemory) return true;
+    try {
+        if (localStorage.getItem(EMAIL_KEY)) {
+            emailCapturedMemory = true;
+            return true;
+        }
+    } catch (error) {
+        // Sigue con sesión y cookie.
+    }
+    try {
+        if (sessionStorage.getItem(EMAIL_KEY) === '1') {
+            emailCapturedMemory = true;
+            return true;
+        }
+    } catch (error) {
+        // Sigue con la cookie.
+    }
+    if (readCookie(COOKIE_MAIL) === '1') {
+        emailCapturedMemory = true;
+        return true;
+    }
+    return false;
 }
 
 export async function syncEmailCapture() {
     const id = visitorId();
     if (!id) return hasVisitorEmail();
+    const seqAtStart = captureSeq;
     try {
         const response = await fetch(`${SummaryApi.baseURL}/api/analitica/correo?visitorId=${encodeURIComponent(id)}`);
         const data = await response.json();
-        if (data?.captured) {
+        if (captureSeq !== seqAtStart) return true;
+        let savedRecently = false;
+        try {
+            const savedAt = Number(sessionStorage.getItem('zenn_email_at') || 0);
+            savedRecently = savedAt > 0 && Date.now() - savedAt < 2 * 60 * 1000;
+        } catch (error) {
+            savedRecently = false;
+        }
+        if (data?.captured || (savedRecently && hasVisitorEmail())) {
+            emailCapturedMemory = true;
             writeCookie(COOKIE_MAIL, '1');
             try {
                 if (!localStorage.getItem(EMAIL_KEY)) localStorage.setItem(EMAIL_KEY, 'guardado');
+            } catch (error) {
+                // La cookie alcanza para no volver a preguntar.
+            }
+            try {
+                sessionStorage.setItem(EMAIL_KEY, '1');
             } catch (error) {
                 // La cookie alcanza para no volver a preguntar.
             }

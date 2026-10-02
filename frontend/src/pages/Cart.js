@@ -7,6 +7,7 @@ import { MdDelete, MdShoppingCart, MdDownload, MdWhatsapp } from "react-icons/md
 import { FaArrowLeft, FaTrash, FaCreditCard, FaUser, FaLock, FaShieldAlt, FaPlus, FaCheckCircle, FaMapMarkerAlt, FaWallet } from "react-icons/fa";
 import { downloadCartQuotePdf } from '../helpers/cartQuotePdf';
 import { toast } from 'react-toastify';
+import { toastCart } from '../helpers/toastLimit';
 import { localCartHelper } from '../helpers/addToCart';
 import BancardPayButton from '../components/BancardPayButton';
 import BalanceService from '../services/balanceService';
@@ -270,7 +271,7 @@ const Cart = () => {
         try {
             if (localCartHelper.updateQuantity(id, qty + 1)) {
                 fetchData();
-                toast.success('Cantidad actualizada');
+                toastCart('success', 'Cantidad actualizada');
             }
         } catch (error) {
             // console.error removed for production
@@ -285,7 +286,7 @@ const Cart = () => {
         try {
             if (localCartHelper.updateQuantity(id, qty - 1)) {
                 fetchData();
-                toast.success('Cantidad actualizada');
+                toastCart('success', 'Cantidad actualizada');
             }
         } catch (error) {
             // console.error removed for production

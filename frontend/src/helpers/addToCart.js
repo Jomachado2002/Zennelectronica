@@ -1,4 +1,5 @@
 import { toast } from 'react-toastify';
+import { toastCart } from './toastLimit';
 
 // Función auxiliar para manejar el carrito en localStorage
 const localCartHelper = {
@@ -123,9 +124,6 @@ const addToCart = (e, product) => {
     }
 
     try {
-        // Mostrar toast inmediatamente
-        toast.info("Agregando al carrito...");
-
         if (!product || !product._id) {
             // console.error removed for production
             toast.error("No se pudo agregar el producto al carrito");
@@ -136,7 +134,7 @@ const addToCart = (e, product) => {
         const success = localCartHelper.addItem(product);
         
         if (success) {
-            toast.success("Producto agregado al carrito");
+            toastCart('success', 'Producto agregado al carrito');
             import('./behaviorTracker').then((tracker) => {
                 tracker.trackProduct('add_to_cart', product);
                 tracker.syncCart(localCartHelper.getCart());

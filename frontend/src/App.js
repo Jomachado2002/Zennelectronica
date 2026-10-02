@@ -107,8 +107,9 @@ function App() {
           </>
         )}
         
-        <ToastContainer 
+        <ToastContainer
           position='top-center'
+          limit={3}
         />
         
         {!isAdminRoute && <Header/>}
