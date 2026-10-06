@@ -87,7 +87,7 @@ async function renderCreativeDocument(payload, format) {
   const logoMap = await getLogoMap();
   const brandHit = payload.brandName ? logoMap[normalizeBrandSlug(payload.brandName)] : null;
   const [logoDataUri, brandLogoDataUri, ...uris] = await Promise.all([
-    payload.scene === 'cielo' ? getLogoColorDataUri() : getLogoWhiteDataUri(),
+    payload.scene === 'cielo' || payload.scene === 'rosa' ? getLogoColorDataUri() : getLogoWhiteDataUri(),
     brandHit?.logoUrl ? getBrandLogoDataUri(brandHit.logoUrl) : Promise.resolve(''),
     ...urls.map((url) => getPhotoDataUri(url))
   ]);

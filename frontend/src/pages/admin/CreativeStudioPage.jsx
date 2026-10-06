@@ -970,7 +970,8 @@ const CreativeStudioPage = () => {
                   { id: 'neon', label: 'Neón' },
                   { id: 'haz', label: 'Haces' },
                   { id: 'malla', label: 'Malla' },
-                  { id: 'cielo', label: 'Azul claro' }
+                  { id: 'cielo', label: 'Azul claro' },
+                  { id: 'rosa', label: 'Octubre Rosa' }
                 ].map((opt) => (
                   <button
                     key={opt.id}

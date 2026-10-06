@@ -1296,13 +1296,12 @@ async function persistOneVisaoProduct(scraped, ctx) {
         }
 
         const tituloFallback = `Producto ${code}`;
-        const tituloRaw = scraped.titulo != null ? String(scraped.titulo) : '';
-        const titulo =
-            mirrorStrict === true
-                ? tituloRaw || tituloFallback
-                : scraped.titulo && scraped.titulo.trim()
-                  ? scraped.titulo.trim()
-                  : tituloFallback;
+        const sectionTitleRe =
+            /^(especificaciones|especificacoes|especificações|descripci[oó]n|descricao|descrição|productos relacionados|produtos relacionados|vistos recientemente|últimos vistos)$/i;
+        const isSectionTitle = (value) => sectionTitleRe.test(String(value || '').trim());
+        const tituloRaw = scraped.titulo != null ? String(scraped.titulo).trim() : '';
+        const tituloCandidate = isSectionTitle(tituloRaw) ? '' : tituloRaw;
+        let titulo = tituloCandidate || tituloFallback;
         const fromMarca = resolveBrandFromMarca(rawSpecs, specCanonical);
         const brandName = resolveVisaoBrandName({
             marcaSlug: scraped.marcaSlug,
@@ -1319,6 +1318,15 @@ async function persistOneVisaoProduct(scraped, ctx) {
 
         /** Solo Firebase en productImage (nunca se escribe CDN Visão). Reutiliza URLs Firebase si ya existen. */
         const existing = await productModel.findOne({ codigo: code });
+        if (
+            existing &&
+            existing.productName &&
+            !isSectionTitle(existing.productName) &&
+            !/^Producto \d+$/.test(String(existing.productName).trim()) &&
+            (!tituloCandidate || titulo === tituloFallback)
+        ) {
+            titulo = String(existing.productName).trim();
+        }
         const previousImages = Array.isArray(existing?.productImage)
             ? existing.productImage.slice()
             : [];

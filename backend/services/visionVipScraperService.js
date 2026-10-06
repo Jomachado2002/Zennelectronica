@@ -768,13 +768,41 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                 }
             });
 
-            const h2 =
-                [...document.querySelectorAll('h2')].find((h) => {
-                    const s = (h.textContent || '').trim();
-                    return s.length > 10 && !/visaovip|categoría|lista/i.test(s);
-                }) || document.querySelector('h2');
+            const cleanText = (value) =>
+                String(value || '')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+            const isSectionHeading = (value) =>
+                /^(especificaciones|especificacoes|especificações|descripci[oó]n|descricao|descrição|productos relacionados|produtos relacionados|vistos recientemente|últimos vistos|compartir|comparte)$/i.test(
+                    cleanText(value)
+                );
+            const usableTitle = (value) => {
+                const s = cleanText(value).split('|')[0].trim();
+                if (s.length < 8) return '';
+                if (isSectionHeading(s)) return '';
+                if (/visaovip|vis[aã]ovip|attention required|just a moment|cloudflare/i.test(s)) return '';
+                return s;
+            };
 
-            const titulo = (h2 && h2.textContent ? h2.textContent : '').trim().replace(/\s+/g, ' ');
+            // El nombre del PDP está en h1. Los h2 son secciones
+            // ("Especificaciones", "Productos relacionados") desde el rediseño.
+            const h1Title = [...document.querySelectorAll('h1')]
+                .map((h) => usableTitle(h.textContent))
+                .find(Boolean);
+            const ogTitle = usableTitle(
+                (document.querySelector('meta[property="og:title"]') || {}).content || ''
+            );
+            const docTitle = usableTitle(document.title || '');
+            const legacyH2 = [...document.querySelectorAll('h2')]
+                .map((h) => cleanText(h.textContent))
+                .find(
+                    (s) =>
+                        s.length > 10 &&
+                        !isSectionHeading(s) &&
+                        !/visaovip|categoría|lista/i.test(s)
+                );
+
+            const titulo = h1Title || ogTitle || docTitle || legacyH2 || '';
             const supplierCodeFinal = supplierCodeFromDom || (fromPath ? fromPath[1] : '');
             const mainT = document.querySelector('main')?.innerText || '';
             const bodyT = document.body?.innerText || '';
@@ -833,11 +861,46 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                         ) || panel
                     );
                 }
-                // Respaldo: sección que ya muestra filas tipo MARCA / REFERENCIA
+                // Acordeón actual: h2 "Especificaciones" + hermano con filas p + span.
+                const specHeadings = [...document.querySelectorAll('h2, h3')];
+                for (const heading of specHeadings) {
+                    const titleTxt = (heading.textContent || '').trim().replace(/\s+/g, ' ');
+                    if (!/^especificaciones$|^especificacoes$|^especificações$/i.test(titleTxt)) {
+                        continue;
+                    }
+                    const next = heading.nextElementSibling;
+                    if (next && /MARCA|MODELO|REFERENCIA|COLOR/i.test(next.innerText || '')) {
+                        return next;
+                    }
+                    const parent = heading.parentElement;
+                    if (!parent) continue;
+                    const sibling = [...parent.children].find(
+                        (child) =>
+                            child !== heading &&
+                            /MARCA|MODELO|REFERENCIA/i.test(child.innerText || '')
+                    );
+                    if (sibling) return sibling;
+                }
+
+                const specRow = [...document.querySelectorAll('div')].find((row) => {
+                    const pEl = row.querySelector(':scope > p');
+                    const spanEl = row.querySelector(':scope > span');
+                    if (!pEl || !spanEl) return false;
+                    return /^(MARCA|MODELO|REFERENCIA)$/i.test(
+                        String(pEl.textContent || '').trim()
+                    );
+                });
+                if (specRow && specRow.parentElement) return specRow.parentElement;
+
+                // Respaldo: sección que ya muestra filas tipo MARCA / MODELO / REFERENCIA
                 const sections = [...document.querySelectorAll('section, .p-panel-content')];
                 for (const sec of sections) {
                     const sample = (sec.innerText || '').slice(0, 800);
-                    if (/MARCA[\s\S]{0,40}REFERENCIA|REFERENCIA[\s\S]{0,40}COLOR/i.test(sample)) {
+                    if (
+                        /MARCA[\s\S]{0,80}(REFERENCIA|MODELO|COLOR)|REFERENCIA[\s\S]{0,40}COLOR/i.test(
+                            sample
+                        )
+                    ) {
                         return sec;
                     }
                 }
@@ -1322,6 +1385,25 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
                     }
                     return true;
                 }
+
+                const headings = [...document.querySelectorAll('h2, h3')];
+                for (const heading of headings) {
+                    const titleTxt = (heading.textContent || '').trim().replace(/\s+/g, ' ');
+                    if (!/^especificaciones$|^especificacoes$|^especificações$/i.test(titleTxt)) {
+                        continue;
+                    }
+                    const next = heading.nextElementSibling;
+                    const visible =
+                        next && /MARCA|MODELO|REFERENCIA|COLOR/i.test(next.innerText || '');
+                    const btn = heading.querySelector('button');
+                    const expanded =
+                        !!btn &&
+                        (String(btn.getAttribute('aria-expanded') || '') === 'true' ||
+                            String(btn.getAttribute('data-state') || '') === 'open');
+                    if (!visible && btn && !expanded) btn.click();
+                    else if (!visible) heading.click();
+                    return true;
+                }
                 return false;
             })
             .catch(() => false);
@@ -1329,6 +1411,11 @@ async function scrapeProductDetail(page, productUrl, detailOpts = {}) {
         await page
             .waitForFunction(
                 () => {
+                    const specLabels = [...document.querySelectorAll('p')].filter((p) =>
+                        /^(MARCA|MODELO|REFERENCIA)$/i.test(String(p.textContent || '').trim())
+                    );
+                    if (specLabels.length >= 2) return true;
+
                     const panels = [
                         ...document.querySelectorAll(
                             '[data-pc-name="panel"], .p-panel, .p-panel-toggleable'

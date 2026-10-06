@@ -426,14 +426,15 @@ function instagramCaption(payload) {
   ].filter(Boolean).join('\n');
 }
 
-const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo'];
+const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'];
 
 function pickScene(requested, family, theme, id) {
   const asked = String(requested || '').toLowerCase();
   if (SCENES.includes(asked)) return asked;
+  const october = new Date().getMonth() === 9;
   const pool = theme === 'gamer'
     ? ['neon', 'haz', 'malla', 'orbita']
-    : ['cielo', 'orbita', 'haz', 'malla'];
+    : (october ? ['rosa', 'cielo', 'orbita', 'haz'] : ['cielo', 'orbita', 'haz', 'malla']);
   const n = String(id || family || '').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
   return pool[n % pool.length];
 }
@@ -475,7 +476,7 @@ function buildCreativePayload(product, options = {}) {
     discountPercent: (Number(product.price) > Number(product.sellingPrice) && Number(product.price) > 0)
       ? Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100)
       : 0,
-    cta: options.cta || 'Pedí el precio de hoy',
+    cta: options.cta || (wantsPrice(options.showPrice) ? 'Pedilo por WhatsApp' : 'Consultá el precio'),
     showPrice: wantsPrice(options.showPrice),
     priceAsOf: priceAsOfLabel(),
     imageUrl: images[imageIndex] || images[0] || '',

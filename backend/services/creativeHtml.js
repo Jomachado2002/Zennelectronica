@@ -1,6 +1,17 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { FORMATS } = require('./creativePayload');
+
+const RIBBON_PNG = path.join(__dirname, '../assets/octubre-rosa-ribbon.png');
+let ribbonDataUri = '';
+function octubreRosaRibbon() {
+  if (!ribbonDataUri && fs.existsSync(RIBBON_PNG)) {
+    ribbonDataUri = `data:image/png;base64,${fs.readFileSync(RIBBON_PNG).toString('base64')}`;
+  }
+  return ribbonDataUri;
+}
 
 const ICONS = {
   cpu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>',
@@ -55,18 +66,25 @@ function specLayout(count, format) {
   return { cols, lines, font };
 }
 
+function fitSpecText(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (text.length <= 34) return text;
+  return `${text.slice(0, 33).trim()}…`;
+}
+
 function specsHtml(specs, format) {
-  const items = filledSpecs(specs);
+  const cap = format === 'square' ? 3 : 4;
+  const items = filledSpecs(specs).slice(0, cap);
   if (!items.length) return '';
-  const { cols, lines, font } = specLayout(items.length, format);
+  const { cols, font } = specLayout(items.length, format);
   const size = Math.ceil(items.length / cols);
   const columns = [];
   for (let i = 0; i < cols; i += 1) {
     const slice = items.slice(i * size, (i + 1) * size);
     if (slice.length) columns.push(slice);
   }
-  return `<div class="specs" style="--spec-size:${font}px;--spec-lines:${lines}">${columns.map((col) => `
-    <div class="col">${col.map((spec) => `<p class="sp"><span class="k">${esc(spec.label)}:</span> ${esc(spec.text)}</p>`).join('')}</div>`).join('')}
+  return `<div class="specs" style="--spec-size:${font}px">${columns.map((col) => `
+    <div class="col">${col.map((spec) => `<p class="sp"><span class="k">${esc(spec.label)}:</span> ${esc(fitSpecText(spec.text))}</p>`).join('')}</div>`).join('')}
   </div>`;
 }
 
@@ -82,7 +100,7 @@ function galleryHtml(gallery) {
 function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   const size = FORMATS[format] || FORMATS.feed;
   const theme = payload.theme === 'gamer' ? 'gamer' : 'studio';
-  const scene = ['orbita', 'neon', 'haz', 'malla', 'cielo'].includes(payload.scene) ? payload.scene : 'orbita';
+  const scene = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'].includes(payload.scene) ? payload.scene : 'orbita';
   const logo = assets.logoDataUri || '';
   const gallery = Array.isArray(assets.gallery) ? assets.gallery.filter((g) => g && g.uri) : [];
   const photo = assets.photoDataUri || gallery.find((g) => g.active)?.uri || payload.imageUrl || '';
@@ -121,6 +139,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .art {
     width: ${size.w}px; height: ${size.h}px;
     position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
     font-family: Outfit, Helvetica, sans-serif;
     color: #fff;
     background: #1E1B4B;
@@ -155,6 +174,14 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       radial-gradient(900px 520px at 0% 0%, rgba(125,211,252,.85), transparent 62%),
       radial-gradient(760px 480px at 100% 100%, rgba(186,230,253,.9), transparent 58%),
       linear-gradient(180deg, #F3FAFF 0%, #D7EEFB 48%, #C5E6F8 100%);
+  }
+  .scene-rosa {
+    color: #4C0519;
+    background:
+      radial-gradient(820px 520px at 0% 0%, rgba(255,255,255,.85), transparent 58%),
+      radial-gradient(760px 560px at 100% 8%, rgba(244,114,182,.55), transparent 60%),
+      radial-gradient(680px 480px at 18% 100%, rgba(190,24,93,.22), transparent 62%),
+      linear-gradient(165deg, #FFF5F8 0%, #FBCFE8 46%, #F9A8D4 100%);
   }
   .deco { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
   .mesh, .dots, .beam, .ring { display: none; }
@@ -224,9 +251,9 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     background: linear-gradient(180deg, #00B5D8, #7B2CBF 55%, #00B5D8);
   }
   header {
-    position: absolute; left: 0; right: 0; top: 0;
+    position: relative; flex: 0 0 auto;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 32px 44px 0 52px; z-index: 6;
+    padding: 28px 44px 0 52px; z-index: 6;
   }
   .logo { height: 50px; width: auto; }
   .seal {
@@ -237,7 +264,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     backdrop-filter: blur(8px);
   }
   .hero {
-    position: absolute; left: 0; right: 0;
+    position: relative; flex: 1 1 auto; min-height: 0;
     z-index: 3;
   }
   .plate {
@@ -312,8 +339,9 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     padding: 7px 12px; border-radius: 999px;
   }
   .specs {
-    position: absolute; z-index: 5;
+    position: relative; z-index: 5; flex: 0 0 auto;
     display: flex; align-items: center; justify-content: center;
+    padding: 6px 44px 2px;
   }
   .col {
     flex: 1; min-width: 0;
@@ -322,19 +350,18 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   }
   .col + .col { border-left: 1px solid rgba(255,255,255,.4); }
   .sp {
-    margin: 0 0 3px;
+    margin: 0 0 4px;
     font-size: var(--spec-size);
-    line-height: 1.28;
+    line-height: 1.3;
     font-weight: 500;
-    color: rgba(226,232,240,.86);
-    display: -webkit-box;
-    -webkit-line-clamp: var(--spec-lines);
-    -webkit-box-orient: vertical;
+    color: rgba(226,232,240,.9);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
   .sp .k { font-weight: 700; color: rgba(255,255,255,.96); }
   footer {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+    position: relative; flex: 0 0 auto; z-index: 6;
   }
   .brand {
     display: inline-flex; align-items: center; gap: 8px;
@@ -366,9 +393,9 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .detail {
-    margin-top: 8px;
-    font-size: 15px; line-height: 1.35; font-weight: 500; color: #D1D5DB;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-top: 6px;
+    font-size: 15px; line-height: 1.3; font-weight: 500; color: #D1D5DB;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
   }
   .scene-cielo .sp, .scene-cielo .sp .k { color: #64748B; }
   .scene-cielo .sp .k { color: #475569; }
@@ -420,6 +447,69 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     color: rgba(255,255,255,.78);
   }
   .scene-cielo .asof { color: #475569; }
+  .scene-rosa .sp, .scene-rosa .sp .k { color: #9D174D; }
+  .scene-rosa .sp .k { color: #4C0519; }
+  .scene-rosa .col + .col { border-color: rgba(157,23,77,.22); }
+  .scene-rosa .detail { color: #9F1239; }
+  .scene-rosa .seal {
+    color: #fff;
+    background: linear-gradient(135deg, #E11D48, #BE185D);
+    border-color: transparent;
+  }
+  .scene-rosa .kicker { color: #BE185D; }
+  .scene-rosa .title, .scene-rosa .wa { color: #4C0519; }
+  .scene-rosa .mark { display: none; }
+  .scene-rosa .c.tl { border-left-color: #E11D48; border-top-color: #E11D48; }
+  .scene-rosa .c.tr { border-right-color: #BE185D; border-top-color: #BE185D; }
+  .scene-rosa .c.bl { border-left-color: #BE185D; border-bottom-color: #BE185D; }
+  .scene-rosa .c.br { border-right-color: #E11D48; border-bottom-color: #E11D48; }
+  .scene-rosa .line { background: linear-gradient(180deg, #FB7185, #9D174D 55%, #FB7185); }
+  .scene-rosa .promises span {
+    color: #4C0519;
+    background: rgba(255,255,255,.72);
+    border-color: rgba(190,24,93,.22);
+  }
+  .scene-rosa .rule { background: linear-gradient(90deg, #FB7185, #9D174D); }
+  .scene-rosa .offer .before { color: #9F1239; }
+  .scene-rosa .offer .now { color: #9D174D; }
+  .scene-rosa .asof { color: #9F1239; }
+  .scene-rosa .cta {
+    background: linear-gradient(135deg, #F43F5E 0%, #9D174D 100%);
+    box-shadow: 0 12px 30px rgba(190,24,93,.32);
+  }
+  .scene-rosa .plate {
+    z-index: 3;
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(135deg, #FB7185 0%, #9D174D 100%) border-box;
+  }
+  .rosa-sash, .rosa-badge, .rosa-pattern { display: none; }
+  .scene-rosa .rosa-pattern {
+    display: block;
+    position: absolute;
+    inset: -80px -40px;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .55;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='150' viewBox='0 0 340 150'><text x='0' y='42' fill='%23F472B6' fill-opacity='0.28' font-family='Arial' font-size='28' font-weight='700' letter-spacing='6'>OCTUBRE ROSA</text><text x='40' y='118' fill='%23FB7185' fill-opacity='0.22' font-family='Arial' font-size='28' font-weight='700' letter-spacing='6'>OCTUBRE ROSA</text></svg>");
+    background-size: 340px 150px;
+    transform: rotate(-8deg);
+  }
+  .scene-rosa .rosa-badge {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 118px;
+    transform: translateX(-50%);
+    z-index: 9;
+    pointer-events: none;
+  }
+  .scene-rosa .rosa-badge img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
   .promises {
     display: flex; flex-wrap: wrap; gap: 8px;
   }
@@ -441,49 +531,50 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   }
   .wa { font-size: 15px; color: rgba(255,255,255,.55); font-weight: 500; }
 
-  .fmt-feed .hero { top: 108px; height: 690px; }
-  .fmt-feed .plate { width: 690px; height: 620px; }
-  .fmt-feed .specs { top: 788px; height: 150px; left: 48px; right: 48px; }
-  .fmt-feed footer { height: 400px; padding: 28px 52px 28px; }
-  .fmt-feed .title { margin-top: 8px; font-size: 40px; }
-  .fmt-feed .cta { height: 52px; padding: 0 24px; font-size: 18px; min-width: 280px; }
-  .fmt-feed .row { margin-top: 12px; }
+  .fmt-story .rosa-badge { width: 156px; top: 16px; }
+  .fmt-feed .rosa-badge { width: 112px; top: 6px; }
+  .fmt-feed .hero { min-height: 460px; }
+  .fmt-feed .plate { width: 620px; height: 500px; }
+  .fmt-feed .title { margin-top: 4px; font-size: 32px; }
+  .fmt-feed .offer .now { font-size: 36px; }
+  .fmt-feed .cta { height: 48px; padding: 0 22px; font-size: 17px; min-width: 240px; }
+  .fmt-feed .row { margin-top: 10px; }
+  .fmt-feed footer { padding: 10px 48px 32px; }
 
-  .fmt-story .hero { top: 112px; height: 880px; }
-  .fmt-story .plate { width: 760px; height: 760px; border-radius: 40px; }
-  .fmt-story .hero.has-thumbs .plate { width: 700px; height: 640px; top: 44%; }
+  .fmt-story .hero { min-height: 620px; }
+  .fmt-story .plate { width: 680px; height: 600px; border-radius: 40px; }
+  .fmt-story .hero.has-thumbs .plate { width: 640px; height: 520px; top: 42%; }
   .fmt-story .thumbs {
     left: 50%; top: auto; bottom: 10px;
     transform: translateX(-50%);
     flex-direction: row;
     z-index: 6;
   }
-  .fmt-story .thumb { width: 86px; height: 86px; }
+  .fmt-story .thumb { width: 78px; height: 78px; }
   .fmt-story .shots { left: auto; right: 28px; bottom: 28px; }
-  .fmt-story .specs { top: 1012px; height: 300px; left: 56px; right: 56px; z-index: 6; }
-  .fmt-story footer { height: 584px; padding: 16px 56px 40px; text-align: center; }
+  .fmt-story footer { padding: 8px 52px 220px; text-align: center; }
   .fmt-story .brand, .fmt-story .kicker, .fmt-story .title, .fmt-story .detail { text-align: center; }
   .fmt-story .brand { margin-left: auto; margin-right: auto; }
   .fmt-story .rule { margin-left: auto; margin-right: auto; }
-  .fmt-story .title { margin-top: 8px; font-size: 46px; }
+  .fmt-story .title { margin-top: 4px; font-size: 34px; }
   .fmt-story .offer { justify-content: center; }
-  .fmt-story .offer .now { font-size: 42px; }
+  .fmt-story .offer .now { font-size: 38px; }
   .fmt-story .asof { text-align: center; }
   .fmt-story .promises { justify-content: center; }
-  .fmt-story .row { flex-direction: column; align-items: center; margin-top: 14px; }
-  .fmt-story .cta { height: 56px; padding: 0 28px; font-size: 20px; min-width: 340px; }
-  .fmt-story .wa { margin-top: 12px; }
+  .fmt-story .row { flex-direction: column; align-items: center; margin-top: 10px; }
+  .fmt-story .cta { height: 52px; padding: 0 26px; font-size: 18px; min-width: 300px; }
+  .fmt-story .wa { margin-top: 8px; }
 
-  .fmt-square .hero { top: 92px; height: 560px; }
-  .fmt-square .plate { width: 620px; height: 500px; border-radius: 30px; }
-  .fmt-square .thumb { width: 74px; height: 72px; border-radius: 16px; }
+  .fmt-square .hero { min-height: 380px; }
+  .fmt-square .plate { width: 520px; height: 400px; border-radius: 30px; }
+  .fmt-square .thumb { width: 68px; height: 66px; border-radius: 16px; }
   .fmt-square .thumbs { left: 22px; }
-  .fmt-square .specs { top: 640px; height: 100px; left: 36px; right: 36px; }
-  .fmt-square header { padding: 24px 36px 0 44px; }
-  .fmt-square footer { height: 320px; padding: 16px 40px 22px; }
-  .fmt-square .title { margin-top: 6px; font-size: 32px; }
-  .fmt-square .cta { height: 46px; padding: 0 18px; font-size: 15px; min-width: 220px; }
-  .fmt-square .row { margin-top: 10px; }
+  .fmt-square header { padding: 20px 36px 0 44px; }
+  .fmt-square footer { padding: 6px 36px 24px; }
+  .fmt-square .title { margin-top: 4px; font-size: 26px; }
+  .fmt-square .offer .now { font-size: 30px; }
+  .fmt-square .cta { height: 44px; padding: 0 16px; font-size: 15px; min-width: 200px; }
+  .fmt-square .row { margin-top: 8px; }
   .fmt-square .mark { font-size: 112px; top: 120px; }
 </style>
 </head>
@@ -497,6 +588,8 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     <div class="deco ring"></div>
     <div class="glow g1"></div>
     <div class="glow g2"></div>
+    <div class="rosa-pattern"></div>
+    <div class="rosa-badge"><img src="${octubreRosaRibbon()}" alt="" /></div>
     <div class="mark">${mark}</div>
     <header>
       ${logo ? `<img class="logo" src="${logo}" alt="Zenn" />` : '<div></div>'}
@@ -525,9 +618,8 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
         <div class="promises">
           <span>Stock disponible</span>
           <span>Entrega 24 h</span>
-          <span>${payload.showPrice === false ? 'Consultá el precio' : (payload.onOffer ? 'Oferta de hoy' : 'Precio del día')}</span>
         </div>
-        <div class="cta">${esc(payload.cta)}</div>
+        <div class="cta">${esc(payload.showPrice === false ? (payload.cta || 'Consultá el precio') : 'Pedilo por WhatsApp')}</div>
       </div>
       <div class="wa" style="margin-top:14px">${format === 'story' ? `${esc(payload.site)}  ·  ${esc(payload.whatsapp)}` : `WhatsApp ${esc(payload.whatsapp)}`}</div>
     </footer>
