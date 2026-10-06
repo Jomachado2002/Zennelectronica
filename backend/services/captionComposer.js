@@ -159,8 +159,15 @@ function hooksFor(mood, voices) {
   return HOOKS[mood] || HOOKS.mix;
 }
 
+const ROSA_HOOKS = [
+  'Octubre Rosa en Zenn. Elegí el tuyo y llevátelo hoy.',
+  'Este octubre, el que te gusta está en la tienda.',
+  'Octubre Rosa. Stock de verdad y entrega en el día.'
+];
+
 function composeVariant(products, mood, variantIndex, voices) {
-  const hooks = hooksFor(mood, voices);
+  const rosa = products.length > 0 && products.every((product) => product.scene === 'rosa');
+  const hooks = rosa ? ROSA_HOOKS : hooksFor(mood, voices);
   const day = new Date().toISOString().slice(0, 10);
   const start = hash(`${day}|${products.map((p) => p.id).join(',')}|${mood}`) % hooks.length;
   const hook = hooks[(start + variantIndex) % hooks.length];
@@ -183,8 +190,11 @@ function composeCaptions(products, voices) {
     const variant = composeVariant(list, mood, index, voices);
     if (index === 2) {
       const tags = variant.hashtags.slice(0, 5);
+      const rosa = list.every((product) => product.scene === 'rosa');
       variant.caption = [
-        mood === 'promo' ? 'Promociones del día 🔥' : (list.length > 1 ? 'Nuevo ingreso en Zenn ✨' : variant.hook),
+        rosa
+          ? 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.'
+          : (mood === 'promo' ? 'Promociones del día 🔥' : (list.length > 1 ? 'Nuevo ingreso en Zenn ✨' : variant.hook)),
         '',
         ...list.map(lineOf),
         '',

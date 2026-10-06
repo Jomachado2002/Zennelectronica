@@ -108,6 +108,8 @@ async function errorFromAxios(err, fallback) {
   return data?.message || fallback;
 }
 
+const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
+
 function asOfLabel() {
   return new Intl.DateTimeFormat('es-PY', {
     timeZone: 'America/Asuncion',
@@ -202,6 +204,21 @@ const CreativeStudioPage = () => {
   const [toolsOpen, setToolsOpen] = useState(false);
   const photoRef = useRef({ key: '', file: null });
   const ios = isIosDevice();
+
+  useEffect(() => {
+    if (!activeId) return;
+    const product = products.find((item) => item.id === activeId);
+    const original = String(product?.detail || '').trim();
+    setDetailDraft((current) => {
+      const text = String(current || '').trim();
+      if (scene === 'rosa') {
+        if (!text || text === original) return ROSA_COPY;
+        return current;
+      }
+      if (text === ROSA_COPY) return original;
+      return current;
+    });
+  }, [scene, activeId, products]);
 
   const openBrands = () => {
     setStudioMode('brands');

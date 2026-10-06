@@ -43,49 +43,66 @@ const SPEC_FIRST = [
   'conex', 'bluetooth', 'wifi', 'teclado', 'peso'
 ];
 
-function filledSpecs(specs) {
-  const rows = (Array.isArray(specs) ? specs : []).filter((spec) => spec && String(spec.text || '').trim());
-  return rows
-    .map((spec, index) => {
-      const blob = `${spec.label || ''} ${spec.name || ''}`.toLowerCase();
-      const rank = SPEC_FIRST.findIndex((key) => blob.includes(key));
-      return { spec, index, rank: rank === -1 ? 100 : rank };
-    })
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .map((row) => row.spec);
+const SPEC_NOISE = /^(marca|brand|color|colour|c[oó]digo|sku|ean|garant[ií]a|origen|procedencia|categor[ií]a|subcategor[ií]a|tipo|descripci[oó]n|certificaci[oó]n|certificaciones|estado|condici[oó]n|compatibilidad|voltaje|alimentaci[oó]n|peso|dimensiones)$/i;
+const SPEC_SOFT = /^(modelo|model|referencia|serie|versi[oó]n)$/i;
+const SPEC_DULL = /^(s[ií]|no|n\/?a|est[aá]ndar|standard|gen[eé]rico|generico|negro|blanco|gris|plata|silver|gold|dorado|azul|rojo|verde|rosa|black|white|gray|grey)$/i;
+
+function specText(spec) {
+  return String(spec && spec.text || '').replace(/\s+/g, ' ').trim();
 }
 
-function specLayout(count, format) {
-  const band = format === 'story' ? 300 : format === 'square' ? 100 : 150;
-  let cols = count <= 2 ? 1 : 2;
-  if (count > 5 && Math.ceil(count / 2) * 34 > band) cols = 3;
-  const rows = Math.ceil(count / cols);
-  const lines = rows * 2 * 15 > band ? 1 : 2;
-  const lineH = band / Math.max(1, rows * lines);
-  const font = Math.max(11, Math.min(format === 'square' ? 14 : 18, Math.floor(lineH * 0.7)));
-  return { cols, lines, font };
+function specScore(spec, title) {
+  const label = String(spec.label || '').replace(/\s+/g, ' ').trim();
+  const name = String(spec.name || '').replace(/\s+/g, ' ').trim();
+  const text = specText(spec);
+  if (!text || text.length < 2) return -1;
+  if (SPEC_NOISE.test(label) || SPEC_NOISE.test(name) || SPEC_DULL.test(text)) return -1;
+  if (text.length > 42 && !/\d/.test(text)) return -1;
+  const titleNorm = String(title || '').toLowerCase();
+  if (titleNorm && text.length > 8 && titleNorm.includes(text.toLowerCase())) return -1;
+  const specific = /\d|\brtx\b|\bgtx\b|\bryzen\b|\bsnapdragon\b|\boled\b|\bips\b|\banc\b|\bdpi\b|\bssd\b|\bnvme\b|\b5g\b/i.test(text);
+  if (SPEC_SOFT.test(label) || SPEC_SOFT.test(name)) return specific ? 48 : -1;
+
+  const blob = `${label} ${name}`.toLowerCase();
+  const rank = SPEC_FIRST.findIndex((key) => blob.includes(key));
+  let score = rank === -1 ? 0 : 36 - rank;
+  if (/\d/.test(text)) score += 24;
+  if (specific) score += 28;
+  if (text.length <= 18) score += 8;
+  if (text.length > 32) score -= 10;
+  return score;
 }
 
-function fitSpecText(value) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim();
-  if (text.length <= 34) return text;
-  return `${text.slice(0, 33).trim()}…`;
-}
-
-function specsHtml(specs, format) {
-  const cap = format === 'square' ? 3 : 4;
-  const items = filledSpecs(specs).slice(0, cap);
-  if (!items.length) return '';
-  const { cols, font } = specLayout(items.length, format);
-  const size = Math.ceil(items.length / cols);
-  const columns = [];
-  for (let i = 0; i < cols; i += 1) {
-    const slice = items.slice(i * size, (i + 1) * size);
-    if (slice.length) columns.push(slice);
+function chipValue(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim();
+  const inch = text.match(/(\d{1,2}(?:[.,]\d)?)\s*(pulgadas|pulg|"|''|inch)/i);
+  if (inch) return `${inch[1].replace(',', '.')}"`;
+  const hz = text.match(/(\d{2,3})\s*hz/i);
+  if (hz && text.length < 24) return `${hz[1]}Hz`;
+  const mem = text.match(/(\d+)\s*(gb|tb)/i);
+  if (mem && text.length < 36) {
+    const kind = /ssd|nvme/i.test(text) ? ' SSD' : '';
+    return `${mem[1]}${mem[2].toUpperCase()}${kind}`;
   }
-  return `<div class="specs" style="--spec-size:${font}px">${columns.map((col) => `
-    <div class="col">${col.map((spec) => `<p class="sp"><span class="k">${esc(spec.label)}:</span> ${esc(fitSpecText(spec.text))}</p>`).join('')}</div>`).join('')}
-  </div>`;
+  if (text.length <= 26) return text;
+  return `${text.slice(0, 25).trim()}…`;
+}
+
+function highlightSpecs(specs, title, format) {
+  const cap = format === 'square' ? 1 : 2;
+  const ranked = (Array.isArray(specs) ? specs : [])
+    .map((spec) => ({ spec, score: specScore(spec, title) }))
+    .filter((row) => row.score >= 24)
+    .sort((a, b) => b.score - a.score || specText(a.spec).length - specText(b.spec).length);
+  if (!ranked.length) return [];
+  if (cap === 1 || !ranked[1] || ranked[1].score < 52) return [ranked[0].spec];
+  return ranked.slice(0, cap).map((row) => row.spec);
+}
+
+function specsHtml(specs, format, title) {
+  const items = highlightSpecs(specs, title, format);
+  if (!items.length) return '';
+  return `<div class="specs">${items.map((spec) => `<div class="chip"><div class="v">${esc(chipValue(spec.text))}</div><div class="k">${esc(spec.label || '')}</div></div>`).join('')}</div>`;
 }
 
 function galleryHtml(gallery) {
@@ -270,7 +287,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .plate {
     position: absolute; left: 50%; top: 50%;
     transform: translate(-50%, -50%);
-    width: 700px; height: 620px;
+    width: 90%; height: 94%;
     border-radius: 32px;
     background:
       linear-gradient(#fff, #fff) padding-box,
@@ -293,7 +310,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .c.br { right: 16px; bottom: 16px; border-right: 3px solid #00B5D8; border-bottom: 3px solid #00B5D8; }
   .photo {
     position: relative; z-index: 2;
-    width: 88%; height: 88%;
+    width: 94%; height: 94%;
     object-fit: contain; object-position: center;
     filter: none;
   }
@@ -340,26 +357,25 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   }
   .specs {
     position: relative; z-index: 5; flex: 0 0 auto;
-    display: flex; align-items: center; justify-content: center;
-    padding: 6px 44px 2px;
+    display: flex; align-items: stretch; justify-content: center;
+    padding: 0 56px;
   }
-  .col {
-    flex: 1; min-width: 0;
+  .chip {
+    min-width: 160px; max-width: 420px;
     text-align: center;
-    padding: 0 18px;
+    padding: 0 32px;
   }
-  .col + .col { border-left: 1px solid rgba(255,255,255,.4); }
-  .sp {
-    margin: 0 0 4px;
-    font-size: var(--spec-size);
-    line-height: 1.3;
-    font-weight: 500;
-    color: rgba(226,232,240,.9);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .chip + .chip { border-left: 1px solid rgba(255,255,255,.35); }
+  .chip .v {
+    font-family: Unbounded, Outfit, sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05;
+    color: #fff;
   }
-  .sp .k { font-weight: 700; color: rgba(255,255,255,.96); }
+  .chip .k {
+    margin-top: 4px;
+    font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: rgba(255,255,255,.72);
+  }
   footer {
     position: relative; flex: 0 0 auto; z-index: 6;
   }
@@ -397,9 +413,9 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     font-size: 15px; line-height: 1.3; font-weight: 500; color: #D1D5DB;
     display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .scene-cielo .sp, .scene-cielo .sp .k { color: #64748B; }
-  .scene-cielo .sp .k { color: #475569; }
-  .scene-cielo .col + .col { border-color: rgba(15,23,42,.2); }
+  .scene-cielo .chip .v { color: #0F172A; }
+  .scene-cielo .chip .k { color: #475569; }
+  .scene-cielo .chip + .chip { border-color: rgba(15,23,42,.2); }
   .scene-cielo .detail { color: #475569; }
   .scene-cielo .seal {
     color: #0F172A;
@@ -447,10 +463,16 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     color: rgba(255,255,255,.78);
   }
   .scene-cielo .asof { color: #475569; }
-  .scene-rosa .sp, .scene-rosa .sp .k { color: #9D174D; }
-  .scene-rosa .sp .k { color: #4C0519; }
-  .scene-rosa .col + .col { border-color: rgba(157,23,77,.22); }
-  .scene-rosa .detail { color: #9F1239; }
+  .scene-rosa .chip .v { color: #4C0519; }
+  .scene-rosa .chip .k { color: #9D174D; }
+  .scene-rosa .chip + .chip { border-color: rgba(157,23,77,.28); }
+  .scene-rosa header { padding-bottom: 118px; }
+  .scene-rosa .detail {
+    color: #9F1239;
+    font-size: 18px;
+    font-weight: 600;
+    -webkit-line-clamp: 2;
+  }
   .scene-rosa .seal {
     color: #fff;
     background: linear-gradient(135deg, #E11D48, #BE185D);
@@ -533,17 +555,18 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
 
   .fmt-story .rosa-badge { width: 156px; top: 16px; }
   .fmt-feed .rosa-badge { width: 112px; top: 6px; }
-  .fmt-feed .hero { min-height: 460px; }
-  .fmt-feed .plate { width: 620px; height: 500px; }
+  .fmt-feed .plate { width: 92%; height: 96%; }
+  .fmt-feed.scene-rosa header { padding-bottom: 132px; }
   .fmt-feed .title { margin-top: 4px; font-size: 32px; }
   .fmt-feed .offer .now { font-size: 36px; }
   .fmt-feed .cta { height: 48px; padding: 0 22px; font-size: 17px; min-width: 240px; }
   .fmt-feed .row { margin-top: 10px; }
   .fmt-feed footer { padding: 10px 48px 32px; }
 
-  .fmt-story .hero { min-height: 620px; }
-  .fmt-story .plate { width: 680px; height: 600px; border-radius: 40px; }
-  .fmt-story .hero.has-thumbs .plate { width: 640px; height: 520px; top: 42%; }
+  .fmt-story .plate { width: 94%; height: 96%; border-radius: 40px; }
+  .fmt-story .hero.has-thumbs .plate { width: 88%; height: 78%; top: 42%; }
+  .fmt-story.scene-rosa header { padding-bottom: 196px; }
+  .fmt-story .chip .v { font-size: 34px; }
   .fmt-story .thumbs {
     left: 50%; top: auto; bottom: 10px;
     transform: translateX(-50%);
@@ -565,8 +588,8 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .fmt-story .cta { height: 52px; padding: 0 26px; font-size: 18px; min-width: 300px; }
   .fmt-story .wa { margin-top: 8px; }
 
-  .fmt-square .hero { min-height: 380px; }
-  .fmt-square .plate { width: 520px; height: 400px; border-radius: 30px; }
+  .fmt-square .plate { width: 88%; height: 94%; border-radius: 30px; }
+  .fmt-square .chip .v { font-size: 22px; }
   .fmt-square .thumb { width: 68px; height: 66px; border-radius: 16px; }
   .fmt-square .thumbs { left: 22px; }
   .fmt-square header { padding: 20px 36px 0 44px; }
@@ -606,7 +629,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
         ${img}
       </div>
     </div>
-    ${specsHtml(payload.specs || [], format)}
+    ${specsHtml(payload.specs || [], format, payload.title)}
     <footer>
       ${brand}
       <div class="kicker">${esc(payload.kicker)}</div>

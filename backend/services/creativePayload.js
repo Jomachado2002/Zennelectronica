@@ -427,6 +427,7 @@ function instagramCaption(payload) {
 }
 
 const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'];
+const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
 
 function pickScene(requested, family, theme, id) {
   const asked = String(requested || '').toLowerCase();
@@ -451,6 +452,7 @@ function buildCreativePayload(product, options = {}) {
   const images = firstImages(product);
   const imageIndex = Math.max(0, Math.min(Number(options.imageIndex) || 0, Math.max(0, images.length - 1)));
   const title = norm(options.title) || shortTitle(product);
+  const scene = pickScene(options.scene, family, theme, product._id);
 
   const payload = {
     id: String(product._id),
@@ -461,11 +463,12 @@ function buildCreativePayload(product, options = {}) {
     family,
     hasGpu,
     theme,
-    scene: pickScene(options.scene, family, theme, product._id),
+    scene,
     categoryLabel: hasGpu && family === 'notebook' ? 'GAMING' : (FAMILY_LABEL[family] || 'TECNOLOGÍA'),
     kicker: categoryKicker(product, family, hasGpu),
     title,
     specs: pageSpecs(product, options.specSchema),
+    sourceDetail: clipDetail(product.description),
     detail: options.detail !== undefined ? norm(options.detail).slice(0, 700) : clipDetail(product.description),
     price: formatGs(product.sellingPrice || product.price),
     listPrice: formatGs(product.price),
@@ -514,6 +517,7 @@ module.exports = {
   formatGs,
   hasDedicatedGpu,
   instagramCaption,
+  ROSA_COPY,
   wantsPrice,
   priceAsOfLabel,
   listSelectFields,
