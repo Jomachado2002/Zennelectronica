@@ -1889,6 +1889,11 @@ const {
     downloadBrandStoryPng,
     exportBrandStoriesZip
 } = require('../controller/product/brandStoryController');
+const {
+  listHighlightCoversController,
+  previewHighlightCoverHtml,
+  downloadHighlightCoverPng
+} = require('../controller/product/highlightCoverController');
 
     // ===== RUTAS DE PRUEBA PARA AUTENTICACIÓN =====
 const authTestRoutes = require('./authTest');
@@ -2032,6 +2037,10 @@ router.post('/creativos/historias-marcas/exportar', authToken, (req, res, next) 
     res.setTimeout(5 * 60 * 1000);
     return exportBrandStoriesZip(req, res, next);
 });
+
+router.get('/creativos/iconos', authToken, listHighlightCoversController);
+router.get('/creativos/iconos/html', authToken, previewHighlightCoverHtml);
+router.get('/creativos/iconos/descargar', authToken, downloadHighlightCoverPng);
 
 router.get('/worker/settings', adminAuth, getWorkerSettingsController);
 router.put('/worker/settings', adminAuth, putWorkerSettingsController);

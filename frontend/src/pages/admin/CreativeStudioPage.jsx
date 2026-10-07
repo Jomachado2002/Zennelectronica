@@ -14,6 +14,7 @@ import axiosInstance from '../../config/axiosInstance';
 import { siteUrl } from '../../config/siteUrl';
 import { productPath } from '../../helpers/productPath';
 import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
+import HighlightCoversPanel from '../../components/admin/HighlightCoversPanel';
 import PublishPanel from '../../components/admin/PublishPanel';
 import {
   collectLeafSubcategoryValues,
@@ -199,6 +200,7 @@ const CreativeStudioPage = () => {
   const [overrides, setOverrides] = useState({});
   const [studioMode, setStudioMode] = useState('flyers');
   const [brandsReady, setBrandsReady] = useState(false);
+  const [iconsReady, setIconsReady] = useState(false);
   const [photoReady, setPhotoReady] = useState(false);
   const [frameW, setFrameW] = useState(340);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -223,6 +225,11 @@ const CreativeStudioPage = () => {
   const openBrands = () => {
     setStudioMode('brands');
     setBrandsReady(true);
+  };
+
+  const openIcons = () => {
+    setStudioMode('icons');
+    setIconsReady(true);
   };
 
   const toggleFormat = (id) => {
@@ -642,7 +649,9 @@ const CreativeStudioPage = () => {
               <p className="text-gray-600 mt-1">
                 {studioMode === 'brands'
                   ? 'Historias con fondo blanco: ícono de la subcategoría y los logos de las marcas que tenemos en stock.'
-                  : 'Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Logo, precio, specs y sello de 24 h ya van en la plantilla.'}
+                  : studioMode === 'icons'
+                    ? 'Portadas para destacadas: el ícono de cada subcategoría va al centro, con el fondo y el logo de Zenn. Guardalas en Fotos y cargalas en Instagram.'
+                    : 'Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Logo, precio, specs y sello de 24 h ya van en la plantilla.'}
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
                 <button
@@ -664,6 +673,16 @@ const CreativeStudioPage = () => {
                     : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
                 >
                   Historias de marcas
+                </button>
+                <button
+                  type="button"
+                  onClick={openIcons}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'icons'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Íconos destacadas
                 </button>
                 <button
                   type="button"
@@ -698,7 +717,13 @@ const CreativeStudioPage = () => {
           </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' ? 'hidden' : ''}`}>
+        {iconsReady ? (
+          <div className={studioMode === 'icons' ? '' : 'hidden'}>
+            <HighlightCoversPanel />
+          </div>
+        ) : null}
+
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' || studioMode === 'icons' ? 'hidden' : ''}`}>
           <div className={`${studioMode === 'publish' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">

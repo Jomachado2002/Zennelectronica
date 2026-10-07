@@ -572,6 +572,8 @@ async function renderBrandStoryPreviewHtml(board, page) {
 
 module.exports = {
   PER_PAGE,
+  iconKeyFor,
+  iconSvg,
   invalidateBrandStoryCache,
   listSubcategoryBrandBoards,
   getSubcategoryBrandBoard,
