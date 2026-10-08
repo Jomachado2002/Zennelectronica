@@ -124,7 +124,7 @@ function moodOf(products) {
 }
 
 function hashtagsFor(products) {
-  const tags = ['#zenn', '#asuncion'];
+  const tags = ['#zenn', '#paraguay', '#asuncion'];
   for (const product of products) {
     const brand = hashtagToken(product.brandName);
     if (brand) tags.push(brand);
@@ -215,8 +215,98 @@ function composeCaptions(products, voices) {
   });
 }
 
+function communityTags(products) {
+  const tags = ['#zenn', '#paraguay', '#asuncion'];
+  const brands = [];
+  for (const product of products) {
+    const blob = `${product.title || ''} ${product.productName || ''} ${product.brandName || ''}`;
+    const gamer = product.theme === 'gamer' || product.hasGpu || /gamer|gaming/i.test(blob);
+    const brand = hashtagToken(product.brandName);
+    if (brand) (gamer ? tags : brands).push(brand);
+    if (product.family === 'mouse') tags.push(gamer ? '#mousegamer' : '#mouse');
+    if (product.family === 'teclado') tags.push(gamer ? '#tecladogamer' : '#teclado');
+    if (product.family === 'monitor') tags.push(gamer ? '#monitorgamer' : '#monitor');
+    if (product.family === 'notebook') tags.push(gamer ? '#notebookgamer' : '#notebook');
+    if (product.family === 'celular') tags.push('#celular');
+    if (/auricular|headset/i.test(blob)) tags.push('#auriculares');
+    if (/cable|adaptador|hub|funda|cargador|webcam|accesorio/i.test(blob)) tags.push('#accesorios');
+    if (product.family && !['mouse', 'teclado', 'monitor', 'notebook', 'celular', 'general'].includes(product.family)) {
+      const familyTag = hashtagToken(product.family);
+      if (familyTag) tags.push(familyTag);
+    }
+  }
+  tags.push(...brands);
+  const unique = [];
+  for (const tag of tags) {
+    if (tag && !unique.includes(tag)) unique.push(tag);
+    if (unique.length >= 8) break;
+  }
+  return unique;
+}
+
+function shelfName(product) {
+  const name = norm(product.productName || product.title);
+  if (name.length <= 90) return name;
+  const cut = name.slice(0, 90);
+  return (cut.replace(/\s+\S*$/, '') || cut).trim();
+}
+
+function specBits(product) {
+  return (product.specs || [])
+    .filter((spec) => spec && spec.text && !String(spec.text).endsWith('…'))
+    .slice(0, 2)
+    .map((spec) => spec.text)
+    .join(' · ');
+}
+
+function offerBit(product) {
+  if (product.showPrice === false || !product.price) return '';
+  if (product.onOffer && product.listPrice && product.discountPercent) {
+    return `${product.price} (antes ${product.listPrice}, -${product.discountPercent}%)`;
+  }
+  return product.price;
+}
+
+function communityCaption(products, intro) {
+  const list = (products || []).filter(Boolean).slice(0, 10);
+  if (!list.length) return '';
+  const tags = communityTags(list);
+  if (list.length === 1) {
+    const product = list[0];
+    const name = shelfName(product);
+    const spec = specBits(product);
+    const price = offerBit(product);
+    const spoken = [name, spec, price ? `a ${price}` : ''].filter(Boolean).join(', ');
+    return [
+      `${spoken}.`,
+      'Está en stock en Zenn. Entrega en Asunción en 24 horas.',
+      `WhatsApp ${WHATSAPP}`,
+      '',
+      tags.join(' ')
+    ].join('\n');
+  }
+  const lines = list.map((product) => {
+    const name = shelfName(product);
+    const spec = specBits(product);
+    const price = offerBit(product);
+    const body = [name, spec].filter(Boolean).join(', ');
+    return `• ${body}${price ? ` · ${price}` : ''}`;
+  });
+  return [
+    intro,
+    '',
+    ...lines,
+    '',
+    'Stock en Asunción. Entrega en 24 horas.',
+    `WhatsApp ${WHATSAPP}`,
+    '',
+    tags.join(' ')
+  ].join('\n');
+}
+
 module.exports = {
   composeCaptions,
+  communityCaption,
   hashtagsFor,
   FAMILY_EMOJI
 };

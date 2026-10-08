@@ -97,6 +97,13 @@ async function runScheduledMirrorOnce(label) {
                 wallMs
             )}) | creados=${s.productsCreated} actualizados=${s.productsUpdated} omitidos=${s.productsSkipped} errores=${s.productsErrors} stockCleanup=${report.stockCleanupCount ?? 0}`
         );
+        try {
+            const { refreshScheduledStock } = require('./communityPlanner');
+            const changed = await refreshScheduledStock();
+            if (changed) console.log(`[Visão schedule][${label}] Calendario: ${changed} publicaciones ajustadas por stock`);
+        } catch (planError) {
+            console.error('[Visão schedule] calendario', planError && planError.message ? planError.message : planError);
+        }
     } catch (err) {
         console.error(
             `[Visão schedule][${label}] Error tras ${Date.now() - t0}ms:`,

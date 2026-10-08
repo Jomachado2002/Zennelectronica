@@ -24,6 +24,9 @@ axiosInstance.interceptors.request.use((config) => {
       delete config.headers['Content-Type'];
       delete config.headers['content-type'];
     }
+  } else if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+    delete config.headers['content-type'];
   } else if (!config.headers['Content-Type'] && !config.headers['content-type']) {
     config.headers['Content-Type'] = 'application/json';
   }

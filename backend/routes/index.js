@@ -1871,6 +1871,8 @@ const {
 const {
   listCreativeProducts,
   getCreativeCategories,
+  listCreativeSpecs,
+  updateCreativeSpec,
   previewCreativeHtml,
   previewCreativePng,
   downloadCreativePng,
@@ -1881,7 +1883,15 @@ const {
   composeSocialCaption,
   publishSocialPost,
   listSocialCalendar,
-  cancelSocialPost
+  cancelSocialPost,
+  planCommunity,
+  getCommunityCalendar,
+  completeCommunityIdea,
+  authorizeCommunityIdea,
+  reviseCommunityIdea,
+  setCommunityDayFocus,
+  communityMediaUpload,
+  uploadCommunityMedia
 } = require('../controller/product/socialStudioController');
 const {
     listBrandStories,
@@ -1971,6 +1981,8 @@ router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
 router.get('/jobs-health', authToken, pingJobsHealth);
 
 router.get('/creativos/categorias', authToken, getCreativeCategories);
+router.get('/creativos/specs-foco', authToken, listCreativeSpecs);
+router.put('/creativos/specs-foco', authToken, updateCreativeSpec);
 router.get('/creativos/productos', authToken, listCreativeProducts);
 router.get('/creativos/html/:id', authToken, previewCreativeHtml);
 router.get('/creativos/png/:id', authToken, previewCreativePng);
@@ -1990,6 +2002,26 @@ router.post('/creativos/publicar', authToken, (req, res, next) => {
 });
 router.get('/creativos/calendario', authToken, listSocialCalendar);
 router.delete('/creativos/calendario/:id', authToken, cancelSocialPost);
+router.get('/creativos/comunidad', authToken, getCommunityCalendar);
+router.post('/creativos/comunidad/armar', authToken, planCommunity);
+router.post('/creativos/comunidad/dia', authToken, (req, res, next) => {
+  req.setTimeout(5 * 60 * 1000);
+  res.setTimeout(5 * 60 * 1000);
+  return setCommunityDayFocus(req, res, next);
+});
+router.post('/creativos/comunidad/:id/listo', authToken, completeCommunityIdea);
+router.post('/creativos/comunidad/:id/autorizar', authToken, authorizeCommunityIdea);
+router.post('/creativos/comunidad/:id/modificar', authToken, (req, res, next) => {
+  req.setTimeout(3 * 60 * 1000);
+  res.setTimeout(3 * 60 * 1000);
+  return reviseCommunityIdea(req, res, next);
+});
+router.post('/creativos/comunidad/:id/archivo', authToken, (req, res, next) => {
+  communityMediaUpload(req, res, (error) => {
+    if (error) return res.status(400).json({ success: false, message: error.message || 'No se pudo leer el archivo' });
+    return uploadCommunityMedia(req, res, next);
+  });
+});
 router.get('/creativos/calendario/tick', async (req, res) => {
   const secret = process.env.CRON_SECRET || '';
   const header = String(req.headers.authorization || '');

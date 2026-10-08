@@ -23,10 +23,10 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitUntilReady(containerId, token) {
+async function waitUntilReady(containerId, token, attempts = 20) {
   const url = `https://graph.instagram.com/${IG_VERSION}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`;
   let last = '';
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     const res = await fetch(url);
     const data = await res.json().catch(() => ({}));
     if (data.error) {
@@ -86,8 +86,8 @@ async function graphForm(url, fields) {
   return data;
 }
 
-async function publishInstagramContainer(base, creationId, token) {
-  await waitUntilReady(creationId, token);
+async function publishInstagramContainer(base, creationId, token, attempts) {
+  await waitUntilReady(creationId, token, attempts);
   const published = await graph(`${base}/media_publish`, {
     creation_id: creationId,
     access_token: token
@@ -209,10 +209,39 @@ async function publishFacebookStories({ urls }) {
   return ids.join(',');
 }
 
+async function publishInstagramReel({ url, caption }) {
+  const { token, userId } = igConfig();
+  if (!token || !userId) throw new Error('Falta el token o el id de Instagram');
+  const base = `https://graph.instagram.com/${IG_VERSION}/${userId}`;
+  const created = await graph(`${base}/media`, {
+    media_type: 'REELS',
+    video_url: url,
+    caption,
+    share_to_feed: true,
+    access_token: token
+  });
+  return publishInstagramContainer(base, created.id, token, 45);
+}
+
+async function publishFacebookVideo({ url, caption }) {
+  const { token, pageId } = fbConfig();
+  if (!token || !pageId) throw new Error('Falta el token o el id de la página de Facebook');
+  const base = `https://graph.facebook.com/${IG_VERSION}/${pageId}`;
+  const video = await graphForm(`${base}/videos`, {
+    file_url: url,
+    description: caption,
+    published: 'true',
+    access_token: token
+  });
+  return video.id;
+}
+
 module.exports = {
   uploadJpeg,
   publishInstagramFeed,
   publishInstagramStories,
+  publishInstagramReel,
   publishFacebookFeed,
-  publishFacebookStories
+  publishFacebookStories,
+  publishFacebookVideo
 };

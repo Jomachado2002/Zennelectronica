@@ -18,6 +18,7 @@ const {
   FORMATS
 } = require('../../services/creativePayload');
 const { renderCreativeHtml } = require('../../services/creativeHtml');
+const { focusedSchemaFor, listCreativeSpecFocus, setCreativeSpecEnabled } = require('../../services/creativeSpecFocus');
 const { getLogoWhiteDataUri, getLogoColorDataUri, getPhotoDataUri, getBrandLogoDataUri } = require('../../services/creativeImage');
 const { getLogoMap, normalizeBrandSlug } = require('../../services/brandLogoService');
 
@@ -180,8 +181,8 @@ function buildListFilter(query) {
   return filter;
 }
 
-function toListItem(p, theme, schemaMap) {
-  const payload = buildCreativePayload(p, { theme, specSchema: schemaFor(schemaMap, p) });
+function toListItem(p, theme, specSchema) {
+  const payload = buildCreativePayload(p, { theme, specSchema });
   return {
     id: payload.id,
     codigo: payload.codigo,
@@ -241,7 +242,6 @@ const listCreativeProducts = async (req, res) => {
     const lane = String(req.query.lane || 'all').toLowerCase();
     const needsGpuFilter = lane === 'gamer' || lane === 'office';
 
-    const schemaMap = await loadSpecSchemaMap();
     let data;
     let total;
 
@@ -251,7 +251,7 @@ const listCreativeProducts = async (req, res) => {
         .sort({ brandName: 1, sellingPrice: 1 })
         .limit(MAX_SCAN)
         .lean();
-      data = products.map((p) => toListItem(p, req.query.theme, schemaMap));
+      data = await Promise.all(products.map(async (p) => toListItem(p, req.query.theme, await focusedSchemaFor(p))));
       if (lane === 'gamer') data = data.filter((p) => p.hasGpu);
       if (lane === 'office') data = data.filter((p) => !p.hasGpu);
       data = sortByLastDownload(await withDownloadDates(data));
@@ -295,13 +295,14 @@ const listCreativeProducts = async (req, res) => {
         ? await Product.find({ _id: { $in: ids } }).select(listSelectFields()).lean()
         : [];
       const byId = new Map(products.map((product) => [String(product._id), product]));
-      data = ranked.map((row) => {
+      data = [];
+      for (const row of ranked) {
         const product = byId.get(String(row._id));
-        if (!product) return null;
-        const item = toListItem(product, req.query.theme, schemaMap);
+        if (!product) continue;
+        const item = toListItem(product, req.query.theme, await focusedSchemaFor(product));
         item.lastDownloadedAt = row.downloadedAt || null;
-        return item;
-      }).filter(Boolean);
+        data.push(item);
+      }
     }
 
     return res.json({
@@ -365,10 +366,9 @@ function applyOverrides(payload, body = {}) {
 async function loadProductPayload(id, options) {
   const product = await Product.findById(id).select(listSelectFields()).lean();
   if (!product) return null;
-  const schemaMap = await loadSpecSchemaMap();
   return buildCreativePayload(product, {
     ...options,
-    specSchema: schemaFor(schemaMap, product)
+    specSchema: await focusedSchemaFor(product)
   });
 }
 
@@ -503,7 +503,7 @@ const exportCreativeZip = async (req, res) => {
           buildCreativePayload(product, {
             theme: extra.theme || theme,
             scene: extra.scene || req.body.scene,
-            specSchema: schemaFor(await loadSpecSchemaMap(), product),
+            specSchema: await focusedSchemaFor(product),
             title: extra.title,
             detail: extra.detail,
             cta: extra.cta,
@@ -554,9 +554,38 @@ const markCreativeDownloaded = async (req, res) => {
   }
 };
 
+const listCreativeSpecs = async (req, res) => {
+  try {
+    const data = await listCreativeSpecFocus({ refresh: String(req.query.refresh || '') === '1' });
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('[creativos] specs', error);
+    return res.status(500).json({ success: false, message: 'No se pudo cargar la tabla de especificaciones' });
+  }
+};
+
+const updateCreativeSpec = async (req, res) => {
+  try {
+    const data = await setCreativeSpecEnabled({
+      category: req.body.category,
+      subcategory: req.body.subcategory,
+      name: req.body.name,
+      enabled: req.body.enabled
+    });
+    return res.json({ success: true, data });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'No se pudo guardar la especificación'
+    });
+  }
+};
+
 module.exports = {
   listCreativeProducts,
   getCreativeCategories,
+  listCreativeSpecs,
+  updateCreativeSpec,
   previewCreativeHtml,
   previewCreativePng,
   downloadCreativePng,

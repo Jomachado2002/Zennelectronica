@@ -261,14 +261,76 @@ function readSpec(product, name) {
   return '';
 }
 
+function shortSpecText(name, label, raw) {
+  const full = norm(raw);
+  if (!full) return '';
+  let text = full.split('|')[0].trim();
+  const blob = `${name || ''} ${label || ''}`.toLowerCase();
+  if (/procesador|processor|\bcpu\b|\bchip\b/.test(blob) && !String(name).startsWith('tipo_')) {
+    const model = text.match(/\b(ryzen\s*[3579]\s*\d{3,5}\w*|core\s*(?:ultra\s*)?i[3579](?:[-\s]*\d{3,5}\w*)?|core\s*(?:ultra\s*)?\d(?:[-\s]+\d{3,5}\w*)?)\b/i)
+      || text.match(/\b(m[1-4](?:\s*(?:pro|max|ultra))?)\b/i);
+    if (model) {
+      return model[1]
+        .replace(/\s+/g, ' ')
+        .replace(/\b(i[3579])(\d)/i, '$1 $2');
+    }
+  }
+  if (/memoria_ram|\bram\b/.test(blob) && !/tipo|velocidad|ddr|latencia/.test(blob)) {
+    const ram = text.match(/(\d+)\s*gb/i);
+    if (ram) return `${ram[1]}GB`;
+  }
+  if (/almacenamiento|^capacidad$|storage/.test(blob) && !/tipo/.test(blob)) {
+    const disk = text.match(/(\d+)\s*(gb|tb)/i);
+    if (disk) {
+      const ssd = /ssd|nvme/i.test(full) ? ' SSD' : '';
+      return `${disk[1]}${disk[2].toUpperCase()}${ssd}`;
+    }
+  }
+  if (/grafic|gpu|v-?ram|memoria_de_video|memoria_v_ram|clocks/.test(blob)) {
+    const gpu = text.match(/((?:rtx|gtx)\s*\d{3,4}(?:\s*(?:ti|super))?|rx\s*\d{3,4})/i);
+    if (gpu) return gpu[1].replace(/\s+/g, ' ').toUpperCase();
+    const gb = text.match(/(\d+)\s*gb/i);
+    if (gb) return `${gb[1]}GB`;
+  }
+  if (/pantalla|tamano_de_pantalla|pulgada/.test(blob)) {
+    const inch = text.match(/(\d{1,2}(?:[.,]\d)?)/);
+    if (inch) return `${inch[1].replace(',', '.')}"`;
+  }
+  if (/frecuencia|refresh|hz|clock/.test(blob)) {
+    const mhz = full.match(/(\d{3,5}(?:[.,]\d+)?)\s*mhz/i);
+    if (mhz) {
+      const n = Number(mhz[1].replace(',', '.'));
+      if (n >= 1000) {
+        const ghz = (n / 1000).toFixed(2).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',');
+        return `${ghz} GHz`;
+      }
+      return `${mhz[1].replace('.', ',')} MHz`;
+    }
+    const ghz = full.match(/(\d(?:[.,]\d+)?)\s*ghz/i);
+    if (ghz) return `${ghz[1].replace('.', ',')} GHz`;
+    const hz = full.match(/(\d{2,3})\s*hz/i);
+    if (hz && !/mhz|ghz/i.test(full) && Number(hz[1]) >= 60) return `${hz[1]}Hz`;
+  }
+  if (/resoluc/.test(blob)) {
+    if (/3840|4k|uhd/i.test(text)) return '4K';
+    if (/2560|1440|qhd|2k/i.test(text)) return 'QHD';
+    if (/1920|1080|full/i.test(text)) return 'FHD';
+  }
+  if (/socket/.test(blob)) return text.replace(/^socket\s*/i, '').slice(0, 16);
+  if (text.length > 22) text = `${text.slice(0, 21).trim()}…`;
+  return text;
+}
+
 function pageSpecs(product, schema) {
-  const fields = Array.isArray(schema) ? schema : [];
-  if (fields.length) {
-    return fields.map((field) => ({
-      label: field.label,
-      name: field.name,
-      text: readSpec(product, field.name)
-    }));
+  if (Array.isArray(schema)) {
+    return schema.map((field) => {
+      const raw = readSpec(product, field.name);
+      return {
+        label: field.label,
+        name: field.name,
+        text: raw ? shortSpecText(field.name, field.label, raw) : ''
+      };
+    }).filter((spec) => spec.text);
   }
   const flat = flattenSpecs(product);
   return Object.entries(flat).slice(0, 18).map(([key, value]) => ({
@@ -308,13 +370,13 @@ function schemaFor(map, product) {
   return map.get(`${product.category}::${product.subcategory}`) || [];
 }
 
-function shortTitle(product, maxChars = 42) {
+function shortTitle(product, maxChars = 52) {
   const brand = norm(product.brandName);
   let name = norm(product.productName);
-  name = name.replace(/^[A-Z0-9._-]{5,}[\s/]+/i, '');
+  name = name.replace(/^[A-Z0-9]*\d[A-Z0-9._-]*[\s/]+/i, '');
   if (brand) {
-    const re = new RegExp(`^${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i');
-    name = name.replace(re, '');
+    const re = new RegExp(`\\b${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    name = name.replace(re, ' ');
   }
   name = name.replace(TITLE_NOISE, ' ').replace(/\s{2,}/g, ' ').trim();
 
@@ -322,6 +384,9 @@ function shortTitle(product, maxChars = 42) {
   const kept = [];
   for (const token of tokens) {
     if (SPEC_STOP.test(token) && kept.length >= 2) break;
+    if (kept.length >= 2 && /\d+\s*(gb|tb)\b/i.test(token)) break;
+    if (kept.length >= 2 && /^(geforce|radeon|rtx|gtx|ryzen)$/i.test(token)) break;
+    if (kept.length >= 2 && token.length >= 8 && /[A-Za-z]/.test(token) && /\d/.test(token)) break;
     kept.push(token);
     const candidate = (brand ? `${brand} ${kept.join(' ')}` : kept.join(' ')).trim();
     if (candidate.length >= maxChars) break;
@@ -418,24 +483,31 @@ function instagramCaption(payload) {
       : `Precio al ${payload.priceAsOf}: ${payload.price}`);
   return [
     title,
-    payload.detail || '',
     ...specs,
     priceLine,
     'Entrega 24 h',
-    'WhatsApp 0973 345 284'
+    '0973 345 284'
   ].filter(Boolean).join('\n');
 }
 
 const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'];
 const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
 
+function isOctoberRosa(date = new Date()) {
+  const month = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Asuncion',
+    month: 'numeric'
+  }).format(date);
+  return month === '10';
+}
+
 function pickScene(requested, family, theme, id) {
+  if (isOctoberRosa()) return 'rosa';
   const asked = String(requested || '').toLowerCase();
   if (SCENES.includes(asked)) return asked;
-  const october = new Date().getMonth() === 9;
   const pool = theme === 'gamer'
     ? ['neon', 'haz', 'malla', 'orbita']
-    : (october ? ['rosa', 'cielo', 'orbita', 'haz'] : ['cielo', 'orbita', 'haz', 'malla']);
+    : ['cielo', 'orbita', 'haz', 'malla'];
   const n = String(id || family || '').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
   return pool[n % pool.length];
 }
@@ -518,6 +590,7 @@ module.exports = {
   hasDedicatedGpu,
   instagramCaption,
   ROSA_COPY,
+  isOctoberRosa,
   wantsPrice,
   priceAsOfLabel,
   listSelectFields,

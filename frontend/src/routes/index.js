@@ -386,6 +386,10 @@ const router = createBrowserRouter([
                         path: "creativos",
                         element: <Lazy><CreativeStudioPage /></Lazy>
                     },
+                    {
+                        path: "calendario-ig",
+                        element: <Lazy><CreativeStudioPage /></Lazy>
+                    },
                     // Catálogo PDF
                     {
                         path: "catalogo-pdf",

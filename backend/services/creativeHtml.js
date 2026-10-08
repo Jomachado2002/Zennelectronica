@@ -88,19 +88,14 @@ function chipValue(raw) {
   return `${text.slice(0, 25).trim()}…`;
 }
 
-function highlightSpecs(specs, title, format) {
-  const cap = format === 'square' ? 1 : 2;
-  const ranked = (Array.isArray(specs) ? specs : [])
-    .map((spec) => ({ spec, score: specScore(spec, title) }))
-    .filter((row) => row.score >= 24)
-    .sort((a, b) => b.score - a.score || specText(a.spec).length - specText(b.spec).length);
-  if (!ranked.length) return [];
-  if (cap === 1 || !ranked[1] || ranked[1].score < 52) return [ranked[0].spec];
-  return ranked.slice(0, cap).map((row) => row.spec);
+function highlightSpecs(specs) {
+  return (Array.isArray(specs) ? specs : [])
+    .filter((spec) => specText(spec).length >= 2)
+    .slice(0, 3);
 }
 
-function specsHtml(specs, format, title) {
-  const items = highlightSpecs(specs, title, format);
+function specsHtml(specs) {
+  const items = highlightSpecs(specs);
   if (!items.length) return '';
   return `<div class="specs">${items.map((spec) => `<div class="chip"><div class="v">${esc(chipValue(spec.text))}</div><div class="k">${esc(spec.label || '')}</div></div>`).join('')}</div>`;
 }
@@ -368,7 +363,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .chip + .chip { border-left: 1px solid rgba(255,255,255,.35); }
   .chip .v {
     font-family: Unbounded, Outfit, sans-serif;
-    font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05;
+    font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05;
     color: #fff;
   }
   .chip .k {
@@ -423,7 +418,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     border-color: rgba(14,116,144,.18);
   }
   .scene-cielo .kicker { color: #0369A1; }
-  .scene-cielo .title, .scene-cielo .wa { color: #0F172A; }
+  .scene-cielo .title, .scene-cielo .wa, .scene-cielo .phone { color: #0F172A; }
   .scene-cielo .mark { color: #0369A1; opacity: .08; }
   .scene-cielo .promises span {
     color: #0F172A;
@@ -479,7 +474,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     border-color: transparent;
   }
   .scene-rosa .kicker { color: #BE185D; }
-  .scene-rosa .title, .scene-rosa .wa { color: #4C0519; }
+  .scene-rosa .title, .scene-rosa .wa, .scene-rosa .phone { color: #4C0519; }
   .scene-rosa .mark { display: none; }
   .scene-rosa .c.tl { border-left-color: #E11D48; border-top-color: #E11D48; }
   .scene-rosa .c.tr { border-right-color: #BE185D; border-top-color: #BE185D; }
@@ -552,6 +547,12 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     box-shadow: 0 12px 30px rgba(123,44,191,.38);
   }
   .wa { font-size: 15px; color: rgba(255,255,255,.55); font-weight: 500; }
+  .phone {
+    margin-top: 16px;
+    font-family: Unbounded, Outfit, sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: .04em;
+    color: #fff;
+  }
 
   .fmt-story .rosa-badge { width: 156px; top: 16px; }
   .fmt-feed .rosa-badge { width: 112px; top: 6px; }
@@ -629,12 +630,11 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
         ${img}
       </div>
     </div>
-    ${specsHtml(payload.specs || [], format, payload.title)}
+    ${specsHtml(payload.specs || [])}
     <footer>
       ${brand}
       <div class="kicker">${esc(payload.kicker)}</div>
       <div class="title">${esc(payload.title)}</div>
-      ${payload.detail ? `<div class="detail">${esc(payload.detail)}</div>` : ''}
       <div class="rule"></div>
       ${payload.showPrice === false ? '' : `<div class="offer">${payload.onOffer ? `<span class="off">-${payload.discountPercent}%</span><span class="before">${esc(payload.listPrice)}</span>` : ''}<span class="now">${esc(payload.price)}</span><span class="asof">Precio al ${esc(payload.priceAsOf)}</span></div>`}
       <div class="row">
@@ -642,9 +642,8 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
           <span>Stock disponible</span>
           <span>Entrega 24 h</span>
         </div>
-        <div class="cta">${esc(payload.showPrice === false ? (payload.cta || 'Consultá el precio') : 'Pedilo por WhatsApp')}</div>
       </div>
-      <div class="wa" style="margin-top:14px">${format === 'story' ? `${esc(payload.site)}  ·  ${esc(payload.whatsapp)}` : `WhatsApp ${esc(payload.whatsapp)}`}</div>
+      <div class="phone">${esc(payload.whatsapp)}</div>
     </footer>
     <div class="grain"></div>
   </div>

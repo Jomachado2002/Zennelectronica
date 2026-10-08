@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   FaBullhorn,
   FaCheck,
@@ -15,6 +16,8 @@ import { siteUrl } from '../../config/siteUrl';
 import { productPath } from '../../helpers/productPath';
 import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
 import HighlightCoversPanel from '../../components/admin/HighlightCoversPanel';
+import CreativeSpecFocusPanel from '../../components/admin/CreativeSpecFocusPanel';
+import CommunityCalendar from '../../components/admin/CommunityCalendar';
 import PublishPanel from '../../components/admin/PublishPanel';
 import {
   collectLeafSubcategoryValues,
@@ -120,13 +123,12 @@ function asOfLabel() {
   }).format(new Date());
 }
 
-function captionFor(product, title, detail, showPrice) {
+function captionFor(product, title, showPrice) {
   if (!product) return '';
   const head = title || product.title || '';
   const specs = (product.specs || [])
     .filter((spec) => spec && spec.text)
     .map((spec) => `${spec.label || 'Detalle'}: ${spec.text}`);
-  const extra = detail != null ? String(detail).trim() : String(product.detail || '').trim();
   const priceLine = showPrice
     ? (product.onOffer
       ? `Precio al ${asOfLabel()}: ${product.price} (antes ${product.listPrice})`
@@ -134,11 +136,10 @@ function captionFor(product, title, detail, showPrice) {
     : 'Consultá el precio por WhatsApp';
   return [
     head,
-    extra,
     ...specs,
     priceLine,
     'Entrega 24 h',
-    'WhatsApp 0973 345 284'
+    '0973 345 284'
   ].filter(Boolean).join('\n');
 }
 
@@ -181,7 +182,8 @@ const CreativeStudioPage = () => {
   const [formats, setFormats] = useState(['feed']);
   const [previewFormat, setPreviewFormat] = useState('feed');
   const [theme, setTheme] = useState('auto');
-  const [scene, setScene] = useState('auto');
+  const october = new Date().getMonth() === 9;
+  const [scene, setScene] = useState(october ? 'rosa' : 'auto');
   const [showPrice, setShowPrice] = useState(true);
   const [lane, setLane] = useState('all');
   const [offersOnly, setOffersOnly] = useState(false);
@@ -201,6 +203,9 @@ const CreativeStudioPage = () => {
   const [studioMode, setStudioMode] = useState('flyers');
   const [brandsReady, setBrandsReady] = useState(false);
   const [iconsReady, setIconsReady] = useState(false);
+  const [specsReady, setSpecsReady] = useState(false);
+  const location = useLocation();
+  const calendarPage = location.pathname.endsWith('/calendario-ig');
   const [photoReady, setPhotoReady] = useState(false);
   const [frameW, setFrameW] = useState(340);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -232,6 +237,11 @@ const CreativeStudioPage = () => {
     setIconsReady(true);
   };
 
+  const openSpecs = () => {
+    setStudioMode('specs');
+    setSpecsReady(true);
+  };
+
   const toggleFormat = (id) => {
     setFormats((prev) => {
       if (prev.includes(id)) {
@@ -256,6 +266,7 @@ const CreativeStudioPage = () => {
   const activeProduct = products.find((p) => p.id === activeId);
 
   useEffect(() => {
+    if (calendarPage) return undefined;
     const load = async () => {
       try {
         const res = await axiosInstance.get('/api/admin/categories/menu/complete-structure');
@@ -269,7 +280,7 @@ const CreativeStudioPage = () => {
       }
     };
     load();
-  }, []);
+  }, [calendarPage]);
 
   const fetchProducts = useCallback(async (next = {}) => {
     const cat = next.category ?? category;
@@ -478,12 +489,7 @@ const CreativeStudioPage = () => {
     if (activeId) persistOverride(activeId, { title: value, imageIndex, detail: detailDraft });
   };
 
-  const onDetailChange = (value) => {
-    setDetailDraft(value);
-    if (activeId) persistOverride(activeId, { title: titleDraft, imageIndex, detail: value });
-  };
-
-  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, detailDraft, showPrice) : '';
+  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, showPrice) : '';
   const productUrl = activeProduct ? siteUrl(productPath(activeProduct)) : '';
 
   const copyActiveCaption = () => {
@@ -501,8 +507,7 @@ const CreativeStudioPage = () => {
       const p = products.find((x) => x.id === id);
       if (!p) return '';
       const title = overrides[id]?.title || (id === activeId ? titleDraft : p.title);
-      const detail = overrides[id]?.detail ?? (id === activeId ? detailDraft : p.detail);
-      return `—— Foto ${i + 1} ——\n${captionFor(p, title, detail, showPrice)}`;
+      return `—— Foto ${i + 1} ——\n${captionFor(p, title, showPrice)}`;
     }).filter(Boolean).join('\n\n');
     copyText(block, `${ids.length} textos listos para el carrusel`);
   };
@@ -636,6 +641,22 @@ const CreativeStudioPage = () => {
     : (ios ? 'Guardar en Fotos' : 'Descargar imagen');
   const activeIndex = products.findIndex((p) => p.id === activeId);
 
+  if (calendarPage) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-6 pb-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-4">
+            <Link to="/panel-admin/creativos" className="text-sm font-semibold" style={{ color: '#7B2CBF' }}>
+              Creativos IG / FB
+            </Link>
+            <h1 className="text-2xl font-bold text-gray-900 mt-1">Calendario</h1>
+          </div>
+          <CommunityCalendar />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-3 sm:p-6 pb-28 xl:pb-6">
       <div className="max-w-7xl mx-auto">
@@ -650,8 +671,10 @@ const CreativeStudioPage = () => {
                 {studioMode === 'brands'
                   ? 'Historias con fondo blanco: ícono de la subcategoría y los logos de las marcas que tenemos en stock.'
                   : studioMode === 'icons'
-                    ? 'Portadas para destacadas: el ícono de cada subcategoría va al centro, con el fondo y el logo de Zenn. Guardalas en Fotos y cargalas en Instagram.'
-                    : 'Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Logo, precio, specs y sello de 24 h ya van en la plantilla.'}
+                    ? 'Portadas para destacadas: el ícono de cada subcategoría va al centro, con el fondo. Guardalas en Fotos y cargalas en Instagram.'
+                    : studioMode === 'specs'
+                      ? 'Elegí, por subcategoría, las especificaciones que salen en el flyer. Máximo 3, las que el cliente mira para comprar.'
+                        : 'Filtrá, previsualizá y descargá flyers listos para Instagram y Facebook. Nombre, precio, las specs elegidas y el número ya van en la plantilla.'}
               </p>
               <div className="flex flex-wrap gap-2 mt-4">
                 <button
@@ -684,6 +707,23 @@ const CreativeStudioPage = () => {
                 >
                   Íconos destacadas
                 </button>
+                <button
+                  type="button"
+                  onClick={openSpecs}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'specs'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Specs del flyer
+                </button>
+                <Link
+                  to="/panel-admin/calendario-ig"
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={{ background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Calendario
+                </Link>
                 <button
                   type="button"
                   onClick={() => setStudioMode('publish')}
@@ -723,7 +763,13 @@ const CreativeStudioPage = () => {
           </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' || studioMode === 'icons' ? 'hidden' : ''}`}>
+        {specsReady ? (
+          <div className={studioMode === 'specs' ? '' : 'hidden'}>
+            <CreativeSpecFocusPanel />
+          </div>
+        ) : null}
+
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' || studioMode === 'icons' || studioMode === 'specs' ? 'hidden' : ''}`}>
           <div className={`${studioMode === 'publish' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -1006,7 +1052,7 @@ const CreativeStudioPage = () => {
               </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Fondo</h2>
               <div className="grid grid-cols-2 gap-2">
-                {[
+                {(october ? [{ id: 'rosa', label: 'Octubre Rosa' }] : [
                   { id: 'auto', label: 'Variar' },
                   { id: 'orbita', label: 'Órbita' },
                   { id: 'neon', label: 'Neón' },
@@ -1014,7 +1060,7 @@ const CreativeStudioPage = () => {
                   { id: 'malla', label: 'Malla' },
                   { id: 'cielo', label: 'Azul claro' },
                   { id: 'rosa', label: 'Octubre Rosa' }
-                ].map((opt) => (
+                ]).map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
@@ -1029,7 +1075,9 @@ const CreativeStudioPage = () => {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                Con precio, el flyer lleva el valor de hoy y la leyenda Precio al día en que se genera. Si hay promoción, también van el precio anterior y el porcentaje. Sin precio, el monto no se imprime.
+                {october
+                  ? 'Todo octubre sale en el flyer Octubre Rosa, también lo que publica el sistema.'
+                  : 'Con precio, el flyer lleva el valor de hoy y la leyenda Precio al día en que se genera. Si hay promoción, también van el precio anterior y el porcentaje. Sin precio, el monto no se imprime.'}
               </p>
             </div>
           </div>
@@ -1177,14 +1225,6 @@ const CreativeStudioPage = () => {
                   <input
                     value={titleDraft}
                     onChange={(e) => onTitleChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
-                  />
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Detalles en el flyer y en el texto</label>
-                  <textarea
-                    value={detailDraft}
-                    onChange={(e) => onDetailChange(e.target.value)}
-                    rows={4}
-                    placeholder="Sumá detalles. Si una spec no tiene dato, el cuadro queda en blanco."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 text-sm"
                   />
                   {activeProduct.images.length > 1 && (

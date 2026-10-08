@@ -29,6 +29,7 @@ import {
   FaChevronRight,
   FaList,
   FaBullhorn,
+  FaCalendarAlt,
   FaTrademark
 } from 'react-icons/fa';
 import ROLE from '../../common/role';
@@ -78,6 +79,7 @@ export function getAdminNavGroups() {
         { path: 'worker-visao', label: 'Worker Visão', icon: FaSyncAlt },
         { path: 'exportar-productos', label: 'Exportar productos', icon: FaDownload },
         { path: 'creativos', label: 'Creativos IG / FB', icon: FaBullhorn },
+        { path: 'calendario-ig', label: 'Calendario', icon: FaCalendarAlt },
         { path: 'catalogo-pdf', label: 'Catálogo PDF', icon: FaFilePdf },
         { path: 'editar-imagenes', label: 'Editor de imágenes', icon: FaImage }
       ]
