@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaMagic, FaSearch, FaSpinner } from 'react-icons/fa';
 import axiosInstance from '../../config/axiosInstance';
+import MarketingPlanner from './MarketingPlanner';
 
 const SAMPLE = {
   id: '34115',
@@ -254,10 +255,13 @@ const MarketingStudioPage = () => {
           Marketing IA
         </h1>
         <p className="text-sm text-zinc-600 mt-2 max-w-3xl">
-          Acá se elige la plantilla del catálogo. La foto del producto queda grande y el precio se lee de un vistazo.
-          Estas piezas todavía no reemplazan las imágenes que Meta está importando: primero dejamos el diseño y después se aplican.
+          El planner decide las campañas del día con el catálogo y el tope de 50 USD. Abajo se prueba la plantilla que usa el catálogo de Meta.
         </p>
       </div>
+
+      <MarketingPlanner />
+
+      <h2 className="text-lg font-semibold text-zinc-900 mb-3">Plantilla del catálogo</h2>
 
       <div className="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)_300px] gap-5 items-start">
         <div className="space-y-3">

@@ -1882,6 +1882,7 @@ const {
   exportCreativeZip,
   markCreativeDownloaded
 } = require('../controller/product/creativeStudioController');
+const { getAdPlanner, buildAdPlanner } = require('../controller/product/adPlannerController');
 const {
   composeSocialCaption,
   publishSocialPost,
@@ -2005,6 +2006,17 @@ router.post('/creativos/publicar', authToken, (req, res, next) => {
 });
 router.get('/creativos/calendario', authToken, listSocialCalendar);
 router.delete('/creativos/calendario/:id', authToken, cancelSocialPost);
+router.get('/creativos/planner', authToken, getAdPlanner);
+router.post('/creativos/planner/armar', authToken, (req, res, next) => {
+  req.setTimeout(3 * 60 * 1000);
+  res.setTimeout(3 * 60 * 1000);
+  return buildAdPlanner(req, res, next);
+});
+router.post('/creativos/planner/dia', authToken, (req, res, next) => {
+  req.setTimeout(3 * 60 * 1000);
+  res.setTimeout(3 * 60 * 1000);
+  return buildAdPlanner(req, res, next);
+});
 router.get('/creativos/comunidad', authToken, getCommunityCalendar);
 router.post('/creativos/comunidad/armar', authToken, planCommunity);
 router.post('/creativos/comunidad/dia', authToken, (req, res, next) => {
@@ -2058,10 +2070,37 @@ router.get('/creativos/calendario/tick', async (req, res) => {
   } catch (error) {
     homeSnapshot = error.message || false;
   }
-  if (socialError) {
-    return res.status(500).json({ success: false, message: socialError, homeSnapshot });
+  let planner = null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Asuncion',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+    const minute = Number(parts.find((part) => part.type === 'minute')?.value);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
+    if (hour === 7 && minute < 15) {
+      const AdPlan = require('../models/adPlanModel');
+      const existing = await AdPlan.findOne({ planDate: today }).select('_id').lean();
+      if (!existing) {
+        const { composeAdPlan } = require('../services/adPlanner');
+        await composeAdPlan();
+        planner = 'armed';
+      } else {
+        planner = 'already';
+      }
+    } else {
+      planner = 'wait-7';
+    }
+  } catch (error) {
+    planner = error.message || 'No se pudo armar el plan';
   }
-  return res.json({ success: true, homeSnapshot });
+  if (socialError) {
+    return res.status(500).json({ success: false, message: socialError, homeSnapshot, planner });
+  }
+  return res.json({ success: true, homeSnapshot, planner });
 });
 
 router.get('/creativos/historias-marcas', authToken, listBrandStories);

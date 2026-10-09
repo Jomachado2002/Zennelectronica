@@ -26,6 +26,17 @@ function startSocialScheduleIfEnabled() {
           lastMorning = '';
           console.error('[social plan]', error.message || error);
         }
+        try {
+          const AdPlan = require('../models/adPlanModel');
+          const existing = await AdPlan.findOne({ planDate: key }).select('_id').lean();
+          if (!existing) {
+            const { composeAdPlan } = require('./adPlanner');
+            await composeAdPlan();
+            console.log('[ad plan] día armado', key);
+          }
+        } catch (error) {
+          console.error('[ad plan]', error.message || error);
+        }
       }
     } catch (error) {
       console.error('[social schedule]', error.message || error);
