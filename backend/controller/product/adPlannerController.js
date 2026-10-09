@@ -1,6 +1,7 @@
 'use strict';
 
 const { composeAdPlan, plannerCalendar } = require('../../services/adPlanner');
+const { authorizeCampaign } = require('../../services/adPublisher');
 
 async function getAdPlanner(req, res) {
   try {
@@ -25,4 +26,22 @@ async function buildAdPlanner(req, res) {
   }
 }
 
-module.exports = { getAdPlanner, buildAdPlanner };
+async function authorizeAdCampaign(req, res) {
+  try {
+    const result = await authorizeCampaign({
+      date: req.body?.date,
+      slot: req.body?.slot
+    });
+    const data = await plannerCalendar({ from: req.query.from, days: req.query.days || 42 });
+    res.json({
+      success: true,
+      message: result.already ? 'Esa campaña ya está en Meta.' : 'La campaña quedó autorizada y ya puede gastar el presupuesto del día.',
+      ...data
+    });
+  } catch (error) {
+    console.error('[planner autorizar]', error.message || error);
+    res.status(error.status || 500).json({ success: false, message: error.message || 'No pude publicar la campaña.' });
+  }
+}
+
+module.exports = { getAdPlanner, buildAdPlanner, authorizeAdCampaign };

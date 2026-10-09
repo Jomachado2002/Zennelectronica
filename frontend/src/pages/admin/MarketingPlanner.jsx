@@ -42,8 +42,17 @@ const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const CHIP = {
   mantener: 'bg-[#D1FAE5] text-[#065F46]',
   crear: 'bg-[#EDE9FE] text-[#5B21B6]',
+  lista: 'bg-[#EDE9FE] text-[#5B21B6]',
   cambiar: 'bg-[#FEF3C7] text-[#92400E]',
   esperar: 'bg-gray-100 text-gray-600'
+};
+
+const ACTION_LABEL = {
+  crear: 'Lista',
+  lista: 'Lista',
+  mantener: 'En Meta',
+  cambiar: 'Cambiar',
+  esperar: 'Sin gasto'
 };
 
 export default function MarketingPlanner() {
@@ -57,7 +66,6 @@ export default function MarketingPlanner() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [selected, setSelected] = useState(today);
-  const [openId, setOpenId] = useState('');
   const [dayAsk, setDayAsk] = useState('');
 
   const from = gridStart(year, month);
@@ -99,7 +107,23 @@ export default function MarketingPlanner() {
     setMonth(nextMonth);
     const parts = today.split('-').map(Number);
     setSelected(parts[0] === nextYear && parts[1] === nextMonth ? today : monthKey(nextYear, nextMonth));
-    setOpenId('');
+  };
+
+  const authorize = async (slotIndex) => {
+    setBusy(`ad-${slotIndex}`);
+    try {
+      const res = await axiosInstance.post('/api/creativos/planner/autorizar', {
+        date: selected,
+        slot: slotIndex
+      }, { timeout: 120000 });
+      toast.success(res.data.message || 'La campaña quedó autorizada');
+      setDays(res.data.days || []);
+      setLive(res.data.live || null);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'No se pudo publicar la campaña');
+    } finally {
+      setBusy('');
+    }
   };
 
   const arm = async (note) => {
@@ -205,7 +229,7 @@ export default function MarketingPlanner() {
                   <button
                     key={date}
                     type="button"
-                    onClick={() => { setSelected(date); setOpenId(''); }}
+                    onClick={() => setSelected(date)}
                     className={`min-h-[4.5rem] sm:min-h-[6.5rem] border-r border-b border-gray-200 p-1 text-left align-top ${active ? 'bg-[#F5F3FF]' : 'bg-white'} ${inMonth ? '' : 'opacity-40'}`}
                   >
                     <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${date === today ? 'bg-[#7B2CBF] text-white' : 'text-gray-800'}`}>
@@ -253,29 +277,33 @@ export default function MarketingPlanner() {
               <p className="text-sm text-gray-500 mt-3">Ese día no tiene campañas. Armá hoy o esperá a las 7:00.</p>
             ) : (
               <div className="mt-3 space-y-3">
-                {selectedDay.slots.map((slot) => {
-                  const open = openId === slot.id;
-                  return (
+                {selectedDay.slots.map((slot, slotIndex) => (
+                
                     <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-3">
+                      {slot.image ? (
+                        <img src={slot.image} alt={slot.name} className="w-full rounded-md mb-2 bg-white" />
+                      ) : null}
                       <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.action] || ''}`}>
-                        {slot.action} · USD {slot.dailyBudgetUsd}/día
+                        {ACTION_LABEL[slot.action] || slot.action} · USD {slot.dailyBudgetUsd}/día
                       </p>
                       <p className="font-semibold text-gray-900 mt-2 text-sm">{slot.name}</p>
                       <p className="text-xs text-gray-500">{slot.productSet} · {slot.priceFrom} a {slot.priceTo}</p>
+                      <p className="text-sm text-gray-700 mt-1">{slot.headline}. {slot.text}</p>
                       <p className="text-sm text-gray-600 mt-1">{slot.why}</p>
-                      <button type="button" onClick={() => setOpenId(open ? '' : slot.id)} className="text-xs font-semibold mt-2" style={{ color: '#1E1B4B' }}>
-                        {open ? 'Ocultar' : 'Ver anuncio y flyer'}
-                      </button>
-                      {open ? (
-                        <div className="mt-2 text-sm text-gray-700 space-y-1">
-                          <p>{slot.headline}. {slot.text}</p>
-                          <p className="text-gray-500">{slot.flyer}</p>
-                          <p className="text-xs text-gray-500">{slot.audience}</p>
-                        </div>
+                      {selected === today && !slot.metaAdId && slot.action !== 'esperar' ? (
+                        <button
+                          type="button"
+                          disabled={busy === `ad-${slotIndex}`}
+                          onClick={() => authorize(slotIndex)}
+                          className="mt-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white disabled:opacity-50"
+                          style={{ background: '#7B2CBF' }}
+                        >
+                          {busy === `ad-${slotIndex}` ? 'Publicando…' : 'Autorizar y publicar'}
+                        </button>
                       ) : null}
+                      {slot.metaAdId ? <p className="text-xs text-emerald-700 mt-2">Ya está publicada en Meta.</p> : null}
                     </article>
-                  );
-                })}
+                ))}
               </div>
             )}
           </aside>

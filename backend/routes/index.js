@@ -1882,7 +1882,7 @@ const {
   exportCreativeZip,
   markCreativeDownloaded
 } = require('../controller/product/creativeStudioController');
-const { getAdPlanner, buildAdPlanner } = require('../controller/product/adPlannerController');
+const { getAdPlanner, buildAdPlanner, authorizeAdCampaign } = require('../controller/product/adPlannerController');
 const {
   composeSocialCaption,
   publishSocialPost,
@@ -2017,6 +2017,7 @@ router.post('/creativos/planner/dia', authToken, (req, res, next) => {
   res.setTimeout(3 * 60 * 1000);
   return buildAdPlanner(req, res, next);
 });
+router.post('/creativos/planner/autorizar', authToken, authorizeAdCampaign);
 router.get('/creativos/comunidad', authToken, getCommunityCalendar);
 router.post('/creativos/comunidad/armar', authToken, planCommunity);
 router.post('/creativos/comunidad/dia', authToken, (req, res, next) => {

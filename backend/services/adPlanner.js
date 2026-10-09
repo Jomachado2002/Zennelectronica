@@ -151,7 +151,7 @@ function fallbackCampaigns(shelf, dailyTotalUsd) {
     headline: row.subcategoryLabel,
     text: `En Zenn, ${row.subcategoryLabel.toLowerCase()} con stock en Asunción. Elegí dentro de tu presupuesto.`,
     flyer: `Pieza cuadrada: el producto entero, el precio en la pastilla y el nombre completo. Una sola subcategoría: ${row.subcategoryLabel}.`,
-    action: each > 0 ? 'crear' : 'esperar'
+      action: each > 0 ? 'lista' : 'esperar'
   }));
 }
 
@@ -166,7 +166,7 @@ function fitBudgets(campaigns, dailyTotalUsd) {
   const asked = list.reduce((sum, row) => sum + (Number(row.dailyBudgetUsd) || 0), 0);
   if (asked <= 0 && dailyTotalUsd > 0 && list.length) {
     const each = Math.round((dailyTotalUsd / list.length) * 100) / 100;
-    list = list.map((row) => ({ ...row, dailyBudgetUsd: each, action: row.action === 'esperar' ? 'crear' : (row.action || 'crear') }));
+    list = list.map((row) => ({ ...row, dailyBudgetUsd: each, action: row.action === 'esperar' ? 'lista' : (row.action || 'lista') }));
   }
   const nextAsked = list.reduce((sum, row) => sum + (Number(row.dailyBudgetUsd) || 0), 0);
   const scale = nextAsked > dailyTotalUsd && nextAsked > 0 ? dailyTotalUsd / nextAsked : 1;
@@ -175,7 +175,7 @@ function fitBudgets(campaigns, dailyTotalUsd) {
     return {
       ...row,
       dailyBudgetUsd: dailyTotalUsd <= 0 ? 0 : daily,
-      action: dailyTotalUsd <= 0 ? 'esperar' : (row.action || 'crear')
+      action: dailyTotalUsd <= 0 ? 'esperar' : (row.action === 'crear' ? 'lista' : (row.action || 'lista'))
     };
   });
 }
@@ -189,7 +189,7 @@ async function examplesFor(campaign, shelfRow) {
     productImage: { $exists: true, $ne: [] }
   };
   const rows = await Product.find(query)
-    .select('codigo productName brandName sellingPrice productImage')
+    .select('codigo slug productName brandName sellingPrice productImage catalogPlateUrl')
     .sort({ sellingPrice: 1 })
     .limit(3)
     .lean();
@@ -198,7 +198,8 @@ async function examplesFor(campaign, shelfRow) {
     name: row.productName,
     brand: row.brandName,
     price: moneyGs(row.sellingPrice),
-    image: (row.productImage || [])[0] || ''
+    image: row.catalogPlateUrl || (row.productImage || [])[0] || '',
+    slug: row.slug || ''
   }));
 }
 
@@ -332,7 +333,7 @@ No gastes de más. Si el tope de la semana ya se usó, las acciones son "esperar
 Máximo ${MAX_CAMPAIGNS} campañas. Cada una usa una subcategoría de la lista. Si el rango es ancho, elegí una banda: entrada, medio o alto. Si es angosto, banda "todo".
 El objetivo es ventas en Paraguay, no alcance barato. Preferí quien ya miró ese tipo de producto.
 Devolvé solo JSON:
-{"diagnosis":"qué harías hoy, en 3 oraciones","changes":["qué cambia respecto del plan anterior"],"campaigns":[{"subcategory":"id","name":"nombre corto","band":"medio","dailyBudgetUsd":2,"why":"...","audience":"...","headline":"...","text":"texto del anuncio","flyer":"qué tiene que mostrar la pieza","action":"crear"}]}
+{"diagnosis":"qué harías hoy, en 3 oraciones","changes":["qué cambia respecto del plan anterior"],"campaigns":[{"subcategory":"id","name":"nombre corto","band":"medio","dailyBudgetUsd":2,"why":"...","audience":"...","headline":"...","text":"texto del anuncio","flyer":"qué producto del catálogo va en la pieza","action":"lista"}]}
 ${dossier}`);
       drafted = parseJson(text);
       engines.claude = Boolean(drafted && drafted.campaigns);
@@ -370,9 +371,10 @@ ${dossier}`);
       headline: clip(row.headline, 60),
       text: clip(row.text, 240),
       flyer: clip(row.flyer, 280),
-      action: row.action,
+      action: row.action === 'crear' ? 'lista' : row.action,
       examples: await examplesFor({ band: band.name }, row.shelf)
     });
+    campaigns[campaigns.length - 1].image = (campaigns[campaigns.length - 1].examples[0] || {}).image || '';
   }
 
   const diagnosis = clip(
@@ -464,8 +466,34 @@ async function plannerCalendar({ from, days = 42 } = {}) {
         headline: campaign.headline,
         text: campaign.text,
         flyer: campaign.flyer,
+        image: campaign.image || ((campaign.examples || [])[0] || {}).image || '',
+        metaAdId: campaign.metaAdId || '',
         examples: campaign.examples || []
       }))
+    });
+  }
+  const codes = [];
+  list.forEach((day) => {
+    day.slots.forEach((slot) => {
+      (slot.examples || []).forEach((example) => {
+        if (example.codigo) codes.push(String(example.codigo));
+      });
+    });
+  });
+  if (codes.length) {
+    const plates = await Product.find({ codigo: { $in: codes } })
+      .select('codigo catalogPlateUrl slug')
+      .lean();
+    const byCode = new Map(plates.map((row) => [String(row.codigo), row]));
+    list.forEach((day) => {
+      day.slots.forEach((slot) => {
+        const hero = (slot.examples || [])[0];
+        const plate = hero && byCode.get(String(hero.codigo));
+        if (plate && plate.catalogPlateUrl) {
+          slot.image = plate.catalogPlateUrl;
+          if (hero) hero.image = plate.catalogPlateUrl;
+        }
+      });
     });
   }
   const latest = plans[0] || null;
