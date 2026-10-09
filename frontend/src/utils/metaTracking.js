@@ -90,7 +90,7 @@ export const MetaTracking = {
         fbq('track', 'ViewContent', {
           content_name: productData.productName,
           content_category: productData.category,
-          content_ids: [productData._id],
+          content_ids: [productData.codigo || productData._id],
           content_type: 'product',
           value: productData.sellingPrice,
           currency: 'PYG'

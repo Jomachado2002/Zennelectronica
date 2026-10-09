@@ -126,7 +126,7 @@ const PaymentSuccess = () => {
             // Facebook Pixel Tracking, solo si fbq está definido
             if (typeof fbq === 'function') {
                 fbq('track', 'Purchase', {
-                    content_ids: transactionDetails?.items?.map(item => item.product_slug || item.slug) || [shop_process_id],
+                    content_ids: transactionDetails?.items?.map(item => item.sku || item.codigo || item.product_id).filter(Boolean) || [shop_process_id],
                     value: parseFloat(amount || 0),
                     currency: currency_id === 'PYG' ? 'PYG' : 'USD',
                     content_type: 'product'

@@ -1013,6 +1013,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.post("/productos/actualizar-precios-mayoristas", authToken, updatePricesFromMayoristasController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
+    router.get("/meta/catalog.xml", channableFeedController);
     router.get("/channable/feed.xml", channableFeedController);
     router.get("/google/merchant-feed.xml", channableFeedController);
     router.get("/gmc/image.jpg", merchantJpegController);

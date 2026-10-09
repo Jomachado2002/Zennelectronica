@@ -49,13 +49,11 @@ const getProductCategory = (product) => {
 
 // ✅ FUNCIÓN PARA GENERAR IDS CONSISTENTES CON CHANNABLE
 const generateCleanId = (product) => {
-    if (!product || !product._id) return '';
-    
-    const id = product._id.toString();
-    const brand = (product.brandName || 'prod').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const category = (product.subcategory || product.category || 'item').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    return `${brand}${category}${id}`.substring(0, 50);
+    if (!product) return '';
+    const code = String(product.codigo || product.sku || '').trim();
+    if (code) return code.replace(/[^A-Za-z0-9_-]/g, '_').substring(0, 50);
+    if (product._id) return String(product._id);
+    return '';
 };
 
 // ✅ FUNCIÓN HELPER PARA NORMALIZAR CONTENT_IDS
