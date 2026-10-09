@@ -1,5 +1,4 @@
-/* global fbq */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { 
     FaCheckCircle, 
@@ -12,6 +11,7 @@ import {
 } from 'react-icons/fa';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { localCartHelper } from '../helpers/addToCart';
+import { trackPurchase } from '../components/MetaPixelTracker';
 import GoogleCustomerReviewsOptIn from '../components/GoogleCustomerReviewsOptIn';
 
 const PaymentSuccess = () => {
@@ -24,6 +24,7 @@ const PaymentSuccess = () => {
 
     // Obtener parámetros de la URL Bancard
     const shop_process_id = searchParams.get('shop_process_id');
+    const purchaseSent = useRef(false);
     const operation_id = searchParams.get('operation_id');
     const currency_id = searchParams.get('currency_id');
     const amount = searchParams.get('amount');
@@ -117,24 +118,25 @@ const PaymentSuccess = () => {
 
     // ✅ Limpiar carrito cuando se confirme que el pago fue exitoso
     useEffect(() => {
-        if (isPaymentSuccessful && !isLoading) {
+        if (isPaymentSuccessful && !isLoading && transactionDetails) {
+            const transaction = transactionDetails?.transaction || transactionDetails?.local_transaction || transactionDetails;
+            const items = transaction?.items || transactionDetails?.items || [];
+            if (!purchaseSent.current && (items.length || amount)) {
+                purchaseSent.current = true;
+                const info = transaction?.customer_info || {};
+                trackPurchase({
+                    shop_process_id: shop_process_id || transaction?.shop_process_id,
+                    amount: parseFloat(amount || transaction?.amount || 0),
+                    customer_email: info.email,
+                    customer_phone: info.phone
+                }, items);
+            }
+
             setTimeout(() => {
                 localCartHelper.clearCart();
-                
             }, 2000);
-
-            // Facebook Pixel Tracking, solo si fbq está definido
-            if (typeof fbq === 'function') {
-                fbq('track', 'Purchase', {
-                    content_ids: transactionDetails?.items?.map(item => item.sku || item.codigo || item.product_id).filter(Boolean) || [shop_process_id],
-                    value: parseFloat(amount || 0),
-                    currency: currency_id === 'PYG' ? 'PYG' : 'USD',
-                    content_type: 'product'
-                });
-                
-            }
         }
-    }, [isPaymentSuccessful, isLoading, shop_process_id, transactionDetails, amount, currency_id]);
+    }, [isPaymentSuccessful, isLoading, shop_process_id, transactionDetails, amount]);
 
     const fetchTransactionDetails = async (transactionId) => {
         try {

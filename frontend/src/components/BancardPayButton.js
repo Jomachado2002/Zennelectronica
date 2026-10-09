@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaCreditCard, FaLock, FaSpinner, FaTimes, FaCheckCircle } from 'react-icons/fa';
 import { MdSecurity } from 'react-icons/md';
+import { metaClickIds } from './MetaPixelTracker';
 
 const BancardPayButton = ({ 
   cartItems = [], 
@@ -396,7 +397,9 @@ const BancardPayButton = ({
                 unit_price: item.productId?.sellingPrice || item.unitPrice || 0,
                 total: (item.productId?.sellingPrice || item.unitPrice || 0) * item.quantity,
                 category: item.productId?.category || '',
-                brand: item.productId?.brandName || ''
+                brand: item.productId?.brandName || '',
+                codigo: item.productId?.codigo || item.codigo || '',
+                sku: item.productId?.codigo || item.codigo || ''
             })),
             
             // ✅ AGREGAR DELIVERY_LOCATION COMPLETO
@@ -446,7 +449,8 @@ ${customerData.location.google_maps_url || 'No disponible'}
             tax_amount: trackingData.tax_amount,
             utm_source: trackingData.utm_source,
             utm_medium: trackingData.utm_medium,
-            utm_campaign: trackingData.utm_campaign
+            utm_campaign: trackingData.utm_campaign,
+            meta_click: metaClickIds()
         };
 
         console.log('📤 Enviando solicitud de pago CON UBICACIÓN:', {

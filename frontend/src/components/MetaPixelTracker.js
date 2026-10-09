@@ -1,37 +1,37 @@
 // frontend/src/components/MetaPixelTracker.js - VERSIÓN CORREGIDA
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import SummaryApi from '../common';
 
-const MetaPixelTracker = () => {
-  useEffect(() => {
-    // La cola de eventos queda lista al toque. El archivo de Facebook (pesado)
-    // entra después de que la página ya pintó, para no pelear con la foto grande.
-    const arm = () => {
-      if (window.fbq) return;
-      const n = function () {
-        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
-      };
-      if (!window._fbq) window._fbq = n;
-      window.fbq = n;
-      n.push = n;
-      n.loaded = true;
-      n.version = '2.0';
-      n.queue = [];
-      window.fbq('init', '1535652171192853');
-      window.fbq('track', 'PageView');
-    };
-    arm();
+const PIXEL_ID = '1535652171192853';
 
-    const inject = () => {
-      if (document.querySelector('script[src*="fbevents.js"]')) return;
+const MetaPixelTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (window.fbq) return;
+    const n = function () {
+      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    };
+    if (!window._fbq) window._fbq = n;
+    window.fbq = n;
+    n.push = n;
+    n.loaded = true;
+    n.version = '2.0';
+    n.queue = [];
+    window.fbq('init', PIXEL_ID);
+    if (!document.querySelector('script[src*="fbevents.js"]')) {
       const script = document.createElement('script');
       script.async = true;
       script.src = 'https://connect.facebook.net/en_US/fbevents.js';
       document.head.appendChild(script);
-    };
-    if (document.readyState === 'complete') inject();
-    else window.addEventListener('load', inject, { once: true });
+    }
   }, []);
+
+  useEffect(() => {
+    if (typeof window.fbq !== 'function') return;
+    window.fbq('track', 'PageView');
+  }, [location.pathname, location.search]);
 
   return null;
 };
@@ -65,31 +65,57 @@ const normalizeContentId = (productData) => {
   return cleanId ? [cleanId] : [];
 };
 
-// ✅ FUNCIÓN PARA TRACKEAR CONTACTO POR WHATSAPP
+function readCookie(name) {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+export function metaClickIds() {
+  return { fbp: readCookie('_fbp'), fbc: readCookie('_fbc') };
+}
+
+function send(eventName, data, eventId) {
+  if (typeof window.fbq !== 'function') return;
+  const options = eventId ? { eventID: eventId } : undefined;
+  window.fbq('track', eventName, data, options);
+}
+
+function productEvent(product) {
+  const id = generateCleanId(product);
+  const value = Number(product?.sellingPrice || product?.price || 0) || 0;
+  return {
+    content_ids: id ? [id] : [],
+    content_type: 'product',
+    content_name: product?.productName || product?.name || 'Producto',
+    content_category: getProductCategory(product),
+    value,
+    currency: 'PYG',
+    contents: id ? [{ id, quantity: 1, item_price: value }] : []
+  };
+}
+
+let lastSearch = '';
+
+export const trackSearch = (term) => {
+  const search = String(term || '').trim();
+  const key = search.toLowerCase();
+  if (key.length < 2 || key === lastSearch) return;
+  lastSearch = key;
+  send('Search', { search_string: search.slice(0, 100) });
+};
+
 export const trackWhatsAppContact = (productData = null) => {
-  
-     
-  if (typeof window.fbq !== 'undefined') {
-    const contentIds = normalizeContentId(productData);
-    
-    window.fbq('track', 'Contact', {
-      content_ids: contentIds, // ✅ Usar IDs normalizados
-      content_name: productData?.productName || 'Consulta General',
-      content_category: getProductCategory(productData),
-      value: productData?.sellingPrice || 0,
+  const payload = productEvent(productData);
+  send('Contact', payload);
+  if (typeof window.fbq === 'function') {
+    window.fbq('trackCustom', 'WhatsAppContact', {
+      content_ids: payload.content_ids,
+      content_type: 'product',
+      product_name: payload.content_name,
+      value: payload.value,
       currency: 'PYG'
     });
-         
-    window.fbq('trackCustom', 'WhatsAppContact', {
-      content_ids: contentIds, // ✅ También aquí
-      product_name: productData?.productName || 'Consulta General',
-      source: 'website_button',
-      timestamp: Date.now()
-    });
-         
-    
-  } else {
-    // console.warn removed for production
   }
 };
 
@@ -128,21 +154,7 @@ export const trackPDFDownload = (customerData, cartTotal, cartItems = []) => {
 
 // ✅ FUNCIÓN PARA TRACKEAR AGREGAR AL CARRITO
 export const trackAddToCart = (product) => {
-  
-     
-  if (typeof window.fbq !== 'undefined') {
-    const contentIds = normalizeContentId(product);
-    
-    window.fbq('track', 'AddToCart', {
-      content_ids: contentIds, // ✅ IDs normalizados
-      content_name: product.productName,
-      content_category: getProductCategory(product),
-      value: product.sellingPrice,
-      currency: 'PYG'
-    });
-         
-    
-  }
+  send('AddToCart', productEvent(product));
 };
 
 // ✅ FUNCIÓN PARA TRACKEAR INTERÉS EN PRODUCTO
@@ -165,21 +177,7 @@ export const trackProductInterest = (product, interestLevel, score) => {
 
 // ✅ FUNCIÓN PARA TRACKEAR VIEW CONTENT
 export const trackViewContent = (product) => {
-  
-  
-  if (typeof window.fbq !== 'undefined') {
-    const contentIds = normalizeContentId(product);
-    
-    window.fbq('track', 'ViewContent', {
-      content_ids: contentIds, // ✅ IDs normalizados
-      content_name: product.productName,
-      content_category: getProductCategory(product),
-      value: product.sellingPrice,
-      currency: 'PYG'
-    });
-    
-    
-  }
+  send('ViewContent', productEvent(product));
 };
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR INICIO DE CHECKOUT
@@ -188,13 +186,13 @@ export const trackInitiateCheckout = (cartItems, totalValue) => {
   
   if (typeof window.fbq !== 'undefined') {
     // ✅ Usar generateCleanId para consistencia
-    const contentIds = cartItems
-      .filter(item => item && item.productId && item.productId._id)
-      .map(item => generateCleanId(item.productId))
+    const contentIds = (cartItems || [])
+      .map((item) => generateCleanId(item?.productId || item))
       .filter(Boolean);
     
-    window.fbq('track', 'InitiateCheckout', {
+    send('InitiateCheckout', {
       content_ids: contentIds,
+      content_type: 'product',
       value: totalValue,
       currency: 'PYG',
       num_items: cartItems.length
@@ -206,39 +204,41 @@ export const trackInitiateCheckout = (cartItems, totalValue) => {
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR COMPRA COMPLETADA
 export const trackPurchase = async (transactionData, cartItems) => {
-  if (typeof window.fbq !== 'undefined') {
-    // ✅ Generar event_id único para deduplicación
-    const transactionId = transactionData.shop_process_id || transactionData.transaction_id;
-    const eventId = `purchase_${transactionId}_${Date.now()}`;
-    
-    // ✅ Usar generateCleanId para consistencia
-    const contentIds = cartItems
-      .filter(item => item && item.productId && item.productId._id)
-      .map(item => generateCleanId(item.productId))
-      .filter(Boolean);
-    
-    // ✅ Trackear con Meta Pixel (client-side)
-    window.fbq('track', 'Purchase', {
-      content_ids: contentIds,
-      value: transactionData.amount,
-      currency: 'PYG',
-      transaction_id: transactionId,
-      num_items: cartItems.length,
-      eventID: eventId // ✅ Event ID para deduplicación
-    });
-    
-    // ✅ También enviar al servidor para tracking server-side (deduplicación)
-    try {
+  const transactionId = transactionData.shop_process_id || transactionData.transaction_id;
+  const eventId = `purchase_${transactionId}`;
+  const contentIds = (cartItems || [])
+    .map((item) => {
+      const product = item?.productId || item || {};
+      return generateCleanId({
+        codigo: product.codigo || item.codigo || item.sku,
+        _id: product._id || item.product_id
+      });
+    })
+    .filter(Boolean);
+
+  send('Purchase', {
+    content_ids: contentIds,
+    content_type: 'product',
+    value: transactionData.amount,
+    currency: 'PYG',
+    order_id: String(transactionId || ''),
+    num_items: (cartItems || []).length
+  }, eventId);
+
+  try {
       // Usar SummaryApi para obtener la URL del backend
       const backendUrl = SummaryApi.baseURL || process.env.REACT_APP_BACKEND_URL || window.location.origin;
       
       if (backendUrl) {
         // Obtener datos del usuario si están disponibles
+        const click = metaClickIds();
         const userData = {
           email: transactionData.customer_email,
-          phone: transactionData.customer_phone
+          phone: transactionData.customer_phone,
+          fbp: click.fbp,
+          fbc: click.fbc
         };
-        
+
         await fetch(`${backendUrl}/api/meta/track-purchase`, {
           method: 'POST',
           headers: {
@@ -256,10 +256,8 @@ export const trackPurchase = async (transactionData, cartItems) => {
           })
         });
       }
-    } catch (error) {
-      // No bloquear si falla el tracking server-side
-      console.warn('⚠️ Error al enviar tracking al servidor:', error);
-    }
+  } catch (error) {
+    console.warn('⚠️ Error al enviar tracking al servidor:', error);
   }
 };
 

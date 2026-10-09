@@ -222,13 +222,13 @@ async function storePulse() {
 
 function capiStatus() {
   const pixel = Boolean(process.env.META_PIXEL_ID);
-  const server = Boolean(process.env.META_ACCESS_TOKEN);
+  const server = Boolean(process.env.META_ACCESS_TOKEN || process.env.META_MARKETING_ACCESS_TOKEN);
   return {
     pixel,
     server,
     note: server
       ? 'La API de compras del servidor está configurada: Meta puede saber si la persona compró.'
-      : 'El pixel del sitio puede ver la visita. Falta META_ACCESS_TOKEN: el servidor todavía no confirma la compra a Meta.'
+      : 'El pixel del sitio puede ver la visita. Falta el token del servidor: Meta todavía no recibe la confirmación de la compra.'
   };
 }
 

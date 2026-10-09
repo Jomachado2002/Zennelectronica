@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const BancardTransactionModel = require('../../models/bancardTransactionModel');
 const emailService = require('../../services/emailService'); // ✅ IMPORTAR EMAIL SERVICE
+const metaConversionsService = require('../../services/metaConversionsService');
 const { 
     validateBancardConfig,
     getBancardBaseUrl,
@@ -44,7 +45,8 @@ const chargeWithTokenController = async (req, res) => {
             tax_amount = 0,
             utm_source = '',
             utm_medium = '',
-            utm_campaign = ''
+            utm_campaign = '',
+            meta_click = {}
         } = req.body;
 
         // ✅ VALIDACIONES INICIALES
@@ -173,7 +175,8 @@ const chargeWithTokenController = async (req, res) => {
                 total: parseFloat(item.total || ((item.quantity || 1) * (item.unitPrice || item.unit_price || 0))),
                 category: item.category || '',
                 brand: item.brand || '',
-                sku: item.sku || ''
+                sku: item.sku || item.codigo || '',
+                codigo: item.codigo || item.sku || ''
             }));
 
             const newTransaction = new BancardTransactionModel({
@@ -237,6 +240,10 @@ const chargeWithTokenController = async (req, res) => {
                 user_bancard_id: finalUserBancardId,
                 ip_address: clientIpAddress,
                 user_agent: user_agent || req.headers['user-agent'] || '',
+                browser_info: {
+                    fbp: meta_click?.fbp || '',
+                    fbc: meta_click?.fbc || ''
+                },
                 payment_session_id: payment_session_id,
                 device_type: device_type,
                 cart_total_items: cart_total_items || normalizedItems.length,
@@ -362,6 +369,15 @@ const chargeWithTokenController = async (req, res) => {
                     );
 
                     // ✅ ENVIAR EMAILS INMEDIATAMENTE
+                    if (updatedTransaction && isApproved) {
+                        metaConversionsService.trackStoredPurchase(updatedTransaction, {
+                            userAgent: req.headers['user-agent'],
+                            clientIp: req.ip || req.headers['x-forwarded-for']
+                        }).catch((metaError) => {
+                            console.warn('⚠️ Meta no recibió la compra con tarjeta:', metaError.message);
+                        });
+                    }
+
                     if (updatedTransaction) {
                         try {
                             

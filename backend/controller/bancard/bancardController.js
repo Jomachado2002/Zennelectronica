@@ -273,42 +273,10 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
                                 
                             }
 
-                            // ✅ TRACKEAR COMPRA EN META CONVERSIONS API (server-side)
                             try {
-                                const transactionAmount = parseFloat(updatedTransaction.amount || transactionData.amount || 0);
-                                const contentIds = (updatedTransaction.items || []).map(item => {
-                                    // Generar ID consistente con el formato del frontend
-                                    if (item.productId && item.productId._id) {
-                                        const product = item.productId;
-                                        const brand = (product.brandName || 'prod').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
-                                        const category = (product.subcategory || product.category || 'item').substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '');
-                                        return `${brand}${category}${product._id}`.substring(0, 50);
-                                    }
-                                    return null;
-                                }).filter(Boolean);
-
-                                const userData = {
-                                    email: updatedTransaction.customer_info?.email,
-                                    phone: updatedTransaction.customer_info?.phone,
-                                    firstName: updatedTransaction.customer_info?.name?.split(' ')[0],
-                                    lastName: updatedTransaction.customer_info?.name?.split(' ').slice(1).join(' ')
-                                };
-
-                                await metaConversionsService.trackPurchase({
-                                    transactionId: String(updatedTransaction.shop_process_id),
-                                    value: transactionAmount,
-                                    currency: updatedTransaction.currency || 'PYG',
-                                    contentIds: contentIds,
-                                    userData: userData,
-                                    eventSourceUrl: 'https://www.zenn.com.py',
+                                await metaConversionsService.trackStoredPurchase(updatedTransaction, {
                                     userAgent: headers?.['user-agent'],
-                                    clientIp: clientIp,
-                                    eventId: `purchase_${updatedTransaction.shop_process_id}_${Date.now()}`
-                                });
-
-                                console.log('✅ Meta Conversions API: Compra trackeada correctamente', {
-                                    transaction_id: updatedTransaction.shop_process_id,
-                                    amount: transactionAmount
+                                    clientIp: clientIp
                                 });
                             } catch (metaTrackingError) {
                                 // No bloquear el flujo si falla el tracking
@@ -473,7 +441,8 @@ const createPaymentController = async (req, res) => {
             tax_amount = 0,
             utm_source = '',
             utm_medium = '',
-            utm_campaign = ''
+            utm_campaign = '',
+            meta_click = {}
         } = req.body;
 
         const isRegisteredUser = req.isAuthenticated === true && req.user && !String(req.userId || '').startsWith('guest-');
@@ -659,7 +628,8 @@ const createPaymentController = async (req, res) => {
                         total: parseFloat(item.total || ((item.quantity || 1) * (item.unitPrice || item.unit_price || 0))),
                         category: item.category || '',
                         brand: item.brand || '',
-                        sku: item.sku || ''
+                        sku: item.sku || item.codigo || '',
+                        codigo: item.codigo || item.sku || ''
                     }));
 
                     console.log("📋 Datos normalizados:", {
@@ -753,6 +723,10 @@ const createPaymentController = async (req, res) => {
                         user_bancard_id: finalUserBancardId,
                         ip_address: clientIpAddress,
                         user_agent: user_agent || req.headers['user-agent'] || '',
+                        browser_info: {
+                            fbp: meta_click?.fbp || '',
+                            fbc: meta_click?.fbc || ''
+                        },
                         payment_session_id: payment_session_id,
                         device_type: device_type,
                         cart_total_items: cart_total_items || normalizedItems.length,

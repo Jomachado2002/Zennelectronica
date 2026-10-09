@@ -10,6 +10,7 @@ import { getSearchMemory, rememberProduct, rememberQuery } from '../helpers/sear
 import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import { useContext } from 'react';
+import { trackSearch } from './MetaPixelTracker';
 
 const SearchPreview = ({ 
   searchTerm, 
@@ -143,6 +144,7 @@ const SearchPreview = ({
     onSearchChange('');
     onClose();
     
+    if (trimmedSearchTerm) trackSearch(trimmedSearchTerm);
     navigate(productPath(product));
   }, [onSearchChange, onClose, navigate, trimmedSearchTerm, memoryQueries]);
 
@@ -162,6 +164,7 @@ const SearchPreview = ({
     setShowPreview(false);
     onClose();
     if (!query) return;
+    trackSearch(query);
     navigate(`/buscar?q=${encodeURIComponent(query)}`);
   }, [onClose, trimmedSearchTerm, navigate, memoryMode, memoryQueries]);
 

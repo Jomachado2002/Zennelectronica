@@ -149,6 +149,10 @@ const bancardTransactionSchema = mongoose.Schema({
         sku: {
             type: String,
             required: false
+        },
+        codigo: {
+            type: String,
+            required: false
         }
     }],
     

@@ -15,7 +15,7 @@ const crypto = require('crypto');
 class MetaConversionsService {
   constructor() {
     this.pixelId = process.env.META_PIXEL_ID;
-    this.accessToken = process.env.META_ACCESS_TOKEN;
+    this.accessToken = process.env.META_ACCESS_TOKEN || process.env.META_MARKETING_ACCESS_TOKEN;
     this.apiVersion = process.env.META_API_VERSION || 'v21.0';
     this.apiUrl = `https://graph.facebook.com/${this.apiVersion}/${this.pixelId}/events`;
     
@@ -44,7 +44,8 @@ class MetaConversionsService {
       normalized.em = [this.hashUserData(userData.email)];
     }
     if (userData.phone) {
-      normalized.ph = [this.hashUserData(userData.phone)];
+      const digits = String(userData.phone).replace(/\D/g, '');
+      if (digits) normalized.ph = [this.hashUserData(digits)];
     }
     if (userData.firstName) {
       normalized.fn = [this.hashUserData(userData.firstName)];
@@ -64,6 +65,8 @@ class MetaConversionsService {
     if (userData.country) {
       normalized.country = [this.hashUserData(userData.country)];
     }
+    if (userData.fbp) normalized.fbp = String(userData.fbp);
+    if (userData.fbc) normalized.fbc = String(userData.fbc);
     
     return normalized;
   }
@@ -127,7 +130,7 @@ class MetaConversionsService {
           ...(eventData.content_ids && { content_ids: eventData.content_ids }),
           ...(eventData.content_name && { content_name: eventData.content_name }),
           ...(eventData.content_category && { content_category: eventData.content_category }),
-          ...(eventData.content_type && { content_type: eventData.content_type }),
+          ...((eventData.content_type || eventData.content_ids) ? { content_type: eventData.content_type || 'product' } : {}),
           ...(eventData.num_items && { num_items: eventData.num_items }),
           ...(eventData.transaction_id && { order_id: eventData.transaction_id })
         }
@@ -346,6 +349,41 @@ class MetaConversionsService {
   /**
    * Trackea contacto por WhatsApp
    */
+  catalogId(item = {}) {
+    const product = item.productId && typeof item.productId === 'object' ? item.productId : {};
+    const raw = String(item.codigo || product.codigo || item.sku || product.sku || item.product_id || product._id || '').trim();
+    if (!raw) return '';
+    return raw.replace(/[^A-Za-z0-9_-]/g, '_').substring(0, 50);
+  }
+
+  async trackStoredPurchase(transaction, extras = {}) {
+    if (!transaction || !transaction.shop_process_id) return { success: false, error: 'Sin pedido' };
+    const items = transaction.items || [];
+    const info = transaction.customer_info || {};
+    const click = transaction.browser_info || {};
+    const name = String(info.name || '');
+    return this.trackPurchase({
+      transactionId: String(transaction.shop_process_id),
+      value: parseFloat(transaction.amount || 0),
+      currency: transaction.currency || 'PYG',
+      contentIds: items.map((item) => this.catalogId(item)).filter(Boolean),
+      userData: {
+        email: info.email,
+        phone: info.phone,
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ').slice(1).join(' '),
+        city: info.city,
+        country: 'py',
+        fbp: click.fbp || extras.fbp,
+        fbc: click.fbc || extras.fbc
+      },
+      eventSourceUrl: extras.eventSourceUrl || 'https://www.zenn.com.py/pago-exitoso',
+      userAgent: extras.userAgent || transaction.user_agent,
+      clientIp: extras.clientIp || transaction.ip_address,
+      eventId: `purchase_${transaction.shop_process_id}`
+    });
+  }
+
   async trackContact({
     value = 0,
     currency = 'PYG',

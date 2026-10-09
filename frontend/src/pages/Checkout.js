@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { toastCart } from '../helpers/toastLimit';
+import { metaClickIds } from '../components/MetaPixelTracker';
 import { 
     FaArrowLeft, 
     FaCreditCard, 
@@ -96,7 +97,8 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                 tax_amount: (totalAmount * 0.1).toFixed(2),
                 utm_source: new URLSearchParams(window.location.search).get('utm_source') || '',
                 utm_medium: new URLSearchParams(window.location.search).get('utm_medium') || '',
-                utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || ''
+                utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign') || '',
+                meta_click: metaClickIds()
             };
 
             // ✅ AHORA SÍ USAR trackingData
@@ -115,7 +117,9 @@ const SavedCardsSection = ({ user, totalAmount, customerData, cartItems, onPayme
                     unit_price: product.productId.sellingPrice,
                     total: product.quantity * product.productId.sellingPrice,
                     category: product.productId.category,
-                    brand: product.productId.brandName
+                    brand: product.productId.brandName,
+                    codigo: product.productId.codigo || '',
+                    sku: product.productId.codigo || ''
                 })),
                 user_type: 'REGISTERED',
                 payment_method: 'saved_card',

@@ -258,6 +258,7 @@ ${productUrl}
     if (typeof trackWhatsAppContact === 'function') {
       trackWhatsAppContact({
         _id: data._id,
+        codigo: data.codigo,
         productName: data.productName,
         category: data.category,
         subcategory: data.subcategory,
