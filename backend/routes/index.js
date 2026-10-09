@@ -26,6 +26,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const getProductDetails = require('../controller/product/getProductDetails');
     const { updateAllPricesController } = require('../controller/product/updateAllPrices');
     const channableFeedController = require('../controller/product/channableFeedController');
+    const catalogPlateController = require('../controller/product/catalogPlateController');
     const { merchantJpegController } = require('../controller/product/merchantJpegController');
     const { sitemapController } = require('../controller/seo/sitemapController');
     const { productSeoHtmlController } = require('../controller/seo/productSeoHtmlController');
@@ -1014,6 +1015,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
     router.get("/meta/catalog.xml", channableFeedController);
+    router.get("/meta/catalog-image/:file", catalogPlateController);
     router.get("/channable/feed.xml", channableFeedController);
     router.get("/google/merchant-feed.xml", channableFeedController);
     router.get("/gmc/image.jpg", merchantJpegController);

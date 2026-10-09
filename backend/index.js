@@ -130,6 +130,7 @@ app.use((req, res, next) => {
     p.startsWith('/api/gmc/') ||
     p === '/api/channable/feed.xml' ||
     p === '/api/meta/catalog.xml' ||
+    p.startsWith('/api/meta/catalog-image/') ||
     p === '/api/google/merchant-feed.xml'
   ) {
     return next();
