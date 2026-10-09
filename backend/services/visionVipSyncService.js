@@ -1067,7 +1067,7 @@ async function markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos
 
     const toClean = await productModel
         .find(filter)
-        .select('_id codigo productImage stock stockStatus')
+        .select('_id codigo productImage catalogPlateUrl stock stockStatus')
         .lean();
 
     let firebaseDeleted = 0;
@@ -1112,7 +1112,8 @@ async function markMissingVisaoProductsOutOfStockAndCleanupImages(catalogCodigos
         productsScanned: toClean.length,
         productsWithFirebaseCleanup,
         firebaseDeleted,
-        firebaseFailed
+        firebaseFailed,
+        removedCodigos: toClean.map((doc) => doc.codigo).filter(Boolean)
     };
 }
 
@@ -1827,7 +1828,19 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         `[RESUMEN] creados=${mirrorSummary.productsCreated} actualizados=${mirrorSummary.productsUpdated} omitidos=${mirrorSummary.productsSkipped} errores=${mirrorSummary.productsErrors} imágenes_fallidas=${mirrorSummary.imageImportFailures} tiempo_ms=${mirrorSummary.durationMs}`
     );
 
+    let catalogPlates = null;
+    try {
+        const { refreshCatalogPlatesAfterSync } = require('./catalogPlateStorage');
+        catalogPlates = await refreshCatalogPlatesAfterSync(persistResults, {
+            removedCodigos: firebaseImageCleanup && firebaseImageCleanup.removedCodigos
+        });
+    } catch (plateErr) {
+        console.warn('[catalogo] no pude actualizar las plantillas:', plateErr.message || plateErr);
+        catalogPlates = { error: plateErr.message || String(plateErr) };
+    }
+
     Object.assign(mirrorSummary, {
+        catalogPlates,
         pruneReport,
         exportFrontendReport
     });
@@ -1967,6 +1980,16 @@ async function syncVisionVipCatalogToMongo(opts = {}) {
     console.log(
         `[RESUMEN] creados=${mirrorSummary.productsCreated} actualizados=${mirrorSummary.productsUpdated} omitidos=${mirrorSummary.productsSkipped} errores=${mirrorSummary.productsErrors} imágenes_fallidas=${mirrorSummary.imageImportFailures} tiempo_ms=${mirrorSummary.durationMs}`
     );
+
+    try {
+        const { refreshCatalogPlatesAfterSync } = require('./catalogPlateStorage');
+        mirrorSummary.catalogPlates = await refreshCatalogPlatesAfterSync(persistResults, {
+            removedCodigos: firebaseImageCleanup && firebaseImageCleanup.removedCodigos
+        });
+    } catch (plateErr) {
+        console.warn('[catalogo] no pude actualizar las plantillas:', plateErr.message || plateErr);
+        mirrorSummary.catalogPlates = { error: plateErr.message || String(plateErr) };
+    }
 
     return {
         mirror: false,

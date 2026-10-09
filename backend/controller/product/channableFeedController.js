@@ -107,6 +107,7 @@ const PRODUCT_SELECT = [
     'category',
     'subcategory',
     'productImage',
+    'catalogPlateUrl',
     'description',
     'price',
     'sellingPrice',
@@ -400,12 +401,10 @@ function generateProductURL(slug) {
     return `${XML_CONFIG.STORE_URL}/producto/${slug}`;
 }
 
-function catalogTemplateUrl(product, discountInfo) {
-    const code = encodeURIComponent(generateCleanId(product));
-    const stamp = `${discountInfo.finalPrice}|${discountInfo.originalPrice}|${discountInfo.hasDiscount ? 1 : 0}`;
-    let hash = 0;
-    for (let i = 0; i < stamp.length; i += 1) hash = (hash * 33 + stamp.charCodeAt(i)) >>> 0;
-    return `${XML_CONFIG.STORE_URL}/api/meta/catalog-image/${code}.jpg?v=${hash.toString(36)}`;
+function catalogImageUrl(product, fallback) {
+    const plate = String(product.catalogPlateUrl || '').trim();
+    if (/^https:\/\/cdn\.zenn\.com\.py\/catalog-plates\//.test(plate)) return plate;
+    return fallback;
 }
 
 function buildItemXml(product, taxonomy, forMeta) {
@@ -436,7 +435,7 @@ function buildItemXml(product, taxonomy, forMeta) {
             <g:description>${escapeXML(description)}</g:description>
             <g:link>${escapeXML(generateProductURL(product.slug))}</g:link>
             <link>${escapeXML(generateProductURL(product.slug))}</link>
-            <g:image_link>${escapeXML(forMeta ? catalogTemplateUrl(product, discountInfo) : mainImage)}</g:image_link>\n`;
+            <g:image_link>${escapeXML(forMeta ? catalogImageUrl(product, mainImage) : mainImage)}</g:image_link>\n`;
 
     additionalImages.forEach((img) => {
         xml += `            <g:additional_image_link>${escapeXML(img)}</g:additional_image_link>\n`;

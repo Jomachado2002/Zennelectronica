@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const opentype = require('opentype.js');
 const { getLogoMap } = require('./brandLogoService');
 const { normalizeBrandSlug } = require('../helpers/brandSlug');
 
@@ -10,30 +11,51 @@ const SIZE = 1080;
 const LINE = 8;
 const PAD = 36;
 const ZENN_LOGO = path.join(__dirname, '..', 'assets', 'logozenn.svg');
+function loadFont(file) {
+  const buf = fs.readFileSync(file);
+  return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+}
+
+const FONT = loadFont(path.join(__dirname, '..', 'assets', 'fonts', 'Inter-SemiBold.ttf'));
 
 const cache = new Map();
-const CACHE_MAX = 60;
+const CACHE_MAX = 40;
 
 function money(value) {
   const amount = Math.round(Number(value) || 0);
-  return amount.toLocaleString('es-PY');
+  return String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function escapeXml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function offerOf(product) {
+  const original = Number(product.price) || 0;
+  const finalPrice = Number(product.sellingPrice) > 0 ? Number(product.sellingPrice) : original;
+  const hasDiscount = original > finalPrice && finalPrice > 0
+    && Math.round((original - finalPrice) / original * 100) >= 1;
+  return {
+    hasDiscount,
+    finalPrice,
+    originalPrice: original,
+    percent: hasDiscount ? Math.round((original - finalPrice) / original * 100) : 0
+  };
 }
 
-function wrapName(name) {
-  const words = String(name || '').replace(/\s+/g, ' ').trim().split(' ');
+function textPath(text, x, baseline, size, fill) {
+  const d = FONT.getPath(String(text || ''), x, baseline, size).toPathData(1);
+  if (!d) return '';
+  return `<path d="${d}" fill="${fill}"/>`;
+}
+
+function textWidth(text, size) {
+  return FONT.getAdvanceWidth(String(text || ''), size);
+}
+
+function wrapName(name, size, maxWidth) {
+  const words = String(name || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
   const lines = [];
   let line = '';
   words.forEach((word) => {
     const next = line ? `${line} ${word}` : word;
-    if (next.length > 34 && line) {
+    if (line && textWidth(next, size) > maxWidth) {
       lines.push(line);
       line = word;
     } else {
@@ -42,6 +64,66 @@ function wrapName(name) {
   });
   if (line) lines.push(line);
   return lines.slice(0, 6);
+}
+
+function footerSvg(product) {
+  const offer = offerOf(product);
+  const amount = money(offer.finalPrice);
+  const gsSize = 26;
+  const amountSize = 52;
+  const gap = 10;
+  const priceW = textWidth('Gs.', gsSize) + gap + textWidth(amount, amountSize);
+  const listLabel = `Gs. ${money(offer.originalPrice)}`;
+  const listW = offer.hasDiscount ? textWidth(listLabel, 26) : 0;
+  const pillW = Math.min(520, Math.max(320, Math.max(priceW, listW) + 64));
+  const pillX = SIZE - 28 - pillW;
+  const nameSize = 30;
+  const lineH = 38;
+  const lines = wrapName(product.productName, nameSize, pillX - PAD - 20);
+  const nameH = Math.max(lineH, lines.length * lineH);
+  const priceH = amountSize + (offer.hasDiscount ? 78 : 0);
+  const footerH = Math.max(156, Math.max(nameH, priceH) + 52);
+  const pillY = 22;
+  const pillH = footerH - 44;
+  const right = pillX + pillW - 28;
+
+  const nameTop = (footerH - lines.length * lineH) / 2;
+  const nameSvg = lines.map((line, index) => (
+    textPath(line, PAD, nameTop + (index + 1) * lineH - 8, nameSize, '#14122e')
+  )).join('');
+
+  const amountBaseline = pillY + pillH - 30;
+  const amountX = right - textWidth(amount, amountSize);
+  const gsX = amountX - gap - textWidth('Gs.', gsSize);
+  let offerSvg = '';
+  if (offer.hasDiscount && offer.percent > 0) {
+    const badge = `-${offer.percent}%`;
+    const badgeBaseline = Math.max(pillY + 36, amountBaseline - 78);
+    offerSvg += textPath(badge, right - textWidth(badge, 24), badgeBaseline, 24, '#ffffff');
+  }
+  if (offer.hasDiscount) {
+    const listX = right - listW;
+    const listBaseline = Math.max(pillY + 64, amountBaseline - 42);
+    offerSvg += textPath(listLabel, listX, listBaseline, 24, '#ffffff');
+    const strike = listBaseline - 8;
+    offerSvg += `<line x1="${listX}" y1="${strike}" x2="${listX + listW}" y2="${strike}" stroke="#ffffff" stroke-width="2"/>`;
+  }
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${SIZE}" height="${footerH}" viewBox="0 0 ${SIZE} ${footerH}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="zenn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00B5D8"/>
+      <stop offset="100%" stop-color="#7B2CBF"/>
+    </linearGradient>
+  </defs>
+  <rect x="${pillX}" y="${pillY}" rx="28" ry="28" width="${pillW}" height="${pillH}" fill="url(#zenn)"/>
+  ${offerSvg}
+  ${textPath('Gs.', gsX, amountBaseline, gsSize, '#ffffff')}
+  ${textPath(amount, amountX, amountBaseline, amountSize, '#ffffff')}
+  ${nameSvg}
+</svg>`;
+  return { footerH, svg };
 }
 
 function remember(key, buffer) {
@@ -66,57 +148,12 @@ async function fitLogo(source, height) {
     .toBuffer();
 }
 
-function footerSvg(lines, offer) {
-  const lineHeight = 34;
-  const textHeight = Math.max(lineHeight, lines.length * lineHeight);
-  const footerH = Math.max(168, textHeight + 56);
-  const nameSvg = lines.map((line, index) => (
-    `<tspan x="36" dy="${index === 0 ? 0 : lineHeight}">${escapeXml(line)}</tspan>`
-  )).join('');
-  const list = offer.hasDiscount
-    ? `<text x="1044" y="${footerH - 118}" text-anchor="end" fill="#ffffff" fill-opacity="0.9" font-size="28" font-family="system-ui, Segoe UI, sans-serif" text-decoration="line-through">Gs. ${escapeXml(money(offer.originalPrice))}</text>`
-    : '';
-  const badge = offer.hasDiscount && offer.percent > 0
-    ? `<text x="1044" y="${footerH - 154}" text-anchor="end" fill="#ffffff" font-size="28" font-weight="700" font-family="system-ui, Segoe UI, sans-serif">-${offer.percent}%</text>`
-    : '';
-  return {
-    footerH,
-    svg: `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${SIZE}" height="${footerH}" viewBox="0 0 ${SIZE} ${footerH}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="zenn" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#00B5D8"/>
-      <stop offset="100%" stop-color="#7B2CBF"/>
-    </linearGradient>
-  </defs>
-  <rect x="620" y="28" rx="28" ry="28" width="424" height="${footerH - 56}" fill="url(#zenn)"/>
-  ${badge}
-  ${list}
-  <text x="1044" y="${footerH - 48}" text-anchor="end" fill="#ffffff" font-family="system-ui, Segoe UI, sans-serif">
-    <tspan font-size="26" font-weight="700">Gs.</tspan>
-    <tspan font-size="52" font-weight="800"> ${escapeXml(money(offer.finalPrice))}</tspan>
-  </text>
-  <text y="${Math.max(40, footerH - textHeight)}" fill="#14122e" font-size="30" font-weight="650" font-family="system-ui, Segoe UI, sans-serif">${nameSvg}</text>
-</svg>`
-  };
-}
-
 async function renderCatalogPlate(product) {
-  const original = Number(product.price) || 0;
-  const finalPrice = Number(product.sellingPrice) > 0 ? Number(product.sellingPrice) : original;
-  const hasDiscount = original > finalPrice && finalPrice > 0
-    && Math.round((original - finalPrice) / original * 100) >= 1;
-  const offer = {
-    hasDiscount,
-    finalPrice,
-    originalPrice: original,
-    percent: hasDiscount ? Math.round((original - finalPrice) / original * 100) : 0
-  };
-  const key = `${product.codigo}|${finalPrice}|${original}|${(product.productImage || [])[0] || ''}`;
+  const offer = offerOf(product);
+  const key = `${product.codigo}|${offer.finalPrice}|${offer.originalPrice}|${product.productName}|${(product.productImage || [])[0] || ''}`;
   if (cache.has(key)) return cache.get(key);
 
-  const lines = wrapName(product.productName);
-  const { footerH, svg } = footerSvg(lines, offer);
+  const { footerH, svg } = footerSvg(product);
   const photoH = SIZE - LINE - footerH;
   const sourceUrl = (product.productImage || []).find((url) => /^https:\/\//.test(String(url || '')));
   if (!sourceUrl) throw new Error('sin foto');
@@ -170,4 +207,4 @@ async function renderCatalogPlate(product) {
   return jpeg;
 }
 
-module.exports = { renderCatalogPlate };
+module.exports = { renderCatalogPlate, offerOf };

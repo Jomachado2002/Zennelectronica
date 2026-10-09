@@ -9,6 +9,9 @@ const productSchema = mongoose.Schema({
     /** _id del subdocumento subcategoría dentro de Category */
     subcategoryId: { type: mongoose.Schema.Types.ObjectId, index: true },
     productImage: { type: [String], required: true },
+    /** JPEG de la plantilla de catálogo Meta, en el CDN. No es la foto de la tienda. */
+    catalogPlateUrl: { type: String, default: '' },
+    catalogPlateStamp: { type: String, default: '' },
     documentationLink: { type: String },
     description: { type: String },
     /** Especificaciones con claves canónicas (slug) alineadas a subcategoría.specifications.name */
