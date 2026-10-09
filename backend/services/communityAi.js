@@ -459,6 +459,9 @@ module.exports = {
   interpretRevision,
   revisePieceHtml,
   askDayOps,
+  askGeminiText,
+  askClaudeText,
+  parseJson,
   communityAiReady,
   claudeReady
 };

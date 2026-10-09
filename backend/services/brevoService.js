@@ -444,6 +444,7 @@ module.exports = {
     sendPasswordResetEmail,
     sendOrderStatusEmail,
     formatToPYG,
-    formatDate
+    formatDate,
+    escapeHtml
 };
 

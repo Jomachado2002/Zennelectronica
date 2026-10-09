@@ -2132,6 +2132,41 @@ router.get('/analitica/carrito/:token', restoreCartController);
 router.get('/analitica/comprar/:productId', buyProductController);
 router.get('/analitica/panel', adminAuth, adminOverviewController);
 router.post('/analitica/enviar-pendientes', adminAuth, sendPendingEmailsController);
+const newsletterController = require('../controller/newsletter/newsletterController');
+const newsletterUpload = require('multer')({
+    storage: require('multer').memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 }
+});
+
+router.get('/newsletter/resumen', adminAuth, newsletterController.summaryController);
+router.get('/newsletter/contactos', adminAuth, newsletterController.listContactsController);
+router.post('/newsletter/importar', adminAuth, newsletterUpload.single('archivo'), newsletterController.importContactsController);
+router.post('/newsletter/contactos', adminAuth, newsletterController.addContactController);
+router.delete('/newsletter/contactos/:id', adminAuth, newsletterController.removeContactController);
+router.post('/newsletter/plantilla', adminAuth, newsletterController.generateTemplateController);
+router.get('/newsletter/plantilla/html', adminAuth, newsletterController.previewController);
+router.get('/newsletter/brevo', adminAuth, newsletterController.brevoTemplatesController);
+router.get('/newsletter/lote', adminAuth, newsletterController.batchController);
+router.post('/newsletter/lote', adminAuth, newsletterController.assignController);
+router.post('/newsletter/enviar', adminAuth, newsletterController.sendController);
+router.post('/newsletter/prueba', adminAuth, newsletterController.testController);
+router.get('/newsletter/envios', adminAuth, newsletterController.sendsController);
+router.get('/newsletter/baja/:token', newsletterController.unsubscribeController);
+router.post('/newsletter/sincronizar', adminAuth, newsletterController.syncStoreController);
+router.get('/newsletter/cron', async (req, res) => {
+    const secret = process.env.CRON_SECRET || '';
+    const header = String(req.headers.authorization || '');
+    if (!secret || header !== `Bearer ${secret}`) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+    }
+    try {
+        const data = await require('../services/newsletterService').runScheduledSend();
+        return res.json({ success: true, data });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    }
+});
+
 router.get('/analitica/cron', async (req, res) => {
     const secret = process.env.CRON_SECRET || '';
     const header = String(req.headers.authorization || '');
@@ -2141,7 +2176,13 @@ router.get('/analitica/cron', async (req, res) => {
     try {
         const { processPendingEmails } = require('../services/analyticsMailer');
         const sent = await processPendingEmails();
-        return res.json({ success: true, data: sent });
+        let newsletter = null;
+        try {
+            newsletter = await require('../services/newsletterService').runScheduledSend();
+        } catch (error) {
+            newsletter = { skipped: true, reason: error.message };
+        }
+        return res.json({ success: true, data: sent, newsletter });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }

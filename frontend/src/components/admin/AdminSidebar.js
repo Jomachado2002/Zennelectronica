@@ -30,7 +30,8 @@ import {
   FaList,
   FaBullhorn,
   FaCalendarAlt,
-  FaTrademark
+  FaTrademark,
+  FaEnvelope
 } from 'react-icons/fa';
 import ROLE from '../../common/role';
 
@@ -113,6 +114,12 @@ export function getAdminNavGroups() {
       label: 'Visitantes',
       icon: FaUsers,
       path: 'visitantes'
+    },
+    {
+      id: 'newsletter',
+      label: 'Newsletter',
+      icon: FaEnvelope,
+      path: 'newsletter'
     },
     {
       id: 'config',
