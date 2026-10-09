@@ -15,6 +15,7 @@ const {
 
 const WEEKLY_USD = Math.max(5, Number(process.env.AD_WEEKLY_BUDGET_USD) || 50);
 const MAX_CAMPAIGNS = 3;
+const HORIZON_DAYS = 3;
 
 function moneyGs(value) {
   return `Gs. ${Math.round(Number(value) || 0).toLocaleString('es-PY')}`;
@@ -131,6 +132,123 @@ async function loadMetaWeek(rate) {
   }
 }
 
+function hzOf(value) {
+  const match = String(value || '').match(/(\d{2,3})/);
+  const n = match ? Number(match[1]) : 0;
+  return n >= 60 && n <= 540 ? n : 0;
+}
+
+function specValue(product, key) {
+  const direct = product[key];
+  if (direct) return direct;
+  const maps = [product.specifications, product.technicalSpecifications];
+  for (const map of maps) {
+    if (map && typeof map === 'object' && map[key]) return map[key];
+  }
+  return '';
+}
+
+function tally(counts, label) {
+  const key = String(label || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!key) return;
+  counts.set(key, (counts.get(key) || 0) + 1);
+}
+
+async function specDigest(subs) {
+  if (!subs.length) return [];
+  const rows = await Product.find({
+    subcategory: { $in: subs },
+    stock: { $gte: 1 },
+    sellingPrice: { $gte: 1000 },
+    productImage: { $exists: true, $ne: [] }
+  })
+    .select('subcategory sellingPrice monitorRefreshRate monitorSize monitorResolution processor memory graphicsCard ramCapacity ramType specifications technicalSpecifications')
+    .limit(500)
+    .lean();
+  const grouped = new Map();
+  rows.forEach((row) => {
+    if (!grouped.has(row.subcategory)) grouped.set(row.subcategory, []);
+    grouped.get(row.subcategory).push(row);
+  });
+  return subs.map((sub) => {
+    const list = grouped.get(sub) || [];
+    const hz = { ge140: 0, ge165: 0 };
+    const tops = new Map();
+    list.forEach((row) => {
+      const rate = hzOf(specValue(row, 'monitorRefreshRate'));
+      if (rate >= 140) hz.ge140 += 1;
+      if (rate >= 165) hz.ge165 += 1;
+      ['monitorSize', 'monitorResolution', 'processor', 'memory', 'graphicsCard', 'ramCapacity', 'ramType'].forEach((key) => {
+        tally(tops, specValue(row, key));
+      });
+    });
+    const popular = [...tops.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4)
+      .map(([label, count]) => `${label} (${count})`)
+      .join(', ');
+    const filters = [];
+    if (hz.ge140) filters.push(`${hz.ge140} monitores de 140 Hz o más`);
+    if (hz.ge165) filters.push(`${hz.ge165} de 165 Hz o más`);
+    return `${sub} | muestra ${list.length} | ${filters.join('; ') || 'sin filtro de Hz'} | specs frecuentes: ${popular || 'sin spec cargada'}`;
+  });
+}
+
+async function salesByCategory() {
+  const since = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000);
+  const rows = await Sale.aggregate([
+    { $match: { paymentStatus: 'pagado', saleDate: { $gte: since } } },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.productSnapshot.category',
+        qty: { $sum: '$items.quantity' },
+        total: { $sum: { $ifNull: ['$items.unitPricePYG', '$items.unitPrice'] } }
+      }
+    },
+    { $sort: { total: -1 } },
+    { $limit: 8 }
+  ]);
+  return rows
+    .filter((row) => row._id)
+    .map((row) => `${row._id}: ${row.qty} unidades, ${moneyGs(row.total)}`);
+}
+
+async function loadRecentAds(rate) {
+  const token = process.env.META_MARKETING_ACCESS_TOKEN || '';
+  const act = process.env.META_AD_ACCOUNT_ID || '';
+  const version = process.env.META_API_VERSION || 'v21.0';
+  if (!token || !act) return [];
+  const until = todayKey();
+  const since = shiftKey(until, -3);
+  const fields = 'campaign_name,spend,impressions,clicks,actions,action_values';
+  const range = encodeURIComponent(JSON.stringify({ since, until }));
+  const url = `https://graph.facebook.com/${version}/${act}/insights?level=campaign&time_range=${range}&fields=${fields}&access_token=${encodeURIComponent(token)}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return [];
+    return (data.data || []).slice(0, 8).map((row) => {
+      const spendPyg = Number(row.spend) || 0;
+      const purchases = (row.actions || []).reduce((sum, action) => (
+        /purchase/i.test(action.action_type || '') ? sum + (Number(action.value) || 0) : sum
+      ), 0);
+      const purchaseValue = (row.action_values || []).reduce((sum, action) => (
+        /purchase/i.test(action.action_type || '') ? sum + (Number(action.value) || 0) : sum
+      ), 0);
+      const roas = spendPyg > 0 && purchaseValue > 0 ? Math.round((purchaseValue / spendPyg) * 100) / 100 : 0;
+      return {
+        name: row.campaign_name || 'Campaña',
+        spendUsd: rate > 0 ? Math.round((spendPyg / rate) * 100) / 100 : 0,
+        clicks: Number(row.clicks) || 0,
+        impressions: Number(row.impressions) || 0,
+        purchases,
+        roas
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 function shelfLine(row) {
   const bands = row.bands
     .map((band) => `${band.name} ${moneyGs(band.min)}–${moneyGs(band.max)}`)
@@ -180,19 +298,44 @@ function fitBudgets(campaigns, dailyTotalUsd) {
   });
 }
 
+function normalizeSpec(value) {
+  const match = String(value || '').match(/refresh\s*>=\s*(140|165)/i);
+  return match ? `refresh >= ${match[1]}` : '';
+}
+
+function specQuery(specFilter) {
+  const match = String(specFilter || '').match(/refresh\s*>=\s*(\d+)/i);
+  if (!match) return null;
+  const min = Number(match[1]);
+  if (min < 60) return null;
+  const pattern = min >= 165
+    ? '(16[5-9]|1[7-9][0-9]|[2-9][0-9]{2})'
+    : '(14[0-9]|1[5-9][0-9]|[2-9][0-9]{2})';
+  const regex = { $regex: pattern, $options: 'i' };
+  return {
+    $or: [
+      { monitorRefreshRate: regex },
+      { 'specifications.monitorRefreshRate': regex },
+      { 'technicalSpecifications.monitorRefreshRate': regex }
+    ]
+  };
+}
+
 async function examplesFor(campaign, shelfRow) {
   const band = (shelfRow.bands || []).find((item) => item.name === campaign.band) || shelfRow.bands[0];
   const query = {
     subcategory: shelfRow.subcategory,
     stock: { $gte: 1 },
     sellingPrice: { $gte: band.min, $lte: band.max || shelfRow.max },
-    productImage: { $exists: true, $ne: [] }
+    productImage: { $exists: true, $ne: [] },
+    ...(specQuery(campaign.specFilter) || {})
   };
-  const rows = await Product.find(query)
-    .select('codigo slug productName brandName sellingPrice productImage catalogPlateUrl')
-    .sort({ sellingPrice: 1 })
-    .limit(3)
-    .lean();
+  const select = 'codigo slug productName brandName sellingPrice productImage catalogPlateUrl';
+  let rows = await Product.find(query).select(select).sort({ sellingPrice: 1 }).limit(3).lean();
+  if (!rows.length && query.$or) {
+    delete query.$or;
+    rows = await Product.find(query).select(select).sort({ sellingPrice: 1 }).limit(3).lean();
+  }
   return rows.map((row) => ({
     codigo: row.codigo,
     name: row.productName,
@@ -276,6 +419,12 @@ function shiftKey(key, days) {
 
 async function composeAdPlan(options = {}) {
   const note = String(options.note || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  const force = Boolean(options.force || note);
+  if (!force) {
+    const fresh = await AdPlan.findOne().sort({ createdAt: -1 }).lean();
+    const age = fresh ? Date.now() - new Date(fresh.createdAt).getTime() : Infinity;
+    if (fresh && age < HORIZON_DAYS * 24 * 60 * 60 * 1000) return fresh;
+  }
   const [{ shelf, productCount }, rateDoc, history, sales] = await Promise.all([
     loadShelf(),
     ExchangeRate.getCurrentRate('USD').catch(() => ({ toPYG: 7300 })),
@@ -283,7 +432,12 @@ async function composeAdPlan(options = {}) {
     storePulse()
   ]);
   const rate = Number(rateDoc && rateDoc.toPYG) > 0 ? Number(rateDoc.toPYG) : 7300;
-  const meta = await loadMetaWeek(rate);
+  const [meta, specs, soldCats, recentAds] = await Promise.all([
+    loadMetaWeek(rate),
+    specDigest(shelf.slice(0, 8).map((row) => row.subcategory)),
+    salesByCategory(),
+    loadRecentAds(rate)
+  ]);
   const spentUsd = Math.round((meta.spentUsd || 0) * 100) / 100;
   const remainingUsd = Math.max(0, Math.round((WEEKLY_USD - spentUsd) * 100) / 100);
   const dailyTotalUsd = Math.round((remainingUsd / 7) * 100) / 100;
@@ -293,9 +447,11 @@ async function composeAdPlan(options = {}) {
   if (communityAiReady()) {
     try {
       const scout = await askGeminiText(
-        `Hoy en Paraguay, qué electrónica está buscando la gente para comprar: notebooks, placas, procesadores, teclados, monitores, celulares.
-Devolvé solo JSON: {"trends":[{"term":"teclado gamer","why":"una frase"}]}
-Máximo 5. No inventes precios.`,
+        `En Paraguay, esta semana, qué electrónica la gente quiere comprar, no solo mirar.
+Compará placas madre, monitores, placas de video, procesadores, memorias RAM, notebooks, teclados y celulares.
+Si la búsqueda trae un filtro real (monitor gamer, 144 Hz, socket AM5, DDR5), ponelo.
+Devolvé solo JSON: {"trends":[{"term":"monitor gamer 144hz","intent":"comprar un monitor para jugar","filter":"refresh >= 140"}]}
+Máximo 6. No inventes precios ni stock.`,
         true
       );
       trends = (parseJson(scout)?.trends || []).slice(0, 5);
@@ -315,8 +471,15 @@ Máximo 5. No inventes precios.`,
     meta.connected
       ? `Meta, últimos 7 días: ${meta.impressions} impresiones, ${meta.clicks} clics, ${meta.purchases} compras, gasto ${moneyGs(meta.spendPyg)}.`
       : `Meta: ${meta.note}`,
-    `Lo que se está buscando: ${trends.map((row) => row.term).filter(Boolean).join(', ') || 'sin búsqueda externa hoy'}.`,
+    `Búsquedas con intención de compra: ${trends.map((row) => [row.term, row.intent, row.filter].filter(Boolean).join(' → ')).join(' | ') || 'sin búsqueda externa hoy'}.`,
     `Ventas pagadas de la tienda, 7 días: ${sales.count} por ${moneyGs(sales.totalPyg)}. ${sales.names.length ? `Últimas: ${sales.names.join(' · ')}` : 'Sin ventas pagadas en esos días.'}`,
+    soldCats.length ? `Lo que más se vendió en 21 días, por categoría: ${soldCats.join(' | ')}` : 'En 21 días no hay ventas pagadas agrupadas por categoría.',
+    recentAds.length
+      ? `Anuncios de los últimos 3 días: ${recentAds.map((row) => `${row.name}: USD ${row.spendUsd}, ${row.clicks} clics, ${row.purchases} compras, ROAS ${row.roas || 'sin dato'}`).join(' | ')}`
+      : 'En los últimos 3 días Meta no devolvió resultados por campaña.',
+    `ROAS de la tienda contra el gasto de Meta en 7 días: ${meta.spendPyg > 0 ? Math.round((sales.totalPyg / meta.spendPyg) * 100) / 100 : 'sin gasto, no hay ROAS'}.`,
+    'Especificaciones reales para filtrar. Si alguien busca monitor gamer, el filtro es 140 Hz o más y solo si esa línea dice que hay stock:',
+    ...specs,
     `Control de compra hacia Meta: ${capiStatus().note}`,
     note ? `Pedido de quien administra, hay que cumplirlo: ${note}` : 'No hay un pedido manual. Decidí vos con los datos.',
     'Si una campaña anterior coincide con algo que se vendió, la acción es mantener. Si no vendió, la acción es cambiar. No repitas una pieza que no trajo compra.',
@@ -328,12 +491,14 @@ Máximo 5. No inventes precios.`,
   let drafted = null;
   if (claudeReady()) {
     try {
-      const text = await askClaudeText(`Sos el planner de publicidad de Zenn Electrónicos, Paraguay. Armás campañas de catálogo para que a quien busca un teclado le aparezcan teclados en su rango de precio, y lo mismo con procesador, placa o notebook.
-No gastes de más. Si el tope de la semana ya se usó, las acciones son "esperar".
-Máximo ${MAX_CAMPAIGNS} campañas. Cada una usa una subcategoría de la lista. Si el rango es ancho, elegí una banda: entrada, medio o alto. Si es angosto, banda "todo".
-El objetivo es ventas en Paraguay, no alcance barato. Preferí quien ya miró ese tipo de producto.
+      const text = await askClaudeText(`Sos el planner de publicidad de Zenn Electrónicos, Paraguay. El objetivo es vender con poca plata: el mejor ROAS, no que la gente solo vea el anuncio.
+Hay más de 4800 productos. Si alguien busca placa madre, la campaña muestra placas madre. Si busca monitor, monitores. Si busca monitor gamer, filtrá por 140 Hz o más y solo si el dossier dice que hay unidades.
+Compará tres cosas antes de elegir: lo que la gente quiere comprar, lo que la tienda ya vendió, y lo que hay en stock con foto. Priorizá donde esas tres coinciden. Si una búsqueda no tiene stock, no armes esa campaña.
+Este plan dura ${HORIZON_DAYS} días. No lo cambies todos los días. Si una campaña de los últimos 3 días tuvo compras o un ROAS mayor a 1, la acción es "mantener". Si gastó y no vendió nada, la acción es "cambiar". Si el tope de la semana ya se usó, la acción es "esperar".
+Máximo ${MAX_CAMPAIGNS} campañas. Cada una usa una subcategoría de la lista. Si el rango de precio es ancho, elegí una banda: entrada, medio o alto. Si es angosto, banda "todo".
+specFilter queda vacío, salvo un filtro que el catálogo pueda cumplir. El único filtro numérico permitido es "refresh >= 140" o "refresh >= 165".
 Devolvé solo JSON:
-{"diagnosis":"qué harías hoy, en 3 oraciones","changes":["qué cambia respecto del plan anterior"],"campaigns":[{"subcategory":"id","name":"nombre corto","band":"medio","dailyBudgetUsd":2,"why":"...","audience":"...","headline":"...","text":"texto del anuncio","flyer":"qué producto del catálogo va en la pieza","action":"lista"}]}
+{"diagnosis":"qué venderías estos 3 días y por qué, en 4 oraciones","changes":["qué se mantiene y qué se cambia"],"campaigns":[{"subcategory":"id","name":"nombre corto","band":"medio","specFilter":"","dailyBudgetUsd":2,"why":"por qué esta pieza puede vender","audience":"quién ya mostró intención de comprar esto","headline":"...","text":"texto del anuncio, orientado a comprar","flyer":"qué producto del catálogo va en la pieza","action":"lista"}]}
 ${dossier}`);
       drafted = parseJson(text);
       engines.claude = Boolean(drafted && drafted.campaigns);
@@ -367,12 +532,13 @@ ${dossier}`);
       dailyBudgetUsd: row.dailyBudgetUsd,
       dailyBudgetGs: moneyGs(row.dailyBudgetUsd * rate),
       why: clip(row.why, 280),
+      specFilter: normalizeSpec(row.specFilter),
       audience: clip(row.audience, 220),
       headline: clip(row.headline, 60),
       text: clip(row.text, 240),
       flyer: clip(row.flyer, 280),
       action: row.action === 'crear' ? 'lista' : row.action,
-      examples: await examplesFor({ band: band.name }, row.shelf)
+      examples: await examplesFor({ band: band.name, specFilter: normalizeSpec(row.specFilter) }, row.shelf)
     });
     campaigns[campaigns.length - 1].image = (campaigns[campaigns.length - 1].examples[0] || {}).image || '';
   }
@@ -400,7 +566,8 @@ ${dossier}`);
     meta: { ...meta, sales, capi: capiStatus(), activeAds: await loadActiveAds(rate) },
     catalog: { productCount, shelves: shelf.length },
     engines,
-    note
+    note,
+    horizonDays: HORIZON_DAYS
   });
   return saved.toObject();
 }
@@ -409,8 +576,9 @@ async function plannerCalendar({ from, days = 42 } = {}) {
   const start = String(from || todayKey());
   const count = Math.min(42, Math.max(7, Number(days) || 42));
   const end = shiftKey(start, count);
+  const lookback = shiftKey(start, -HORIZON_DAYS);
   const [plans, salesRows, rateDoc] = await Promise.all([
-    AdPlan.find({ planDate: { $gte: start, $lt: end } }).sort({ createdAt: -1 }).lean(),
+    AdPlan.find({ planDate: { $gte: lookback, $lt: end } }).sort({ createdAt: -1 }).lean(),
     Sale.aggregate([
       {
         $match: {
@@ -442,7 +610,16 @@ async function plannerCalendar({ from, days = 42 } = {}) {
   const list = [];
   for (let index = 0; index < count; index += 1) {
     const date = shiftKey(start, index);
-    const plan = byDate.get(date);
+    let plan = byDate.get(date);
+    if (!plan) {
+      for (let back = 1; back < HORIZON_DAYS; back += 1) {
+        const previous = byDate.get(shiftKey(date, -back));
+        if (previous && (previous.horizonDays || HORIZON_DAYS) > back) {
+          plan = previous;
+          break;
+        }
+      }
+    }
     const sold = salesByDate.get(date);
     list.push({
       date,
@@ -462,6 +639,7 @@ async function plannerCalendar({ from, days = 42 } = {}) {
         dailyBudgetUsd: campaign.dailyBudgetUsd,
         dailyBudgetGs: campaign.dailyBudgetGs,
         why: campaign.why,
+        specFilter: campaign.specFilter || '',
         audience: campaign.audience,
         headline: campaign.headline,
         text: campaign.text,

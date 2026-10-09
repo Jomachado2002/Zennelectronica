@@ -17,7 +17,7 @@ async function getAdPlanner(req, res) {
 
 async function buildAdPlanner(req, res) {
   try {
-    await composeAdPlan({ note: req.body?.note });
+    await composeAdPlan({ note: req.body?.note, force: true });
     const data = await plannerCalendar({ from: req.query.from, days: req.query.days || 42 });
     res.json({ success: true, message: 'El día quedó armado.', ...data });
   } catch (error) {

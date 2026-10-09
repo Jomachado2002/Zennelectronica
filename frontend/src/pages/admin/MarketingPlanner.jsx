@@ -151,7 +151,7 @@ export default function MarketingPlanner() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthTitle(year, month)}</h2>
           <p className="text-sm text-gray-600 mt-1 max-w-xl">
-            Tocá un día para ver las campañas. A las 7:00 se arma el día si está vacío. Si querés cambiar algo, escribilo abajo y el plan se rehace con el catálogo, las ventas y lo que se está buscando.
+            Tocá un día para ver las campañas. A las 7:00 se revisa el plan. Si tiene menos de 3 días y está vendiendo, sigue. Si gastó y no vendió, se cambia. Si querés tocar algo antes, escribilo abajo.
           </p>
         </div>
         <button type="button" onClick={() => arm('')} disabled={Boolean(busy)} className="px-3 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-50" style={{ background: '#7B2CBF' }}>
@@ -287,7 +287,7 @@ export default function MarketingPlanner() {
                         {ACTION_LABEL[slot.action] || slot.action} · USD {slot.dailyBudgetUsd}/día
                       </p>
                       <p className="font-semibold text-gray-900 mt-2 text-sm">{slot.name}</p>
-                      <p className="text-xs text-gray-500">{slot.productSet} · {slot.priceFrom} a {slot.priceTo}</p>
+                      <p className="text-xs text-gray-500">{slot.productSet} · {slot.priceFrom} a {slot.priceTo}{slot.specFilter ? ` · ${slot.specFilter}` : ''}</p>
                       <p className="text-sm text-gray-700 mt-1">{slot.headline}. {slot.text}</p>
                       <p className="text-sm text-gray-600 mt-1">{slot.why}</p>
                       {selected === today && !slot.metaAdId && slot.action !== 'esperar' ? (

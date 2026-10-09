@@ -17,7 +17,8 @@ const adPlanSchema = new mongoose.Schema(
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
     catalog: { type: mongoose.Schema.Types.Mixed, default: {} },
     engines: { type: mongoose.Schema.Types.Mixed, default: {} },
-    note: { type: String, default: '' }
+    note: { type: String, default: '' },
+    horizonDays: { type: Number, default: 3 }
   },
   { timestamps: true, collection: 'adplans' }
 );
