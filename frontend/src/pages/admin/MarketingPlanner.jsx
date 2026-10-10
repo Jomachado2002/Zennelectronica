@@ -37,22 +37,27 @@ function monthTitle(year, month) {
   }).format(date);
 }
 
+function money(value) {
+  const n = Math.round(Number(value) || 0);
+  return `Gs. ${n.toLocaleString('es-PY')}`;
+}
+
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const CHIP = {
   mantener: 'bg-[#D1FAE5] text-[#065F46]',
+  ganadora: 'bg-[#D1FAE5] text-[#065F46]',
+  escalar: 'bg-[#DBEAFE] text-[#1E40AF]',
   crear: 'bg-[#EDE9FE] text-[#5B21B6]',
   lista: 'bg-[#EDE9FE] text-[#5B21B6]',
   cambiar: 'bg-[#FEF3C7] text-[#92400E]',
-  esperar: 'bg-gray-100 text-gray-600'
-};
-
-const ACTION_LABEL = {
-  crear: 'Lista',
-  lista: 'Lista',
-  mantener: 'En Meta',
-  cambiar: 'Cambiar',
-  esperar: 'Sin gasto'
+  perdedora: 'bg-[#FEE2E2] text-[#991B1B]',
+  cara: 'bg-[#FEE2E2] text-[#991B1B]',
+  no_interesa: 'bg-[#FEE2E2] text-[#991B1B]',
+  pausada: 'bg-gray-100 text-gray-600',
+  esperar: 'bg-gray-100 text-gray-600',
+  aprendiendo: 'bg-[#FEF3C7] text-[#92400E]',
+  en_prueba: 'bg-[#FEF3C7] text-[#92400E]'
 };
 
 export default function MarketingPlanner() {
@@ -62,7 +67,11 @@ export default function MarketingPlanner() {
   const [month, setMonth] = useState(start[1]);
   const [days, setDays] = useState([]);
   const [live, setLive] = useState(null);
+  const [latest, setLatest] = useState(null);
+  const [running, setRunning] = useState([]);
   const [capi, setCapi] = useState(null);
+  const [nextReview, setNextReview] = useState('');
+  const [weekBudgetUsd, setWeekBudgetUsd] = useState(50);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [selected, setSelected] = useState(today);
@@ -70,15 +79,23 @@ export default function MarketingPlanner() {
 
   const from = gridStart(year, month);
 
+  const apply = (data) => {
+    setDays(data.days || []);
+    setLive(data.live || null);
+    setLatest(data.latest || null);
+    setRunning(data.running || []);
+    setCapi(data.capi || null);
+    setNextReview(data.nextReview || '');
+    setWeekBudgetUsd(Number(data.weekBudgetUsd) || 50);
+  };
+
   const load = useCallback(async (startKey) => {
     setLoading(true);
     try {
       const res = await axiosInstance.get('/api/creativos/planner', {
         params: { from: startKey, days: 42 }
       });
-      setDays(res.data.days || []);
-      setLive(res.data.live || null);
-      setCapi(res.data.capi || null);
+      apply(res.data);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo leer el calendario');
     } finally {
@@ -98,6 +115,13 @@ export default function MarketingPlanner() {
 
   const cells = useMemo(() => Array.from({ length: 42 }, (_, index) => shiftKey(from, index)), [from]);
   const selectedDay = byDate.get(selected);
+  const canChange = Boolean(selectedDay && selectedDay.isLatest) || selected === today;
+  const ads = (live && live.activeAds) || [];
+  const skip = (latest && latest.skip) || [];
+  const watch = (latest && latest.watch) || [];
+  const changes = (selectedDay && selectedDay.changes && selectedDay.changes.length)
+    ? selectedDay.changes
+    : ((latest && latest.changes) || []);
 
   const moveMonth = (delta) => {
     const next = new Date(Date.UTC(year, month - 1 + delta, 1));
@@ -115,10 +139,9 @@ export default function MarketingPlanner() {
       const res = await axiosInstance.post('/api/creativos/planner/autorizar', {
         date: selected,
         slot: slotIndex
-      }, { timeout: 120000 });
+      }, { params: { from, days: 42 }, timeout: 120000 });
       toast.success(res.data.message || 'La campaña quedó autorizada');
-      setDays(res.data.days || []);
-      setLive(res.data.live || null);
+      apply(res.data);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo publicar la campaña');
     } finally {
@@ -129,12 +152,13 @@ export default function MarketingPlanner() {
   const arm = async (note) => {
     setBusy('day');
     try {
-      const res = await axiosInstance.post('/api/creativos/planner/dia', { note: note || '' }, { timeout: 180000 });
+      const res = await axiosInstance.post('/api/creativos/planner/dia', { note: note || '' }, {
+        params: { from, days: 42 },
+        timeout: 180000
+      });
       toast.success(res.data.message || 'El día quedó armado');
       setDayAsk('');
-      setDays(res.data.days || []);
-      setLive(res.data.live || null);
-      setCapi(res.data.capi || null);
+      apply(res.data);
       setSelected(today);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo armar el día');
@@ -143,15 +167,13 @@ export default function MarketingPlanner() {
     }
   };
 
-  const ads = (live && live.activeAds) || [];
-
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-5 mb-8">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthTitle(year, month)}</h2>
-          <p className="text-sm text-gray-600 mt-1 max-w-xl">
-            Tocá un día para ver las campañas. A las 7:00 se revisa el plan. Si tiene menos de 3 días y está vendiendo, sigue. Si gastó y no vendió, se cambia. Si querés tocar algo antes, escribilo abajo.
+          <p className="text-sm text-gray-600 mt-1 max-w-2xl">
+            Claude elige qué productos se pagan con {weekBudgetUsd} USD a la semana (~7 USD al día). Lo que vende se deja. Lo que gasta y no vende se pausa. Vos solo autorizás. Próxima revisión: {nextReview || 'cuando armes hoy'}.
           </p>
         </div>
         <button type="button" onClick={() => arm('')} disabled={Boolean(busy)} className="px-3 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-50" style={{ background: '#7B2CBF' }}>
@@ -160,28 +182,49 @@ export default function MarketingPlanner() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-sm">
         <div className="rounded-lg border border-gray-200 px-3 py-2">
           <div className="text-xs text-gray-500">Gasto Meta, 7 días</div>
           <div className="font-semibold">USD {Number(live?.spentUsd || 0).toLocaleString('es-PY')}</div>
+          <div className="text-[11px] text-gray-500">Quedan USD {Number(live?.remainingUsd || 0).toLocaleString('es-PY')}</div>
+        </div>
+        <div className="rounded-lg border border-gray-200 px-3 py-2">
+          <div className="text-xs text-gray-500">Tope del día</div>
+          <div className="font-semibold">USD {Number(live?.dailyTotalUsd || 0).toLocaleString('es-PY')}</div>
         </div>
         <div className="rounded-lg border border-gray-200 px-3 py-2">
           <div className="text-xs text-gray-500">Interacciones</div>
-          <div className="font-semibold">{live?.clicks || 0} clics · {live?.impressions || 0} vistas</div>
+          <div className="font-semibold">{live?.clicks || 0} clics · {live?.contacts || 0} WhatsApp</div>
         </div>
         <div className="rounded-lg border border-gray-200 px-3 py-2">
           <div className="text-xs text-gray-500">Compras que Meta vio</div>
           <div className="font-semibold">{live?.purchases || 0}</div>
         </div>
         <div className="rounded-lg border border-gray-200 px-3 py-2">
-          <div className="text-xs text-gray-500">Ventas pagadas en la tienda</div>
-          <div className="font-semibold">{live?.sales?.count || 0} · {live?.sales?.totalPyg ? `Gs. ${Number(live.sales.totalPyg).toLocaleString('es-PY')}` : 'Gs. 0'}</div>
+          <div className="text-xs text-gray-500">Ventas pagadas, 7 días</div>
+          <div className="font-semibold">{live?.sales?.count || 0} · {live?.sales?.totalPyg ? money(live.sales.totalPyg) : 'Gs. 0'}</div>
         </div>
       </div>
 
       {capi ? <p className="text-xs text-gray-500 mb-3">{capi.note}</p> : null}
 
-      {ads.length ? (
+      {running.length ? (
+        <div className="mb-4 rounded-lg border border-gray-200 p-3">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Análisis de lo que está en Meta</p>
+          <div className="space-y-2">
+            {running.map((row) => (
+              <div key={row.metaCampaignId || row.name} className="text-xs text-gray-700">
+                <span className={`inline-flex rounded px-1.5 py-0.5 font-semibold mr-2 ${CHIP[row.verdict] || 'bg-gray-100 text-gray-700'}`}>
+                  {row.label || row.verdict}
+                </span>
+                <span className="font-semibold">{row.name}</span>
+                <span className="text-gray-500"> · {money(row.spendPyg)} · {row.clicks} clics · {row.contacts || 0} WhatsApp · {row.purchases} compras</span>
+                {row.reason ? <p className="text-gray-600 mt-0.5">{row.reason}</p> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : ads.length ? (
         <div className="mb-4">
           <p className="text-xs font-semibold text-gray-700 mb-2">Publicidad activa hoy</p>
           <div className="flex gap-2 overflow-auto">
@@ -206,15 +249,16 @@ export default function MarketingPlanner() {
       </div>
 
       <div className="flex flex-wrap gap-3 text-xs text-gray-600 mb-3">
-        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#7C3AED]" /> Crear</span>
-        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#059669]" /> Mantener</span>
-        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#D97706]" /> Cambiar</span>
+        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#7C3AED]" /> Lista / autorizar</span>
+        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#059669]" /> Ganadora</span>
+        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#D97706]" /> En prueba</span>
+        <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-[#DC2626]" /> Pausada</span>
       </div>
 
       {loading ? (
         <div className="py-16 flex justify-center"><FaSpinner className="animate-spin text-gray-400" /></div>
       ) : (
-        <div className="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)] lg:gap-4">
+        <div className="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.85fr)] lg:gap-4">
           <div>
             <div className="grid grid-cols-7 text-center text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">
               {WEEKDAYS.map((day) => <div key={day} className="py-1">{day}</div>)}
@@ -256,53 +300,102 @@ export default function MarketingPlanner() {
             ) : (
               <p className="text-xs text-gray-500 mt-1">Sin ventas pagadas ese día.</p>
             )}
-            {selected === today ? (
+
+            {canChange ? (
               <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                <p className="text-xs font-semibold text-gray-800">Cambiar el día</p>
-                <p className="mt-1 text-xs text-gray-500">Una frase alcanza. Por ejemplo: dejá los teclados y cambiá la campaña que no vendió por procesadores de entrada.</p>
+                <p className="text-xs font-semibold text-gray-800">Pedir un cambio</p>
+                <p className="mt-1 text-xs text-gray-500">El planner lo cumple. Ejemplo: sacá notebooks, poné auriculares gamer y monitores de 165 Hz.</p>
                 <textarea
                   value={dayAsk}
                   onChange={(event) => setDayAsk(event.target.value)}
                   rows={3}
-                  placeholder="Cambiá lo que no vendió por memorias RAM de entrada"
+                  placeholder="Cambiá lo que no vendió por auriculares y monitores gamer"
                   className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
                 />
                 <button type="button" disabled={busy === 'day' || !dayAsk.trim()} onClick={() => arm(dayAsk)} className="mt-2 text-xs font-semibold" style={{ color: '#7B2CBF' }}>
-                  {busy === 'day' ? 'Cambiando…' : 'Cambiar el día'}
+                  {busy === 'day' ? 'Cambiando…' : 'Cambiar el plan'}
                 </button>
               </div>
             ) : null}
+
             {selectedDay && selectedDay.diagnosis ? <p className="text-sm text-gray-700 mt-3">{selectedDay.diagnosis}</p> : null}
+
+            {changes.length ? (
+              <ul className="mt-3 space-y-1 text-xs text-gray-600 list-disc pl-4">
+                {changes.slice(0, 8).map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            ) : null}
+
+            {skip.length && (selectedDay && selectedDay.isLatest) ? (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-700">No se paga</p>
+                {skip.map((row) => (
+                  <p key={row.family} className="text-xs text-gray-600 mt-1">{row.label}: {row.why}</p>
+                ))}
+              </div>
+            ) : null}
+
+            {watch.length && (selectedDay && selectedDay.isLatest) ? (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-700">Mirar en 3 días</p>
+                {watch.map((line) => <p key={line} className="text-xs text-gray-600 mt-1">{line}</p>)}
+              </div>
+            ) : null}
+
             {!selectedDay || !selectedDay.slots.length ? (
               <p className="text-sm text-gray-500 mt-3">Ese día no tiene campañas. Armá hoy o esperá a las 7:00.</p>
             ) : (
               <div className="mt-3 space-y-3">
                 {selectedDay.slots.map((slot, slotIndex) => (
-                
-                    <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-3">
-                      {slot.image ? (
-                        <img src={slot.image} alt={slot.name} className="w-full rounded-md mb-2 bg-white" />
-                      ) : null}
-                      <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.action] || ''}`}>
-                        {ACTION_LABEL[slot.action] || slot.action} · USD {slot.dailyBudgetUsd}/día
+                  <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-3">
+                    {slot.image ? (
+                      <img src={slot.image} alt={slot.name} className="w-full rounded-md mb-2 bg-white" />
+                    ) : null}
+                    <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.action] || 'bg-gray-100 text-gray-700'}`}>
+                      {slot.verdict || slot.action} · {slot.dailyBudgetGs || `USD ${slot.dailyBudgetUsd}/día`}
+                    </p>
+                    <p className="font-semibold text-gray-900 mt-2 text-sm">{slot.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {slot.filterLabel || slot.productSet || ''}
+                      {slot.priceFrom ? ` · ${slot.priceFrom} a ${slot.priceTo}` : ''}
+                      {slot.setSize ? ` · ${slot.setSize} productos` : ''}
+                    </p>
+                    {slot.avgProfit ? (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Gana {money(slot.avgProfit)} por venta · ROAS mínimo {slot.breakEvenRoas || '-'}
+                        {slot.killAtPyg ? ` · se corta a ${money(slot.killAtPyg)}` : ''}
                       </p>
-                      <p className="font-semibold text-gray-900 mt-2 text-sm">{slot.name}</p>
-                      <p className="text-xs text-gray-500">{slot.productSet} · {slot.priceFrom} a {slot.priceTo}{slot.specFilter ? ` · ${slot.specFilter}` : ''}</p>
-                      <p className="text-sm text-gray-700 mt-1">{slot.headline}. {slot.text}</p>
-                      <p className="text-sm text-gray-600 mt-1">{slot.why}</p>
-                      {selected === today && !slot.metaAdId && slot.action !== 'esperar' ? (
-                        <button
-                          type="button"
-                          disabled={busy === `ad-${slotIndex}`}
-                          onClick={() => authorize(slotIndex)}
-                          className="mt-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white disabled:opacity-50"
-                          style={{ background: '#7B2CBF' }}
-                        >
-                          {busy === `ad-${slotIndex}` ? 'Publicando…' : 'Autorizar y publicar'}
-                        </button>
-                      ) : null}
-                      {slot.metaAdId ? <p className="text-xs text-emerald-700 mt-2">Ya está publicada en Meta.</p> : null}
-                    </article>
+                    ) : null}
+                    {slot.headline ? <p className="text-sm text-gray-800 mt-1">{slot.headline}</p> : null}
+                    {slot.text ? <p className="text-sm text-gray-700">{slot.text}</p> : null}
+                    {slot.why ? <p className="text-sm text-gray-600 mt-1">{slot.why}</p> : null}
+                    {slot.expected ? <p className="text-xs text-gray-500 mt-1">En 3 días: {slot.expected}</p> : null}
+                    {slot.warn ? <p className="text-xs text-red-700 mt-1">{slot.warn}</p> : null}
+                    {slot.products && slot.products.length ? (
+                      <div className="mt-2 flex gap-2 overflow-auto">
+                        {slot.products.map((product) => (
+                          <div key={product.codigo || product.name} className="min-w-[92px] max-w-[110px]">
+                            {product.plate ? <img src={product.plate} alt="" className="w-full rounded bg-white" /> : null}
+                            <p className="text-[10px] text-gray-700 mt-1 line-clamp-2">{product.name}</p>
+                            <p className="text-[10px] text-gray-500">{product.priceText || money(product.price)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {slot.canAuthorize ? (
+                      <button
+                        type="button"
+                        disabled={busy === `ad-${slotIndex}`}
+                        onClick={() => authorize(slotIndex)}
+                        className="mt-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white disabled:opacity-50"
+                        style={{ background: '#7B2CBF' }}
+                      >
+                        {busy === `ad-${slotIndex}` ? 'Publicando…' : 'Autorizar y publicar'}
+                      </button>
+                    ) : null}
+                    {slot.published ? <p className="text-xs text-emerald-700 mt-2">Ya está publicada en Meta.</p> : null}
+                    {slot.paused ? <p className="text-xs text-red-700 mt-2">Pausada. No se toca hasta la próxima revisión.</p> : null}
+                  </article>
                 ))}
               </div>
             )}

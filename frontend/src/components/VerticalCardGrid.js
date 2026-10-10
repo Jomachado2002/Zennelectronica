@@ -1,11 +1,11 @@
-import React, { useContext, useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useContext, useRef, useState, useMemo, useCallback } from 'react';
 import scrollTop from '../helpers/scrollTop';
 import Context from '../context';
 import addToCart from '../helpers/addToCart';
 import { Link } from 'react-router-dom';
 import displayPYGCurrency from '../helpers/displayCurrency';
 import { FaShoppingCart } from 'react-icons/fa';
-import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
+import { trackAddToCart } from './MetaPixelTracker';
 import { productPath } from '../helpers/productPath';
 
 const VerticalCardGrid = ({ loading, data = [] }) => {
@@ -15,45 +15,6 @@ const VerticalCardGrid = ({ loading, data = [] }) => {
     const [imageErrors, setImageErrors] = useState(new Set());
     const [hoveredProductId, setHoveredProductId] = useState(null);
     const [hoverTimeout, setHoverTimeout] = useState(null);
-    const [viewedProducts, setViewedProducts] = useState(new Set());
-    const observerRef = useRef(null);
-
-    // ✅ INTERSECTION OBSERVER PARA TRACKEAR VIEW CONTENT
-    useEffect(() => {
-        if (!data.length) return;
-        
-        observerRef.current = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const productId = entry.target.dataset.productId;
-                        const product = data.find(p => p._id === productId);
-                        
-                        if (product && !viewedProducts.has(productId)) {
-                            setViewedProducts(prev => new Set([...prev, productId]));
-                            trackViewContent(product);
-                        }
-                    }
-                });
-            },
-            {
-                threshold: 0.5, // 50% del producto visible
-                rootMargin: '0px'
-            }
-        );
-
-        // Observar todos los productos
-        const productElements = document.querySelectorAll('[data-product-id]');
-        productElements.forEach(el => {
-            observerRef.current.observe(el);
-        });
-
-        return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect();
-            }
-        };
-    }, [data, viewedProducts]);
 
     const handleAddToCart = useCallback((e, product) => {
         e.stopPropagation();

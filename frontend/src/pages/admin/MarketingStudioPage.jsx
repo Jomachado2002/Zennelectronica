@@ -255,7 +255,7 @@ const MarketingStudioPage = () => {
           Marketing IA
         </h1>
         <p className="text-sm text-zinc-600 mt-2 max-w-3xl">
-          El planner decide las campañas del día con el catálogo y el tope de 50 USD. Abajo se prueba la plantilla que usa el catálogo de Meta.
+          El planner cruza el catálogo, las specs, las ventas y lo que se busca en Paraguay. Con ~7 USD al día paga lo que deja ganancia. Vos solo autorizás. Abajo está la plantilla del catálogo de Meta.
         </p>
       </div>
 

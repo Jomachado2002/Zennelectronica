@@ -18,7 +18,14 @@ const adPlanSchema = new mongoose.Schema(
     catalog: { type: mongoose.Schema.Types.Mixed, default: {} },
     engines: { type: mongoose.Schema.Types.Mixed, default: {} },
     note: { type: String, default: '' },
-    horizonDays: { type: Number, default: 3 }
+    horizonDays: { type: Number, default: 3 },
+    economics: { type: mongoose.Schema.Types.Mixed, default: null },
+    review: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    budget: { type: mongoose.Schema.Types.Mixed, default: null },
+    market: { type: mongoose.Schema.Types.Mixed, default: null },
+    skip: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    watch: { type: [String], default: [] },
+    intent: { type: mongoose.Schema.Types.Mixed, default: null }
   },
   { timestamps: true, collection: 'adplans' }
 );

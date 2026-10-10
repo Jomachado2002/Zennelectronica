@@ -6,7 +6,7 @@ import addToCart from '../helpers/addToCart';
 import Context from '../context';
 import scrollTop from '../helpers/scrollTop';
 import { productPath } from '../helpers/productPath';
-import { trackViewContent, trackAddToCart } from './MetaPixelTracker';
+import { trackAddToCart } from './MetaPixelTracker';
 
 // ✅ COMPONENTE OPTIMIZADO PARA MOBILE/DESKTOP
 const VerticalCardProduct = ({ 

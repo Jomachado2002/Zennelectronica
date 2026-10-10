@@ -91,8 +91,14 @@ async function askGeminiText(prompt, withSearch) {
   return data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n') || '';
 }
 
-async function askClaudeText(prompt) {
+async function askClaudeText(prompt, options = {}) {
   const key = claudeKey();
+  const body = {
+    model: CLAUDE_MODEL,
+    max_tokens: Math.max(1000, Number(options.maxTokens) || 6000),
+    messages: [{ role: 'user', content: prompt }]
+  };
+  if (options.temperature != null) body.temperature = Number(options.temperature);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -100,11 +106,7 @@ async function askClaudeText(prompt) {
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json'
     },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 6000,
-      messages: [{ role: 'user', content: prompt }]
-    })
+    body: JSON.stringify(body)
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
