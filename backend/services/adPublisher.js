@@ -138,7 +138,12 @@ async function uploadPlate(url) {
   return first.hash;
 }
 
-async function creativeFromPlates(campaign, page) {
+function withIg(spec, instagramId) {
+  if (!instagramId) return spec;
+  return { ...spec, instagram_user_id: instagramId };
+}
+
+async function creativeFromPlates(campaign, page, instagramId) {
   const items = (campaign.products || []).filter((product) => product.plate).slice(0, 10);
   const hashes = [];
   for (const product of items) {
@@ -153,7 +158,7 @@ async function creativeFromPlates(campaign, page) {
     const item = hashes[0];
     return metaAds.metaPost(`${metaAds.metaConfig().act}/adcreatives`, {
       name: campaign.name,
-      object_story_spec: {
+      object_story_spec: withIg({
         page_id: page,
         link_data: {
           image_hash: item.hash,
@@ -163,12 +168,13 @@ async function creativeFromPlates(campaign, page) {
           description: item.product.priceText || '',
           call_to_action: { type: 'SHOP_NOW' }
         }
-      }
+      }, instagramId),
+      ...(instagramId ? { instagram_user_id: instagramId } : {})
     });
   }
   return metaAds.metaPost(`${metaAds.metaConfig().act}/adcreatives`, {
     name: campaign.name,
-    object_story_spec: {
+    object_story_spec: withIg({
       page_id: page,
       link_data: {
         link: 'https://www.zenn.com.py',
@@ -182,7 +188,8 @@ async function creativeFromPlates(campaign, page) {
           call_to_action: { type: 'SHOP_NOW' }
         }))
       }
-    }
+    }, instagramId),
+    ...(instagramId ? { instagram_user_id: instagramId } : {})
   });
 }
 
@@ -190,6 +197,10 @@ async function publishNew(plan, campaign) {
   const { act, page, pixel } = metaAds.metaConfig();
   if (!page) throw fail('Falta FACEBOOK_PAGE_ID para publicar.');
   if (!pixel) throw fail('Falta META_PIXEL_ID para publicar.');
+  const instagramId = await metaAds.instagramActor();
+  if (!instagramId) {
+    throw fail('Meta pide la cuenta de Instagram del anuncio. En Business Manager, Usuarios del sistema → Zenn Marketings → Asignar activos → Cuentas de Instagram → zennelectronicos, acceso total. En la página Zenn Electrónicos, Configuración → Instagram, conectá @zennelectronicos.');
+  }
   const rate = Number(plan.exchangeRate) > 0 ? Number(plan.exchangeRate) : 7300;
   await underWeeklyCap(rate);
   const catalog = await metaAds.liveCatalog();
@@ -233,11 +244,12 @@ async function publishNew(plan, campaign) {
       status: 'PAUSED'
     });
     const creative = useImages
-      ? await creativeFromPlates(campaign, page)
+      ? await creativeFromPlates(campaign, page, instagramId)
       : await metaAds.metaPost(`${act}/adcreatives`, {
         name: campaign.name,
         product_set_id: setId,
-        object_story_spec: {
+        instagram_user_id: instagramId,
+        object_story_spec: withIg({
           page_id: page,
           template_data: {
             message: adMessage(campaign),
@@ -247,7 +259,7 @@ async function publishNew(plan, campaign) {
             call_to_action: { type: 'SHOP_NOW' },
             multi_share_end_card: false
           }
-        }
+        }, instagramId)
       });
     const ad = await metaAds.metaPost(`${act}/ads`, {
       name: campaign.name,

@@ -8,9 +8,44 @@ function metaConfig() {
     act: process.env.META_AD_ACCOUNT_ID || '',
     pixel: process.env.META_PIXEL_ID || '',
     page: process.env.FACEBOOK_PAGE_ID || '',
+    instagram: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || process.env.FACEBOOK_INSTAGRAM_ID || '',
     business: process.env.FACEBOOK_BUSINESS_ID || '',
     version: process.env.META_API_VERSION || 'v21.0'
   };
+}
+
+let instagramMemo = { at: 0, id: '' };
+
+async function instagramActor() {
+  if (instagramMemo.id && Date.now() - instagramMemo.at < 6 * 60 * 60 * 1000) return instagramMemo.id;
+  const { instagram, business, page } = metaConfig();
+  if (instagram) {
+    instagramMemo = { at: Date.now(), id: instagram };
+    return instagram;
+  }
+  if (business) {
+    const list = await metaGet(`${business}/owned_instagram_accounts`, { fields: 'id,username' }).catch(() => null);
+    const hit = (list?.data || []).find((row) => String(row.username || '').toLowerCase() === 'zennelectronicos')
+      || (list?.data || [])[0];
+    if (hit && hit.id) {
+      instagramMemo = { at: Date.now(), id: String(hit.id) };
+      return instagramMemo.id;
+    }
+  }
+  const pageTok = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || '';
+  if (page && pageTok) {
+    const q = new URLSearchParams({
+      fields: 'instagram_business_account',
+      access_token: pageTok
+    });
+    const data = await fetch(`https://graph.facebook.com/${metaConfig().version}/${page}?${q}`).then((res) => res.json()).catch(() => ({}));
+    const id = data?.instagram_business_account?.id;
+    if (id) {
+      instagramMemo = { at: Date.now(), id: String(id) };
+      return instagramMemo.id;
+    }
+  }
+  return '';
 }
 
 function metaReady() {
@@ -22,7 +57,9 @@ function metaError(data, fallback) {
   const raw = data?.error?.error_user_msg || data?.error?.message || fallback;
   const message = /modo de desarrollo|development mode/i.test(raw)
     ? 'Meta rechazó el anuncio porque la app Zenn Electronicos sigue en modo desarrollo. En developers.facebook.com, en Publicar, pasala a pública.'
-    : raw;
+    : /instagram o una página|represente a tu negocio en Instagram|Instagram account or a Facebook Page/i.test(raw)
+      ? 'Meta pide @zennelectronicos en el anuncio. En Business Manager asigná esa Instagram a Zenn Marketings (acceso total) y, en la página Zenn Electrónicos, conectala en Configuración → Instagram. Después autorizá de nuevo.'
+      : raw;
   const error = new Error(message);
   error.status = 400;
   error.metaCode = data?.error?.code;
@@ -184,6 +221,7 @@ async function setAdsetBudget(id, dailyBudgetPyg) {
 module.exports = {
   metaConfig,
   metaReady,
+  instagramActor,
   metaGet,
   metaPost,
   metaDelete,
