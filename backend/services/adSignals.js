@@ -285,18 +285,25 @@ function economics({ products, pixel, history, sales }) {
 }
 
 function scoreProducts(products, econ) {
-  const reach = Math.max(econ.avgTicket || 0, 300000) * 4;
+  const ticket = Math.max(econ.avgTicket || 0, 400000);
+  const sweetMax = Math.min(2500000, Math.max(ticket * 2.5, 1500000));
+  const sweetMin = 70000;
+  const profitFloor = Math.min(econ.minProfit, 35000);
   products.forEach((product) => {
     const demand = product.searches * 3 + product.carts * 4 + product.views + product.sold * 5;
-    const profitScore = Math.min(product.profit / Math.max(econ.minProfit, 1), 2.5);
-    const pricey = product.price > reach ? Math.log10(product.price / reach) * 3 : 0;
+    const profitScore = Math.min(product.profit / Math.max(profitFloor, 1), 2);
+    const pricey = product.price > sweetMax ? Math.log10(product.price / sweetMax) * 5 : 0;
+    const sweet = product.price >= sweetMin && product.price <= sweetMax ? 1.4 : 0;
     product.demand = Math.round(demand * 10) / 10;
-    product.adsOk = product.profit >= econ.minProfit;
+    product.sweet = product.price >= sweetMin && product.price <= sweetMax;
+    product.adsOk = Boolean(product.plate && product.profit >= profitFloor && product.price <= 3500000);
     product.score = Math.round((
-      profitScore * 2
-      + Math.log1p(demand) * 2.5
-      + (product.list ? 1 : 0)
+      profitScore * 1.4
+      + Math.log1p(demand) * 2.8
+      + sweet
+      + (product.list ? 0.6 : 0)
       + (product.stock >= 3 ? 0.3 : 0)
+      + (product.sold > 0 ? 0.8 : 0)
       - pricey
     ) * 100) / 100;
   });
@@ -382,8 +389,11 @@ function pickLeaks(products, limit = 12) {
     .slice(0, limit);
 }
 
-function pickCandidates(products, limit = 160, perFamily = 5) {
+function pickCandidates(products, limit = 200, perFamily = 10) {
   const ranked = products.filter((product) => product.adsOk && product.plate).sort((a, b) => b.score - a.score);
+  const mid = products
+    .filter((product) => product.plate && product.sweet)
+    .sort((a, b) => (b.sold * 6 + b.carts * 4 + b.searches * 3 + b.views) - (a.sold * 6 + a.carts * 4 + a.searches * 3 + a.views));
   const out = [];
   const seen = new Set();
   const take = (product) => {
@@ -391,7 +401,8 @@ function pickCandidates(products, limit = 160, perFamily = 5) {
     seen.add(product.codigo);
     out.push(product);
   };
-  pickSold(products, 18).forEach(take);
+  pickSold(products.filter((product) => product.sweet || product.price <= 2500000), 24).forEach(take);
+  mid.slice(0, 50).forEach(take);
   const byCategory = new Map();
   ranked.forEach((product) => {
     if (!byCategory.has(product.category)) byCategory.set(product.category, product);

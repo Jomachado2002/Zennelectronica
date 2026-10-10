@@ -19,6 +19,8 @@ const HORIZON_DAYS = 3;
 const MAX_NEW = 3;
 const MIN_ADSET_PYG = 10000;
 const SET_SIZE = 60;
+const SHOW_SIZE = 10;
+const SWEET_MAX = 2500000;
 const PAUSE_VERDICTS = new Set(['perdedora', 'cara', 'no_interesa']);
 const EMPTY = {
   spendPyg: 0,
@@ -269,11 +271,12 @@ NO armes campañas. NO elijas productos. Solo investigá con Google Search qué 
 Reglas:
 - Vale solo lo publicado esta semana o los últimos 10 días.
 - Priorizá intención de compra: más vendidos, oferta vigente, "agotado", cuotas, aguinaldo, feriado. No sirven unboxing de YouTube ni lanzamientos de Estados Unidos.
-- Tiendas: Nissei, Shopping China, Gonzalez Gimenez, Tupi, Bristol, Cellshop, Mercado Libre Paraguay, Marketplace Paraguay.
-- El término es lo que la persona escribe para comprar: "monitor 165hz", "auriculares gamer", "ryzen 5 5600", no "tecnología" ni "notebook" a secas si afuera se busca notebook gamer.
+- Tiendas Paraguay: Nissei, Shopping China, Gonzalez Gimenez, Tupi, Bristol, Cellshop, Mercado Libre Paraguay, Marketplace Paraguay.
+- También mirá más vendidos del mundo que un paraguayo sí paga de una: Amazon Best Sellers electronics, Mercado Libre LATAM. Mouse, auricular, teclado, monitor 24/27, RAM, SSD, webcam. Ticket hasta 2.500.000 Gs. No sirvan notebooks de 8 millones ni GPUs de 6: eso se mira y no se compra.
+- El término es lo que la persona escribe para comprar: "monitor 165hz", "auriculares gamer", "mouse gamer", no "tecnología".
 - Si el término no entra en ninguna familia nuestra, no lo pongas.
 
-1) demand: qué quiere COMPRAR la gente ahora. term, intent, ticketGs (lo que espera pagar), family (id de la lista), why (por qué ahora, una frase), source (dominio).
+1) demand: qué quiere COMPRAR la gente ahora, en Paraguay o en el mundo si lo tenemos. term, intent, ticketGs (lo que espera pagar, preferí menos de 2500000), family (id de la lista), why (por qué ahora, una frase), source (dominio).
 2) prices: el MISMO modelo que estos códigos nuestros. Tienda paraguaya, precio en guaraníes y URL. Si no es el mismo SKU o el precio está solo en dólares, no lo pongas.
 3) dates: fechas de compra en Paraguay de los próximos 30 días, solo con fuente.
 
@@ -506,15 +509,15 @@ function plannerPrompt(ctx) {
   return `Sos el media buyer de Zenn Electrónicos, Asunción. Hoy es ${dateLabel()}.
 Gemini solo scoutó el mercado. Vos analizás NUESTRO catálogo y decidís qué se paga. El que administra solo autoriza.
 
-Presupuesto: ${WEEKLY_USD} USD/semana (${moneyGs(budget.capPyg)}), unos 7 USD por día (${moneyGs(budget.dailyCapPyg)}). Para campañas nuevas hay ${moneyGs(budget.newPyg)}/día durante ${HORIZON_DAYS} días. Mínimo ${moneyGs(MIN_ADSET_PYG)} por conjunto. Con esta plata, UNA o DOS campañas de prospección ganan más que tres chicas que se matan entre sí. No armes notebook y placa madre por default: el catálogo tiene auriculares, monitores, teclados, celulares y el resto. Elegí donde coinciden demanda + ganancia + stock + precio.
+Presupuesto: ${WEEKLY_USD} USD/semana (${moneyGs(budget.capPyg)}), unos 7 USD por día (${moneyGs(budget.dailyCapPyg)}). Para campañas nuevas hay ${moneyGs(budget.newPyg)}/día durante ${HORIZON_DAYS} días. Mínimo ${moneyGs(MIN_ADSET_PYG)} por conjunto. Con esta plata, UNA o DOS campañas ganan más que tres chicas. Cada campaña es un RUBRO con 8 a 12 productos (10 monitores, 10 mouse, 10 auriculares), no 2 notebooks caros.
 
-Único objetivo: ganancia. Un clic o un like que no vende es plata perdida.
+Único objetivo: que compren. Un producto de 6 u 8 millones se mira y no se compra con un anuncio de 7 USD. El ticket que convierte en Paraguay está entre Gs. 70.000 y Gs. 2.500.000: mouse, auricular, teclado, monitor 24/27, RAM, SSD, webcam. Notebook tope de gama y GPU cara van a skip salvo que el pedido lo pida.
 
 Números de Zenn:
 - "gana" = lo que queda después de costo y envío. Margen promedio ${pct(econ.margin)}. ROAS mínimo ${econ.breakEvenRoas}.
 - WhatsApp cierra la venta. 14 días: ${econ.contacts14} contactos, ${econ.carts14} carritos, ${econ.purchases14} compras web.
-- Un WhatsApp por anuncio cuesta ~${moneyGs(econ.costPerContact)} y compra el ${pct(econ.closeRate)}. Una venta por anuncio ~${moneyGs(econ.estCpa)}.
-- Solo se paga un producto que deja ≥ ${moneyGs(econ.minProfit)}. Lo que deja menos va a orgánico o a "Volvé a verlo".
+- Un WhatsApp por anuncio cuesta ~${moneyGs(econ.costPerContact)} y compra el ${pct(econ.closeRate)}.
+- Preferí productos que dejan plata y se pagan de una. priceMax de prospección ≤ 2500000 salvo pedido contrario.
 - Clic ~${moneyGs(econ.costPerClick)}. Meta optimiza por ${EVENT_LABEL[econ.event] || 'compras'}.
 
 Ya decidido, no lo toques:
@@ -525,12 +528,13 @@ Ya decidido, no lo toques:
 Cómo pensás, en este orden:
 1. Cruzá: lo que se vende en la tienda, lo que se busca en zenn.com.py, lo que Gemini vio en Paraguay, la ganancia por venta y si somos más baratos que la competencia.
 2. Héroes = códigos concretos de "Ya se vendió" o de "Candidatos". El anuncio muestra ESA foto y ESE precio. Si un término de Gemini no tiene stock, skip.
-3. Filtro sobre los ${productCount} productos con stock, no sobre una lista inventada. Campos: subcategories (ids), priceMin, priceMax, brands, specs [{key,op,value}] con las claves de especificaciones (op >= <= = includes), words (b550, rtx 5060, 165).
-   Monitor gamer: {"subcategories":["monitores__27"],"specs":[{"key":"frecuencia_de_actualizacion","op":">=","value":144}],"priceMax":2500000}
-   El sistema saca del grupo lo que deja menos de ${moneyGs(econ.minProfit)}.
-4. Texto para alguien de Paraguay que nos ve en el celular y no nos conoce. Línea 1: qué es y el precio real del héroe o "desde" el más barato. Línea 2: por qué comprarlo hoy (spec, modelo o precio vs competencia). Cierre: Consultá por WhatsApp o Comprá en zenn.com.py. Máximo 3 líneas. No inventes cuotas, envío gratis, garantía ni descuento que no esté en los datos.
-5. killAtGs: entre ${moneyGs(econ.costPerContact * 2)} y ${moneyGs(killTop)}. Si gasta eso sin WhatsApp ni compra, se pausa.
-6. share suma 1. skip: familias buscadas que no se pagan, con el motivo. watch: qué mirar a los ${HORIZON_DAYS} días.
+3. Filtro sobre los ${productCount} productos con stock. Campos: subcategories (ids), priceMin, priceMax, brands, specs [{key,op,value}] (op >= <= = includes), words.
+   Monitor gamer: {"subcategories":["monitores__27"],"specs":[{"key":"frecuencia_de_actualizacion","op":">=","value":144}],"priceMax":2200000}
+   priceMax ≤ 2500000. El grupo tiene que quedar con 8 a 12 productos, no con 2 caros.
+4. Héroes: 4 a 8 códigos del rango medio, no el más caro de la familia.
+5. Texto para alguien de Paraguay que nos ve en el celular. Línea 1: qué es y "desde" el más barato del grupo. Línea 2: por qué comprarlo hoy. Cierre: Consultá por WhatsApp o Comprá en zenn.com.py. Máximo 3 líneas. No inventes cuotas, envío gratis, garantía ni descuento.
+6. killAtGs: entre ${moneyGs(econ.costPerContact * 2)} y ${moneyGs(killTop)}. Si gasta eso sin WhatsApp ni compra, se pausa.
+7. share suma 1. skip: notebooks caros, GPU cara y familias que se miran y no se compran. watch: qué mirar a los ${HORIZON_DAYS} días.
 
 Pedido de quien administra: ${note ? `"${note}"` : 'ninguno'}.
 ${note ? 'Si nombra una familia, va como campaña aunque deje poco, y en why decís cuánto deja. Si pide sacar algo, no lo pongas. noteFamilies = ids que pidió y que pidió sacar.' : ''}
@@ -622,7 +626,7 @@ function buildCampaigns(ctx) {
     const watched = products
       .filter((product) => product.plate && (product.views || product.carts))
       .sort((a, b) => (b.carts * 4 + b.views) - (a.carts * 4 + a.views));
-    const shown = (watched.length >= 3 ? watched : products.slice().sort((a, b) => b.score - a.score)).slice(0, 6);
+    const shown = (watched.length >= 3 ? watched : products.slice().sort((a, b) => b.score - a.score)).slice(0, SHOW_SIZE);
     const copy = (drafted && drafted.retargeting) || {};
     campaigns.push({
       type: 'retargeting',
@@ -671,6 +675,9 @@ function buildCampaigns(ctx) {
   }
   rows.forEach((row) => {
     row.forced = row.forced || row.filter.subcategories.some((id) => wanted.has(id));
+    if (!row.forced && (!row.filter.priceMax || row.filter.priceMax > SWEET_MAX)) {
+      row.filter.priceMax = SWEET_MAX;
+    }
   });
   rows.sort((a, b) => Number(Boolean(b.forced)) - Number(Boolean(a.forced)));
 
@@ -688,10 +695,14 @@ function buildCampaigns(ctx) {
     if (!heroes.length) {
       heroes = list.slice(0, 3).map((product) => product.codigo);
     }
+    const rest = list.filter((product) => !heroes.includes(product.codigo));
+    const mid = rest.filter((product) => product.sweet !== false && product.price <= SWEET_MAX);
+    const high = rest.filter((product) => !mid.includes(product));
     const ordered = [
       ...heroes.map((code) => list.find((product) => product.codigo === code)),
-      ...list.filter((product) => !heroes.includes(product.codigo))
-    ];
+      ...mid,
+      ...high
+    ].filter(Boolean);
     built.push({ row, set: ordered.slice(0, SET_SIZE), relaxed });
   });
 
@@ -722,7 +733,7 @@ function buildCampaigns(ctx) {
       why: clip(row.why, 320),
       expected: clip(row.expected, 200),
       codigos: set.map((product) => product.codigo),
-      products: set.slice(0, 6).map(preview),
+      products: set.slice(0, SHOW_SIZE).map(preview),
       image: (set[0] && set[0].plate) || '',
       setSize: set.length,
       priceFrom: moneyGs(cheapest),
@@ -1006,7 +1017,7 @@ function slotOf(plan, campaign, index, latestId) {
     breakEvenRoas: campaign.breakEvenRoas || 0,
     killAtPyg: campaign.killAtPyg || 0,
     warn: campaign.warn || '',
-    products: (campaign.products || campaign.examples || []).slice(0, 6),
+    products: (campaign.products || campaign.examples || []).slice(0, SHOW_SIZE),
     image: campaign.image || '',
     headline: campaign.headline,
     text: campaign.text,

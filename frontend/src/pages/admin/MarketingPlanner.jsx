@@ -115,7 +115,6 @@ export default function MarketingPlanner() {
 
   const cells = useMemo(() => Array.from({ length: 42 }, (_, index) => shiftKey(from, index)), [from]);
   const selectedDay = byDate.get(selected);
-  const canChange = Boolean(selectedDay && selectedDay.isLatest) || selected === today;
   const ads = (live && live.activeAds) || [];
   const skip = (latest && latest.skip) || [];
   const watch = (latest && latest.watch) || [];
@@ -137,7 +136,7 @@ export default function MarketingPlanner() {
     setBusy(`ad-${slotIndex}`);
     try {
       const res = await axiosInstance.post('/api/creativos/planner/autorizar', {
-        date: selected,
+        date: (latest && latest.planDate) || selected,
         slot: slotIndex
       }, { params: { from, days: 42 }, timeout: 120000 });
       toast.success(res.data.message || 'La campaña quedó autorizada');
@@ -180,6 +179,26 @@ export default function MarketingPlanner() {
           {busy === 'day' ? <FaSpinner className="animate-spin inline mr-2" /> : null}
           Armar hoy
         </button>
+      </div>
+
+      <div className="mb-4 rounded-xl border border-[#E9D5FF] bg-[#F5F3FF] p-3 sm:p-4">
+        <p className="text-sm font-semibold text-gray-900">Pedile un cambio al planner</p>
+        <p className="text-xs text-gray-600 mt-1">Lo que escribas reemplaza el plan. Ejemplo: 10 mouse gamer y 10 monitores hasta 2 millones. Nada de notebooks caros.</p>
+        <textarea
+          value={dayAsk}
+          onChange={(event) => setDayAsk(event.target.value)}
+          rows={3}
+          placeholder="Sacá lo caro. Armá 10 monitores de 24/27 y 10 mouse de entrada."
+          className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" disabled={busy === 'day' || !dayAsk.trim()} onClick={() => arm(dayAsk)} className="px-3 py-1.5 rounded-full text-xs font-semibold text-white disabled:opacity-50" style={{ background: '#7B2CBF' }}>
+            {busy === 'day' ? 'Cambiando…' : 'Aplicar pedido'}
+          </button>
+          <button type="button" disabled={Boolean(busy)} onClick={() => arm('')} className="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-300 text-gray-700 disabled:opacity-50">
+            Rearmar sin pedido
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-sm">
@@ -301,23 +320,6 @@ export default function MarketingPlanner() {
               <p className="text-xs text-gray-500 mt-1">Sin ventas pagadas ese día.</p>
             )}
 
-            {canChange ? (
-              <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                <p className="text-xs font-semibold text-gray-800">Pedir un cambio</p>
-                <p className="mt-1 text-xs text-gray-500">El planner lo cumple. Ejemplo: sacá notebooks, poné auriculares gamer y monitores de 165 Hz.</p>
-                <textarea
-                  value={dayAsk}
-                  onChange={(event) => setDayAsk(event.target.value)}
-                  rows={3}
-                  placeholder="Cambiá lo que no vendió por auriculares y monitores gamer"
-                  className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <button type="button" disabled={busy === 'day' || !dayAsk.trim()} onClick={() => arm(dayAsk)} className="mt-2 text-xs font-semibold" style={{ color: '#7B2CBF' }}>
-                  {busy === 'day' ? 'Cambiando…' : 'Cambiar el plan'}
-                </button>
-              </div>
-            ) : null}
-
             {selectedDay && selectedDay.diagnosis ? <p className="text-sm text-gray-700 mt-3">{selectedDay.diagnosis}</p> : null}
 
             {changes.length ? (
@@ -348,7 +350,7 @@ export default function MarketingPlanner() {
               <div className="mt-3 space-y-3">
                 {selectedDay.slots.map((slot, slotIndex) => (
                   <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-3">
-                    {slot.image ? (
+                    {slot.image && !(slot.products && slot.products.length > 1) ? (
                       <img src={slot.image} alt={slot.name} className="w-full rounded-md mb-2 bg-white" />
                     ) : null}
                     <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.action] || 'bg-gray-100 text-gray-700'}`}>
@@ -372,10 +374,10 @@ export default function MarketingPlanner() {
                     {slot.expected ? <p className="text-xs text-gray-500 mt-1">En 3 días: {slot.expected}</p> : null}
                     {slot.warn ? <p className="text-xs text-red-700 mt-1">{slot.warn}</p> : null}
                     {slot.products && slot.products.length ? (
-                      <div className="mt-2 flex gap-2 overflow-auto">
+                      <div className="mt-2 grid grid-cols-2 gap-2">
                         {slot.products.map((product) => (
-                          <div key={product.codigo || product.name} className="min-w-[92px] max-w-[110px]">
-                            {product.plate ? <img src={product.plate} alt="" className="w-full rounded bg-white" /> : null}
+                          <div key={product.codigo || product.name} className="rounded bg-white p-1">
+                            {product.plate ? <img src={product.plate} alt="" className="w-full rounded" /> : null}
                             <p className="text-[10px] text-gray-700 mt-1 line-clamp-2">{product.name}</p>
                             <p className="text-[10px] text-gray-500">{product.priceText || money(product.price)}</p>
                           </div>
