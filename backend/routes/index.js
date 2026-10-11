@@ -1898,6 +1898,11 @@ const {
   uploadCommunityMedia
 } = require('../controller/product/socialStudioController');
 const {
+  startTikTokConnect,
+  tiktokOAuthCallback,
+  getTikTokAccount
+} = require('../controller/product/tiktokController');
+const {
     listBrandStories,
     previewBrandStoryHtml,
     downloadBrandStoryPng,
@@ -1983,6 +1988,10 @@ router.post('/generate-catalog-pdf', authToken, generateCatalogPDF);
 router.get('/catalog-pdf-job/:jobId', authToken, getCatalogPdfJobStatus);
 router.get('/catalog-pdf-job/:jobId/file', authToken, downloadCatalogPdfJob);
 router.get('/jobs-health', authToken, pingJobsHealth);
+
+router.get('/tiktok/oauth', tiktokOAuthCallback);
+router.get('/tiktok/connect', authToken, startTikTokConnect);
+router.get('/tiktok/status', authToken, getTikTokAccount);
 
 router.get('/creativos/categorias', authToken, getCreativeCategories);
 router.get('/creativos/specs-foco', authToken, listCreativeSpecs);

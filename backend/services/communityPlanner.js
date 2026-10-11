@@ -994,10 +994,17 @@ async function listCommunityCalendar({ from, days = 14 } = {}) {
     planDate: { $gte: start, $lte: end }
   }).lean();
   const focusByDate = new Map(focuses.map((item) => [item.planDate, item.focus || '']));
+  let tiktok = { connected: false, configured: false, name: '' };
+  try {
+    tiktok = await require('./tiktokAuth').getTikTokStatus();
+  } catch {
+    /* el calendario no depende de TikTok */
+  }
   return {
     from: start,
     ai: communityAiReady(),
     claude: claudeReady(),
+    tiktok,
     days: [...byDate.entries()].map(([date, slots]) => ({
       date,
       label: dayLabel(date),

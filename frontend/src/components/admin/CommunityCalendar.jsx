@@ -86,6 +86,8 @@ export default function CommunityCalendar() {
   const [asks, setAsks] = useState({});
   const [aiReady, setAiReady] = useState(true);
   const [dayAsk, setDayAsk] = useState('');
+  const [tiktok, setTiktok] = useState({ connected: false, configured: false, name: '' });
+  const [tiktokBusy, setTiktokBusy] = useState(false);
 
   const from = gridStart(year, month);
 
@@ -97,6 +99,7 @@ export default function CommunityCalendar() {
       });
       setDays(res.data.days || []);
       setAiReady(Boolean(res.data.claude));
+      if (res.data.tiktok) setTiktok(res.data.tiktok);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo leer el calendario');
     } finally {
@@ -107,6 +110,32 @@ export default function CommunityCalendar() {
   useEffect(() => {
     load(from);
   }, [from, load]);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const result = query.get('tiktok');
+    if (!result) return;
+    if (result === 'ok') toast.success('TikTok quedó conectado');
+    else toast.error('TikTok no se pudo conectar. Probá de nuevo.');
+    query.delete('tiktok');
+    query.delete('reason');
+    const next = `${window.location.pathname}${query.toString() ? `?${query}` : ''}`;
+    window.history.replaceState({}, '', next);
+    load(from);
+  }, [from, load]);
+
+  const connectTikTok = async () => {
+    setTiktokBusy(true);
+    try {
+      const res = await axiosInstance.get('/api/tiktok/connect');
+      if (res.data.url) window.location.href = res.data.url;
+      else toast.error(res.data.message || 'TikTok no armó el enlace');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'No se pudo abrir TikTok');
+    } finally {
+      setTiktokBusy(false);
+    }
+  };
 
   const byDate = useMemo(() => {
     const map = new Map();
@@ -254,10 +283,20 @@ export default function CommunityCalendar() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthTitle(year, month)}</h2>
           <p className="text-sm text-gray-600 mt-1 max-w-xl">
-            Tocá un día para ver qué sube. A las 7:00 se miran los próximos 3 días y Google arma un día solo si está vacío. En el día podés hablarle al plan: cambiar un rubro, meter una marca o separar un grupo. La foto de un creativo se cambia con el HTML.
+            Tocá un día para ver qué sube. A las 7:00 se miran los próximos 3 días y Google arma un día solo si está vacío. Instagram, Facebook y TikTok reciben lo mismo. En el día podés hablarle al plan: cambiar un rubro, meter una marca o separar un grupo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {tiktok.connected ? (
+            <span className="px-3 py-2 rounded-full text-sm font-semibold border border-emerald-200 bg-emerald-50 text-emerald-800">
+              TikTok · {tiktok.name || 'conectado'}
+            </span>
+          ) : (
+            <button type="button" onClick={connectTikTok} disabled={tiktokBusy} className="px-3 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-50" style={{ background: '#111827' }}>
+              {tiktokBusy ? <FaSpinner className="animate-spin inline mr-2" /> : null}
+              Conectar TikTok
+            </button>
+          )}
           <button type="button" onClick={() => arm(3)} disabled={Boolean(busy)} className="px-3 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-50" style={{ background: '#7B2CBF' }}>
             {busy === '3' ? <FaSpinner className="animate-spin inline mr-2" /> : null}
             Armar 3 días

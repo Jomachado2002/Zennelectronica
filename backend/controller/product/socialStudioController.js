@@ -14,6 +14,7 @@ const {
   publishFacebookStories,
   publishFacebookVideo
 } = require('../../services/socialPublishService');
+const { publishToTikTok } = require('../../services/tiktokPublishService');
 const { uploadBufferToR2 } = require('../../services/r2StorageService');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -108,51 +109,69 @@ function isVideoUrl(url) {
   return /\.mp4($|\?)/i.test(String(url || ''));
 }
 
-async function publishUploaded(doc) {
-  const url = (doc.mediaUrls || [])[0];
-  if (!url) throw new Error('Falta el archivo para publicar');
-  const video = isVideoUrl(url);
-  let igMediaId = '';
-  let fbPostId = '';
-  let igError = '';
-  let fbError = '';
-  try {
-    if (video) igMediaId = await publishInstagramReel({ url, caption: doc.caption });
-    else if (doc.kind === 'story') igMediaId = await publishInstagramStories({ urls: [url] });
-    else igMediaId = await publishInstagramFeed({ urls: [url], caption: doc.caption, alts: [doc.headline || 'Zenn'] });
-  } catch (error) {
-    igError = error.message || 'Instagram no publicó';
-  }
-  try {
-    if (video) fbPostId = await publishFacebookVideo({ url, caption: doc.caption });
-    else if (doc.kind === 'story') fbPostId = await publishFacebookStories({ urls: [url] });
-    else fbPostId = await publishFacebookFeed({ urls: [url], caption: doc.caption });
-  } catch (error) {
-    fbError = error.message || 'Facebook no publicó';
-  }
-  doc.igMediaId = igMediaId;
-  doc.fbPostId = fbPostId;
-  if (igError || fbError) {
-    const parts = [];
-    if (igMediaId && fbError) parts.push(`Salió en Instagram. Facebook: ${fbError}`);
-    else if (fbPostId && igError) parts.push(`Salió en Facebook. Instagram: ${igError}`);
-    else {
-      if (igError) parts.push(`Instagram: ${igError}`);
-      if (fbError) parts.push(`Facebook: ${fbError}`);
-    }
+function finishPublish(doc, parts, anyId) {
+  if (parts.length) {
     doc.status = 'failed';
     doc.error = parts.join(' · ');
-    if (igMediaId || fbPostId) doc.publishedAt = new Date();
-    await doc.save();
-    const error = new Error(doc.error);
-    error.statusCode = 502;
-    throw error;
+    if (anyId) doc.publishedAt = new Date();
+    return doc.save().then(() => {
+      const error = new Error(doc.error);
+      error.statusCode = 502;
+      throw error;
+    });
   }
   doc.status = 'published';
   doc.publishedAt = new Date();
   doc.error = '';
-  await doc.save();
-  return doc;
+  return doc.save();
+}
+
+async function publishTikTokSafe(urls) {
+  try {
+    return { id: await publishToTikTok({ urls }), error: '' };
+  } catch (error) {
+    if (error.code === 'SKIP') return { id: '', error: '' };
+    return { id: '', error: error.message || 'TikTok no publicó' };
+  }
+}
+
+async function publishToNetworks(doc, urls, alts) {
+  const list = (urls || []).filter(Boolean);
+  if (!list.length) throw new Error('Falta el archivo para publicar');
+  const video = isVideoUrl(list[0]);
+  let igMediaId = '';
+  let fbPostId = '';
+  let ttPublishId = '';
+  let igError = '';
+  let fbError = '';
+  try {
+    if (video) igMediaId = await publishInstagramReel({ url: list[0], caption: doc.caption });
+    else if (doc.kind === 'story') igMediaId = await publishInstagramStories({ urls: list });
+    else igMediaId = await publishInstagramFeed({ urls: list, caption: doc.caption, alts });
+  } catch (error) {
+    igError = error.message || 'Instagram no publicó';
+  }
+  try {
+    if (video) fbPostId = await publishFacebookVideo({ url: list[0], caption: doc.caption });
+    else if (doc.kind === 'story') fbPostId = await publishFacebookStories({ urls: list });
+    else fbPostId = await publishFacebookFeed({ urls: list, caption: doc.caption });
+  } catch (error) {
+    fbError = error.message || 'Facebook no publicó';
+  }
+  const tiktok = await publishTikTokSafe(list);
+  ttPublishId = tiktok.id;
+  doc.igMediaId = igMediaId;
+  doc.fbPostId = fbPostId;
+  doc.ttPublishId = ttPublishId;
+  const parts = [];
+  if (igError) parts.push(`Instagram: ${igError}`);
+  if (fbError) parts.push(`Facebook: ${fbError}`);
+  if (tiktok.error) parts.push(`TikTok: ${tiktok.error}`);
+  return finishPublish(doc, parts, igMediaId || fbPostId || ttPublishId);
+}
+
+async function publishUploaded(doc) {
+  return publishToNetworks(doc, doc.mediaUrls, [doc.headline || 'Zenn']);
 }
 
 async function publishNow(doc, payloads) {
@@ -160,47 +179,8 @@ async function publishNow(doc, payloads) {
   const format = doc.kind === 'story' ? 'story' : 'feed';
   const urls = await renderUrls(payloads, format);
   const alts = payloads.map((p) => `${p.title} ${p.brandName} en Zenn Electrónicos, Paraguay`.replace(/\s+/g, ' ').trim());
-  let igMediaId = '';
-  let fbPostId = '';
-  let igError = '';
-  let fbError = '';
-  try {
-    igMediaId = doc.kind === 'story'
-      ? await publishInstagramStories({ urls })
-      : await publishInstagramFeed({ urls, caption: doc.caption, alts });
-  } catch (error) {
-    igError = error.message || 'Instagram no publicó';
-  }
-  try {
-    fbPostId = doc.kind === 'story'
-      ? await publishFacebookStories({ urls })
-      : await publishFacebookFeed({ urls, caption: doc.caption });
-  } catch (error) {
-    fbError = error.message || 'Facebook no publicó';
-  }
-  doc.igMediaId = igMediaId;
-  doc.fbPostId = fbPostId;
-  if (igError || fbError) {
-    const parts = [];
-    if (igMediaId && fbError) parts.push(`Salió en Instagram. Facebook: ${fbError}`);
-    else if (fbPostId && igError) parts.push(`Salió en Facebook. Instagram: ${igError}`);
-    else {
-      if (igError) parts.push(`Instagram: ${igError}`);
-      if (fbError) parts.push(`Facebook: ${fbError}`);
-    }
-    doc.status = 'failed';
-    doc.error = parts.join(' · ');
-    if (igMediaId || fbPostId) doc.publishedAt = new Date();
-    await doc.save();
-    const error = new Error(doc.error);
-    error.statusCode = 502;
-    throw error;
-  }
-  doc.status = 'published';
-  doc.publishedAt = new Date();
-  doc.error = '';
-  await doc.save();
-  return doc;
+  doc.mediaUrls = urls;
+  return publishToNetworks(doc, urls, alts);
 }
 
 const publishSocialPost = async (req, res) => {
@@ -332,7 +312,7 @@ const authorizeCommunityIdea = async (req, res) => {
       doc.scheduledAt = new Date(Date.now() + 60 * 1000);
     }
     await doc.save();
-    return res.json({ success: true, message: 'Autorizada. Sale a la hora de esa tarjeta en Instagram y Facebook.' });
+    return res.json({ success: true, message: 'Autorizada. Sale a la hora de esa tarjeta en Instagram, Facebook y TikTok.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'No se pudo autorizar' });
   }
@@ -423,7 +403,7 @@ const uploadCommunityMedia = async (req, res) => {
       doc.scheduledAt = new Date(Date.now() + 60 * 1000);
     }
     await doc.save();
-    return res.json({ success: true, message: 'Quedó cargado. Sale a la hora de esa tarjeta.' });
+    return res.json({ success: true, message: 'Quedó cargado. Sale a la hora de esa tarjeta en Instagram, Facebook y TikTok.' });
   } catch (error) {
     console.error('[social] upload', error);
     return res.status(500).json({ success: false, message: error.message || 'No se pudo cargar el archivo' });

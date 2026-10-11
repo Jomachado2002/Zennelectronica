@@ -31,6 +31,7 @@ const socialPostSchema = new mongoose.Schema(
     publishedAt: { type: Date, default: null },
     igMediaId: { type: String, default: '' },
     fbPostId: { type: String, default: '' },
+    ttPublishId: { type: String, default: '' },
     error: { type: String, default: '' }
   },
   { timestamps: true, collection: 'socialposts' }

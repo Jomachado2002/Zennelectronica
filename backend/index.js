@@ -55,7 +55,7 @@ app.use(compression());
 app.use((req, res, next) => {
   // Set cache headers for static assets
   if (req.path.startsWith('/api/')) {
-    if (/catalog-pdf|jobs-health|generate-catalog-pdf/.test(req.path)) {
+    if (/catalog-pdf|jobs-health|generate-catalog-pdf|tiktok\/oauth/.test(req.path)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
     } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images|gmc\/image|merchant-feed|channable\/feed|meta\/catalog/.test(req.path)) {
