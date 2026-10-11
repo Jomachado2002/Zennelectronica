@@ -1015,6 +1015,7 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/producto-por-slug/:slug", getProductBySlug);
     router.post("/finanzas/actualizarprecios", authToken, updateAllPricesController);
     router.get("/meta/catalog.xml", channableFeedController);
+    router.get("/tiktok/catalog.csv", channableFeedController.tiktokCsv);
     router.get("/meta/catalog-image/:file", catalogPlateController);
     router.get("/channable/feed.xml", channableFeedController);
     router.get("/google/merchant-feed.xml", channableFeedController);

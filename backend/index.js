@@ -58,7 +58,7 @@ app.use((req, res, next) => {
     if (/catalog-pdf|jobs-health|generate-catalog-pdf|tiktok\/oauth/.test(req.path)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
-    } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images|gmc\/image|merchant-feed|channable\/feed|meta\/catalog/.test(req.path)) {
+    } else if (/\/seo\/|sitemap\.xml|obtener-productos$|subcategory-preview-images|gmc\/image|merchant-feed|channable\/feed|meta\/catalog|tiktok\/catalog/.test(req.path)) {
       // Cache-Control lo define el controlador (CDN público).
     } else {
       res.setHeader('Cache-Control', 'private, max-age=300');
@@ -131,6 +131,7 @@ app.use((req, res, next) => {
     p === '/api/channable/feed.xml' ||
     p === '/api/meta/catalog.xml' ||
     p.startsWith('/api/meta/catalog-image/') ||
+    p === '/api/tiktok/catalog.csv' ||
     p === '/api/google/merchant-feed.xml'
   ) {
     return next();

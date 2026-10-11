@@ -272,6 +272,16 @@ function getAvailability(product) {
     return 'out_of_stock';
 }
 
+function getTikTokAvailability(product) {
+    return getAvailability(product) === 'in_stock' ? 'in stock' : 'out of stock';
+}
+
+function csvCell(value) {
+    const text = String(value ?? '');
+    if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+}
+
 const SPEC_FIELDS = [
     ['Procesador', ['processor', 'phoneProcessor', 'tabletProcessor', 'processorModel']],
     ['Núcleos', ['processorCores']],
@@ -547,4 +557,82 @@ const channableFeedController = async (req, res) => {
     }
 };
 
+function buildTikTokRow(product, taxonomy) {
+    const validImages = getValidImages(product.productImage);
+    if (!product.productName || !product.slug || validImages.length === 0) return '';
+
+    const discountInfo = getDiscountInfo(product);
+    if (!discountInfo.finalPrice || discountInfo.finalPrice < XML_CONFIG.MIN_PRICE) return '';
+
+    const specParts = collectSpecParts(product);
+    const title = generateTitle(product);
+    const { categoryLabel, subcategoryLabel } = taxonomyLabels(product, taxonomy);
+    const description = generateDescription(product, specParts, categoryLabel, subcategoryLabel);
+    const brand = String(product.brandName || XML_CONFIG.DEFAULT_BRAND).trim() || XML_CONFIG.DEFAULT_BRAND;
+    const price = `${formatPrice(discountInfo.hasDiscount ? discountInfo.originalPrice : discountInfo.finalPrice)} ${XML_CONFIG.CURRENCY}`;
+    const salePrice = discountInfo.hasDiscount
+        ? `${formatPrice(discountInfo.finalPrice)} ${XML_CONFIG.CURRENCY}`
+        : '';
+    const extras = validImages.slice(1, 10).join(',');
+
+    return [
+        generateCleanId(product),
+        title,
+        description,
+        getTikTokAvailability(product),
+        'new',
+        price,
+        salePrice,
+        generateProductURL(product.slug),
+        catalogImageUrl(product, validImages[0]),
+        extras,
+        brand,
+        `${categoryLabel} > ${subcategoryLabel}`
+    ].map(csvCell).join(',');
+}
+
+const tiktokCatalogCsv = async (req, res) => {
+    try {
+        const query = {
+            productName: { $exists: true, $nin: [null, ''] },
+            slug: { $exists: true, $nin: [null, ''] },
+            productImage: { $exists: true, $ne: [], $not: { $size: 0 } },
+            $or: [
+                { sellingPrice: { $gte: XML_CONFIG.MIN_PRICE } },
+                { price: { $gte: XML_CONFIG.MIN_PRICE } }
+            ]
+        };
+        const taxonomy = await loadTaxonomy();
+        res.status(200);
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Cache-Control': 'public, max-age=1800',
+            'Access-Control-Allow-Origin': '*'
+        });
+        res.write('\uFEFF');
+        res.write('sku,title,description,availability,condition,price,sale_price,link,image_link,additional_image_link,brand,product_type\n');
+        const cursor = ProductModel
+            .find(query)
+            .select(PRODUCT_SELECT)
+            .sort({ category: 1, subcategory: 1, productName: 1 })
+            .lean()
+            .cursor();
+        for await (const product of cursor) {
+            const row = buildTikTokRow(product, taxonomy);
+            if (row) res.write(`${row}\n`);
+        }
+        res.end();
+    } catch (error) {
+        if (res.headersSent) {
+            res.end();
+            return;
+        }
+        res.status(500).json({
+            success: false,
+            message: 'No se pudo armar el catálogo de TikTok'
+        });
+    }
+};
+
+channableFeedController.tiktokCsv = tiktokCatalogCsv;
 module.exports = channableFeedController;
