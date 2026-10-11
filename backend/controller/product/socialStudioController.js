@@ -126,9 +126,9 @@ function finishPublish(doc, parts, anyId) {
   return doc.save();
 }
 
-async function publishTikTokSafe(urls) {
+async function publishTikTokSafe(urls, caption) {
   try {
-    return { id: await publishToTikTok({ urls }), error: '' };
+    return { id: await publishToTikTok({ urls, caption }), error: '' };
   } catch (error) {
     if (error.code === 'SKIP') return { id: '', error: '' };
     return { id: '', error: error.message || 'TikTok no publicó' };
@@ -158,7 +158,7 @@ async function publishToNetworks(doc, urls, alts) {
   } catch (error) {
     fbError = error.message || 'Facebook no publicó';
   }
-  const tiktok = await publishTikTokSafe(list);
+  const tiktok = await publishTikTokSafe(list, doc.caption);
   ttPublishId = tiktok.id;
   doc.igMediaId = igMediaId;
   doc.fbPostId = fbPostId;

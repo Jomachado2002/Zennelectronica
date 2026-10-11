@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const TiktokAccount = require('../models/tiktokAccountModel');
 
-const SCOPES = 'user.info.basic,video.upload';
+const SCOPES = 'user.info.basic,video.upload,video.publish';
 
 function clientKey() {
   return String(process.env.TIKTOK_CLIENT_KEY || '').trim();

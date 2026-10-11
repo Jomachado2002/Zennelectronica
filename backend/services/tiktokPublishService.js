@@ -86,28 +86,75 @@ async function mediaBuffer(urls) {
   return imageToMp4(urls || []);
 }
 
-async function initInbox(token, size) {
-  const res = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
+async function tiktokJson(url, token, body) {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json; charset=UTF-8'
     },
-    body: JSON.stringify({
-      source_info: {
-        source: 'FILE_UPLOAD',
-        video_size: size,
-        chunk_size: size,
-        total_chunk_count: 1
-      }
-    })
+    body: body ? JSON.stringify(body) : undefined
   });
   const data = await res.json().catch(() => ({}));
   const err = data.error || {};
   if (!res.ok || (err.code && err.code !== 'ok')) {
-    throw new Error(err.message || 'TikTok no aceptó el video');
+    throw new Error(err.message || 'TikTok no aceptó la publicación');
   }
   return data.data || {};
+}
+
+async function privacyLevel(token) {
+  try {
+    const info = await tiktokJson('https://open.tiktokapis.com/v2/post/publish/creator_info/query/', token);
+    const options = info.privacy_level_options || [];
+    if (options.includes('PUBLIC_TO_EVERYONE')) return 'PUBLIC_TO_EVERYONE';
+    return options[0] || 'PUBLIC_TO_EVERYONE';
+  } catch {
+    return 'PUBLIC_TO_EVERYONE';
+  }
+}
+
+function clipCaption(caption) {
+  return String(caption || 'Zenn Electrónicos').replace(/\s+/g, ' ').trim();
+}
+
+async function initPhotoPost(token, urls, caption) {
+  const text = clipCaption(caption);
+  return tiktokJson('https://open.tiktokapis.com/v2/post/publish/content/init/', token, {
+    post_info: {
+      title: text.slice(0, 90),
+      description: text.slice(0, 4000),
+      privacy_level: await privacyLevel(token),
+      disable_comment: false,
+      auto_add_music: true
+    },
+    source_info: {
+      source: 'PULL_FROM_URL',
+      photo_cover_index: 0,
+      photo_images: urls.slice(0, 35)
+    },
+    post_mode: 'DIRECT_POST',
+    media_type: 'PHOTO'
+  });
+}
+
+async function initDirectPost(token, size, caption) {
+  return tiktokJson('https://open.tiktokapis.com/v2/post/publish/video/init/', token, {
+    post_info: {
+      title: clipCaption(caption).slice(0, 2200),
+      privacy_level: await privacyLevel(token),
+      disable_duet: false,
+      disable_comment: false,
+      disable_stitch: false,
+      video_cover_timestamp_ms: 1000
+    },
+    source_info: {
+      source: 'FILE_UPLOAD',
+      video_size: size,
+      chunk_size: size,
+      total_chunk_count: 1
+    }
+  });
 }
 
 async function putVideo(uploadUrl, buffer) {
@@ -127,7 +174,7 @@ async function putVideo(uploadUrl, buffer) {
   }
 }
 
-async function publishToTikTok({ urls }) {
+async function publishToTikTok({ urls, caption }) {
   const account = await getAccount();
   if (!account) {
     const error = new Error('TikTok no está conectado');
@@ -140,11 +187,16 @@ async function publishToTikTok({ urls }) {
     error.code = 'SKIP';
     throw error;
   }
+  const photos = list.filter((url) => !isVideoUrl(url));
+  if (photos.length) {
+    const posted = await initPhotoPost(account.accessToken, photos, caption);
+    return posted.publish_id || 'photo';
+  }
   const buffer = await mediaBuffer(list);
-  const started = await initInbox(account.accessToken, buffer.length);
+  const started = await initDirectPost(account.accessToken, buffer.length, caption);
   if (!started.upload_url) throw new Error('TikTok no dio URL de carga');
   await putVideo(started.upload_url, buffer);
-  return started.publish_id || 'inbox';
+  return started.publish_id || 'published';
 }
 
 module.exports = {
