@@ -98,7 +98,7 @@ async function tiktokJson(url, token, body) {
   const data = await res.json().catch(() => ({}));
   const err = data.error || {};
   if (!res.ok || (err.code && err.code !== 'ok')) {
-    throw new Error(err.message || 'TikTok no aceptó la publicación');
+    throw new Error(err.message || err.code || 'TikTok no aceptó la publicación');
   }
   return data.data || {};
 }
@@ -118,13 +118,13 @@ function clipCaption(caption) {
   return String(caption || 'Zenn Electrónicos').replace(/\s+/g, ' ').trim();
 }
 
-async function initPhotoPost(token, urls, caption) {
+async function initPhotoPost(token, urls, caption, level) {
   const text = clipCaption(caption);
   return tiktokJson('https://open.tiktokapis.com/v2/post/publish/content/init/', token, {
     post_info: {
       title: text.slice(0, 90),
       description: text.slice(0, 4000),
-      privacy_level: await privacyLevel(token),
+      privacy_level: level || await privacyLevel(token),
       disable_comment: false,
       auto_add_music: true
     },
@@ -138,11 +138,11 @@ async function initPhotoPost(token, urls, caption) {
   });
 }
 
-async function initDirectPost(token, size, caption) {
+async function initDirectPost(token, size, caption, level) {
   return tiktokJson('https://open.tiktokapis.com/v2/post/publish/video/init/', token, {
     post_info: {
       title: clipCaption(caption).slice(0, 2200),
-      privacy_level: await privacyLevel(token),
+      privacy_level: level || await privacyLevel(token),
       disable_duet: false,
       disable_comment: false,
       disable_stitch: false,
@@ -175,6 +175,11 @@ async function putVideo(uploadUrl, buffer) {
 }
 
 async function publishToTikTok({ urls, caption }) {
+  if (String(process.env.TIKTOK_PUBLISH_ENABLED || '').trim() !== '1') {
+    const error = new Error('TikTok está pausado hasta que aprueben la app');
+    error.code = 'SKIP';
+    throw error;
+  }
   const account = await getAccount();
   if (!account) {
     const error = new Error('TikTok no está conectado');
@@ -189,11 +194,42 @@ async function publishToTikTok({ urls, caption }) {
   }
   const photos = list.filter((url) => !isVideoUrl(url));
   if (photos.length) {
-    const posted = await initPhotoPost(account.accessToken, photos, caption);
-    return posted.publish_id || 'photo';
+    const level = await privacyLevel(account.accessToken);
+    try {
+      const posted = await initPhotoPost(account.accessToken, photos, caption, level);
+      return posted.publish_id || 'photo';
+    } catch (error) {
+      try {
+        const posted = await initPhotoPost(account.accessToken, photos, caption, 'SELF_ONLY');
+        return posted.publish_id || 'photo';
+      } catch (second) {
+        console.warn('[tiktok] foto, paso a video', second.message || error.message || error);
+      }
+    }
   }
   const buffer = await mediaBuffer(list);
-  const started = await initDirectPost(account.accessToken, buffer.length, caption);
+  const level = await privacyLevel(account.accessToken);
+  let started = null;
+  try {
+    started = await initDirectPost(account.accessToken, buffer.length, caption, level);
+  } catch (error) {
+    try {
+      if (level !== 'SELF_ONLY') {
+        started = await initDirectPost(account.accessToken, buffer.length, caption, 'SELF_ONLY');
+      } else {
+        throw error;
+      }
+    } catch {
+      started = await tiktokJson('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', account.accessToken, {
+        source_info: {
+          source: 'FILE_UPLOAD',
+          video_size: buffer.length,
+          chunk_size: buffer.length,
+          total_chunk_count: 1
+        }
+      });
+    }
+  }
   if (!started.upload_url) throw new Error('TikTok no dio URL de carga');
   await putVideo(started.upload_url, buffer);
   return started.publish_id || 'published';
