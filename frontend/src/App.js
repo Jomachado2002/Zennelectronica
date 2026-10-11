@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setUserDetails } from './store/userSlice';
 import { localCartHelper } from './helpers/addToCart'; // Importa el helper
 import MetaPixelTracker from './components/MetaPixelTracker'; // Importa el tracker
+import TikTokPixelTracker from './components/TikTokPixelTracker';
 import GoogleAnalytics from './components/GoogleAnalytics'; // Importa Google Analytics
 import EmailCaptureModal from './components/EmailCaptureModal';
 import { captureVisitorEmail, getStoredVisitorEmail, trackEvent } from './helpers/behaviorTracker';
@@ -101,6 +102,7 @@ function App() {
         {enableTrackers && (
           <>
             <MetaPixelTracker />
+            <TikTokPixelTracker />
             <GoogleAnalytics />
             <Analytics />
             <SpeedInsights />

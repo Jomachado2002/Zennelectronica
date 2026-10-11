@@ -5,6 +5,7 @@ const axios = require('axios');
 const BancardTransactionModel = require('../../models/bancardTransactionModel');
 const emailService = require('../../services/emailService'); // ✅ IMPORTAR EMAIL SERVICE
 const metaConversionsService = require('../../services/metaConversionsService');
+const tiktokEventsService = require('../../services/tiktokEventsService');
 const { 
     validateBancardConfig,
     getBancardBaseUrl,
@@ -242,7 +243,9 @@ const chargeWithTokenController = async (req, res) => {
                 user_agent: user_agent || req.headers['user-agent'] || '',
                 browser_info: {
                     fbp: meta_click?.fbp || '',
-                    fbc: meta_click?.fbc || ''
+                    fbc: meta_click?.fbc || '',
+                    ttclid: meta_click?.ttclid || '',
+                    ttp: meta_click?.ttp || ''
                 },
                 payment_session_id: payment_session_id,
                 device_type: device_type,
@@ -376,6 +379,10 @@ const chargeWithTokenController = async (req, res) => {
                         }).catch((metaError) => {
                             console.warn('⚠️ Meta no recibió la compra con tarjeta:', metaError.message);
                         });
+                        tiktokEventsService.trackStoredPurchase(updatedTransaction, {
+                            userAgent: req.headers['user-agent'],
+                            clientIp: req.ip || req.headers['x-forwarded-for']
+                        }).catch(() => {});
                     }
 
                     if (updatedTransaction) {

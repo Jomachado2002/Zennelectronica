@@ -2151,6 +2151,10 @@ router.post('/meta/track-event', trackEventController);
  */
 router.post('/meta/track-purchase', trackPurchaseController);
 
+const tiktokTrackingController = require('../controller/product/tiktokTrackingController');
+router.post('/tiktok/track-event', tiktokTrackingController.trackEventController);
+router.post('/tiktok/track-purchase', tiktokTrackingController.trackPurchaseController);
+
 /**
  * POST /api/meta/test-event
  * Endpoint de prueba para validar la configuración de Meta Conversions API

@@ -10,6 +10,7 @@ const ClientModel = require('../../models/clientModel');
 const emailService = require('../../services/emailService');
 const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 const metaConversionsService = require('../../services/metaConversionsService');
+const tiktokEventsService = require('../../services/tiktokEventsService');
 const { 
     verifyConfirmationToken, 
     validateBancardConfig,
@@ -275,6 +276,10 @@ const processConfirmationWithEmails = async (body, query, headers, clientIp) => 
 
                             try {
                                 await metaConversionsService.trackStoredPurchase(updatedTransaction, {
+                                    userAgent: headers?.['user-agent'],
+                                    clientIp: clientIp
+                                });
+                                await tiktokEventsService.trackStoredPurchase(updatedTransaction, {
                                     userAgent: headers?.['user-agent'],
                                     clientIp: clientIp
                                 });
@@ -725,7 +730,9 @@ const createPaymentController = async (req, res) => {
                         user_agent: user_agent || req.headers['user-agent'] || '',
                         browser_info: {
                             fbp: meta_click?.fbp || '',
-                            fbc: meta_click?.fbc || ''
+                            fbc: meta_click?.fbc || '',
+                            ttclid: meta_click?.ttclid || '',
+                            ttp: meta_click?.ttp || ''
                         },
                         payment_session_id: payment_session_id,
                         device_type: device_type,

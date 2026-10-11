@@ -2,6 +2,16 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import SummaryApi from '../common';
+import {
+  ttAddToCart,
+  ttCheckout,
+  ttContact,
+  ttLead,
+  ttPurchase,
+  ttSearch,
+  ttViewContent,
+  tiktokClickIds
+} from './TikTokPixelTracker';
 
 const PIXEL_ID = '1535652171192853';
 
@@ -72,7 +82,13 @@ function readCookie(name) {
 }
 
 export function metaClickIds() {
-  return { fbp: readCookie('_fbp'), fbc: readCookie('_fbc') };
+  const tiktok = tiktokClickIds();
+  return {
+    fbp: readCookie('_fbp'),
+    fbc: readCookie('_fbc'),
+    ttclid: tiktok.ttclid,
+    ttp: tiktok.ttp
+  };
 }
 
 function send(eventName, data, eventId) {
@@ -103,11 +119,13 @@ export const trackSearch = (term) => {
   if (key.length < 2 || key === lastSearch) return;
   lastSearch = key;
   send('Search', { search_string: search.slice(0, 100) });
+  ttSearch(search);
 };
 
 export const trackWhatsAppContact = (productData = null) => {
   const payload = productEvent(productData);
   send('Contact', payload);
+  ttContact(productData);
   if (typeof window.fbq === 'function') {
     window.fbq('trackCustom', 'WhatsAppContact', {
       content_ids: payload.content_ids,
@@ -147,14 +165,14 @@ export const trackPDFDownload = (customerData, cartTotal, cartItems = []) => {
       customer_provided_info: Boolean(customerData.name),
       cart_items_count: cartItems.length
     });
-         
-    
+    ttLead(cartItems, cartTotal);
   }
 };
 
 // ✅ FUNCIÓN PARA TRACKEAR AGREGAR AL CARRITO
 export const trackAddToCart = (product) => {
   send('AddToCart', productEvent(product));
+  ttAddToCart(product);
 };
 
 // ✅ FUNCIÓN PARA TRACKEAR INTERÉS EN PRODUCTO
@@ -178,6 +196,7 @@ export const trackProductInterest = (product, interestLevel, score) => {
 // ✅ FUNCIÓN PARA TRACKEAR VIEW CONTENT
 export const trackViewContent = (product) => {
   send('ViewContent', productEvent(product));
+  ttViewContent(product);
 };
 
 // ✅ NUEVA FUNCIÓN PARA TRACKEAR INICIO DE CHECKOUT
@@ -197,6 +216,7 @@ export const trackInitiateCheckout = (cartItems, totalValue) => {
       currency: 'PYG',
       num_items: cartItems.length
     });
+    ttCheckout(cartItems, totalValue);
     
     
   }
@@ -224,6 +244,7 @@ export const trackPurchase = async (transactionData, cartItems) => {
     order_id: String(transactionId || ''),
     num_items: (cartItems || []).length
   }, eventId);
+  ttPurchase(transactionData, cartItems);
 
   try {
       // Usar SummaryApi para obtener la URL del backend
