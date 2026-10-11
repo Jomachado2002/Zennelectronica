@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import SummaryApi from '../common';
 
-const PIXEL_ID = String(process.env.REACT_APP_TIKTOK_PIXEL_ID || '').trim();
+const PIXEL_ID = String(process.env.REACT_APP_TIKTOK_PIXEL_ID || 'DB619J3C77U6DDDLCUBG').trim();
 
 function readCookie(name) {
   if (typeof document === 'undefined') return '';

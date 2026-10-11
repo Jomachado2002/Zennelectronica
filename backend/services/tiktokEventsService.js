@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 
 function pixelCode() {
-  return String(process.env.TIKTOK_PIXEL_ID || '').trim();
+  return String(process.env.TIKTOK_PIXEL_ID || 'DB619J3C77U6DDDLCUBG').trim();
 }
 
 function accessToken() {
