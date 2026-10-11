@@ -587,7 +587,8 @@ function buildTikTokRow(product, taxonomy) {
         catalogImageUrl(product, validImages[0]),
         extras,
         brand,
-        `${categoryLabel} > ${subcategoryLabel}`
+        `${categoryLabel} > ${subcategoryLabel}`,
+        inferGoogleCategory(product.category, product.subcategory, title)
     ].map(csvCell).join(',');
 }
 
@@ -610,7 +611,7 @@ const tiktokCatalogCsv = async (req, res) => {
             'Access-Control-Allow-Origin': '*'
         });
         res.write('\uFEFF');
-        res.write('sku,title,description,availability,condition,price,sale_price,link,image_link,additional_image_link,brand,product_type\n');
+        res.write('sku_id,title,description,availability,condition,price,sale_price,link,image_link,additional_image_link,brand,product_type,google_product_category\n');
         const cursor = ProductModel
             .find(query)
             .select(PRODUCT_SELECT)
