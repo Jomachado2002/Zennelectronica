@@ -607,10 +607,9 @@ const tiktokCatalogCsv = async (req, res) => {
         res.status(200);
         res.set({
             'Content-Type': 'text/csv; charset=utf-8',
-            'Cache-Control': 'public, max-age=1800',
+            'Cache-Control': 'public, max-age=60, s-maxage=60',
             'Access-Control-Allow-Origin': '*'
         });
-        res.write('\uFEFF');
         res.write('sku_id,title,description,availability,condition,price,sale_price,link,image_link,additional_image_link,brand,product_type,google_product_category\n');
         const cursor = ProductModel
             .find(query)
