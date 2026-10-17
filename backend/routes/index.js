@@ -2083,6 +2083,7 @@ router.get('/creativos/calendario/tick', async (req, res) => {
     homeSnapshot = error.message || false;
   }
   let planner = null;
+  let community = null;
   try {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'America/Asuncion',
@@ -2093,7 +2094,11 @@ router.get('/creativos/calendario/tick', async (req, res) => {
     const hour = Number(parts.find((part) => part.type === 'hour')?.value);
     const minute = Number(parts.find((part) => part.type === 'minute')?.value);
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
-    if (hour === 7 && minute < 15) {
+    if (hour * 60 + minute >= 7 * 60) {
+      const { planCommunityDays, refreshScheduledStock } = require('../services/communityPlanner');
+      await refreshScheduledStock();
+      const result = await planCommunityDays({ days: 3 });
+      community = { created: result.created, painted: result.painted, start: result.start };
       const AdPlan = require('../models/adPlanModel');
       const existing = await AdPlan.findOne({ planDate: today }).select('_id').lean();
       if (!existing) {
@@ -2110,9 +2115,9 @@ router.get('/creativos/calendario/tick', async (req, res) => {
     planner = error.message || 'No se pudo armar el plan';
   }
   if (socialError) {
-    return res.status(500).json({ success: false, message: socialError, homeSnapshot, planner });
+    return res.status(500).json({ success: false, message: socialError, homeSnapshot, planner, community });
   }
-  return res.json({ success: true, homeSnapshot, planner });
+  return res.json({ success: true, homeSnapshot, planner, community });
 });
 
 router.get('/creativos/historias-marcas', authToken, listBrandStories);
@@ -2245,5 +2250,8 @@ router.get('/analitica/cron', async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 });
+
+const reelJobRoutes = require('./reelJobRoutes');
+router.use('/reels/jobs', reelJobRoutes);
 
     module.exports = router;

@@ -95,7 +95,8 @@ export default function CommunityCalendar() {
     setLoading(true);
     try {
       const res = await axiosInstance.get('/api/creativos/comunidad', {
-        params: { from: startKey, days: 42 }
+        params: { from: startKey, days: 42 },
+        timeout: 20000
       });
       setDays(res.data.days || []);
       setAiReady(Boolean(res.data.claude));
@@ -283,7 +284,7 @@ export default function CommunityCalendar() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900 capitalize">{monthTitle(year, month)}</h2>
           <p className="text-sm text-gray-600 mt-1 max-w-xl">
-            Tocá un día para ver qué sube. A las 7:00 se miran los próximos 3 días y Google arma un día solo si está vacío. Instagram, Facebook y TikTok reciben lo mismo. En el día podés hablarle al plan: cambiar un rubro, meter una marca o separar un grupo.
+            Hoy y los días que siguen muestran las piezas con imagen. Los días que ya pasaron quedan como título de lo que se subió. A las 7:00 se miran los próximos 3 días. En un día abierto podés hablarle al plan.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -373,22 +374,39 @@ export default function CommunityCalendar() {
             <h3 className="font-semibold text-gray-900 capitalize">
               {(selectedDay && selectedDay.label) || selected}
             </h3>
-            <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-              <p className="text-xs font-semibold text-gray-800">Hablar con este día</p>
-              <p className="mt-1 text-xs text-gray-500">El plan se cambia con una frase. Por ejemplo: en vez de monitores mostrá memorias RAM. Agregá las notebooks Acer. En vez de 5 auriculares subí 5 cosas distintas. Si hablás de la foto, ese pedido va al HTML de la pieza.</p>
-              <textarea
-                value={dayAsk}
-                onChange={(event) => setDayAsk(event.target.value)}
-                rows={3}
-                placeholder="En vez de monitores mostrá memorias RAM"
-                className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
-              />
-              <button type="button" disabled={busy === 'focus' || !dayAsk.trim()} onClick={talk} className="mt-2 text-xs font-semibold" style={{ color: '#7B2CBF' }}>
-                {busy === 'focus' ? 'Cambiando…' : 'Cambiar el día'}
-              </button>
-            </div>
+            {selected < today ? (
+              <p className="mt-1 text-xs text-gray-500">Día cerrado. Solo queda el título de lo que se subió.</p>
+            ) : (
+              <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+                <p className="text-xs font-semibold text-gray-800">Hablar con este día</p>
+                <p className="mt-1 text-xs text-gray-500">El plan se cambia con una frase. Por ejemplo: en vez de monitores mostrá memorias RAM. Agregá las notebooks Acer. En vez de 5 auriculares subí 5 cosas distintas. Si hablás de la foto, ese pedido va al HTML de la pieza.</p>
+                <textarea
+                  value={dayAsk}
+                  onChange={(event) => setDayAsk(event.target.value)}
+                  rows={3}
+                  placeholder="En vez de monitores mostrá memorias RAM"
+                  className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <button type="button" disabled={busy === 'focus' || !dayAsk.trim()} onClick={talk} className="mt-2 text-xs font-semibold" style={{ color: '#7B2CBF' }}>
+                  {busy === 'focus' ? 'Cambiando…' : 'Cambiar el día'}
+                </button>
+              </div>
+            )}
             {!selectedDay || !selectedDay.slots.length ? (
               <p className="text-sm text-gray-500 mt-3">Ese día no tiene publicaciones. Armá los días o esperá a las 7:00.</p>
+            ) : selected < today ? (
+              <div className="mt-3 space-y-2">
+                {selectedDay.slots.map((slot) => (
+                  <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-2">
+                    <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.kind] || ''}`}>
+                      {slot.time} · {KIND[slot.kind] || slot.kind}
+                      {slot.status === 'published' ? ' · publicado' : ''}
+                      {slot.status === 'done' ? ' · listo' : ''}
+                    </p>
+                    <p className="font-semibold text-gray-900 mt-1 text-sm">{slot.headline}</p>
+                  </article>
+                ))}
+              </div>
             ) : (
               <div className="mt-3 space-y-3">
                 {selectedDay.slots.map((slot) => {

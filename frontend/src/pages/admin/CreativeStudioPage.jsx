@@ -18,6 +18,7 @@ import BrandStoriesPanel from '../../components/admin/BrandStoriesPanel';
 import HighlightCoversPanel from '../../components/admin/HighlightCoversPanel';
 import CreativeSpecFocusPanel from '../../components/admin/CreativeSpecFocusPanel';
 import CommunityCalendar from '../../components/admin/CommunityCalendar';
+import ReelDraftPanel from '../../components/admin/ReelDraftPanel';
 import PublishPanel from '../../components/admin/PublishPanel';
 import {
   collectLeafSubcategoryValues,
@@ -668,7 +669,9 @@ const CreativeStudioPage = () => {
                 Estudio de creativos
               </h1>
               <p className="text-gray-600 mt-1">
-                {studioMode === 'brands'
+                {studioMode === 'reel'
+                  ? 'Generá un MP4 vertical de prueba en esta Mac. Queda en el disco local, no se publica y no entra al calendario.'
+                  : studioMode === 'brands'
                   ? 'Historias con fondo blanco: ícono de la subcategoría y los logos de las marcas que tenemos en stock.'
                   : studioMode === 'icons'
                     ? 'Portadas para destacadas: el ícono de cada subcategoría va al centro, con el fondo. Guardalas en Fotos y cargalas en Instagram.'
@@ -734,6 +737,16 @@ const CreativeStudioPage = () => {
                 >
                   Publicar
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setStudioMode('reel')}
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={studioMode === 'reel'
+                    ? { background: '#1E1B4B', color: '#fff', borderColor: '#1E1B4B' }
+                    : { background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Reel de prueba
+                </button>
               </div>
             </div>
             {studioMode === 'flyers' ? (
@@ -769,7 +782,9 @@ const CreativeStudioPage = () => {
           </div>
         ) : null}
 
-        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' || studioMode === 'icons' || studioMode === 'specs' ? 'hidden' : ''}`}>
+        {studioMode === 'reel' ? <ReelDraftPanel /> : null}
+
+        <div className={`grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 ${studioMode === 'brands' || studioMode === 'icons' || studioMode === 'specs' || studioMode === 'reel' ? 'hidden' : ''}`}>
           <div className={`${studioMode === 'publish' ? 'xl:col-span-3' : 'xl:col-span-4'} space-y-4 sm:space-y-6 ${studioMode === 'publish' ? 'order-1' : (products.length ? 'order-3' : 'order-1')} xl:order-1`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">

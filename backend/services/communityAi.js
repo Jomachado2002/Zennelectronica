@@ -78,7 +78,8 @@ async function askGeminiText(prompt, withSearch) {
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(withSearch ? 18000 : 12000)
     }
   );
   const data = await res.json().catch(() => ({}));
@@ -99,6 +100,7 @@ async function askClaudeText(prompt, options = {}) {
     messages: [{ role: 'user', content: prompt }]
   };
   if (options.temperature != null) body.temperature = Number(options.temperature);
+  const timeoutMs = Math.max(8000, Number(options.timeout) || 20000);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -106,7 +108,8 @@ async function askClaudeText(prompt, options = {}) {
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json'
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs)
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -192,13 +195,14 @@ Todo el texto entra con 64px de margen. Nada cortado en el borde. El precio se l
       ? '\n\nLa respuesta anterior tenía blanco detrás del producto o le faltaba {{product1}}. Hacela de nuevo, con color de campo y el producto flotando.'
       : '';
     try {
-      const html = extractHtml(await askClaudeText(`${prompt}${extra}`));
+      const html = extractHtml(await askClaudeText(`${prompt}${extra}`, { timeout: 70000, maxTokens: 8000 }));
       last = html;
       if (!html.includes('<style') || /<script/i.test(html) || hasWhitePlate(html)) continue;
       if (products && products.length && !html.includes('{{product1}}')) continue;
       return html;
     } catch (error) {
       console.error('[community ai] html', error.message || error);
+      if (timedOut(error)) break;
     }
   }
   return last && !hasWhitePlate(last) ? '' : '';
@@ -394,6 +398,14 @@ function extractHtml(text) {
   return raw.slice(start).trim();
 }
 
+function timedOut(error) {
+  return Boolean(error) && (
+    error.name === 'TimeoutError'
+    || error.name === 'AbortError'
+    || /aborted|timeout/i.test(String(error.message || ''))
+  );
+}
+
 function hasWhitePlate(html) {
   return /background\s*:\s*(#fff\b|#ffffff\b|white\b|rgb\(\s*255\s*,\s*255\s*,\s*255\s*\))/i.test(html);
 }
@@ -435,7 +447,7 @@ ${html}`;
       ? '\n\nLa respuesta anterior tenía blanco detrás del producto o le faltaba {{product1}}. Hacela de nuevo, sin superficie blanca, con el producto flotando.'
       : '';
     try {
-      const text = await askClaudeText(`${base}${extra}`);
+      const text = await askClaudeText(`${base}${extra}`, { timeout: 70000, maxTokens: 8000 });
       const next = extractHtml(text);
       last = next;
       if (!next || /<script/i.test(next) || next.length > 80000) continue;
@@ -446,6 +458,7 @@ ${html}`;
     } catch (error) {
       console.error('[community ai] html', error.message || error);
       if (error.statusCode) throw error;
+      if (timedOut(error)) break;
     }
   }
   if (last && hasWhitePlate(last)) return '';

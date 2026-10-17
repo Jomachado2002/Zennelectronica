@@ -290,7 +290,13 @@ const getCommunityCalendar = async (req, res) => {
     return res.json({ success: true, ...data });
   } catch (error) {
     console.error('[social] comunidad', error);
-    return res.status(500).json({ success: false, message: 'No se pudo leer el calendario' });
+    const timedOut = /timed out|MongoNetwork/i.test(`${error.name || ''} ${error.message || ''}`);
+    return res.status(500).json({
+      success: false,
+      message: timedOut
+        ? 'La base tardó en responder. Volvé a abrir el calendario.'
+        : 'No se pudo leer el calendario'
+    });
   }
 };
 

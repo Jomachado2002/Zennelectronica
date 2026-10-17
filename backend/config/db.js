@@ -6,10 +6,8 @@ async function connectDB() {
         const isVercel = Boolean(process.env.VERCEL);
         const options = {
             serverSelectionTimeoutMS: 30000,
-            socketTimeoutMS: 45000,
             maxPoolSize: isVercel ? 5 : 10,
-            minPoolSize: isVercel ? 0 : 5,
-            maxIdleTimeMS: isVercel ? 10000 : 30000,
+            minPoolSize: 0,
             retryWrites: true,
             retryReads: true,
         };

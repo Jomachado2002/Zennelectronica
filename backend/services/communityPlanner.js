@@ -686,7 +686,7 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
     trend: row.trend || null,
     products: shelfCards((row.onlyIds ? row.list.filter((item) => row.onlyIds.includes(item.id)) : row.list).filter((item) => !used.has(item.id)), 8)
   }));
-  const ai = askAi ? await chooseCatalogDay({
+  const ai = askAi ? await withTimeout(chooseCatalogDay({
     dossier: dossierText({
       dateLabel: dayLabel(dateKey),
       recentLabels,
@@ -698,7 +698,7 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
       key: row.key,
       productIds: row.products.map((product) => product.id)
     }))
-  }) : null;
+  }), 15000, null) : null;
   if (ai) {
     const byKey = new Map(rows.map((row) => [row.key, row]));
     const aiFeeds = ai.feeds
@@ -827,7 +827,8 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
         intent: row.intent || '',
         planDate: dateKey,
         brief: pack.brief || '',
-        angle: pack.headline || ''
+        angle: pack.headline || '',
+        fast: true
       });
     } catch (error) {
       console.error('[community graphic]', error.message || error);
@@ -882,11 +883,31 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
   return created;
 }
 
+function minutesOf(hhmm) {
+  const [hour, minute] = String(hhmm || '').split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+function withTimeout(promise, ms, fallback) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).catch(() => fallback),
+    new Promise((resolve) => {
+      timer = setTimeout(() => resolve(fallback), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
 function firstOpenDay() {
   const parts = zonedParts();
   const today = `${parts.year}-${parts.month}-${parts.day}`;
-  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
-  if (minutes < 9 * 60) return today;
+  const now = Number(parts.hour) * 60 + Number(parts.minute);
+  const latest = Math.max(
+    ...FEED_TIMES.map(minutesOf),
+    ...STORY_TIMES.map(minutesOf),
+    ...SUGGESTION_SLOTS.map((slot) => minutesOf(slot.time))
+  );
+  if (now + 10 < latest) return today;
   return addDays(today, 1);
 }
 
@@ -913,8 +934,8 @@ async function planCommunityDays({ days = 3, startDate } = {}) {
     stockPool()
   ]);
   const groups = groupPool(products);
-  const account = needsThought ? await accountPulse() : '';
-  const trends = needsThought ? await scoutMarket({ dateLabel: dayLabel(openings[0]), account }) : [];
+  const account = needsThought ? await withTimeout(accountPulse(), 8000, '') : '';
+  const trends = needsThought ? await withTimeout(scoutMarket({ dateLabel: dayLabel(openings[0]), account }), 18000, []) : [];
   const created = [];
   for (const dateKey of openings) {
     const rows = await planDay(dateKey, groups, labels, used, freshness, trends, account);
@@ -931,23 +952,50 @@ async function planCommunityDays({ days = 3, startDate } = {}) {
   };
 }
 
-function publicPost(post) {
+function slotTime(post) {
   const when = post.scheduledAt ? new Date(post.scheduledAt) : null;
-  const time = when && !Number.isNaN(when.getTime())
-    ? new Intl.DateTimeFormat('es-PY', {
-      timeZone: ZONE,
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23'
-    }).format(when)
-    : '';
+  if (!when || Number.isNaN(when.getTime())) return '';
+  return new Intl.DateTimeFormat('es-PY', {
+    timeZone: ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).format(when);
+}
+
+function publicPost(post, compact = false) {
+  const time = slotTime(post);
+  const headline = post.headline || (post.titles || [])[0] || 'Publicación';
+  if (compact) {
+    return {
+      id: String(post._id),
+      date: post.planDate,
+      time,
+      kind: post.kind,
+      status: post.status,
+      headline,
+      titles: post.titles || [],
+      compact: true,
+      previewUrl: '',
+      mediaUrls: [],
+      caption: '',
+      brief: '',
+      reason: '',
+      productIds: [],
+      needsApproval: false,
+      canRevise: false,
+      waitingUpload: false,
+      autoPublish: false,
+      origin: post.origin || 'manual'
+    };
+  }
   return {
     id: String(post._id),
     date: post.planDate,
     time,
     kind: post.kind,
     status: post.status,
-    headline: post.headline || (post.titles || [])[0] || 'Publicación',
+    headline,
     scene: post.scene || (isOctoberRosa() ? 'rosa' : ''),
     reason: post.reason || '',
     brief: post.brief || '',
@@ -957,6 +1005,7 @@ function publicPost(post) {
     subcategoryLabel: post.subcategoryLabel || '',
     mediaUrls: post.mediaUrls || [],
     previewUrl: (post.mediaUrls || [])[0] || '',
+    compact: false,
     needsApproval: ['imagen', 'dato'].includes(post.kind) && post.status === 'idea' && (post.mediaUrls || []).length > 0,
     canRevise: ['imagen', 'dato'].includes(post.kind) && ['idea', 'scheduled'].includes(post.status),
     waitingUpload: post.kind === 'reel'
@@ -971,28 +1020,59 @@ function publicPost(post) {
   };
 }
 
-async function listCommunityCalendar({ from, days = 14 } = {}) {
-  await releaseReelBoards();
-  const start = from || zonedDate();
-  const count = Math.max(1, Math.min(42, Number(days) || 14));
-  const end = addDays(start, count - 1);
-  const posts = await SocialPost.find({
+const PAST_FIELDS = 'titles kind origin planDate slot headline status scheduledAt';
+const LIVE_FIELDS = 'productIds titles kind mediaUrls caption scene origin planDate slot headline reason brief subcategoryLabel status scheduledAt';
+
+function communityRange(start, end) {
+  return {
     origin: 'community',
     planDate: { $gte: start, $lte: end },
     status: { $nin: ['cancelled'] }
-  }).sort({ planDate: 1, scheduledAt: 1 }).lean();
+  };
+}
+
+async function listCommunityCalendar({ from, days = 14 } = {}) {
+  const start = from || zonedDate();
+  const count = Math.max(1, Math.min(42, Number(days) || 14));
+  const end = addDays(start, count - 1);
+  const today = zonedDate();
+  const reads = [];
+  if (start < today) {
+    const pastEnd = end < today ? end : addDays(today, -1);
+    reads.push(
+      SocialPost.find(communityRange(start, pastEnd))
+        .select(PAST_FIELDS)
+        .sort({ planDate: 1, scheduledAt: 1 })
+        .maxTimeMS(8000)
+        .lean()
+        .then((rows) => rows.map((row) => publicPost(row, true)))
+    );
+  }
+  if (end >= today) {
+    const liveStart = start > today ? start : today;
+    reads.push(
+      SocialPost.find(communityRange(liveStart, end))
+        .select(LIVE_FIELDS)
+        .sort({ planDate: 1, scheduledAt: 1 })
+        .maxTimeMS(8000)
+        .lean()
+        .then((rows) => rows.map((row) => publicPost(row, false)))
+    );
+  }
+  const posts = (await Promise.all(reads)).flat();
   const byDate = new Map();
   for (let index = 0; index < count; index += 1) {
     const date = addDays(start, index);
     byDate.set(date, []);
   }
   for (const post of posts) {
-    if (!byDate.has(post.planDate)) byDate.set(post.planDate, []);
-    byDate.get(post.planDate).push(publicPost(post));
+    if (!byDate.has(post.date)) byDate.set(post.date, []);
+    byDate.get(post.date).push(post);
   }
-  const focuses = await CommunityDayFocus.find({
-    planDate: { $gte: start, $lte: end }
-  }).lean();
+  const focusStart = start > today ? start : today;
+  const focuses = end >= today
+    ? await CommunityDayFocus.find({ planDate: { $gte: focusStart, $lte: end } }).lean()
+    : [];
   const focusByDate = new Map(focuses.map((item) => [item.planDate, item.focus || '']));
   let tiktok = { connected: false, configured: false, name: '' };
   try {
@@ -1002,12 +1082,14 @@ async function listCommunityCalendar({ from, days = 14 } = {}) {
   }
   return {
     from: start,
+    today,
     ai: communityAiReady(),
     claude: claudeReady(),
     tiktok,
     days: [...byDate.entries()].map(([date, slots]) => ({
       date,
       label: dayLabel(date),
+      past: date < today,
       focus: focusByDate.get(date) || '',
       slots
     }))
@@ -1147,7 +1229,8 @@ async function paintOpenIdeas() {
         label: doc.subcategoryLabel || doc.headline,
         subcategory: doc.subcategory,
         time,
-        planDate: doc.planDate
+        planDate: doc.planDate,
+        fast: true
       });
       if (!art.mediaUrl) continue;
       doc.mediaUrls = [art.mediaUrl];

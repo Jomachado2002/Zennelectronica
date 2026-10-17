@@ -624,7 +624,8 @@ async function composeSuggestion({
   layoutName = '',
   brief = '',
   angle = '',
-  title = ''
+  title = '',
+  fast = false
 } = {}) {
   const day = weekdayOf(planDate);
   const skip = new Set((excludeIds || []).map(String));
@@ -688,7 +689,7 @@ async function composeSuggestion({
   if (!photos[0]) return art;
   const [logoWhite, logoInk] = await Promise.all([getCommunityLogoDark(), getCommunityLogoLight()]);
   let html = '';
-  if (claudeReady()) {
+  if (!fast && claudeReady()) {
     try {
       const designed = await designPieceHtml({
         dateLabel: planDate,
@@ -740,11 +741,6 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     error.statusCode = 400;
     throw error;
   }
-  if (!claudeReady()) {
-    const error = new Error('Falta la clave de Claude. Sin eso no se modifica el HTML.');
-    error.statusCode = 400;
-    throw error;
-  }
   const ask = readAsk(`${note} ${background}`);
   const wantsSwap = Boolean(swap) || ask.swap;
   const color = /^#[0-9A-Fa-f]{6}$/.test(String(background || '')) ? background : ask.background;
@@ -790,56 +786,59 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
   const logoInk = await getCommunityLogoLight();
   const logoWhite = await getCommunityLogoDark();
   const named = COLOR_WORDS.find(([, hex]) => hex.toLowerCase() === String(color || '').toLowerCase());
-  const wantsTemplate = /plantilla|otro dise|otra pieza|rehac|otra grafica|otro estilo|otro formato/.test(plain(note));
-  const steered = wantsTemplate
-    ? await steerTemplate(note, chosen.map((item) => ({ name: item.productName })))
-    : null;
-  const instruction = [
-    String(note || '').trim(),
-    steered && steered.angle ? `Nueva plantilla: ${steered.angle}` : '',
-    steered && steered.brief ? steered.brief : '',
-    color ? `El fondo tiene que ser ${named ? named[0] : color}. Cambiá la tipografía para que no quede la misma pieza.` : '',
-    wantsSwap || linked
-      ? 'El producto cambió. Reescribí el nombre y el precio con los datos nuevos. La foto nueva entra en {{product1}}.'
-      : 'No cambies el producto ni el precio.'
-  ].filter(Boolean).join('\n');
-  let masked = maskHtml(doc.creativeHtml);
-  if (!masked.includes('{{product1}}') || masked.length > 120000) {
-    const day = weekdayOf(doc.planDate);
-    const layout = layoutFromHtml(doc.creativeHtml) || layoutFor(doc.kind, day, doc.subcategoryLabel);
-    const line = { ...voice(doc.subcategoryLabel), angle: WEEK[day], label: doc.subcategoryLabel };
-    masked = maskHtml(buildHtml({
-      layout,
-      logoInk,
-      logoWhite,
-      line,
-      items: chosen,
-      photos,
-      background: color
-    }));
-  }
-  const html = await revisePieceHtml({
-    html: masked,
-    note: instruction,
-    products: chosen.map((item) => ({ name: item.productName, price: priceText(item) }))
+  const day = weekdayOf(doc.planDate);
+  const layout = layoutFromHtml(doc.creativeHtml) || layoutFor(doc.kind, day, doc.subcategoryLabel);
+  const line = { ...voice(doc.subcategoryLabel), angle: WEEK[day], label: doc.subcategoryLabel };
+  const localHtml = () => buildHtml({
+    layout,
+    logoInk,
+    logoWhite,
+    line,
+    items: chosen,
+    photos,
+    background: color
   });
-  if (!html) {
-    const error = new Error('Claude no devolvió una pieza usable. Pedila de nuevo, sin fondo blanco.');
-    error.statusCode = 502;
-    throw error;
+  const designAsk = String(note || '').trim();
+  let filled = '';
+  let viaClaude = false;
+  if (designAsk && claudeReady()) {
+    const wantsTemplate = /plantilla|otro dise|otra pieza|rehac|otra grafica|otro estilo|otro formato/.test(plain(note));
+    const steered = wantsTemplate
+      ? await steerTemplate(note, chosen.map((item) => ({ name: item.productName })))
+      : null;
+    const instruction = [
+      designAsk,
+      steered && steered.angle ? `Nueva plantilla: ${steered.angle}` : '',
+      steered && steered.brief ? steered.brief : '',
+      color ? `El fondo tiene que ser ${named ? named[0] : color}. Cambiá la tipografía para que no quede la misma pieza.` : '',
+      wantsSwap || linked
+        ? 'El producto cambió. Reescribí el nombre y el precio con los datos nuevos. La foto nueva entra en {{product1}}.'
+        : 'No cambies el producto ni el precio.'
+    ].filter(Boolean).join('\n');
+    let masked = maskHtml(doc.creativeHtml);
+    if (!masked.includes('{{product1}}') || masked.length > 120000) {
+      masked = maskHtml(localHtml());
+    }
+    const html = await revisePieceHtml({
+      html: masked,
+      note: instruction,
+      products: chosen.map((item) => ({ name: item.productName, price: priceText(item) }))
+    });
+    if (html) {
+      const tokens = { logo: await logoFor(html) };
+      chosen.forEach((item, index) => {
+        tokens[`product${index + 1}`] = photos[index] || '';
+        tokens[`name${index + 1}`] = esc(clip(item.productName, 80));
+        tokens[`price${index + 1}`] = esc(priceText(item));
+      });
+      const next = /<html/i.test(html) ? fillHtml(html, tokens) : page(fillHtml(html, tokens), '');
+      if (next && !hasWhitePlate(next)) {
+        filled = next;
+        viaClaude = true;
+      }
+    }
   }
-  const tokens = { logo: await logoFor(html) };
-  chosen.forEach((item, index) => {
-    tokens[`product${index + 1}`] = photos[index] || '';
-    tokens[`name${index + 1}`] = esc(clip(item.productName, 80));
-    tokens[`price${index + 1}`] = esc(priceText(item));
-  });
-  const filled = /<html/i.test(html) ? fillHtml(html, tokens) : page(fillHtml(html, tokens), '');
-  if (hasWhitePlate(filled)) {
-    const error = new Error('Claude devolvió la pieza con fondo blanco. Pedile otro fondo.');
-    error.statusCode = 502;
-    throw error;
-  }
+  if (!filled) filled = localHtml();
   const png = await renderPng(filled);
   const mediaUrl = await uploadJpeg(png, `comunidad-revision-${Date.now()}`);
   const arrived = chosen.filter((item) => !ids.includes(item.id)).map((item) => clip(item.productName, 80));
@@ -847,13 +846,11 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     note ? `Pediste: ${String(note).trim()}` : '',
     productChanged ? `Entró ${arrived.join(' · ') || 'otro producto'}.` : '',
     color ? `El fondo pasó a ${named ? named[0] : color}.` : '',
-    'Claude reescribió el HTML de la pieza.'
+    viaClaude ? 'Claude reescribió el HTML de la pieza.' : 'La pieza se rearmó acá, sin esperar a Claude.'
   ].filter(Boolean);
   const changeNote = lines.join(' ');
-  const day = weekdayOf(doc.planDate);
-  const line = { ...voice(doc.subcategoryLabel), angle: WEEK[day], label: doc.subcategoryLabel };
   const copy = copyFor({
-    layout: layoutFromHtml(filled) || layoutFor(doc.kind, day, doc.subcategoryLabel),
+    layout: layoutFromHtml(filled) || layout,
     line,
     items: chosen,
     label: doc.subcategoryLabel,
