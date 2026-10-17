@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const opentype = require('opentype.js');
 const sharp = require('sharp');
 
 const ROOT = path.resolve(__dirname, '../var/reels-dev');
@@ -24,9 +25,9 @@ function assertId(id) {
 function sidecarNames(id) {
   return [
     `${id}.image.jpg`,
+    `${id}.frame.jpg`,
     `${id}.name.txt`,
     `${id}.price.txt`,
-    `${id}.filter.txt`,
     `${id}.mp4`
   ];
 }
@@ -94,33 +95,57 @@ function runFfmpeg(args) {
   });
 }
 
+function fitLine(font, text, maxWidth, startSize) {
+  let size = startSize;
+  let value = text;
+  while (size > 28 && font.getAdvanceWidth(value, size) > maxWidth) size -= 2;
+  while (font.getAdvanceWidth(value, size) > maxWidth && value.length > 8) {
+    value = `${value.slice(0, -2).trim()}…`;
+  }
+  return { value, size };
+}
+
+function lineSvg(font, text, fontSize, color, baseline) {
+  const width = font.getAdvanceWidth(text, fontSize);
+  const x = Math.max(24, (1080 - width) / 2);
+  const glyph = font.getPath(text, x, baseline, fontSize);
+  glyph.fill = color;
+  return Buffer.from(`<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">${glyph.toSVG(2)}</svg>`);
+}
+
 async function renderStill({ id, productName, priceLabel, imageUrl }) {
   assertId(id);
   ensureRoot();
   const imagePath = safeJoin(`${id}.image.jpg`);
+  const framePath = safeJoin(`${id}.frame.jpg`);
   const namePath = safeJoin(`${id}.name.txt`);
   const pricePath = safeJoin(`${id}.price.txt`);
-  const filterPath = safeJoin(`${id}.filter.txt`);
   const videoPath = safeJoin(`${id}.mp4`);
+  const name = String(productName || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const price = String(priceLabel || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   const jpeg = await sharp(await downloadImage(imageUrl)).rotate().jpeg({ quality: 90 }).toBuffer();
   await fs.promises.writeFile(imagePath, jpeg);
-  await fs.promises.writeFile(namePath, String(productName || '').replace(/\s+/g, ' ').trim().slice(0, 80));
-  await fs.promises.writeFile(pricePath, String(priceLabel || '').replace(/\s+/g, ' ').trim().slice(0, 40));
-  const filter = [
-    'scale=1080:1920:force_original_aspect_ratio=decrease',
-    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x0B1220',
-    `drawtext=fontfile=${FONT}:textfile=${namePath}:fontsize=52:fontcolor=white:x=(w-text_w)/2:y=120`,
-    `drawtext=fontfile=${FONT}:textfile=${pricePath}:fontsize=46:fontcolor=0x7DD3FC:x=(w-text_w)/2:y=h-200`
-  ].join(',');
-  await fs.promises.writeFile(filterPath, filter);
+  await fs.promises.writeFile(namePath, name);
+  await fs.promises.writeFile(pricePath, price);
+  const font = opentype.loadSync(FONT);
+  const title = fitLine(font, name, 1000, 52);
+  const amount = fitLine(font, price, 1000, 46);
+  const photo = await sharp(jpeg).resize(1080, 1500, { fit: 'contain', background: '#0B1220' }).jpeg().toBuffer();
+  const frame = await sharp({
+    create: { width: 1080, height: 1920, channels: 3, background: '#0B1220' }
+  }).composite([
+    { input: photo, top: 210, left: 0 },
+    { input: lineSvg(font, title.value, title.size, '#FFFFFF', 130), top: 0, left: 0 },
+    { input: lineSvg(font, amount.value, amount.size, '#7DD3FC', 1800), top: 0, left: 0 }
+  ]).jpeg({ quality: 90 }).toBuffer();
+  await fs.promises.writeFile(framePath, frame);
   await runFfmpeg([
     '-y',
     '-loop', '1',
-    '-i', imagePath,
+    '-i', framePath,
     '-f', 'lavfi',
     '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
     '-t', '12',
-    '-filter_script:v', filterPath,
     '-r', '30',
     '-c:v', 'libx264',
     '-pix_fmt', 'yuv420p',
