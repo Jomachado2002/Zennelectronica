@@ -104,6 +104,13 @@ async function runScheduledMirrorOnce(label) {
         } catch (planError) {
             console.error('[Visão schedule] calendario', planError && planError.message ? planError.message : planError);
         }
+        try {
+            const { runDailySeoReview } = require('./seoDailyReview');
+            const review = await runDailySeoReview({ trigger: 'worker' });
+            console.log(`[Visão schedule][${label}] SEO diario ${review?.day || ''} fichas=${(review?.applied || []).length}`);
+        } catch (seoError) {
+            console.error('[Visão schedule] seo', seoError && seoError.message ? seoError.message : seoError);
+        }
     } catch (err) {
         console.error(
             `[Visão schedule][${label}] Error tras ${Date.now() - t0}ms:`,

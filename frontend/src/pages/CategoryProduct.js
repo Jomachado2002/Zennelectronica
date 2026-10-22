@@ -9,6 +9,7 @@ import SideDrawerFilters from '../components/filters/SideDrawerFilters';
 import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import getSeoTitle from '../utils/getSeoTitle';
 import { Helmet } from 'react-helmet';
+import SummaryApi from '../common';
 import VerticalCardGrid from '../components/VerticalCardGrid';
 import { siteUrl, SITE_ORIGIN } from '../config/siteUrl';
 import { findShopperDepartment } from '../config/shopperNav';
@@ -436,6 +437,7 @@ const CategoryProductContent = () => {
   } = usePreloadedCategories();
   
   const categories = useMemo(() => getCategories(), [getCategories]);
+  const [hub, setHub] = useState(null);
   const listRef = useRef(data);
   if (!mobileFilterOpen) listRef.current = data;
   const listData = mobileFilterOpen ? listRef.current : data;
@@ -448,16 +450,6 @@ const CategoryProductContent = () => {
         ? `Promociones · ${getSeoTitle(location, categories)}`
         : 'Promociones')
     : getSeoTitle(location, categories);
-
-  const seoTitle = onlyDiscounted
-    ? (filterCategoryList[0] || filterSubcategoryList[0]
-        ? `${pageHeading} | Zenn`
-        : 'Promociones y Ofertas | Zenn Paraguay')
-    : `${pageHeading} | Zenn Paraguay`;
-
-  const seoDescription = onlyDiscounted
-    ? 'Productos en promoción en Zenn Paraguay. Filtrá por categoría y subcategoría. Descuentos reales y envío a todo el país.'
-    : `Comprá ${pageHeading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`;
 
   const canonicalPath = (() => {
     if (onlyDiscounted) {
@@ -473,6 +465,46 @@ const CategoryProductContent = () => {
     const q = p.toString();
     return q ? `/categoria-producto?${q}` : '/categoria-producto';
   })();
+
+  useEffect(() => {
+    const category = filterCategoryList[0];
+    if (!category || onlyDiscounted) {
+      setHub(null);
+      return undefined;
+    }
+    const subcategory = filterSubcategoryList[0] || '';
+    let cancelled = false;
+    const query = new URLSearchParams({ category, subcategory });
+    fetch(`${SummaryApi.baseURL}/api/seo/categoria?${query}`)
+      .then((response) => response.json())
+      .then((body) => {
+        if (!cancelled) setHub(body?.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setHub(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterCategoryList, filterSubcategoryList, onlyDiscounted]);
+
+  const seoTitle = hub?.seoTitle
+    || (onlyDiscounted
+      ? (filterCategoryList[0] || filterSubcategoryList[0]
+          ? `${pageHeading} | Zenn`
+          : 'Promociones y Ofertas | Zenn Paraguay')
+      : `${pageHeading} | Zenn Paraguay`);
+
+  const seoDescription = hub?.intro
+    || (onlyDiscounted
+      ? 'Productos en promoción en Zenn Paraguay. Filtrá por categoría y subcategoría. Descuentos reales y envío a todo el país.'
+      : `${pageHeading} en Paraguay. Precio en guaraníes y envío a Asunción y todo Paraguay.`);
+
+  useEffect(() => {
+    const first = document.querySelector('meta[name="description"]');
+    if (first && seoDescription) first.setAttribute('content', seoDescription);
+    if (seoTitle) document.title = seoTitle;
+  }, [seoDescription, seoTitle]);
 
   return (
     <>
@@ -506,6 +538,9 @@ const CategoryProductContent = () => {
         <h1 className="text-[22px] font-semibold tracking-[0.08em] uppercase text-gray-900">
           {mobileTitle || pageHeading}
         </h1>
+        {seoDescription && (
+          <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">{seoDescription}</p>
+        )}
         {department?.chips?.length > 0 && (
           <div className="mt-4 -mx-4 px-4 flex gap-2 overflow-x-auto scrollbar-none">
             {department.chips.map((chip) => {
@@ -554,9 +589,9 @@ const CategoryProductContent = () => {
         <div className="container mx-auto">
           <div className="flex flex-col sm:flex-row items-center">
             <div className="flex items-center w-full">
-              <p className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
                 {pageHeading}
-              </p>
+              </h1>
               {onlyDiscounted && (
                 <button
                   type="button"
@@ -578,6 +613,10 @@ const CategoryProductContent = () => {
           </div>
         </div>
       </div>
+
+      {seoDescription && (
+        <p className="hidden lg:block container mx-auto px-4 pt-3 text-sm text-gray-600">{seoDescription}</p>
+      )}
       
       {/* Contenido principal */}
       <div className="container mx-auto px-4 pt-2">

@@ -4,7 +4,8 @@ const fs = require('fs');
 const Product = require('../../models/productModel');
 const ReelJob = require('../../models/reelJobModel');
 const { TRIAL_TAG } = ReelJob;
-const { renderStill, resolveMp4, filesForJob } = require('../../services/reelLocalRender');
+const { buildPlan } = require('../../services/reelScenePlan');
+const { renderPlan, resolveMp4, filesForJob } = require('../../services/reelLocalRender');
 
 let renderLock = false;
 
@@ -20,6 +21,10 @@ function publicJob(doc) {
     durationMs: doc.durationMs || 0,
     fileName: doc.fileName || '',
     files: filesForJob(doc._id),
+    hook: doc.plan && doc.plan.editorial ? doc.plan.editorial.hook : '',
+    sceneCount: doc.plan && Array.isArray(doc.plan.scenes) ? doc.plan.scenes.length : 0,
+    verifiedPrice: doc.verifiedPrice || 0,
+    verifiedStock: doc.verifiedStock || 0,
     createdAt: doc.createdAt
   };
 }
@@ -45,12 +50,17 @@ async function createJob(req, res) {
     if (!(product.stock > 0) || !(product.sellingPrice > 0) || !(product.productImage && product.productImage[0])) {
       return res.status(400).json({ success: false, message: 'El producto necesita stock, precio y una foto' });
     }
+    const plan = buildPlan(product);
     const created = await ReelJob.create({
       trialTag: TRIAL_TAG,
       productId: product._id,
       codigo: product.codigo,
       productName: product.productName,
       status: 'queued',
+      plan,
+      verifiedAt: new Date(),
+      verifiedPrice: product.sellingPrice,
+      verifiedStock: product.stock,
       createdBy: req.userId
     });
     claimed = await ReelJob.findOneAndUpdate(
@@ -63,13 +73,7 @@ async function createJob(req, res) {
     }
     res.status(202).json({ success: true, data: publicJob(claimed) });
     try {
-      const priceLabel = `Gs. ${Number(product.sellingPrice).toLocaleString('es-PY')}`;
-      const result = await renderStill({
-        id: String(claimed._id),
-        productName: product.productName,
-        priceLabel,
-        imageUrl: product.productImage[0]
-      });
+      const result = await renderPlan(String(claimed._id), plan);
       await ReelJob.updateOne(
         { _id: claimed._id, status: 'rendering', trialTag: TRIAL_TAG },
         { $set: { status: 'ready_for_review', bytes: result.bytes, durationMs: result.durationMs, fileName: result.fileName, error: '' } }
@@ -93,17 +97,24 @@ async function createJob(req, res) {
   }
 }
 
+function noStore(res) {
+  res.setHeader('Cache-Control', 'private, no-store');
+}
+
 async function listJobs(req, res) {
+  noStore(res);
   const rows = await ReelJob.find({ trialTag: TRIAL_TAG }).sort({ createdAt: -1 }).limit(20);
   return res.json({ success: true, data: rows.map(publicJob) });
 }
 
 async function listTrials(req, res) {
+  noStore(res);
   const rows = await ReelJob.find({ trialTag: TRIAL_TAG }).sort({ createdAt: -1 }).limit(100);
   return res.json({ success: true, data: rows.map(publicJob) });
 }
 
 async function getJob(req, res) {
+  noStore(res);
   const doc = await ReelJob.findOne({ _id: req.params.id, trialTag: TRIAL_TAG });
   if (!doc) return res.status(404).json({ success: false, message: 'Trabajo no encontrado' });
   return res.json({ success: true, data: publicJob(doc) });

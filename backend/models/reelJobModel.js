@@ -21,6 +21,10 @@ const reelJobSchema = new mongoose.Schema(
     bytes: { type: Number, default: 0 },
     durationMs: { type: Number, default: 0 },
     fileName: { type: String, default: '' },
+    plan: { type: mongoose.Schema.Types.Mixed, default: null },
+    verifiedAt: { type: Date, default: null },
+    verifiedPrice: { type: Number, default: 0 },
+    verifiedStock: { type: Number, default: 0 },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'user' }
   },
   { timestamps: true, collection: 'reeljobs' }

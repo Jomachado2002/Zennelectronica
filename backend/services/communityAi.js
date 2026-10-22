@@ -66,7 +66,7 @@ Devolvé solo JSON:
 }`;
 }
 
-async function askGeminiText(prompt, withSearch) {
+async function askGeminiText(prompt, withSearch, timeoutMs) {
   const key = apiKey();
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -79,7 +79,7 @@ async function askGeminiText(prompt, withSearch) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(withSearch ? 18000 : 12000)
+      signal: AbortSignal.timeout(Number(timeoutMs) || (withSearch ? 18000 : 12000))
     }
   );
   const data = await res.json().catch(() => ({}));

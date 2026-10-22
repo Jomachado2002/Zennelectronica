@@ -186,6 +186,12 @@ const startServer = async () => {
     } catch (e) {
       console.warn('[newsletter] No se pudo inicializar:', e.message || e);
     }
+    try {
+      const { startSeoDailySchedule } = require('./services/seoDailyReview');
+      startSeoDailySchedule();
+    } catch (e) {
+      console.warn('[seo diario] No se pudo inicializar:', e.message || e);
+    }
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {

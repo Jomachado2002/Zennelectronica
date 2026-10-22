@@ -22,6 +22,9 @@ const getProductDetails = async(req,res)=>{
         if (!product) {
             product = await productModel.findOne({ slug: key }).lean()
         }
+        if (!product) {
+            product = await productModel.findOne({ previousSlugs: key }).lean()
+        }
 
         if (!product) {
             return res.json({

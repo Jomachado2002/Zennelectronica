@@ -97,6 +97,18 @@
             if (!data) return null;
             var img = data.productImage && data.productImage[0];
             if (typeof img === 'string') preloadImage(img);
+            var amount = Math.round(Number(data.sellingPrice) || 0);
+            var price = amount ? ('Gs. ' + amount.toLocaleString('es-PY')) : '';
+            var available = data.stock == null || Number(data.stock) > 0;
+            var reviewed = available ? String(data.seoDescription || '').replace(/\s+/g, ' ').trim() : '';
+            var desc = reviewed.length >= 40
+              ? reviewed
+              : (String(data.productName || '') + '. ' + (price ? price + ' en Paraguay. ' : '') + (available ? 'Hay stock en Zenn.' : 'Consultá disponibilidad en Zenn.'));
+            var seoTitle = available ? String(data.seoTitle || '').replace(/\s+/g, ' ').trim() : '';
+            if (seoTitle) document.title = seoTitle.slice(0, 58);
+            else if (data.productName) document.title = String(data.productName).replace(/\s+/g, ' ').trim().slice(0, 58);
+            var meta = document.querySelector('meta[name="description"]');
+            if (meta && desc) meta.setAttribute('content', desc.slice(0, 160));
             return data;
           }).catch(function () { return null; });
 

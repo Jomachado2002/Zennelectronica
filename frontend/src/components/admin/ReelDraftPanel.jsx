@@ -145,6 +145,8 @@ export default function ReelDraftPanel() {
       {job ? (
         <p className="text-sm text-gray-700 mb-3">
           Trabajo {job.id}: {job.status}
+          {job.hook ? `. ${job.hook}` : ''}
+          {job.sceneCount ? ` · ${job.sceneCount} escenas` : ''}
           {job.error ? `. ${job.error}` : ''}
         </p>
       ) : null}

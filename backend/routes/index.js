@@ -30,6 +30,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const { merchantJpegController } = require('../controller/product/merchantJpegController');
     const { sitemapController } = require('../controller/seo/sitemapController');
     const { productSeoHtmlController } = require('../controller/seo/productSeoHtmlController');
+    const { estadoController: searchConsoleEstado, informeController: searchConsoleInforme } = require('../controller/seo/searchConsoleController');
     const searchProduct = require('../controller/product/searchProduct');
     const advancedSearchProduct = require('../controller/product/advancedSearchProduct');
     const filterProductController = require('../controller/product/filterProduct');
@@ -1023,6 +1024,17 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/gmc/image.jpg", merchantJpegController);
     router.get("/sitemap.xml", sitemapController);
     router.get("/seo/producto/:slugOrId", productSeoHtmlController);
+    const { categorySeoController } = require('../controller/seo/categorySeoController');
+    router.get("/seo/categoria", categorySeoController);
+    router.get("/admin/search-console/estado", adminAuth, searchConsoleEstado);
+    router.get("/admin/search-console/informe", adminAuth, searchConsoleInforme);
+    const { listSeoDailyController, runSeoDailyController } = require('../controller/seo/seoDailyController');
+    router.get("/admin/seo-diario", adminAuth, listSeoDailyController);
+    router.post("/admin/seo-diario/correr", adminAuth, (req, res, next) => {
+        req.setTimeout(8 * 60 * 1000);
+        res.setTimeout(8 * 60 * 1000);
+        return runSeoDailyController(req, res, next);
+    });
 
 
     // ===========================================

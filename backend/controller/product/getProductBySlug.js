@@ -6,7 +6,12 @@ const getProductBySlug = async (req, res) => {
     try {
         const { slug } = req.params;
 
-        const product = await productModel.findOne({ slug }).lean();
+        let product = await productModel.findOne({ slug }).lean();
+        let redirectSlug = '';
+        if (!product) {
+            product = await productModel.findOne({ previousSlugs: slug }).lean();
+            if (product?.slug) redirectSlug = product.slug;
+        }
 
         if (!product) {
             return res.status(404).json({
@@ -18,6 +23,7 @@ const getProductBySlug = async (req, res) => {
 
         res.json({
             data: await attachBrandLogo(product),
+            redirectSlug,
             message: "Ok",
             success: true,
             error: false

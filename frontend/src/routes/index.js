@@ -92,6 +92,8 @@ const CreativeStudioPage = lazy(() => import('../pages/admin/CreativeStudioPage'
 const MarketingStudioPage = lazy(() => import('../pages/admin/MarketingStudioPage'));
 const AdminWorkerPage = lazy(() => import('../pages/admin/AdminWorkerPage'));
 const VisitantesPage = lazy(() => import('../pages/admin/VisitantesPage'));
+const SearchConsolePage = lazy(() => import('../pages/admin/SearchConsolePage'));
+const SeoDailyPage = lazy(() => import('../pages/admin/SeoDailyPage'));
 const NewsletterPage = lazy(() => import('../pages/admin/NewsletterPage'));
 
 // Importar página de editor de imágenes
@@ -321,6 +323,14 @@ const router = createBrowserRouter([
                     {
                         path: "visitantes",
                         element: <Lazy><VisitantesPage /></Lazy>
+                    },
+                    {
+                        path: "busqueda-google",
+                        element: <Lazy><SearchConsolePage /></Lazy>
+                    },
+                    {
+                        path: "seo-diario",
+                        element: <Lazy><SeoDailyPage /></Lazy>
                     },
                     {
                         path: "newsletter",

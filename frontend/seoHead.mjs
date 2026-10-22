@@ -102,7 +102,7 @@ export function planSeo(pathname, search) {
       kind: 'category',
       canonical: `${SITE}/categoria-producto${q ? `?${q}` : ''}`,
       title: `${heading} | Zenn Paraguay`,
-      description: `Comprá ${heading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`
+      description: `${heading} en Paraguay. Precio en guaraníes y envío a Asunción y todo Paraguay.`
     };
   }
 

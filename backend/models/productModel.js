@@ -14,6 +14,14 @@ const productSchema = mongoose.Schema({
     catalogPlateStamp: { type: String, default: '' },
     documentationLink: { type: String },
     description: { type: String },
+    /** Título corto para Google. El worker no lo pisa: el nombre del proveedor sigue en productName. */
+    seoTitle: { type: String, default: '' },
+    /** Texto que Google muestra bajo el título. No lo pisa el nombre del proveedor. */
+    seoDescription: { type: String, default: '' },
+    /** Stock que había cuando se escribió el texto. Si pasa a 0, ese texto se retira. */
+    seoStock: { type: Number, default: null },
+    /** Slugs viejos. Si la URL cambia, la anterior redirige acá. */
+    previousSlugs: { type: [String], default: [] },
     /** Especificaciones con claves canónicas (slug) alineadas a subcategoría.specifications.name */
     technicalSpecifications: {
         type: mongoose.Schema.Types.Mixed,
@@ -420,6 +428,7 @@ productSchema.set('strict', false);
 
 // Creamos un índice para el slug para búsquedas más rápidas
 productSchema.index({ slug: 1 }, { unique: true, sparse: true });
+productSchema.index({ previousSlugs: 1 }, { sparse: true });
 /** Home / listados por cat+sub con stock */
 productSchema.index({ category: 1, subcategory: 1, stock: 1, createdAt: -1 });
 productSchema.index({ category: 1, stock: 1, createdAt: -1 });

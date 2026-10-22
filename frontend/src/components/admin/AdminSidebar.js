@@ -32,7 +32,8 @@ import {
   FaMagic,
   FaCalendarAlt,
   FaTrademark,
-  FaEnvelope
+  FaEnvelope,
+  FaSearch
 } from 'react-icons/fa';
 import ROLE from '../../common/role';
 
@@ -116,6 +117,18 @@ export function getAdminNavGroups() {
       label: 'Visitantes',
       icon: FaUsers,
       path: 'visitantes'
+    },
+    {
+      id: 'search-console',
+      label: 'Google Search',
+      icon: FaSearch,
+      path: 'busqueda-google'
+    },
+    {
+      id: 'seo-diario',
+      label: 'SEO diario',
+      icon: FaMagic,
+      path: 'seo-diario'
     },
     {
       id: 'newsletter',

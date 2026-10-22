@@ -16,6 +16,7 @@ import usePreloadedCategories from '../hooks/usePreloadedCategories';
 import { getLastQuery, rememberProduct } from '../helpers/searchMemory';
 import { flushEvents, trackProduct } from '../helpers/behaviorTracker';
 import { ProductEmailOffer } from '../components/EmailCaptureModal';
+import { productSearchSnippet } from '../utils/searchSnippet';
 
 
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
@@ -132,8 +133,9 @@ useEffect(() => {
   const param = String(params?.id || '');
   const loadedId = productData?._id ? String(productData._id) : '';
   const loadedSlug = productData?.slug ? String(productData.slug) : '';
+  const aliases = Array.isArray(productData?.previousSlugs) ? productData.previousSlugs.map(String) : [];
   const productMatchesUrl = Boolean(
-    productData && param && (param === loadedSlug || param === loadedId)
+    productData && param && (param === loadedSlug || param === loadedId || aliases.includes(param))
   );
 
   if (productMatchesUrl) {
@@ -169,7 +171,8 @@ useEffect(() => {
     const param = String(params?.id || '');
     const loadedId = productData?._id ? String(productData._id) : '';
     const loadedSlug = productData?.slug ? String(productData.slug) : '';
-    if (loadedId && loadedSlug && param === loadedId && param !== loadedSlug) {
+    const oldSlugs = Array.isArray(productData?.previousSlugs) ? productData.previousSlugs.map(String) : [];
+    if (loadedId && loadedSlug && param !== loadedSlug && (param === loadedId || oldSlugs.includes(param))) {
       navigate(`/producto/${loadedSlug}`, { replace: true });
     }
   }, [productData, params?.id, navigate]);
@@ -307,16 +310,23 @@ ${productUrl}
     .map((img) => (typeof img === 'string' && img.startsWith('http') ? img : getAbsoluteImageUrl(img)))
     .filter(Boolean);
   const hasValidOffer = Boolean(data.productName && Number(data.sellingPrice) > 0 && schemaImages.length);
+  const searchSnippet = productSearchSnippet({
+    productName: data.productName,
+    sellingPrice: data.sellingPrice,
+    stock: data.stock
+  });
+  const pageTitle = (isInStock && String(data.seoTitle || '').trim()) || searchSnippet.title;
+  const metaDescription = (isInStock && String(data.seoDescription || '').trim()) || searchSnippet.description;
 
   return (
     <>
       <Helmet>
-        <title>{data.productName ? `${data.productName} | Zenn` : 'Producto | Zenn'}</title>
-        <meta name="description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        <title>{data.productName ? pageTitle : 'Producto | Zenn'}</title>
+        <meta name="description" content={metaDescription} />
         
         {/* Open Graph Meta Tags - Para WhatsApp y redes sociales */}
         <meta property="og:title" content={data.productName || 'Producto'} />
-        <meta property="og:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        <meta property="og:description" content={metaDescription} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Zenn" />
@@ -339,7 +349,7 @@ ${productUrl}
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={data.productName || 'Producto'} />
-        <meta name="twitter:description" content={data.description?.substring(0, 160) || 'Descubre este producto en Zenn'} />
+        <meta name="twitter:description" content={metaDescription} />
         {data.productImage && data.productImage[0] && (
           <meta name="twitter:image" content={getAbsoluteImageUrl(data.productImage[0])} />
         )}
@@ -411,7 +421,7 @@ ${productUrl}
             {/** Sección de Imagen Principal y Zoom **/}
             <div className="relative w-full max-w-full lg:max-w-[600px]">
               <div
-                className="relative w-full max-w-full bg-gray-50 flex justify-center items-center border border-gray-200 overflow-hidden min-h-[220px] max-h-[70vh]"
+                className="relative w-full max-w-full bg-gray-50 flex justify-center items-center border border-gray-200 overflow-hidden aspect-square"
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
@@ -419,7 +429,7 @@ ${productUrl}
                   <img
                     src={activeImage}
                     alt={data.productName}
-                    className="object-contain w-full h-auto max-h-[70vh]"
+                    className="object-contain w-full h-full"
                     width={800}
                     height={800}
                     fetchPriority="high"
@@ -519,7 +529,13 @@ ${productUrl}
                     <h2 className="mt-2 text-2xl md:text-3xl font-bold text-gray-800">
                       {data?.productName}
                     </h2>
-                    <p className="capitalize text-sm md:text-lg text-gray-500">{data?.subcategory}</p>
+                    <p className="text-sm md:text-lg text-gray-500">
+                      {String(data?.subcategory || '').replace(/__[\d_]+$/g, '').replace(/_/g, ' ')}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-600">
+                      {searchSnippet.priceLabel ? `${searchSnippet.priceLabel} en guaraníes. ` : 'Precio en guaraníes. '}
+                      {isInStock ? 'Hay stock en Zenn y envío a todo Paraguay.' : 'Consultá disponibilidad. Envío a todo Paraguay.'}
+                    </p>
                   </div>
                   
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3 min-w-0">

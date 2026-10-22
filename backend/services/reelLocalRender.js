@@ -3,12 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const opentype = require('opentype.js');
 const sharp = require('sharp');
+const { validatePlan, ALLOWED_HOSTS } = require('./reelScenePlan');
 
 const ROOT = path.resolve(__dirname, '../var/reels-dev');
-const FONT = path.resolve(__dirname, '../assets/fonts/Inter-Regular.ttf');
-const ALLOWED_HOSTS = new Set(['cdn.zenn.com.py', 'firebasestorage.googleapis.com']);
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,16 +18,6 @@ function assertId(id) {
   if (!ID_RE.test(String(id || ''))) {
     throw Object.assign(new Error('Identificador de trabajo inválido'), { statusCode: 400 });
   }
-}
-
-function sidecarNames(id) {
-  return [
-    `${id}.image.jpg`,
-    `${id}.frame.jpg`,
-    `${id}.name.txt`,
-    `${id}.price.txt`,
-    `${id}.mp4`
-  ];
 }
 
 function safeJoin(name) {
@@ -54,10 +42,7 @@ async function downloadImage(url) {
     redirect: 'manual',
     signal: AbortSignal.timeout(15000)
   });
-  if (response.status >= 300 && response.status < 400) {
-    throw Object.assign(new Error('La foto del producto no se pudo leer'), { statusCode: 400 });
-  }
-  if (!response.ok) {
+  if (response.status >= 300 && response.status < 400 || !response.ok) {
     throw Object.assign(new Error('La foto del producto no se pudo leer'), { statusCode: 400 });
   }
   const declared = Number(response.headers.get('content-length') || 0);
@@ -71,15 +56,15 @@ async function downloadImage(url) {
   return body;
 }
 
-function runFfmpeg(args) {
+function runFfmpeg(args, timeoutMs) {
   return new Promise((resolve, reject) => {
     const bin = process.env.FFMPEG_PATH || 'ffmpeg';
     const child = spawn(bin, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(Object.assign(new Error('El render superó 60 segundos'), { statusCode: 500 }));
-    }, 60000);
+      reject(Object.assign(new Error('El render superó el tiempo límite'), { statusCode: 500 }));
+    }, timeoutMs || 120000);
     child.stderr.on('data', (chunk) => {
       stderr = `${stderr}${chunk.toString()}`.slice(-1500);
     });
@@ -95,66 +80,131 @@ function runFfmpeg(args) {
   });
 }
 
-function fitLine(font, text, maxWidth, startSize) {
-  let size = startSize;
-  let value = text;
-  while (size > 28 && font.getAdvanceWidth(value, size) > maxWidth) size -= 2;
-  while (font.getAdvanceWidth(value, size) > maxWidth && value.length > 8) {
-    value = `${value.slice(0, -2).trim()}…`;
+function escapeXml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/ /g, '&#160;');
+}
+
+function wrapLines(text, max) {
+  const words = cleanWords(text);
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > max && current) {
+      lines.push(current);
+      current = word;
+    } else current = next;
   }
-  return { value, size };
+  if (current) lines.push(current);
+  return lines.slice(0, 2);
 }
 
-function lineSvg(font, text, fontSize, color, baseline) {
-  const width = font.getAdvanceWidth(text, fontSize);
-  const x = Math.max(24, (1080 - width) / 2);
-  const glyph = font.getPath(text, x, baseline, fontSize);
-  glyph.fill = color;
-  return Buffer.from(`<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">${glyph.toSVG(2)}</svg>`);
+function cleanWords(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
 }
 
-async function renderStill({ id, productName, priceLabel, imageUrl }) {
-  assertId(id);
-  ensureRoot();
-  const imagePath = safeJoin(`${id}.image.jpg`);
-  const framePath = safeJoin(`${id}.frame.jpg`);
-  const namePath = safeJoin(`${id}.name.txt`);
-  const pricePath = safeJoin(`${id}.price.txt`);
-  const videoPath = safeJoin(`${id}.mp4`);
-  const name = String(productName || '').replace(/\s+/g, ' ').trim().slice(0, 80);
-  const price = String(priceLabel || '').replace(/\s+/g, ' ').trim().slice(0, 40);
-  const jpeg = await sharp(await downloadImage(imageUrl)).rotate().jpeg({ quality: 90 }).toBuffer();
-  await fs.promises.writeFile(imagePath, jpeg);
-  await fs.promises.writeFile(namePath, name);
-  await fs.promises.writeFile(pricePath, price);
-  const font = opentype.loadSync(FONT);
-  const title = fitLine(font, name, 1000, 52);
-  const amount = fitLine(font, price, 1000, 46);
-  const photo = await sharp(jpeg).resize(1080, 1500, { fit: 'contain', background: '#0B1220' }).jpeg().toBuffer();
-  const frame = await sharp({
+function textSvg(kicker, overlay) {
+  const lines = wrapLines(overlay, 28);
+  const title = lines.map((line, index) => (
+    `<text x="540" y="${148 + index * 52}" text-anchor="middle" font-size="40" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">${escapeXml(line)}</text>`
+  )).join('');
+  const brand = `<text x="540" y="82" text-anchor="middle" font-size="22" fill="#94A3B8" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">${escapeXml(kicker)}</text>`;
+  return Buffer.from(`<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">${brand}${title}</svg>`);
+}
+
+function motionFilter(type, frames) {
+  const last = Math.max(1, frames - 1);
+  if (type === 'pan_right') {
+    return `zoompan=z=1.16:x='(iw-iw/zoom)*on/${last}':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=30`;
+  }
+  if (type === 'pan_left') {
+    return `zoompan=z=1.16:x='(iw-iw/zoom)*(1-on/${last})':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=30`;
+  }
+  if (type === 'hold') {
+    return `zoompan=z=1.04:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=30`;
+  }
+  return `zoompan=z='min(1.0+on*0.0013,1.16)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${frames}:s=1080x1920:fps=30`;
+}
+
+async function composeCard({ jpeg, overlay, kicker }) {
+  const photo = await sharp(jpeg).resize(1080, 1420, { fit: 'contain', background: '#0B1220' }).jpeg().toBuffer();
+  return sharp({
     create: { width: 1080, height: 1920, channels: 3, background: '#0B1220' }
   }).composite([
-    { input: photo, top: 210, left: 0 },
-    { input: lineSvg(font, title.value, title.size, '#FFFFFF', 130), top: 0, left: 0 },
-    { input: lineSvg(font, amount.value, amount.size, '#7DD3FC', 1800), top: 0, left: 0 }
+    { input: photo, top: 250, left: 0 },
+    { input: textSvg(kicker || 'ZENN', overlay), top: 0, left: 0 }
   ]).jpeg({ quality: 90 }).toBuffer();
-  await fs.promises.writeFile(framePath, frame);
-  await runFfmpeg([
-    '-y',
-    '-loop', '1',
-    '-i', framePath,
-    '-f', 'lavfi',
-    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
-    '-t', '12',
-    '-r', '30',
+}
+
+async function renderPlan(id, plan) {
+  assertId(id);
+  const check = validatePlan(plan);
+  if (!check.ok) {
+    throw Object.assign(new Error('El plan de escenas no es válido'), { statusCode: 400 });
+  }
+  ensureRoot();
+  const cardPaths = [];
+  const clipPaths = [];
+  for (let index = 0; index < plan.scenes.length; index += 1) {
+    const scene = plan.scenes[index];
+    const jpeg = await sharp(await downloadImage(scene.assetRefs[0])).rotate().jpeg({ quality: 90 }).toBuffer();
+    const card = await composeCard({
+      jpeg,
+      overlay: scene.overlayText,
+      kicker: scene.purpose === 'close' ? 'ZENN · ASUNCIÓN' : 'ZENN'
+    });
+    const cardPath = safeJoin(`${id}.s${index}.jpg`);
+    const clipPath = safeJoin(`${id}.c${index}.mp4`);
+    await fs.promises.writeFile(cardPath, card);
+    const frames = Math.round(scene.durationSeconds * plan.render.fps);
+    await runFfmpeg([
+      '-y',
+      '-loop', '1',
+      '-i', cardPath,
+      '-t', String(scene.durationSeconds),
+      '-vf', `scale=1350:2400:force_original_aspect_ratio=increase,crop=1350:2400,${motionFilter(scene.motion.type, frames)}`,
+      '-r', '30',
+      '-an',
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      clipPath
+    ], 45000);
+    cardPaths.push(cardPath);
+    clipPaths.push(clipPath);
+  }
+  const videoPath = safeJoin(`${id}.mp4`);
+  const args = ['-y'];
+  clipPaths.forEach((file) => {
+    args.push('-i', file);
+  });
+  args.push('-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100');
+  const labels = clipPaths.map((_, index) => `[${index}:v]`).join('');
+  args.push(
+    '-filter_complex',
+    `${labels}concat=n=${clipPaths.length}:v=1:a=0[v]`,
+    '-map', '[v]',
+    '-map', `${clipPaths.length}:a`,
+    '-t', String(plan.render.targetDurationSeconds),
     '-c:v', 'libx264',
     '-pix_fmt', 'yuv420p',
     '-c:a', 'aac',
+    '-shortest',
     '-movflags', '+faststart',
     videoPath
-  ]);
+  );
+  await runFfmpeg(args, 120000);
   const stat = await fs.promises.stat(videoPath);
-  return { bytes: stat.size, durationMs: 12000, fileName: `${id}.mp4` };
+  return {
+    bytes: stat.size,
+    durationMs: plan.render.targetDurationSeconds * 1000,
+    fileName: `${id}.mp4`,
+    sceneCount: plan.scenes.length
+  };
 }
 
 function resolveMp4(fileName) {
@@ -166,14 +216,12 @@ function resolveMp4(fileName) {
 
 function filesForJob(id) {
   if (!ID_RE.test(String(id || ''))) return [];
-  return sidecarNames(id).filter((name) => {
-    const full = safeJoin(name);
-    return full && fs.existsSync(full);
-  });
+  ensureRoot();
+  return fs.readdirSync(ROOT).filter((name) => name.startsWith(`${id}.`) && !name.includes('..')).sort();
 }
 
 module.exports = {
-  renderStill,
+  renderPlan,
   resolveMp4,
   filesForJob
 };

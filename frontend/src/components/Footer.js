@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { HOME_SLOT_ROUTES, categoriaProductoHref } from '../config/homeSlotRoutes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp, faInstagram, faFacebook } from '@fortawesome/free-brands-svg-icons';
 import { faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
@@ -27,8 +28,24 @@ const Footer = () => {
                 <span>ventas@zenn.com.py</span>
               </div>
             </div>
-            <p className="font-semibold mt-6 mb-2">Enlaces</p>
+            <p className="font-semibold mt-6 mb-2">En Paraguay</p>
             <div className="space-y-2 text-sm">
+              {[
+                ['Notebooks en Paraguay', HOME_SLOT_ROUTES.notebooks],
+                ['Celulares en Paraguay', HOME_SLOT_ROUTES.celulares],
+                ['Monitores en Paraguay', HOME_SLOT_ROUTES.monitores],
+                ['Teclados en Paraguay', HOME_SLOT_ROUTES.teclados],
+                ['Auriculares en Paraguay', { category: 'perifericos', subcategory: 'auriculares_y_accesorios__30_05' }],
+                ['Adaptadores en Paraguay', { category: 'perifericos', subcategory: 'adaptadores__30_09_01' }]
+              ].map(([label, route]) => (
+                <Link
+                  key={label}
+                  to={categoriaProductoHref(route.category, route.subcategory)}
+                  className="block text-white/90 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {label}
+                </Link>
+              ))}
               <Link to="/nosotros" className="block text-white/90 hover:text-white underline-offset-2 hover:underline">
                 Nosotros
               </Link>
@@ -92,6 +109,9 @@ const Footer = () => {
         <div className="border-t border-white/30 mt-8 pt-6 text-center space-y-3">
           <p className="text-white/80 text-sm">
             Gaudioso Nuñez casi Celsa Speratti, Asunción, Paraguay
+          </p>
+          <p className="text-white/80 text-sm">
+            Envío a Asunción y todo Paraguay.
           </p>
           <p className="text-white/80">
             ©{new Date().getFullYear()} Zenn. Todos los derechos reservados

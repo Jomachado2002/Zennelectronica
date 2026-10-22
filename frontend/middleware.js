@@ -6,6 +6,7 @@
  */
 
 import { applyHead, planSeo } from './seoHead.mjs';
+import { productSearchSnippet } from './src/utils/searchSnippet.js';
 
 export const config = {
   matcher: [
@@ -61,17 +62,48 @@ async function productHead(slug) {
     const data = body && body.data;
     const name = data && String(data.productName || '').trim();
     if (!name) return null;
-    const description = String(data.description || 'Descubre este producto en Zenn')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 160);
-    const value = { title: `${name} | Zenn`, description };
+    if (body.redirectSlug && body.redirectSlug !== slug) {
+      return { redirect: body.redirectSlug };
+    }
+    const snippet = productSearchSnippet(data);
+    const available = data.stock == null || Number(data.stock) > 0;
+    const reviewed = available ? String(data.seoDescription || '').replace(/\s+/g, ' ').trim() : '';
+    const seoTitle = available ? String(data.seoTitle || '').replace(/\s+/g, ' ').trim() : '';
+    const value = {
+      title: seoTitle || snippet.title,
+      description: reviewed.length >= 40 ? reviewed.slice(0, 160) : snippet.description
+    };
     productCache.set(slug, { exp: Date.now() + CACHE_MS, value });
     if (productCache.size > 400) {
       const oldest = productCache.keys().next().value;
       productCache.delete(oldest);
     }
     return value;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function categoryHead(category, subcategory) {
+  if (!category) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 700);
+  try {
+    const query = new URLSearchParams({ category, subcategory: subcategory || '' });
+    const res = await fetch(`${BACKEND}/api/seo/categoria?${query}`, {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    const data = body && body.data;
+    if (!data || !data.seoTitle) return null;
+    return {
+      title: String(data.seoTitle),
+      description: String(data.intro || '').slice(0, 160)
+    };
   } catch {
     return null;
   } finally {
@@ -96,8 +128,20 @@ export default async function middleware(request) {
     const plan = planSeo(url.pathname, url.search);
     if (!plan) return;
 
+    if (plan.kind === 'category') {
+      const target = new URL(plan.canonical);
+      const head = await categoryHead(target.searchParams.get('category') || '', target.searchParams.get('subcategory') || '');
+      if (head) {
+        plan.title = head.title;
+        plan.description = head.description;
+      }
+    }
+
     if (plan.kind === 'product') {
       const head = await productHead(plan.slug);
+      if (head?.redirect) {
+        return Response.redirect(`https://www.zenn.com.py/producto/${head.redirect}`, 301);
+      }
       if (head) {
         plan.title = head.title;
         plan.description = head.description;
