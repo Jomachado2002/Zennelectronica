@@ -176,7 +176,7 @@ async function putVideo(uploadUrl, buffer) {
 
 async function publishToTikTok({ urls, caption }) {
   if (String(process.env.TIKTOK_PUBLISH_ENABLED || '').trim() !== '1') {
-    const error = new Error('TikTok está pausado hasta que aprueben la app');
+    const error = new Error('TikTok está pausado (TIKTOK_PUBLISH_ENABLED)');
     error.code = 'SKIP';
     throw error;
   }
