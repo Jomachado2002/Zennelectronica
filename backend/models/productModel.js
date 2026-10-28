@@ -407,7 +407,18 @@ deliveryCost: { type: Number, default: 0 },      // Costo de envío/transportado
 profitMargin: { type: Number, default: 30 },     // Margen de ganancia deseado como porcentaje
 profitAmount: { type: Number, default: 0 },      // Utilidad calculada en monto
 sellingPrice: { type: Number, default: 0 },      // Precio de venta final
-lastUpdatedFinance: { type: Date },              // Fecha de última actualización financiera
+    lastUpdatedFinance: { type: Date },              // Fecha de última actualización financiera
+
+    shippingWeightKg: { type: Number, default: null },
+    shippingWeightSource: { type: String, default: '' },
+    tnCategoryIds: { type: [String], default: undefined },
+    tiendaNaranja: {
+        entityId: { type: String, default: '' },
+        sku: { type: String, default: '' },
+        environment: { type: String, default: '' },
+        lastSyncAt: { type: Date, default: null },
+        lastError: { type: String, default: '' }
+    },
 
     // Campos para presupuestos y seguimiento
     budgets: [{

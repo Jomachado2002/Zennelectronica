@@ -351,9 +351,24 @@ async function updatePurchasePaymentController(req, res) {
         }
 
         const { purchaseId } = req.params;
-        const { paymentStatus, paymentMethod, notes } = req.body;
+        const { paymentStatus, paymentMethod, notes, purchaseDate } = req.body;
+
+        const purchase = await PurchaseModel.findById(purchaseId);
+        if (!purchase) {
+            throw new Error("Compra no encontrada");
+        }
 
         const updateData = {};
+        if (purchaseDate) {
+            if (purchase.paymentStatus === 'pagado') {
+                return res.status(403).json({
+                    message: "No se puede modificar la fecha de una compra pagada",
+                    error: true,
+                    success: false
+                });
+            }
+            updateData.purchaseDate = parseLocalDate(purchaseDate);
+        }
         if (paymentStatus) updateData.paymentStatus = paymentStatus;
         if (paymentMethod) updateData.paymentMethod = paymentMethod;
         if (notes !== undefined) updateData.notes = notes;
@@ -653,10 +668,10 @@ async function updatePurchaseController(req, res) {
             ...(supplierInfo && { supplierInfo }),
             ...(branchId && { branchId }),
             ...(items && { items }),
-            ...(purchaseDate && { purchaseDate: new Date(purchaseDate) }),
-            ...(dueDate && { dueDate: new Date(dueDate) }),
+            ...(purchaseDate && { purchaseDate: parseLocalDate(purchaseDate) }),
+            ...(dueDate && { dueDate: parseLocalDate(dueDate) }),
             ...(invoiceNumber && { invoiceNumber }),
-            ...(invoiceDate && { invoiceDate: new Date(invoiceDate) }),
+            ...(invoiceDate && { invoiceDate: parseLocalDate(invoiceDate) }),
             ...(paymentMethod && { paymentMethod }),
             ...(paymentStatus && { paymentStatus }),
             ...(notes !== undefined && { notes }),

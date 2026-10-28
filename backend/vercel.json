@@ -19,7 +19,8 @@
     ],
     "crons": [
         { "path": "/api/creativos/calendario/tick", "schedule": "*/15 * * * *" },
-        { "path": "/api/analitica/cron", "schedule": "0 * * * *" }
+        { "path": "/api/analitica/cron", "schedule": "0 * * * *" },
+        { "path": "/api/tienda-naranja/tick", "schedule": "0 9 * * *" }
     ],
     "routes" : [
         {

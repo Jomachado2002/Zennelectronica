@@ -5,6 +5,16 @@ const uploadProductPermission = require('../../helpers/permission');
 const { hasAdminAccessFromRequest } = uploadProductPermission;
 const { sendPurchaseConfirmationEmail } = require('../../services/brevoService');
 
+function parseLocalDate(value) {
+    if (!value) return new Date();
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day, 12, 0, 0);
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 /**
  * Crear una nueva venta
  */
@@ -284,9 +294,28 @@ async function updateSalePaymentController(req, res) {
         }
 
         const { saleId } = req.params;
-        const { paymentStatus, paymentMethod, notes } = req.body;
+        const { paymentStatus, paymentMethod, notes, saleDate } = req.body;
+
+        const sale = await SaleModel.findById(saleId);
+        if (!sale) {
+            return res.status(404).json({
+                message: "Venta no encontrada",
+                error: true,
+                success: false
+            });
+        }
 
         const updateData = {};
+        if (saleDate) {
+            if (sale.paymentStatus === 'pagado') {
+                return res.status(403).json({
+                    message: "No se puede modificar la fecha de una venta pagada",
+                    error: true,
+                    success: false
+                });
+            }
+            updateData.saleDate = parseLocalDate(saleDate);
+        }
         if (paymentStatus) updateData.paymentStatus = paymentStatus;
         if (paymentMethod) updateData.paymentMethod = paymentMethod;
         if (notes !== undefined) updateData.notes = notes;

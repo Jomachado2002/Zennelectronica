@@ -192,6 +192,12 @@ const startServer = async () => {
     } catch (e) {
       console.warn('[seo diario] No se pudo inicializar:', e.message || e);
     }
+    try {
+      const { startTnScheduleIfEnabled } = require('./services/tiendaNaranjaSyncService');
+      startTnScheduleIfEnabled();
+    } catch (e) {
+      console.warn('[tn sync] No se pudo inicializar:', e.message || e);
+    }
     
     // Solo iniciar el servidor explícitamente en desarrollo
     if (process.env.NODE_ENV !== 'production') {

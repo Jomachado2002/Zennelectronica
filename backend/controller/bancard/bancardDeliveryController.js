@@ -145,24 +145,60 @@ const updateDeliveryStatusController = async (req, res) => {
                     throw new Error('Cliente sin email - venta no creada');
                 }
 
-                // Preparar items para la venta
-                const saleItems = updatedTransaction.items.map(item => ({
-                    description: item.description || item.name,
-                    quantity: item.quantity || 1,
-                    unitPrice: item.unit_price || 0,
-                    currency: 'PYG',
-                    exchangeRate: 1,
-                    unitPricePYG: item.unit_price || 0,
-                    taxType: 'iva_10',
-                    taxRate: 10,
-                    subtotal: (item.quantity || 1) * (item.unit_price || 0),
-                    subtotalWithTax: (item.quantity || 1) * (item.unit_price || 0) * 1.1
-                }));
+                // Comisión Bancard: la venta entra con 5% menos que el monto cobrado.
+                const BANCARD_NET_RATE = 0.95;
+                const netOfBancard = (value) => Math.round((Number(value) || 0) * BANCARD_NET_RATE);
 
-                // Calcular totales
+                const rawItems = Array.isArray(updatedTransaction.items) ? updatedTransaction.items : [];
+                let saleItems = rawItems.map((item) => {
+                    const quantity = Number(item.quantity) || 1;
+                    const grossUnit = Number(item.unit_price || item.unitPrice || 0)
+                        || (quantity ? Number(item.total || 0) / quantity : 0);
+                    const unitPrice = netOfBancard(grossUnit);
+                    const lineSubtotal = unitPrice * quantity;
+                    const lineTax = Math.round(lineSubtotal * 0.10);
+                    return {
+                        description: item.description || item.name || 'Producto',
+                        quantity,
+                        unitPrice,
+                        currency: 'PYG',
+                        exchangeRate: 1,
+                        unitPricePYG: unitPrice,
+                        taxType: 'iva_10',
+                        taxRate: 10,
+                        taxAmount: lineTax,
+                        priceIncludesTax: false,
+                        subtotal: lineSubtotal,
+                        subtotalWithTax: lineSubtotal + lineTax
+                    };
+                }).filter((item) => item.unitPrice > 0);
+
+                if (saleItems.length === 0 && Number(updatedTransaction.amount) > 0) {
+                    const unitPrice = netOfBancard(updatedTransaction.amount);
+                    const lineTax = Math.round(unitPrice * 0.10);
+                    saleItems = [{
+                        description: updatedTransaction.description || 'Pago Bancard',
+                        quantity: 1,
+                        unitPrice,
+                        currency: 'PYG',
+                        exchangeRate: 1,
+                        unitPricePYG: unitPrice,
+                        taxType: 'iva_10',
+                        taxRate: 10,
+                        taxAmount: lineTax,
+                        priceIncludesTax: false,
+                        subtotal: unitPrice,
+                        subtotalWithTax: unitPrice + lineTax
+                    }];
+                }
+
                 const subtotal = saleItems.reduce((sum, item) => sum + item.subtotal, 0);
-                const taxAmount = subtotal * 0.10; // IVA 10%
+                const taxAmount = saleItems.reduce((sum, item) => sum + item.taxAmount, 0);
                 const totalAmount = subtotal + taxAmount;
+                const saleDate = updatedTransaction.confirmation_date
+                    || updatedTransaction.transaction_date
+                    || updatedTransaction.createdAt
+                    || new Date();
 
                 // Crear la venta
                 const newSale = new SaleModel({
@@ -180,8 +216,8 @@ const updateDeliveryStatusController = async (req, res) => {
                     totalAmountPYG: totalAmount,
                     paymentMethod: 'tarjeta', // Bancard
                     paymentStatus: 'pagado', // Ya está pagado
-                    saleDate: updatedTransaction.actual_delivery_date || new Date(),
-                    notes: `Venta creada automáticamente al marcar como entregado. Pago procesado con Bancard. Transaction ID: ${updatedTransaction.shop_process_id}. Cliente: ${customerEmail}`,
+                    saleDate,
+                    notes: `Venta creada al marcar como entregado. Pago Bancard ${updatedTransaction.shop_process_id}. Comisión Bancard 5% descontada. Fecha de la transacción Bancard: ${saleDate.toISOString()}. Cliente: ${customerEmail}`,
                     createdBy: req.userId, // Usuario admin que marcó como entregado
                     isActive: true,
                     bancardTransactionId: updatedTransaction._id // Referencia a la transacción

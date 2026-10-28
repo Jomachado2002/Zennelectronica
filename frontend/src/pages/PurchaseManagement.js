@@ -75,8 +75,22 @@ const PurchaseManagement = () => {
   const [quickEditData, setQuickEditData] = useState({
     paymentStatus: '',
     paymentMethod: '',
-    notes: ''
+    notes: '',
+    purchaseDate: ''
   });
+  const [dateEditPurchase, setDateEditPurchase] = useState(null);
+  const [dateEditValue, setDateEditValue] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
+
+  const toInputDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // ✅ Estados para edición completa
   const [showFullEditModal, setShowFullEditModal] = useState(false);
@@ -456,7 +470,8 @@ const PurchaseManagement = () => {
     setQuickEditData({
       paymentStatus: purchase.paymentStatus || 'pendiente',
       paymentMethod: purchase.paymentMethod || 'transferencia',
-      notes: purchase.notes || ''
+      notes: purchase.notes || '',
+      purchaseDate: toInputDate(purchase.purchaseDate)
     });
     setShowQuickEditModal(true);
   };
@@ -495,17 +510,69 @@ const PurchaseManagement = () => {
     }
   };
 
+  const openDateEditor = (purchase) => {
+    if (purchase.paymentStatus === 'pagado') {
+      toast.info('La fecha solo se puede cambiar antes de marcar la compra como pagada.');
+      return;
+    }
+    setDateEditPurchase(purchase);
+    setDateEditValue(toInputDate(purchase.purchaseDate));
+  };
+
+  const savePurchaseDate = async () => {
+    if (!dateEditPurchase || !dateEditValue) {
+      toast.error('Elegí una fecha');
+      return;
+    }
+
+    setSavingDate(true);
+    try {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/compras/${dateEditPurchase._id}/pago`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ purchaseDate: dateEditValue })
+      });
+      const result = await response.json();
+      if (result.success) {
+        applyPurchasesUpdate(prev => prev.map(purchase =>
+          purchase._id === dateEditPurchase._id
+            ? { ...purchase, purchaseDate: result.data?.purchaseDate || dateEditValue }
+            : purchase
+        ));
+        toast.success('Fecha actualizada');
+        setDateEditPurchase(null);
+      } else {
+        toast.error(result.message || 'No se pudo actualizar la fecha');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingDate(false);
+    }
+  };
+
   const handleQuickUpdate = async () => {
     if (!editingPurchase) return;
 
     const previous = {
       paymentStatus: editingPurchase.paymentStatus,
       paymentMethod: editingPurchase.paymentMethod,
-      notes: editingPurchase.notes
+      notes: editingPurchase.notes,
+      purchaseDate: editingPurchase.purchaseDate
     };
 
+    const payload = {
+      paymentStatus: quickEditData.paymentStatus,
+      paymentMethod: quickEditData.paymentMethod,
+      notes: quickEditData.notes
+    };
+    if (editingPurchase.paymentStatus !== 'pagado' && quickEditData.purchaseDate) {
+      payload.purchaseDate = quickEditData.purchaseDate;
+    }
+
     applyPurchasesUpdate(prev => prev.map(purchase =>
-      purchase._id === editingPurchase._id ? { ...purchase, ...quickEditData } : purchase
+      purchase._id === editingPurchase._id ? { ...purchase, ...payload } : purchase
     ));
     setShowQuickEditModal(false);
 
@@ -516,7 +583,7 @@ const PurchaseManagement = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(quickEditData)
+        body: JSON.stringify(payload)
       });
 
       const result = await response.json();
@@ -1243,6 +1310,15 @@ const PurchaseManagement = () => {
                         >
                           <FaEdit className="w-4 h-4" />
                         </button>
+                        {purchase.paymentStatus !== 'pagado' && (
+                          <button
+                            onClick={() => openDateEditor(purchase)}
+                            className="text-amber-600 hover:text-amber-900"
+                            title="Editar fecha"
+                          >
+                            <FaCalendarAlt className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           className="text-green-600 hover:text-green-900"
                           title="Edición Rápida"
@@ -1331,10 +1407,22 @@ const PurchaseManagement = () => {
                   <FaEye className="w-3 h-3 mr-1" />
                   Ver
                 </button>
-                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                <button
+                  onClick={() => openFullEditModal(purchase)}
+                  className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
                   <FaEdit className="w-3 h-3 mr-1" />
                   Editar
                 </button>
+                {purchase.paymentStatus !== 'pagado' && (
+                  <button
+                    onClick={() => openDateEditor(purchase)}
+                    className="flex-1 flex items-center justify-center px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm"
+                  >
+                    <FaCalendarAlt className="w-3 h-3 mr-1" />
+                    Fecha
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -2114,6 +2202,20 @@ const PurchaseManagement = () => {
                 )}
               </div>
 
+              {editingPurchase.paymentStatus !== 'pagado' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha de compra
+                  </label>
+                  <input
+                    type="date"
+                    value={quickEditData.purchaseDate || ''}
+                    onChange={(e) => setQuickEditData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+
               {/* Notas */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2143,6 +2245,55 @@ const PurchaseManagement = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Guardar Cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dateEditPurchase && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="font-bold text-lg text-gray-800">
+                Editar fecha — #{dateEditPurchase.invoiceNumber || 'Compra'}
+              </h2>
+              <button
+                className="text-2xl text-gray-600 hover:text-black"
+                onClick={() => setDateEditPurchase(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de la compra
+              </label>
+              <input
+                type="date"
+                value={dateEditValue}
+                onChange={(e) => setDateEditValue(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Se puede cambiar mientras la compra no esté pagada.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setDateEditPurchase(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={savePurchaseDate}
+                disabled={savingDate}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-60"
+              >
+                {savingDate ? 'Guardando...' : 'Guardar fecha'}
               </button>
             </div>
           </div>

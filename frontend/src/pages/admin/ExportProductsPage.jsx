@@ -32,6 +32,7 @@ const ExportProductsPage = () => {
     // Estados para exportación
     const [isExporting, setIsExporting] = useState(false);
     const [exportProgress, setExportProgress] = useState(0);
+    const [tnBusy, setTnBusy] = useState(false);
 
     // Cargar categorías
     useEffect(() => {
@@ -169,6 +170,32 @@ const ExportProductsPage = () => {
         }
     };
 
+    const downloadTiendaNaranja = async () => {
+        setTnBusy(true);
+        try {
+            const response = await axiosInstance.get('/api/admin/tienda-naranja/excel', {
+                responseType: 'blob',
+                timeout: 180000
+            });
+            const header = response.headers['content-disposition'] || '';
+            const match = header.match(/filename="([^"]+)"/);
+            const filename = match ? match[1] : `zenn-tienda-naranja.xls`;
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Excel de Tienda Naranja listo');
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'No se pudo armar el Excel de Tienda Naranja');
+        } finally {
+            setTnBusy(false);
+        }
+    };
+
     // Obtener subcategorías de la categoría seleccionada
     const getSubcategories = () => {
         const category = categories.find(cat => cat.value === selectedCategory);
@@ -196,6 +223,25 @@ const ExportProductsPage = () => {
                     <p className="mt-2 text-gray-600">
                         Exporta información detallada de productos con stock > 0 en Excel junto con sus imágenes organizadas. Las descripciones incluyen automáticamente el mensaje de contacto para reventa.
                     </p>
+                </div>
+
+                <div className="bg-white shadow rounded-lg p-6 mb-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-2 flex items-center gap-2">
+                        <FaFileExcel className="text-orange-500" />
+                        Excel diario · Tienda Naranja
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-4 max-w-3xl">
+                        Arma la planilla que ellos leen: SKU ZEEL, precio, stock, fotos JPG y la categoría que ya usamos. Bajala y mandala. No hace falta llenarla a mano.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={downloadTiendaNaranja}
+                        disabled={tnBusy}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50"
+                    >
+                        {tnBusy ? <FaSpinner className="animate-spin" /> : <FaDownload />}
+                        {tnBusy ? 'Armando el Excel…' : 'Bajar Excel de Tienda Naranja'}
+                    </button>
                 </div>
 
                 {/* Filtros */}

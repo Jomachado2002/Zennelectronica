@@ -56,6 +56,19 @@ const SalesManagement = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' o 'card'
   const [selectedSales, setSelectedSales] = useState([]);
+  const [dateEditSale, setDateEditSale] = useState(null);
+  const [dateEditValue, setDateEditValue] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
+
+  const toInputDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
 
   // Estadísticas
@@ -432,6 +445,46 @@ const SalesManagement = () => {
         sale._id === saleId ? { ...sale, paymentStatus: previousStatus } : sale
       ));
       toast.error("Error de conexión");
+    }
+  };
+
+  const openDateEditor = (sale) => {
+    if (sale.paymentStatus === 'pagado') {
+      toast.info('La fecha solo se puede cambiar antes de marcar la venta como pagada.');
+      return;
+    }
+    setDateEditSale(sale);
+    setDateEditValue(toInputDate(sale.saleDate));
+  };
+
+  const saveSaleDate = async () => {
+    if (!dateEditSale || !dateEditValue) {
+      toast.error('Elegí una fecha');
+      return;
+    }
+
+    setSavingDate(true);
+    try {
+      const response = await fetch(`${SummaryApi.baseURL}/api/finanzas/ventas/${dateEditSale._id}/pago`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ saleDate: dateEditValue })
+      });
+      const result = await response.json();
+      if (result.success) {
+        applySalesUpdate(prev => prev.map(sale =>
+          sale._id === dateEditSale._id ? { ...sale, saleDate: result.data?.saleDate || dateEditValue } : sale
+        ));
+        toast.success('Fecha actualizada');
+        setDateEditSale(null);
+      } else {
+        toast.error(result.message || 'No se pudo actualizar la fecha');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingDate(false);
     }
   };
 
@@ -932,12 +985,15 @@ const SalesManagement = () => {
                         >
                           <FaEye className="w-4 h-4" />
                         </button>
-                        <button
-                          className="text-green-600 hover:text-green-900"
-                          title="Editar"
-                        >
-                          <FaEdit className="w-4 h-4" />
-                        </button>
+                        {sale.paymentStatus !== 'pagado' && (
+                          <button
+                            onClick={() => openDateEditor(sale)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Editar fecha"
+                          >
+                            <FaEdit className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteSale(sale._id)}
                           className="text-red-600 hover:text-red-900"
@@ -1019,10 +1075,15 @@ const SalesManagement = () => {
                   <FaEye className="w-3 h-3 mr-1" />
                   Ver
                 </button>
-                <button className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-                  <FaEdit className="w-3 h-3 mr-1" />
-                  Editar
-                </button>
+                {sale.paymentStatus !== 'pagado' && (
+                  <button
+                    onClick={() => openDateEditor(sale)}
+                    className="flex-1 flex items-center justify-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                  >
+                    <FaEdit className="w-3 h-3 mr-1" />
+                    Fecha
+                  </button>
+                )}
                 <button 
                   onClick={() => deleteSale(sale._id)}
                   className="flex-1 flex items-center justify-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
@@ -1050,6 +1111,55 @@ const SalesManagement = () => {
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-2 text-sm text-gray-500">Cargando ventas...</p>
+        </div>
+      )}
+
+      {dateEditSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="font-bold text-lg text-gray-800">
+                Editar fecha — #{dateEditSale.invoiceNumber || 'Venta'}
+              </h2>
+              <button
+                className="text-2xl text-gray-600 hover:text-black"
+                onClick={() => setDateEditSale(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de la venta
+              </label>
+              <input
+                type="date"
+                value={dateEditValue}
+                onChange={(e) => setDateEditValue(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Se puede cambiar mientras la venta no esté pagada.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setDateEditSale(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveSaleDate}
+                disabled={savingDate}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60"
+              >
+                {savingDate ? 'Guardando...' : 'Guardar fecha'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

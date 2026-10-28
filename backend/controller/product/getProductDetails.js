@@ -1,5 +1,6 @@
 const productModel = require("../../models/productModel")
 const { attachBrandLogo } = require("../../services/brandLogoService")
+const { hideShippingWeight } = require("../../services/productWeightService")
 const { isMongoObjectId } = require("../../helpers/productStructuredData")
 
 const getProductDetails = async(req,res)=>{
@@ -36,7 +37,7 @@ const getProductDetails = async(req,res)=>{
         }
 
         res.json({
-            data : await attachBrandLogo(product),
+            data : hideShippingWeight(await attachBrandLogo(product)),
             message : "Ok",
             success : true,
             error : false

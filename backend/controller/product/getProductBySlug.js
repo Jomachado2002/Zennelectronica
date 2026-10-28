@@ -1,6 +1,7 @@
 // backend/controller/product/getProductBySlug.js
 const productModel = require("../../models/productModel");
 const { attachBrandLogo } = require("../../services/brandLogoService");
+const { hideShippingWeight } = require("../../services/productWeightService");
 
 const getProductBySlug = async (req, res) => {
     try {
@@ -22,7 +23,7 @@ const getProductBySlug = async (req, res) => {
         }
 
         res.json({
-            data: await attachBrandLogo(product),
+            data: hideShippingWeight(await attachBrandLogo(product)),
             redirectSlug,
             message: "Ok",
             success: true,

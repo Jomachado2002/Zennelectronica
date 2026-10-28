@@ -31,6 +31,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const { sitemapController } = require('../controller/seo/sitemapController');
     const { productSeoHtmlController } = require('../controller/seo/productSeoHtmlController');
     const { estadoController: searchConsoleEstado, informeController: searchConsoleInforme } = require('../controller/seo/searchConsoleController');
+    const { estado: tiendaNaranjaEstado, probar: tiendaNaranjaProbar, revisarProducto: tiendaNaranjaRevisar, catalogoExcel: tiendaNaranjaExcel, tick: tiendaNaranjaTick, pesos: tiendaNaranjaPesos } = require('../controller/product/tiendaNaranjaController');
     const searchProduct = require('../controller/product/searchProduct');
     const advancedSearchProduct = require('../controller/product/advancedSearchProduct');
     const filterProductController = require('../controller/product/filterProduct');
@@ -1028,6 +1029,27 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/seo/categoria", categorySeoController);
     router.get("/admin/search-console/estado", adminAuth, searchConsoleEstado);
     router.get("/admin/search-console/informe", adminAuth, searchConsoleInforme);
+    router.get("/admin/tienda-naranja/estado", adminAuth, tiendaNaranjaEstado);
+    router.post("/admin/tienda-naranja/probar", adminAuth, tiendaNaranjaProbar);
+    router.get("/admin/tienda-naranja/producto/:id", adminAuth, tiendaNaranjaRevisar);
+    router.get("/admin/tienda-naranja/excel", adminAuth, tiendaNaranjaExcel);
+    router.post("/admin/tienda-naranja/pesos", adminAuth, tiendaNaranjaPesos);
+    router.get("/tienda-naranja/tick", async (req, res) => {
+      const secret = process.env.CRON_SECRET || process.env.TN_EXCEL_TOKEN || '';
+      const header = String(req.headers.authorization || '');
+      if (!secret || header !== `Bearer ${secret}`) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+      }
+      return tiendaNaranjaTick(req, res);
+    });
+    router.get("/tienda-naranja/catalogo.xls", async (req, res) => {
+      const secret = process.env.TN_EXCEL_TOKEN || process.env.CRON_SECRET || '';
+      const token = String(req.query.token || req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      if (!secret || token !== secret) {
+        return res.status(401).json({ success: false, message: 'No autorizado' });
+      }
+      return tiendaNaranjaExcel(req, res);
+    });
     const { listSeoDailyController, runSeoDailyController } = require('../controller/seo/seoDailyController');
     router.get("/admin/seo-diario", adminAuth, listSeoDailyController);
     router.post("/admin/seo-diario/correr", adminAuth, (req, res, next) => {
