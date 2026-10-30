@@ -114,6 +114,27 @@ async function errorFromAxios(err, fallback) {
 }
 
 const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
+const NARANJA_COPY = 'Reintegro Itaú del 2 al 4. Toda la tienda.';
+const NARANJA_CAPTION = 'Del 2 al 4 de noviembre hay reintegro Itaú en toda la tienda. 15% con tope de Gs. 350.000 con cualquier tarjeta de crédito Itaú. 20% con tope de Gs. 500.000 con Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés. El reintegro lo asume Tienda Naranja: no es un descuento del precio.';
+
+function asuncionKey() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Asuncion',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
+function naranjaToday() {
+  const key = asuncionKey();
+  return key >= '2026-11-02' && key <= '2026-11-04';
+}
+
+function halloweenToday() {
+  const key = asuncionKey();
+  return key >= '2026-10-30' && key <= '2026-10-31';
+}
 
 function asOfLabel() {
   return new Intl.DateTimeFormat('es-PY', {
@@ -124,7 +145,7 @@ function asOfLabel() {
   }).format(new Date());
 }
 
-function captionFor(product, title, showPrice) {
+function captionFor(product, title, showPrice, scene) {
   if (!product) return '';
   const head = title || product.title || '';
   const specs = (product.specs || [])
@@ -135,13 +156,15 @@ function captionFor(product, title, showPrice) {
       ? `Precio al ${asOfLabel()}: ${product.price} (antes ${product.listPrice})`
       : `Precio al ${asOfLabel()}: ${product.price}`)
     : 'Consultá el precio por WhatsApp';
-  return [
+  const body = [
     head,
     ...specs,
     priceLine,
     'Entrega 24 h',
     '0973 345 284'
   ].filter(Boolean).join('\n');
+  if (scene === 'naranja' && !/reintegro/i.test(body)) return `${NARANJA_CAPTION}\n\n${body}`;
+  return body;
 }
 
 async function copyText(text, okMsg) {
@@ -183,8 +206,9 @@ const CreativeStudioPage = () => {
   const [formats, setFormats] = useState(['feed']);
   const [previewFormat, setPreviewFormat] = useState('feed');
   const [theme, setTheme] = useState('auto');
-  const october = new Date().getMonth() === 9;
-  const [scene, setScene] = useState(october ? 'rosa' : 'auto');
+  const naranjaDays = naranjaToday();
+  const halloweenDays = halloweenToday();
+  const [scene, setScene] = useState(naranjaDays ? 'naranja' : halloweenDays ? 'halloween' : 'auto');
   const [showPrice, setShowPrice] = useState(true);
   const [lane, setLane] = useState('all');
   const [offersOnly, setOffersOnly] = useState(false);
@@ -219,11 +243,11 @@ const CreativeStudioPage = () => {
     const original = String(product?.detail || '').trim();
     setDetailDraft((current) => {
       const text = String(current || '').trim();
-      if (scene === 'rosa') {
-        if (!text || text === original) return ROSA_COPY;
+      if (scene === 'naranja') {
+        if (!text || text === original || text === ROSA_COPY) return NARANJA_COPY;
         return current;
       }
-      if (text === ROSA_COPY) return original;
+      if (text === ROSA_COPY || text === NARANJA_COPY) return original;
       return current;
     });
   }, [scene, activeId, products]);
@@ -490,7 +514,7 @@ const CreativeStudioPage = () => {
     if (activeId) persistOverride(activeId, { title: value, imageIndex, detail: detailDraft });
   };
 
-  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, showPrice) : '';
+  const activeCaption = activeProduct ? captionFor(activeProduct, titleDraft, showPrice, scene) : '';
   const productUrl = activeProduct ? siteUrl(productPath(activeProduct)) : '';
 
   const copyActiveCaption = () => {
@@ -508,7 +532,7 @@ const CreativeStudioPage = () => {
       const p = products.find((x) => x.id === id);
       if (!p) return '';
       const title = overrides[id]?.title || (id === activeId ? titleDraft : p.title);
-      return `—— Foto ${i + 1} ——\n${captionFor(p, title, showPrice)}`;
+      return `—— Foto ${i + 1} ——\n${captionFor(p, title, showPrice, scene)}`;
     }).filter(Boolean).join('\n\n');
     copyText(block, `${ids.length} textos listos para el carrusel`);
   };
@@ -1067,15 +1091,16 @@ const CreativeStudioPage = () => {
               </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Fondo</h2>
               <div className="grid grid-cols-2 gap-2">
-                {(october ? [{ id: 'rosa', label: 'Octubre Rosa' }] : [
+                {[
                   { id: 'auto', label: 'Variar' },
+                  { id: 'halloween', label: 'Halloween' },
+                  { id: 'naranja', label: 'Reintegro Naranja' },
                   { id: 'orbita', label: 'Órbita' },
                   { id: 'neon', label: 'Neón' },
                   { id: 'haz', label: 'Haces' },
                   { id: 'malla', label: 'Malla' },
-                  { id: 'cielo', label: 'Azul claro' },
-                  { id: 'rosa', label: 'Octubre Rosa' }
-                ]).map((opt) => (
+                  { id: 'cielo', label: 'Azul claro' }
+                ].map((opt) => (
                   <button
                     key={opt.id}
                     type="button"
@@ -1090,9 +1115,11 @@ const CreativeStudioPage = () => {
                 ))}
               </div>
               <p className="text-xs text-gray-500 mt-3">
-                {october
-                  ? 'Todo octubre sale en el flyer Octubre Rosa, también lo que publica el sistema.'
-                  : 'Con precio, el flyer lleva el valor de hoy y la leyenda Precio al día en que se genera. Si hay promoción, también van el precio anterior y el porcentaje. Sin precio, el monto no se imprime.'}
+                {naranjaDays
+                  ? 'Del 2 al 4 de noviembre el planner publica con el zócalo de reintegro Tienda Naranja. 15% tope Gs. 350.000 en cualquier tarjeta Itaú. 20% tope Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas. No es un descuento del precio.'
+                  : halloweenDays
+                    ? 'Hoy y mañana la plantilla es Halloween: noche, telarañas en las cuatro esquinas, luna y murciélagos. El producto sigue grande. El domingo vuelve a las plantillas de siempre.'
+                    : 'Variar usa las plantillas de siempre. Halloween queda el 30 y el 31. Reintegro Naranja, el 2, 3 y 4 de noviembre.'}
               </p>
             </div>
           </div>

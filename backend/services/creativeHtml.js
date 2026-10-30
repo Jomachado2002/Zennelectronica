@@ -5,12 +5,20 @@ const path = require('path');
 const { FORMATS } = require('./creativePayload');
 
 const RIBBON_PNG = path.join(__dirname, '../assets/octubre-rosa-ribbon.png');
+const NARANJA_PNG = path.join(__dirname, '../assets/tienda-naranja-reintegro.png');
 let ribbonDataUri = '';
+let naranjaDataUri = '';
 function octubreRosaRibbon() {
   if (!ribbonDataUri && fs.existsSync(RIBBON_PNG)) {
     ribbonDataUri = `data:image/png;base64,${fs.readFileSync(RIBBON_PNG).toString('base64')}`;
   }
   return ribbonDataUri;
+}
+function naranjaBanner() {
+  if (!naranjaDataUri && fs.existsSync(NARANJA_PNG)) {
+    naranjaDataUri = `data:image/png;base64,${fs.readFileSync(NARANJA_PNG).toString('base64')}`;
+  }
+  return naranjaDataUri;
 }
 
 const ICONS = {
@@ -84,8 +92,10 @@ function chipValue(raw) {
     const kind = /ssd|nvme/i.test(text) ? ' SSD' : '';
     return `${mem[1]}${mem[2].toUpperCase()}${kind}`;
   }
-  if (text.length <= 26) return text;
-  return `${text.slice(0, 25).trim()}…`;
+  if (text.length <= 28) return text;
+  const head = text.split(/[,;|]/)[0].replace(/\s+/g, ' ').trim();
+  if (head.length >= 3 && head.length <= 28) return head;
+  return `${text.slice(0, 24).trim()}…`;
 }
 
 function highlightSpecs(specs) {
@@ -112,7 +122,7 @@ function galleryHtml(gallery) {
 function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   const size = FORMATS[format] || FORMATS.feed;
   const theme = payload.theme === 'gamer' ? 'gamer' : 'studio';
-  const scene = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'].includes(payload.scene) ? payload.scene : 'orbita';
+  const scene = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa', 'naranja', 'halloween'].includes(payload.scene) ? payload.scene : 'orbita';
   const logo = assets.logoDataUri || '';
   const gallery = Array.isArray(assets.gallery) ? assets.gallery.filter((g) => g && g.uri) : [];
   const photo = assets.photoDataUri || gallery.find((g) => g.active)?.uri || payload.imageUrl || '';
@@ -194,6 +204,25 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       radial-gradient(760px 560px at 100% 8%, rgba(244,114,182,.55), transparent 60%),
       radial-gradient(680px 480px at 18% 100%, rgba(190,24,93,.22), transparent 62%),
       linear-gradient(165deg, #FFF5F8 0%, #FBCFE8 46%, #F9A8D4 100%);
+  }
+  .scene-naranja {
+    background:
+      radial-gradient(880px 520px at 100% 0%, rgba(255,106,0,.45), transparent 56%),
+      radial-gradient(720px 480px at 0% 70%, rgba(255,61,0,.22), transparent 62%),
+      linear-gradient(165deg, #2A1208 0%, #160E0B 46%, #0C0908 100%);
+  }
+  .scene-halloween {
+    background:
+      radial-gradient(circle at 76% 14%, rgba(251,146,60,.62), transparent 16%),
+      radial-gradient(520px 420px at 78% 18%, rgba(251,146,60,.28), transparent 70%),
+      radial-gradient(640px 480px at 8% 92%, rgba(124,58,237,.42), transparent 68%),
+      radial-gradient(1.6px 1.6px at 14% 18%, #fff, transparent),
+      radial-gradient(1.4px 1.4px at 28% 11%, rgba(255,255,255,.85), transparent),
+      radial-gradient(1.3px 1.3px at 46% 7%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1.5px 1.5px at 63% 16%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 90% 38%, rgba(255,255,255,.75), transparent),
+      radial-gradient(1.4px 1.4px at 8% 46%, rgba(255,255,255,.6), transparent),
+      linear-gradient(165deg, #3A1428 0%, #160812 40%, #09060F 100%);
   }
   .deco { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
   .mesh, .dots, .beam, .ring { display: none; }
@@ -500,6 +529,114 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       linear-gradient(#fff, #fff) padding-box,
       linear-gradient(135deg, #FB7185 0%, #9D174D 100%) border-box;
   }
+  .art.scene-naranja { padding-bottom: 252px; }
+  .scene-naranja .chip .v { font-size: 28px; white-space: nowrap; }
+  .scene-naranja .seal,
+  .scene-naranja .row,
+  .scene-naranja .phone { display: none; }
+  .scene-naranja .kicker { color: #FFB088; }
+  .scene-naranja .offer { margin-top: 8px; }
+  .scene-naranja .offer .now { color: #FFE0CC; }
+  .scene-naranja .line { background: linear-gradient(180deg, #FF6A00, #FFB088 55%, #FF6A00); }
+  .scene-naranja .rule { background: linear-gradient(90deg, #FF6A00, #FFB088); margin-top: 8px; }
+  .scene-naranja .cta {
+    background: linear-gradient(135deg, #FF6A00 0%, #C2410C 100%);
+    box-shadow: 0 12px 30px rgba(194,65,12,.35);
+  }
+  .scene-naranja .c.tl { border-left-color: #FF6A00; border-top-color: #FF6A00; }
+  .scene-naranja .c.tr { border-right-color: #FFB088; border-top-color: #FFB088; }
+  .scene-naranja .c.bl { border-left-color: #FFB088; border-bottom-color: #FFB088; }
+  .scene-naranja .c.br { border-right-color: #FF6A00; border-bottom-color: #FF6A00; }
+  .scene-naranja .plate { width: 96%; height: 98%; }
+  .web, .moon, .bat { display: none; }
+  .scene-halloween .web {
+    display: block;
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    z-index: 2;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><g fill='none' stroke='%23F5F5F4' stroke-width='1.7' stroke-linecap='round'><path d='M2 2 L238 2 M2 2 L238 52 M2 2 L214 128 M2 2 L150 232 M2 2 L62 238 M2 2 L2 238' stroke-opacity='0.92'/><path d='M46 2 C72 30 64 58 2 62' stroke-opacity='0.8'/><path d='M98 2 C146 46 136 104 2 116' stroke-opacity='0.72'/><path d='M158 2 C214 78 188 156 2 172' stroke-opacity='0.62'/><path d='M210 16 C236 118 176 204 64 230' stroke-opacity='0.5'/></g><ellipse cx='16' cy='14' rx='7' ry='5.2' fill='%23111111'/><circle cx='14' cy='13' r='1.1' fill='%23FDBA74'/><circle cx='19' cy='13' r='1.1' fill='%23FDBA74'/><path d='M8 10 L2 4 M10 16 L1 18 M22 9 L32 2 M24 16 L34 18' stroke='%23111111' stroke-width='1.2'/></svg>");
+  }
+  .scene-halloween .web-tl { left: -6px; top: -6px; }
+  .scene-halloween .web-tr { right: -6px; top: -6px; transform: scaleX(-1); }
+  .scene-halloween .web-bl { left: -6px; bottom: -6px; transform: scaleY(-1); }
+  .scene-halloween .web-br { right: -6px; bottom: -6px; transform: scale(-1); }
+  .scene-halloween .moon {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 58px;
+    height: 58px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(circle at 32% 32%, #FFF4C8 0%, #FBBF24 42%, #F97316 78%);
+    box-shadow: 0 0 42px rgba(251,146,60,.55);
+  }
+  .scene-halloween .bat {
+    display: block;
+    position: absolute;
+    width: 92px;
+    height: 42px;
+    z-index: 4;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 42'><path fill='%23F5F5F4' d='M46 24 C40 15 28 8 8 13 C18 17 20 24 17 34 C26 27 36 27 46 32 C56 27 66 27 75 34 C72 24 74 17 84 13 C64 8 52 15 46 24 Z'/></svg>");
+  }
+  .scene-halloween .bat-a { left: 27%; top: 22px; width: 78px; height: 36px; transform: rotate(-8deg); }
+  .scene-halloween .bat-b { right: 28%; top: 30px; width: 58px; height: 26px; transform: rotate(10deg); opacity: .92; }
+  .scene-halloween .title,
+  .scene-halloween .offer .now,
+  .scene-halloween .phone { text-shadow: 0 2px 14px rgba(0,0,0,.8); }
+  .scene-halloween .kicker { color: #FDBA74; }
+  .scene-halloween .offer .now { color: #FFEDD5; }
+  .scene-halloween .line { background: linear-gradient(180deg, #F97316, #FDBA74 55%, #F97316); }
+  .scene-halloween .rule { background: linear-gradient(90deg, #F97316, #FDBA74); }
+  .scene-halloween .c.tl, .scene-halloween .c.br { border-color: #F97316; }
+  .scene-halloween .c.tr, .scene-halloween .c.bl { border-color: #C4B5FD; }
+  .scene-halloween .plate {
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(135deg, #F97316 0%, #7C3AED 100%) border-box;
+  }
+  .fmt-story.scene-halloween .web { width: 400px; height: 400px; }
+  .fmt-story.scene-halloween .moon { width: 72px; height: 72px; top: 16px; }
+  .fmt-story.scene-halloween .bat-a { top: 36px; }
+  .fmt-story.scene-halloween .bat-b { top: 44px; }
+  .naranja-banner { display: none; }
+  .scene-naranja .naranja-banner {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: absolute;
+    left: 40px;
+    right: 40px;
+    bottom: 16px;
+    z-index: 12;
+    line-height: 0;
+    pointer-events: none;
+  }
+  .scene-naranja .naranja-banner img {
+    width: auto;
+    max-width: 100%;
+    height: 220px;
+    object-fit: contain;
+    object-position: center bottom;
+    display: block;
+  }
+  .fmt-story.scene-naranja footer { padding-bottom: 4px; }
+  .fmt-feed.scene-naranja footer { padding: 4px 48px 4px; }
+  .fmt-square.scene-naranja footer { padding-bottom: 2px; }
+  .art.fmt-story.scene-naranja { padding-bottom: 248px; }
+  .fmt-story.scene-naranja .naranja-banner img { height: 216px; }
+  .fmt-square.scene-naranja .naranja-banner img { height: 168px; }
+  .fmt-square.scene-naranja.art, .art.fmt-square.scene-naranja { padding-bottom: 196px; }
   .rosa-sash, .rosa-badge, .rosa-pattern { display: none; }
   .scene-rosa .rosa-pattern {
     display: block;
@@ -612,8 +749,16 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     <div class="deco ring"></div>
     <div class="glow g1"></div>
     <div class="glow g2"></div>
+    <div class="moon"></div>
+    <div class="web web-tl"></div>
+    <div class="web web-tr"></div>
+    <div class="web web-bl"></div>
+    <div class="web web-br"></div>
+    <div class="bat bat-a"></div>
+    <div class="bat bat-b"></div>
     <div class="rosa-pattern"></div>
     <div class="rosa-badge"><img src="${octubreRosaRibbon()}" alt="" /></div>
+    <div class="naranja-banner"><img src="${scene === 'naranja' ? naranjaBanner() : ''}" alt="Reintegro Tienda Naranja" /></div>
     <div class="mark">${mark}</div>
     <header>
       ${logo ? `<img class="logo" src="${logo}" alt="Zenn" />` : '<div></div>'}
@@ -653,5 +798,6 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
 
 module.exports = {
   renderCreativeHtml,
+  naranjaBanner,
   FORMATS
 };

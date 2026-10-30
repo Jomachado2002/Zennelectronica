@@ -13,6 +13,7 @@ const {
   schemaFor,
   instagramCaption,
   ROSA_COPY,
+  NARANJA_COPY,
   wantsPrice,
   priceAsOfLabel,
   FORMATS
@@ -352,10 +353,12 @@ function applyOverrides(payload, body = {}) {
     theme: body.theme === 'studio' || body.theme === 'gamer' ? body.theme : payload.theme
   };
   if (body.detail !== undefined) next.detail = String(body.detail).slice(0, 700);
-  if (next.scene === 'rosa') {
+  if (next.scene === 'rosa' || next.scene === 'naranja') {
     const incoming = String(next.detail || '').replace(/\s+/g, ' ').trim();
     const source = String(payload.sourceDetail || '').replace(/\s+/g, ' ').trim();
-    if (!incoming || incoming === source) next.detail = ROSA_COPY;
+    if (!incoming || incoming === source || incoming === ROSA_COPY || incoming === NARANJA_COPY) {
+      next.detail = next.scene === 'naranja' ? NARANJA_COPY : ROSA_COPY;
+    }
   }
   if (body.showPrice !== undefined) next.showPrice = wantsPrice(body.showPrice);
   next.priceAsOf = priceAsOfLabel();

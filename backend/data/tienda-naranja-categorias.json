@@ -1,0 +1,1446 @@
+{
+  "id": 2,
+  "name": "Default Category",
+  "children": [
+    {
+      "id": 2477,
+      "name": "Arte, hobbies y regalos",
+      "children": [
+        {
+          "id": 2480,
+          "name": "Hobbies y artes creativas",
+          "children": [
+            {
+              "id": 2483,
+              "name": "Productos para elaborar cerveza y vino en casa"
+            }
+          ]
+        },
+        {
+          "id": 4250,
+          "name": "Regalos",
+          "children": [
+            {
+              "id": 4253,
+              "name": "Experiencias"
+            },
+            {
+              "id": 4591,
+              "name": "Canastas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4471,
+      "name": "Alimentos",
+      "children": [
+        {
+          "id": 4540,
+          "name": "Alimentos perecederos ",
+          "children": [
+            {
+              "id": 4552,
+              "name": "Confiteria"
+            },
+            {
+              "id": 4555,
+              "name": "Panificados"
+            }
+          ]
+        },
+        {
+          "id": 4603,
+          "name": "Carnes",
+          "children": [
+            {
+              "id": 4549,
+              "name": "Cerdo "
+            },
+            {
+              "id": 4534,
+              "name": "Pollo"
+            },
+            {
+              "id": 4606,
+              "name": "carne vacuna "
+            }
+          ]
+        },
+        {
+          "id": 4585,
+          "name": "Alimentos saludables",
+          "children": [
+            {
+              "id": 4486,
+              "name": "Avena & Granola"
+            },
+            {
+              "id": 4492,
+              "name": "Barras de Cereal"
+            },
+            {
+              "id": 4480,
+              "name": "Dulces Saludables"
+            },
+            {
+              "id": 4507,
+              "name": "Edulcorantes"
+            },
+            {
+              "id": 4558,
+              "name": "Alimentos sin gluten"
+            },
+            {
+              "id": 4483,
+              "name": "Snacks & Frutos Secos"
+            },
+            {
+              "id": 4495,
+              "name": "Saludables & Suplementos"
+            }
+          ]
+        },
+        {
+          "id": 4543,
+          "name": "Congelados",
+          "children": [
+            {
+              "id": 4561,
+              "name": "Tartas & Empanadas"
+            },
+            {
+              "id": 4573,
+              "name": "Sandwiches"
+            },
+            {
+              "id": 4531,
+              "name": "Helados"
+            },
+            {
+              "id": 4546,
+              "name": "Pescados"
+            },
+            {
+              "id": 4564,
+              "name": "Hamburguesas"
+            },
+            {
+              "id": 4567,
+              "name": "Hielo"
+            },
+            {
+              "id": 4570,
+              "name": "Milanesas & Nuggets"
+            },
+            {
+              "id": 4576,
+              "name": "Pizzas"
+            }
+          ]
+        },
+        {
+          "id": 4594,
+          "name": "Frutas y verduras",
+          "children": [
+            {
+              "id": 4597,
+              "name": "Verduras"
+            },
+            {
+              "id": 4600,
+              "name": "Frutas"
+            }
+          ]
+        },
+        {
+          "id": 4582,
+          "name": "Despensa",
+          "children": [
+            {
+              "id": 4519,
+              "name": "Premezclas"
+            },
+            {
+              "id": 4516,
+              "name": "Dulces"
+            },
+            {
+              "id": 4579,
+              "name": "Dulces untables"
+            },
+            {
+              "id": 4444,
+              "name": "Jugo en Polvo"
+            },
+            {
+              "id": 4525,
+              "name": "Snacks salados"
+            },
+            {
+              "id": 4489,
+              "name": "Azúcar y Repostería "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2579,
+      "name": "Bebidas",
+      "children": [
+        {
+          "id": 2582,
+          "name": "Bebidas con Alcohol",
+          "children": [
+            {
+              "id": 2699,
+              "name": "Cervezas"
+            },
+            {
+              "id": 2684,
+              "name": "Destilados y Licores"
+            },
+            {
+              "id": 2585,
+              "name": "Vinos y Espumantes"
+            }
+          ]
+        },
+        {
+          "id": 2855,
+          "name": "Bebidas sin Alcohol",
+          "children": [
+            {
+              "id": 2861,
+              "name": "Agua y Té"
+            },
+            {
+              "id": 2858,
+              "name": "Energizantes e Isotónicos"
+            },
+            {
+              "id": 2864,
+              "name": "Jugos"
+            },
+            {
+              "id": 4588,
+              "name": "Leche vegetal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2399,
+      "name": "Deporte y Aire libre",
+      "children": [
+        {
+          "id": 2558,
+          "name": "Elementos deportivos",
+          "children": [
+            {
+              "id": 2687,
+              "name": "Acampada y Senderismo"
+            },
+            {
+              "id": 2561,
+              "name": "Ciclismo"
+            },
+            {
+              "id": 2663,
+              "name": "Otros deportes"
+            },
+            {
+              "id": 4279,
+              "name": "Fútbol"
+            }
+          ]
+        },
+        {
+          "id": 2402,
+          "name": "Fitness y Musculación",
+          "children": [
+            {
+              "id": 2405,
+              "name": "Máquinas y Accesorios fitness"
+            }
+          ]
+        },
+        {
+          "id": 2816,
+          "name": "Indumentaria deportiva",
+          "children": [
+            {
+              "id": 4282,
+              "name": "Calzados deportivos masculinas"
+            },
+            {
+              "id": 2819,
+              "name": "Prendas deportivas masculinas"
+            },
+            {
+              "id": 2891,
+              "name": "Prendas deportivas femeninas"
+            }
+          ]
+        },
+        {
+          "id": 2228,
+          "name": "Comercial e industrial",
+          "children": [
+            {
+              "id": 2231,
+              "name": "Equipamiento comercial",
+              "children": [
+                {
+                  "id": 2234,
+                  "name": "Gastronomía y hotelería"
+                }
+              ]
+            },
+            {
+              "id": 2534,
+              "name": "Equipamiento industrial",
+              "children": [
+                {
+                  "id": 2537,
+                  "name": "Otros equipamientos comerciales"
+                },
+                {
+                  "id": 2882,
+                  "name": "Otros equipamientos industriales"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2288,
+      "name": "Electrodomésticos",
+      "children": [
+        {
+          "id": 2450,
+          "name": "Accesorios para Electrodomésticos",
+          "children": [
+            {
+              "id": 2453,
+              "name": "Accesorios para Electrodomésticos"
+            }
+          ]
+        },
+        {
+          "id": 2528,
+          "name": "Baño",
+          "children": [
+            {
+              "id": 2531,
+              "name": "Termocalefones y duchas eléctricas"
+            }
+          ]
+        },
+        {
+          "id": 2438,
+          "name": "Climatización",
+          "children": [
+            {
+              "id": 2441,
+              "name": "Aire Acondicionado"
+            },
+            {
+              "id": 2525,
+              "name": "Estufas"
+            },
+            {
+              "id": 2492,
+              "name": "Ventiladores y Purificadores"
+            }
+          ]
+        },
+        {
+          "id": 2291,
+          "name": "Cocina",
+          "children": [
+            {
+              "id": 2432,
+              "name": "Anafe"
+            },
+            {
+              "id": 2297,
+              "name": "Cafeteras y Hervidoras"
+            },
+            {
+              "id": 2435,
+              "name": "Extractores y campanas"
+            },
+            {
+              "id": 2444,
+              "name": "Freidoras"
+            },
+            {
+              "id": 2336,
+              "name": "Heladeras y congeladores"
+            },
+            {
+              "id": 2375,
+              "name": "Horno y cocinas"
+            },
+            {
+              "id": 2651,
+              "name": "Lavasecarropas"
+            },
+            {
+              "id": 2462,
+              "name": "Lavavajillas"
+            },
+            {
+              "id": 2318,
+              "name": "Licuadoras"
+            },
+            {
+              "id": 2594,
+              "name": "Microondas"
+            },
+            {
+              "id": 2294,
+              "name": "Otros electrodomésticos de cocina"
+            },
+            {
+              "id": 2300,
+              "name": "Tostadoras y sandwicheras"
+            }
+          ]
+        },
+        {
+          "id": 2303,
+          "name": "Electrobelleza",
+          "children": [
+            {
+              "id": 2648,
+              "name": "Cepillos eléctricos"
+            },
+            {
+              "id": 2306,
+              "name": "Depiladores y corta pelo"
+            },
+            {
+              "id": 2849,
+              "name": "Otros accesorios de belleza"
+            },
+            {
+              "id": 2378,
+              "name": "Planchitas y modeladores"
+            },
+            {
+              "id": 2381,
+              "name": "Secadores de pelo"
+            }
+          ]
+        },
+        {
+          "id": 2765,
+          "name": "Herramientas",
+          "children": [
+            {
+              "id": 2768,
+              "name": "Heladeras y congeladores"
+            }
+          ]
+        },
+        {
+          "id": 2345,
+          "name": "Lavado y Limpieza",
+          "children": [
+            {
+              "id": 2348,
+              "name": "Aspiradoras e hidrolavadoras"
+            },
+            {
+              "id": 2456,
+              "name": "Lavarropas"
+            },
+            {
+              "id": 2459,
+              "name": "Lavasecarropas"
+            },
+            {
+              "id": 2471,
+              "name": "Planchas"
+            },
+            {
+              "id": 2474,
+              "name": "Secarropas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2192,
+      "name": "Entretenimiento y juguetes",
+      "children": [
+        {
+          "id": 2195,
+          "name": "Juguetes de interior",
+          "children": [
+            {
+              "id": 2198,
+              "name": "Muñecos"
+            },
+            {
+              "id": 2201,
+              "name": "Muñecos/as y accesorios"
+            },
+            {
+              "id": 2411,
+              "name": "Juegos de Mesa y Rompecabezas"
+            }
+          ]
+        },
+        {
+          "id": 2657,
+          "name": "Juegos y entretenimiento en exteriores",
+          "children": [
+            {
+              "id": 2774,
+              "name": "Juegos al aire libre"
+            },
+            {
+              "id": 2660,
+              "name": "Vehículos de juguete"
+            }
+          ]
+        },
+        {
+          "id": 2519,
+          "name": "Otros juguetes",
+          "children": [
+            {
+              "id": 2522,
+              "name": "Otros juguetes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2603,
+      "name": "Equipaje, bolsos y mochilas",
+      "children": [
+        {
+          "id": 2678,
+          "name": "Bolsos",
+          "children": [
+            {
+              "id": 2681,
+              "name": "Bolsos"
+            }
+          ]
+        },
+        {
+          "id": 2606,
+          "name": "Maletas",
+          "children": [
+            {
+              "id": 2609,
+              "name": "Accesorios para viajes"
+            },
+            {
+              "id": 2828,
+              "name": "Maletas"
+            }
+          ]
+        },
+        {
+          "id": 2672,
+          "name": "Mochilas",
+          "children": [
+            {
+              "id": 2675,
+              "name": "Mochilas y maletines"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2204,
+      "name": "Herramientas, Maquinarias y Ferretería",
+      "children": [
+        {
+          "id": 2873,
+          "name": "Articulos de construcción",
+          "children": [
+            {
+              "id": 2876,
+              "name": "Grifería y sanitarios"
+            }
+          ]
+        },
+        {
+          "id": 2222,
+          "name": "Artículos de ferretería",
+          "children": [
+            {
+              "id": 2744,
+              "name": "Cerrajería"
+            },
+            {
+              "id": 2225,
+              "name": "Complementos de seguridad y accesorios"
+            },
+            {
+              "id": 2255,
+              "name": "Materiales de construcción"
+            },
+            {
+              "id": 2573,
+              "name": "Plomería"
+            }
+          ]
+        },
+        {
+          "id": 2207,
+          "name": "Herramientas",
+          "children": [
+            {
+              "id": 2213,
+              "name": "Herramientas de medición y diseño"
+            },
+            {
+              "id": 2210,
+              "name": "Herramientas eléctricas y de mano"
+            },
+            {
+              "id": 2243,
+              "name": "Accesorios de Herramientas"
+            }
+          ]
+        },
+        {
+          "id": 2216,
+          "name": "Maquinarias y Generadores",
+          "children": [
+            {
+              "id": 2576,
+              "name": "Generadores"
+            },
+            {
+              "id": 2852,
+              "name": "Máquina de Coser"
+            },
+            {
+              "id": 2219,
+              "name": "Otras maquinarias"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2141,
+      "name": "Hogar",
+      "children": [
+        {
+          "id": 2552,
+          "name": "Baños",
+          "children": [
+            {
+              "id": 2555,
+              "name": "Artículos del baño"
+            },
+            {
+              "id": 2753,
+              "name": "Muebles de baño"
+            },
+            {
+              "id": 2630,
+              "name": "Toallas"
+            }
+          ]
+        },
+        {
+          "id": 2144,
+          "name": "Bazar",
+          "children": [
+            {
+              "id": 2564,
+              "name": "Conservadoras"
+            },
+            {
+              "id": 2447,
+              "name": "Ollas y Sartenes"
+            },
+            {
+              "id": 2147,
+              "name": "Otros artículos de bazar"
+            },
+            {
+              "id": 3419,
+              "name": "Termos"
+            },
+            {
+              "id": 2420,
+              "name": "Termos, hoppies y vasos"
+            },
+            {
+              "id": 3413,
+              "name": "Vajillas"
+            },
+            {
+              "id": 2597,
+              "name": "Vajillas, cubiertos y accesorios"
+            }
+          ]
+        },
+        {
+          "id": 2180,
+          "name": "Cocina y Comedor",
+          "children": [
+            {
+              "id": 2777,
+              "name": "Artículos de Asado"
+            },
+            {
+              "id": 2771,
+              "name": "Manteles e individuales"
+            },
+            {
+              "id": 2183,
+              "name": "Muebles de Cocina y Comedor"
+            }
+          ]
+        },
+        {
+          "id": 2636,
+          "name": "Decoración",
+          "children": [
+            {
+              "id": 2639,
+              "name": "Decoración del hogar"
+            },
+            {
+              "id": 2741,
+              "name": "Decoraciones festivas"
+            }
+          ]
+        },
+        {
+          "id": 2150,
+          "name": "Dormitorio",
+          "children": [
+            {
+              "id": 2624,
+              "name": "Camas y Cabeceras"
+            },
+            {
+              "id": 2633,
+              "name": "Frazadas y almohadas"
+            },
+            {
+              "id": 2153,
+              "name": "Muebles de Dormitorio"
+            }
+          ]
+        },
+        {
+          "id": 2705,
+          "name": "Iluminación",
+          "children": [
+            {
+              "id": 2708,
+              "name": "Lámparas de mesa"
+            },
+            {
+              "id": 2801,
+              "name": "Luces de pared"
+            },
+            {
+              "id": 2738,
+              "name": "Otros tipos de lamparas y veladores"
+            }
+          ]
+        },
+        {
+          "id": 2237,
+          "name": "Limpieza",
+          "children": [
+            {
+              "id": 2240,
+              "name": "Artículos y herramientas de limpieza"
+            }
+          ]
+        },
+        {
+          "id": 2156,
+          "name": "Sala de Estar",
+          "children": [
+            {
+              "id": 2396,
+              "name": "Otros muebles de la sala"
+            },
+            {
+              "id": 2159,
+              "name": "Sofás"
+            }
+          ]
+        },
+        {
+          "id": 2186,
+          "name": "Seguridad",
+          "children": [
+            {
+              "id": 2363,
+              "name": "Cámaras y Sensores"
+            },
+            {
+              "id": 2189,
+              "name": "Otros articulos de seguridad"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2132,
+      "name": "Jardinería y Exteriores",
+      "children": [
+        {
+          "id": 2135,
+          "name": "Decoración del jardín",
+          "children": [
+            {
+              "id": 4205,
+              "name": "Iluminación de jardín y exteriores"
+            },
+            {
+              "id": 2138,
+              "name": "Muebles y accesorios de jardín"
+            }
+          ]
+        },
+        {
+          "id": 2246,
+          "name": "Limpieza de jardín",
+          "children": [
+            {
+              "id": 2249,
+              "name": "Herramientas de jardín"
+            },
+            {
+              "id": 2252,
+              "name": "Productos de cuidado de jardín"
+            }
+          ]
+        },
+        {
+          "id": 2588,
+          "name": "Parilla y hornos",
+          "children": [
+            {
+              "id": 2591,
+              "name": "Parrillas y hornos"
+            }
+          ]
+        },
+        {
+          "id": 2690,
+          "name": "Piscina",
+          "children": [
+            {
+              "id": 2693,
+              "name": "Piscinas y accesorios de piscina"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2171,
+      "name": "Librería y Oficina",
+      "children": [
+        {
+          "id": 2174,
+          "name": "Oficina y Papelería",
+          "children": [
+            {
+              "id": 2408,
+              "name": "Lápices y bolígrafos"
+            },
+            {
+              "id": 2417,
+              "name": "Marcadores"
+            },
+            {
+              "id": 2177,
+              "name": "Muebles de Oficina"
+            },
+            {
+              "id": 2414,
+              "name": "Otros artículos de oficina"
+            }
+          ]
+        },
+        {
+          "id": 2732,
+          "name": "Libros",
+          "children": [
+            {
+              "id": 2735,
+              "name": "Otros libros"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2309,
+      "name": "Mascotas",
+      "children": [
+        {
+          "id": 2312,
+          "name": "Alimentación y Cuidado de Mascotas",
+          "children": [
+            {
+              "id": 2315,
+              "name": "Cuidado y Aseo de mascotas"
+            },
+            {
+              "id": 2879,
+              "name": "Comida para mascotas"
+            }
+          ]
+        },
+        {
+          "id": 2756,
+          "name": "Ropa y Accesorios de Mascotas",
+          "children": [
+            {
+              "id": 2759,
+              "name": "Otros accesorios para mascotas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2162,
+      "name": "Moda",
+      "children": [
+        {
+          "id": 2822,
+          "name": "Calzado Masculino",
+          "children": [
+            {
+              "id": 2825,
+              "name": "Zapatos para Hombres"
+            }
+          ]
+        },
+        {
+          "id": 2540,
+          "name": "Complementos",
+          "children": [
+            {
+              "id": 2654,
+              "name": "Billeteras"
+            },
+            {
+              "id": 2543,
+              "name": "Carteras"
+            },
+            {
+              "id": 2600,
+              "name": "Otros complementos"
+            },
+            {
+              "id": 2729,
+              "name": "Salidas de baño"
+            }
+          ]
+        },
+        {
+          "id": 2780,
+          "name": "Joyería",
+          "children": [
+            {
+              "id": 2783,
+              "name": "Aros"
+            },
+            {
+              "id": 2789,
+              "name": "Colgantes y dijes"
+            },
+            {
+              "id": 2786,
+              "name": "Otros artículos de joyería"
+            }
+          ]
+        },
+        {
+          "id": 2612,
+          "name": "Otras ropas",
+          "children": [
+            {
+              "id": 2615,
+              "name": "Otras indumentarias"
+            }
+          ]
+        },
+        {
+          "id": 2165,
+          "name": "Ropa Masculina",
+          "children": [
+            {
+              "id": 2762,
+              "name": "Camperas, Chalecos y Suéteres Masculinos"
+            },
+            {
+              "id": 2168,
+              "name": "Otros vestuarios masculinos"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2387,
+      "name": "Otras categorias",
+      "children": [
+        {
+          "id": 2390,
+          "name": "Otras categorias",
+          "children": [
+            {
+              "id": 2393,
+              "name": "Otros productos"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2423,
+      "name": "Productos para bebé",
+      "children": [
+        {
+          "id": 2426,
+          "name": "Cuna y Transporte de Bebés",
+          "children": [
+            {
+              "id": 2495,
+              "name": "Asientos para Bebé y Accesorios"
+            },
+            {
+              "id": 2504,
+              "name": "Carritos para Bebé y Accesorios"
+            },
+            {
+              "id": 2429,
+              "name": "Cunas para Bebé y Accesorios"
+            }
+          ]
+        },
+        {
+          "id": 2498,
+          "name": "Juguetes y entretenimiento para Bebés",
+          "children": [
+            {
+              "id": 2501,
+              "name": "Juguetes para Bebé"
+            }
+          ]
+        },
+        {
+          "id": 2792,
+          "name": "Lactancia y Alimentación",
+          "children": [
+            {
+              "id": 2870,
+              "name": "Biberones y Baberos"
+            },
+            {
+              "id": 2795,
+              "name": "Platos, cubiertos y otros elementos para bebé"
+            },
+            {
+              "id": 4456,
+              "name": "Nutrición Infantil"
+            }
+          ]
+        },
+        {
+          "id": 2747,
+          "name": "Pañales y cuidado del bebé",
+          "children": [
+            {
+              "id": 4468,
+              "name": "Toallitas Húmedas "
+            },
+            {
+              "id": 2750,
+              "name": "Cuidados para bebe"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4285,
+      "name": "PROMOCIONES",
+      "children": [
+        {
+          "id": 4288,
+          "name": "Prueba carruseles"
+        },
+        {
+          "id": 4309,
+          "name": "BlackFriday"
+        }
+      ]
+    },
+    {
+      "id": 2327,
+      "name": "Salud y belleza",
+      "children": [
+        {
+          "id": 2366,
+          "name": "Cosméticos y Perfumería",
+          "children": [
+            {
+              "id": 2372,
+              "name": "Cosméticos"
+            },
+            {
+              "id": 2369,
+              "name": "Perfumería"
+            }
+          ]
+        },
+        {
+          "id": 2894,
+          "name": "Cuidado capilar"
+        },
+        {
+          "id": 2465,
+          "name": "Cuidado de la salud",
+          "children": [
+            {
+              "id": 2798,
+              "name": "Lentes de Vista"
+            },
+            {
+              "id": 2468,
+              "name": "Otros artículos de cuidado de la salud"
+            },
+            {
+              "id": 2885,
+              "name": "Vitaminas y suplementos"
+            }
+          ]
+        },
+        {
+          "id": 2330,
+          "name": "Cuidado personal",
+          "children": [
+            {
+              "id": 2384,
+              "name": "Afeitadoras y After Shave"
+            },
+            {
+              "id": 2627,
+              "name": "Crema para la piel"
+            },
+            {
+              "id": 2333,
+              "name": "Otros artículos de cuidado personal"
+            },
+            {
+              "id": 4447,
+              "name": "Accesorios"
+            },
+            {
+              "id": 4450,
+              "name": "Higiene Bucal"
+            },
+            {
+              "id": 4453,
+              "name": "Cuidado de la Piel"
+            }
+          ]
+        },
+        {
+          "id": 4312,
+          "name": "Servicios",
+          "children": [
+            {
+              "id": 4315,
+              "name": "Experiencias"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2804,
+      "name": "Servicios, cursos y asesoría",
+      "children": [
+        {
+          "id": 2807,
+          "name": "Aprendizaje y Asesoría",
+          "children": [
+            {
+              "id": 2810,
+              "name": "Cursos y Asesoría"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2258,
+      "name": "Tecnología e Informática",
+      "children": [
+        {
+          "id": 2273,
+          "name": "Audio y video",
+          "children": [
+            {
+              "id": 2279,
+              "name": "Accesorios de Cámara"
+            },
+            {
+              "id": 2276,
+              "name": "Cámaras"
+            },
+            {
+              "id": 2723,
+              "name": "Microfonos y controladores de sonido"
+            }
+          ]
+        },
+        {
+          "id": 2339,
+          "name": "Auriculares y Parlantes",
+          "children": [
+            {
+              "id": 2867,
+              "name": "Accesorios para parlantes y auriculares"
+            },
+            {
+              "id": 2357,
+              "name": "Auriculares"
+            },
+            {
+              "id": 2342,
+              "name": "Parlantes"
+            }
+          ]
+        },
+        {
+          "id": 2282,
+          "name": "Celulares",
+          "children": [
+            {
+              "id": 2516,
+              "name": "Accesorios de Celulares"
+            },
+            {
+              "id": 2285,
+              "name": "Celulares"
+            }
+          ]
+        },
+        {
+          "id": 2546,
+          "name": "Computadoras y laptos",
+          "children": [
+            {
+              "id": 2669,
+              "name": "Accesorios y Complementos de Computadora"
+            },
+            {
+              "id": 2549,
+              "name": "Computadoras de escritorio"
+            },
+            {
+              "id": 2645,
+              "name": "Notebooks y laptops"
+            }
+          ]
+        },
+        {
+          "id": 2567,
+          "name": "Consola de juegos",
+          "children": [
+            {
+              "id": 2726,
+              "name": "Accesorios de consola de juegos"
+            },
+            {
+              "id": 2570,
+              "name": "Consola de juegos"
+            }
+          ]
+        },
+        {
+          "id": 2261,
+          "name": "Impresoras",
+          "children": [
+            {
+              "id": 2264,
+              "name": "Accesorios de Impresoras"
+            },
+            {
+              "id": 2666,
+              "name": "Impresoras"
+            }
+          ]
+        },
+        {
+          "id": 2321,
+          "name": "Otros artículos de tecnología",
+          "children": [
+            {
+              "id": 2324,
+              "name": "Otros artículos de tecnología"
+            }
+          ]
+        },
+        {
+          "id": 2267,
+          "name": "Relojes inteligentes",
+          "children": [
+            {
+              "id": 2702,
+              "name": "Accesorios para relojes inteligentes"
+            },
+            {
+              "id": 2270,
+              "name": "Relojes inteligentes"
+            }
+          ]
+        },
+        {
+          "id": 2351,
+          "name": "Tablets",
+          "children": [
+            {
+              "id": 2360,
+              "name": "Accesorios de tablets"
+            },
+            {
+              "id": 2354,
+              "name": "Tablets"
+            }
+          ]
+        },
+        {
+          "id": 2486,
+          "name": "Televisión",
+          "children": [
+            {
+              "id": 2642,
+              "name": "Accesorios de Televisión"
+            },
+            {
+              "id": 2489,
+              "name": "Televisión"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4262,
+      "name": "Tiendas Oficiales",
+      "children": [
+        {
+          "id": 4272,
+          "name": "ItauShop"
+        },
+        {
+          "id": 4259,
+          "name": "Juan Valdez"
+        }
+      ]
+    },
+    {
+      "id": 2507,
+      "name": "Vehículos",
+      "children": [
+        {
+          "id": 2510,
+          "name": "Autos",
+          "children": [
+            {
+              "id": 2513,
+              "name": "Accesorios para autos"
+            },
+            {
+              "id": 2813,
+              "name": "Neumáticos de autos"
+            }
+          ]
+        },
+        {
+          "id": 2843,
+          "name": "Lubricantes y repuestos",
+          "children": [
+            {
+              "id": 2846,
+              "name": "Lubricantes"
+            }
+          ]
+        },
+        {
+          "id": 2618,
+          "name": "Motos",
+          "children": [
+            {
+              "id": 2696,
+              "name": "Accesorios de Motos"
+            },
+            {
+              "id": 2621,
+              "name": "Motos"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3437,
+      "name": "Equipaje"
+    },
+    {
+      "id": 4187,
+      "name": "Arte"
+    },
+    {
+      "id": 4275,
+      "name": "Itubers"
+    },
+    {
+      "id": 4609,
+      "name": "Itaú Shopp"
+    },
+    {
+      "id": 4268,
+      "name": "Eventos Especiales",
+      "children": [
+        {
+          "id": 4269,
+          "name": "Dia de la Madre"
+        },
+        {
+          "id": 4277,
+          "name": "agosto liquida"
+        }
+      ]
+    }
+  ]
+}

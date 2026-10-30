@@ -98,7 +98,7 @@ function matchTrends(rows, trends) {
   return matches;
 }
 
-function dossierText({ dateLabel, recentLabels, trends, candidates, account }) {
+function dossierText({ dateLabel, recentLabels, trends, candidates, account, campaign, angle }) {
   const trendLines = (trends || []).map((trend) => {
     const brands = (trend.brands || []).join(', ');
     const source = trend.source ? ` Fuente: ${trend.source}.` : '';
@@ -111,9 +111,21 @@ function dossierText({ dateLabel, recentLabels, trends, candidates, account }) {
     const because = row.trend ? ` | se busca afuera: ${row.trend.term}` : '';
     return `${row.key} | ${row.label} | mundo ${row.world}${because}\n${lines.join('\n')}`;
   });
+  const push = campaign
+    ? [
+      '',
+      `Reintegro Tienda Naranja, del ${campaign.from} al ${campaign.to}. No es un descuento del precio.`,
+      campaign.lead,
+      'Hoy hacen falta más piezas: publicalas en rubros distintos. Cada hook nombra el reintegro en una frase.',
+      'Prohibido Octubre Rosa.'
+    ]
+    : (angle
+      ? ['', angle.brief, 'Prohibido Octubre Rosa.']
+      : ['', 'Prohibido Octubre Rosa. Octubre ya cerró.']);
   return [
     `Fecha: ${dateLabel}.`,
     `Rubros ya publicados estos días, no los repitas: ${recentLabels.length ? recentLabels.join(', ') : 'ninguno'}.`,
+    ...push,
     '',
     'Si un precio dice "antes" y un porcentaje, esa promoción existe en la tienda. Si no lo dice, no inventes un descuento.',
     '',

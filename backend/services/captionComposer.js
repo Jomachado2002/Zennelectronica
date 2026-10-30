@@ -19,36 +19,38 @@ const FAMILY_EMOJI = {
 
 const PUNCH_BY_ICON = ['gpu', 'hz', 'cpu', 'ram', 'ssd', 'screen', 'res'];
 
+const { NARANJA } = require('./storeCampaign');
+
 const HOOKS = {
   gamer: [
-    'Nuevo ingreso para armar el setup 🎮',
-    'Llegó equipo para jugar en serio 🎮',
-    'Para el que arma la PC este finde 🎮'
+    'La placa es la que decide si el juego corre.',
+    'El setup se arma con el precio de hoy, no con el de la publicidad.',
+    'Si jugás, mirá la GPU antes que el RGB.'
   ],
   office: [
-    'Nuevo ingreso para estudiar y trabajar 💻',
-    'Equipo listo para la oficina y la facultad 💻',
-    'Llegó lo que se usa todos los días 💻'
+    'La facultad no pide la notebook más cara. Pide la que no se cuelga.',
+    'Para cursar y laburar, alcanza con esto. El precio es el de hoy.',
+    'Pantalla, memoria y el precio que se cobra ahora.'
   ],
   phone: [
-    'Nuevo ingreso en celulares 📱',
-    'Llegaron equipos para cambiar el teléfono 📱',
-    'Para el que estaba esperando este modelo 📱'
+    'De día cualquier cámara se ve bien. La prueba es de noche.',
+    'Si vas a cambiar el teléfono, este es el precio de hoy.',
+    'La memoria y la pantalla, en una línea. El resto es marketing.'
   ],
   mix: [
-    'Nuevo ingreso en Zenn ✨',
-    'Acaba de entrar a la tienda ✨',
-    'Lo que llegó hoy al depósito ✨'
+    'Tres cosas distintas que hoy están en el depósito.',
+    'No es un rubro solo: es lo que se puede retirar en Asunción.',
+    'El precio de cada uno es el que se cobra hoy.'
   ],
   single: [
-    'Nuevo ingreso ✨',
-    'Ya está en la tienda ✨',
-    'Entró hoy al depósito ✨'
+    'El dato que cambia la compra está en la primera línea.',
+    'Un modelo, un precio, retiro en Asunción.',
+    'Esto es lo que hay, con el precio de hoy.'
   ],
   promo: [
-    'Promociones del día 🔥',
-    'Bajó el precio, hoy conviene 🔥',
-    'Ofertas para llevar hoy 🔥'
+    'El precio tachado es el anterior. Hoy se cobra el de abajo.',
+    'Bajó en la tienda. El porcentaje es el real, no uno inventado.',
+    'La promo es esta. El tope es el precio que ves.'
   ]
 };
 
@@ -159,15 +161,9 @@ function hooksFor(mood, voices) {
   return HOOKS[mood] || HOOKS.mix;
 }
 
-const ROSA_HOOKS = [
-  'Octubre Rosa en Zenn. Elegí el tuyo y llevátelo hoy.',
-  'Este octubre, el que te gusta está en la tienda.',
-  'Octubre Rosa. Stock de verdad y entrega en el día.'
-];
-
 function composeVariant(products, mood, variantIndex, voices) {
-  const rosa = products.length > 0 && products.every((product) => product.scene === 'rosa');
-  const hooks = rosa ? ROSA_HOOKS : hooksFor(mood, voices);
+  const naranja = products.length > 0 && products.every((product) => product.scene === 'naranja');
+  const hooks = naranja ? NARANJA.hooks : hooksFor(mood, voices);
   const day = new Date().toISOString().slice(0, 10);
   const start = hash(`${day}|${products.map((p) => p.id).join(',')}|${mood}`) % hooks.length;
   const hook = hooks[(start + variantIndex) % hooks.length];
@@ -190,11 +186,11 @@ function composeCaptions(products, voices) {
     const variant = composeVariant(list, mood, index, voices);
     if (index === 2) {
       const tags = variant.hashtags.slice(0, 5);
-      const rosa = list.every((product) => product.scene === 'rosa');
+      const naranja = list.every((product) => product.scene === 'naranja');
       variant.caption = [
-        rosa
-          ? 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.'
-          : (mood === 'promo' ? 'Promociones del día 🔥' : (list.length > 1 ? 'Nuevo ingreso en Zenn ✨' : variant.hook)),
+        naranja
+          ? NARANJA.hooks[0]
+          : (mood === 'promo' ? 'El precio tachado es el anterior. Hoy se cobra el de abajo.' : variant.hook),
         '',
         ...list.map(lineOf),
         '',
@@ -276,14 +272,15 @@ function communityCaption(products, intro) {
     const name = shelfName(product);
     const spec = specBits(product);
     const price = offerBit(product);
-    const spoken = [name, spec, price ? `a ${price}` : ''].filter(Boolean).join(', ');
+    const lead = String(intro || '').trim();
     return [
-      `${spoken}.`,
-      'Está en stock en Zenn. Entrega en Asunción en 24 horas.',
+      lead || `${name}${spec ? `. ${spec}` : ''}.`,
+      lead ? [spec, price ? `Hoy: ${price}` : ''].filter(Boolean).join('. ') : (price ? `Hoy: ${price}.` : ''),
+      'Retiro en Asunción o entrega en 24 horas.',
       `WhatsApp ${WHATSAPP}`,
       '',
       tags.join(' ')
-    ].join('\n');
+    ].filter((line) => line !== undefined).join('\n').replace(/\n{3,}/g, '\n\n');
   }
   const lines = list.map((product) => {
     const name = shelfName(product);
@@ -297,7 +294,7 @@ function communityCaption(products, intro) {
     '',
     ...lines,
     '',
-    'Stock en Asunción. Entrega en 24 horas.',
+    'Retiro en Asunción o entrega en 24 horas.',
     `WhatsApp ${WHATSAPP}`,
     '',
     tags.join(' ')

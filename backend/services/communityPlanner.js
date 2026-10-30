@@ -5,10 +5,11 @@ const Category = require('../models/categoryModel');
 const SocialPost = require('../models/socialPostModel');
 const CommunityDayFocus = require('../models/communityDayFocusModel');
 const { communityCaption } = require('./captionComposer');
-const { buildCreativePayload, formatGs, listSelectFields, isOctoberRosa } = require('./creativePayload');
+const { buildCreativePayload, formatGs, listSelectFields } = require('./creativePayload');
+const { campaignOn, angleOn, flyerSceneOn, ANGLES } = require('./storeCampaign');
 const { focusedSchemaFor } = require('./creativeSpecFocus');
-const { scoutMarket, chooseCatalogDay, communityAiReady, askDayOps, claudeReady } = require('./communityAi');
-const { composeSuggestion, reviseSuggestion } = require('./communityGraphic');
+const { scoutMarket, chooseCatalogDay, communityAiReady, askDayChat, claudeReady } = require('./communityAi');
+const { composeSuggestion, reviseSuggestion, restampCommunityArt } = require('./communityGraphic');
 const { matchTrends, dossierText, shelfCards } = require('./communitySignals');
 const { accountPulse } = require('./communityAccount');
 
@@ -25,6 +26,11 @@ const SUGGESTION_SLOTS = [
   { slot: 'reel', time: '10:15', kind: 'reel' },
   { slot: 'imagen', time: '13:15', kind: 'imagen' },
   { slot: 'dato', time: '19:15', kind: 'dato' }
+];
+const EXTRA_FEED_TIMES = ['20:15', '21:30', '22:15'];
+const EXTRA_STORY_TIMES = ['10:05', '13:35', '17:35', '21:05'];
+const EXTRA_SUGGESTIONS = [
+  { slot: 'imagen-2', time: '16:20', kind: 'imagen' }
 ];
 const DAY_SLOTS = [
   ...FEED_TIMES.map((_, index) => `feed-${index + 1}`),
@@ -450,15 +456,17 @@ function suggestionPackPlain(kind, label, time) {
   };
 }
 
-async function payloadsFor(ids) {
+async function payloadsFor(ids, dateKey) {
   const products = await Product.find({ _id: { $in: ids } }).select(listSelectFields()).lean();
   const byId = new Map(products.map((product) => [String(product._id), product]));
   const payloads = [];
+  const scene = flyerSceneOn(dateKey) || undefined;
   for (const id of ids) {
     const product = byId.get(String(id));
     if (!product) continue;
     payloads.push(buildCreativePayload(product, {
-      scene: isOctoberRosa() ? 'rosa' : undefined,
+      when: dateKey,
+      scene,
       specSchema: await focusedSchemaFor(product)
     }));
   }
@@ -474,10 +482,27 @@ async function existingSlots(dateKey) {
   return new Set(rows.map((row) => row.slot));
 }
 
-function withOctoberLine(caption) {
-  const text = String(caption || '');
-  if (!isOctoberRosa() || text.includes('Octubre Rosa')) return text;
-  return `Octubre Rosa.\n\n${text}`;
+function sceneFor(dateKey, current = '') {
+  return flyerSceneOn(dateKey) || (current === 'rosa' ? '' : (current || ''));
+}
+
+function cleanCaption(caption) {
+  return String(caption || '')
+    .replace(/^Octubre Rosa\.\s*/i, '')
+    .replace(/Octubre Rosa\.?\s*/gi, '')
+    .trim();
+}
+
+function withCampaignLine(caption, dateKey) {
+  const text = cleanCaption(caption);
+  const campaign = campaignOn(dateKey);
+  if (campaign) {
+    if (/reintegro|tienda naranja/i.test(text)) return text;
+    return `${campaign.lead}\n\n${text}`;
+  }
+  const angle = angleOn(dateKey);
+  if (angle && !/halloween|esta noche se juega/i.test(text)) return `${angle.lead}\n\n${text}`;
+  return text;
 }
 
 function clipName(value) {
@@ -620,14 +645,28 @@ function rowsForTrends(trendRows, trends, openRows, freshness, dateKey) {
   return extra;
 }
 
-function pinTrends(feeds, trendRows) {
+function pinTrends(feeds, trendRows, limit = FEED_POSTS) {
   const rest = feeds.filter((row) => !trendRows.some((trend) => trend.key === row.key));
-  return [...trendRows, ...rest].slice(0, FEED_POSTS);
+  return [...trendRows, ...rest].slice(0, limit);
+}
+
+function slotsFor(dateKey) {
+  const campaign = campaignOn(dateKey);
+  if (!campaign) return DAY_SLOTS;
+  return DAY_SLOTS.concat(
+    EXTRA_FEED_TIMES.slice(0, campaign.extraFeeds).map((_, index) => `feed-${FEED_TIMES.length + index + 1}`),
+    EXTRA_STORY_TIMES.slice(0, campaign.extraStories).map((_, index) => `story-${STORY_TIMES.length + index + 1}`),
+    EXTRA_SUGGESTIONS.map((slot) => slot.slot)
+  );
 }
 
 async function planDay(dateKey, groups, labels, used, freshness, trends, account) {
   const taken = await existingSlots(dateKey);
-  if (DAY_SLOTS.every((slot) => taken.has(slot))) return [];
+  const daySlots = slotsFor(dateKey);
+  if (daySlots.every((slot) => taken.has(slot))) return [];
+  const campaign = campaignOn(dateKey);
+  const feedCount = FEED_POSTS + (campaign ? campaign.extraFeeds : 0);
+  const storyCount = STORY_POSTS + (campaign ? campaign.extraStories : 0);
   const askAi = taken.size === 0;
   const rows = catalogRows(groups, labels, used);
   if (!rows.length) return [];
@@ -663,11 +702,12 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
   const front = [promoLocked, ...trendRows].filter(Boolean);
   const avoid = new Set(front.map((row) => row.key));
   let feeds = pinTrends(
-    pickSpread(rows, freshness, FEED_POSTS, FEED_SIZE, avoid),
-    front
+    pickSpread(rows, freshness, feedCount, FEED_SIZE, avoid),
+    front,
+    feedCount
   );
   feeds.forEach((row) => avoid.add(row.key));
-  let stories = pickSpread(rows, freshness, STORY_POSTS, 1, avoid);
+  let stories = pickSpread(rows, freshness, storyCount, 1, avoid);
   const recentLabels = [...freshness.entries()]
     .filter(([, date]) => date && date >= addDays(dateKey, -4))
     .map(([key]) => labels.get(key) || plainLabel(key));
@@ -692,12 +732,16 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
       recentLabels,
       trends,
       candidates,
-      account
+      account,
+      campaign,
+      angle: angleOn(dateKey)
     }),
     catalog: candidates.map((row) => ({
       key: row.key,
       productIds: row.products.map((product) => product.id)
-    }))
+    })),
+    feedLimit: feedCount,
+    storyLimit: storyCount
   }), 15000, null) : null;
   if (ai) {
     const byKey = new Map(rows.map((row) => [row.key, row]));
@@ -707,15 +751,16 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
     const aiStories = ai.stories
       .map((item) => byKey.get(item.subcategory))
       .filter((row) => row && row.fresh >= 1);
-    if (aiFeeds.length >= 3) feeds = pinTrends(aiFeeds.slice(0, FEED_POSTS), front);
+    if (aiFeeds.length >= 3) feeds = pinTrends(aiFeeds.slice(0, feedCount), front, feedCount);
     if (aiStories.length) {
-      stories = aiStories
-        .filter((row) => !feeds.some((feed) => feed.key === row.key))
-        .slice(0, STORY_POSTS);
+      const picked = aiStories.filter((row) => !feeds.some((feed) => feed.key === row.key));
+      const pickedKeys = new Set(picked.map((row) => row.key));
+      const rest = stories.filter((row) => !pickedKeys.has(row.key));
+      stories = [...picked, ...rest].slice(0, storyCount);
     }
   }
   if (promo && promo.fresh > FEED_SIZE) {
-    stories = [promo, ...stories.filter((row) => row.key !== promo.key)].slice(0, STORY_POSTS);
+    stories = [promo, ...stories.filter((row) => row.key !== promo.key)].slice(0, storyCount);
   }
   const hooks = new Map();
   const feedProducts = new Map();
@@ -738,7 +783,7 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
     if (taken.has(slot) || !ids.length) return;
     const when = atAsuncion(dateKey, time);
     if (when.getTime() < Date.now() + 10 * 60 * 1000) return;
-    const payloads = await payloadsFor(ids.map((item) => item.id));
+    const payloads = await payloadsFor(ids.map((item) => item.id), dateKey);
     if (!payloads.length) return;
     ids.forEach((item) => used.add(item.id));
     const storyName = clipName(payloads[0].productName || payloads[0].title);
@@ -766,11 +811,11 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
       productIds: payloads.map((product) => product.id),
       titles: payloads.map((product) => product.productName || product.title),
       kind,
-      caption: withOctoberLine(communityCaption(payloads, row.promo
+      caption: withCampaignLine(communityCaption(payloads, row.promo
         ? `Promociones de ${spokenLabel(row.label)} que están hoy en la tienda${maxOff ? `. Hasta -${maxOff}%` : ''}.`
-        : saleIntro(row, ids))),
+        : (hooks.get(row.key) || saleIntro(row, ids))), dateKey),
       showPrice: true,
-      scene: isOctoberRosa() ? 'rosa' : '',
+      scene: flyerSceneOn(dateKey),
       origin: 'community',
       planDate: dateKey,
       slot,
@@ -800,8 +845,9 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
         mediaUrls: [],
         creativeHtml: '',
         kind: 'reel',
-        caption: withOctoberLine(pack.caption),
+        caption: withCampaignLine(pack.caption, dateKey),
         showPrice: false,
+        scene: flyerSceneOn(dateKey),
         origin: 'community',
         planDate: dateKey,
         slot: slot.slot,
@@ -827,8 +873,8 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
         intent: row.intent || '',
         planDate: dateKey,
         brief: pack.brief || '',
-        angle: pack.headline || '',
-        fast: true
+        angle: (angleOn(dateKey) && angleOn(dateKey).brief) || pack.headline || '',
+        fast: false
       });
     } catch (error) {
       console.error('[community graphic]', error.message || error);
@@ -839,8 +885,9 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
       mediaUrls: art && art.mediaUrl ? [art.mediaUrl] : [],
       creativeHtml: art && art.html ? art.html : '',
       kind: slot.kind,
-      caption: withOctoberLine((art && art.caption) || pack.caption),
+      caption: withCampaignLine((art && art.caption) || pack.caption, dateKey),
       showPrice: false,
+      scene: flyerSceneOn(dateKey),
       origin: 'community',
       planDate: dateKey,
       slot: slot.slot,
@@ -855,19 +902,22 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
     created.push(doc);
   }
 
+  const feedTimes = campaign ? FEED_TIMES.concat(EXTRA_FEED_TIMES.slice(0, campaign.extraFeeds)) : FEED_TIMES;
+  const storyTimes = campaign ? STORY_TIMES.concat(EXTRA_STORY_TIMES.slice(0, campaign.extraStories)) : STORY_TIMES;
+  const suggestionSlots = campaign ? SUGGESTION_SLOTS.concat(EXTRA_SUGGESTIONS) : SUGGESTION_SLOTS;
   for (let index = 0; index < feeds.length; index += 1) {
     const row = feeds[index];
     const ids = pickChosen(row, feedProducts.get(row.key), used, row.onlyIds ? Math.min(FEED_SIZE, row.onlyIds.length) : FEED_SIZE);
-    await placeProducts(`feed-${index + 1}`, FEED_TIMES[index], row, ids, 'feed');
+    await placeProducts(`feed-${index + 1}`, feedTimes[index], row, ids, 'feed');
   }
   for (let index = 0; index < stories.length; index += 1) {
     const row = stories[index];
     const ids = pickChosen(row, storyProducts.get(row.key), used, 1);
-    await placeProducts(`story-${index + 1}`, STORY_TIMES[index], row, ids, 'story');
+    await placeProducts(`story-${index + 1}`, storyTimes[index], row, ids, 'story');
   }
   const suggestionRows = feeds.length ? feeds : stories;
-  for (let index = 0; index < SUGGESTION_SLOTS.length; index += 1) {
-    const slot = SUGGESTION_SLOTS[index];
+  for (let index = 0; index < suggestionSlots.length; index += 1) {
+    const slot = suggestionSlots[index];
     const focus = promoLocked || trendRows[0] || null;
     const row = focus || suggestionRows[index % suggestionRows.length];
     if (!row) continue;
@@ -905,7 +955,8 @@ function firstOpenDay() {
   const latest = Math.max(
     ...FEED_TIMES.map(minutesOf),
     ...STORY_TIMES.map(minutesOf),
-    ...SUGGESTION_SLOTS.map((slot) => minutesOf(slot.time))
+    ...SUGGESTION_SLOTS.map((slot) => minutesOf(slot.time)),
+    ...(campaignOn(today) ? EXTRA_FEED_TIMES.map(minutesOf).concat(EXTRA_STORY_TIMES.map(minutesOf), EXTRA_SUGGESTIONS.map((slot) => minutesOf(slot.time))) : [])
   );
   if (now + 10 < latest) return today;
   return addDays(today, 1);
@@ -919,7 +970,7 @@ async function planCommunityDays({ days = 3, startDate } = {}) {
   let needsThought = false;
   for (const dateKey of dateKeys) {
     const taken = await existingSlots(dateKey);
-    if (DAY_SLOTS.every((slot) => taken.has(slot))) continue;
+    if (slotsFor(dateKey).every((slot) => taken.has(slot))) continue;
     openings.push(dateKey);
     if (taken.size === 0) needsThought = true;
   }
@@ -996,10 +1047,10 @@ function publicPost(post, compact = false) {
     kind: post.kind,
     status: post.status,
     headline,
-    scene: post.scene || (isOctoberRosa() ? 'rosa' : ''),
+    scene: sceneFor(post.planDate, post.scene),
     reason: post.reason || '',
     brief: post.brief || '',
-    caption: post.caption || '',
+    caption: withCampaignLine(post.caption, post.planDate),
     titles: post.titles || [],
     productIds: post.productIds || [],
     subcategoryLabel: post.subcategoryLabel || '',
@@ -1031,11 +1082,79 @@ function communityRange(start, end) {
   };
 }
 
+async function dropOctoberRosa(today) {
+  const posts = await SocialPost.find({
+    origin: 'community',
+    status: { $in: ['scheduled', 'idea'] },
+    planDate: { $gte: today },
+    $or: [{ scene: 'rosa' }, { caption: /Octubre Rosa/i }]
+  });
+  const redraw = [];
+  for (const doc of posts) {
+    doc.scene = sceneFor(doc.planDate, doc.scene);
+    doc.caption = withCampaignLine(doc.caption, doc.planDate);
+    await doc.save();
+    if (['imagen', 'dato'].includes(doc.kind) && redraw.length < 3) redraw.push(doc);
+  }
+  if (redraw.length) {
+    setImmediate(() => {
+      redraw.reduce((chain, doc) => chain.then(async () => {
+        const angle = angleOn(doc.planDate);
+        const note = angle
+          ? angle.brief
+          : 'Sacá Octubre Rosa, el lazo y el fondo rosa. El producto ocupa la pieza. Una frase concreta.';
+        try {
+          const art = await reviseSuggestion(doc, { note, time: '' });
+          if (!art || !art.mediaUrl) return;
+          doc.mediaUrls = [art.mediaUrl];
+          doc.creativeHtml = art.html || doc.creativeHtml;
+          doc.caption = withCampaignLine(art.caption || doc.caption, doc.planDate);
+          await doc.save();
+        } catch (error) {
+          console.error('[community graphic]', error.message || error);
+        }
+      }), Promise.resolve());
+    });
+  }
+  if (today <= '2026-10-31') {
+    const from = today > '2026-10-30' ? today : '2026-10-30';
+    await SocialPost.updateMany(
+      {
+        origin: 'community',
+        status: { $in: ['scheduled', 'idea'] },
+        planDate: { $gte: from, $lte: '2026-10-31' },
+        scene: { $ne: 'halloween' }
+      },
+      { $set: { scene: 'halloween' } }
+    );
+  }
+  for (const angle of ANGLES) {
+    let cursor = angle.from;
+    while (cursor <= angle.to) {
+      if (cursor >= today) {
+        const existing = await CommunityDayFocus.findOne({ planDate: cursor }).lean();
+        if (!existing || !(existing.messages || []).length) {
+          await CommunityDayFocus.findOneAndUpdate(
+            { planDate: cursor },
+            {
+              $set: { focus: (existing && existing.focus) || angle.brief },
+              $push: { messages: { role: 'assistant', text: angle.opener, at: new Date() } }
+            },
+            { upsert: true }
+          );
+        }
+      }
+      cursor = addDays(cursor, 1);
+    }
+  }
+}
+
 async function listCommunityCalendar({ from, days = 14 } = {}) {
   const start = from || zonedDate();
   const count = Math.max(1, Math.min(42, Number(days) || 14));
   const end = addDays(start, count - 1);
   const today = zonedDate();
+  await dropOctoberRosa(today);
   const reads = [];
   if (start < today) {
     const pastEnd = end < today ? end : addDays(today, -1);
@@ -1073,7 +1192,7 @@ async function listCommunityCalendar({ from, days = 14 } = {}) {
   const focuses = end >= today
     ? await CommunityDayFocus.find({ planDate: { $gte: focusStart, $lte: end } }).lean()
     : [];
-  const focusByDate = new Map(focuses.map((item) => [item.planDate, item.focus || '']));
+  const focusByDate = new Map(focuses.map((item) => [item.planDate, item]));
   let tiktok = { connected: false, configured: false, name: '' };
   try {
     tiktok = await require('./tiktokAuth').getTikTokStatus();
@@ -1090,7 +1209,11 @@ async function listCommunityCalendar({ from, days = 14 } = {}) {
       date,
       label: dayLabel(date),
       past: date < today,
-      focus: focusByDate.get(date) || '',
+      focus: (focusByDate.get(date) && focusByDate.get(date).focus) || '',
+      messages: ((focusByDate.get(date) && focusByDate.get(date).messages) || []).slice(-24).map((item) => ({
+        role: item.role,
+        text: item.text
+      })),
       slots
     }))
   };
@@ -1135,9 +1258,11 @@ async function repairCommunityPost(doc, used) {
     }
   }
   if (!dead) {
-    if (isOctoberRosa() && doc.scene !== 'rosa') {
-      doc.scene = 'rosa';
-      doc.caption = withOctoberLine(doc.caption);
+    const wanted = sceneFor(doc.planDate, doc.scene);
+    const cleaned = withCampaignLine(doc.caption, doc.planDate);
+    if ((doc.scene || '') !== wanted || cleaned !== String(doc.caption || '').trim()) {
+      doc.scene = wanted;
+      doc.caption = cleaned;
       await doc.save();
       return true;
     }
@@ -1156,7 +1281,7 @@ async function repairCommunityPost(doc, used) {
     await doc.save();
     return true;
   }
-  const payloads = await payloadsFor(next.map((product) => product.id));
+  const payloads = await payloadsFor(next.map((product) => product.id), doc.planDate);
   if (!payloads.length) {
     doc.status = 'cancelled';
     doc.reason = `${doc.subcategoryLabel || 'Ese rubro'} se quedó sin stock. No se publica un producto que ya no está.`;
@@ -1171,13 +1296,13 @@ async function repairCommunityPost(doc, used) {
       ? clipName(payloads[0].productName || payloads[0].title)
       : `${payloads.length} ${doc.subcategoryLabel || ''}`.trim());
   const maxOff = Math.max(0, ...payloads.map((product) => Number(product.discountPercent) || 0));
-  doc.caption = withOctoberLine(communityCaption(
+  doc.caption = withCampaignLine(communityCaption(
     payloads,
     promoPost
       ? `Promociones de ${doc.subcategoryLabel} que están hoy en la tienda${maxOff ? `. Hasta -${maxOff}%` : ''}.`
       : feedIntro(doc.subcategoryLabel, payloads, '')
-  ));
-  doc.scene = isOctoberRosa() ? 'rosa' : doc.scene;
+  ), doc.planDate);
+  doc.scene = sceneFor(doc.planDate, doc.scene);
   const swapped = spares.length === 1 ? 'entró otro del mismo rubro' : `entraron ${spares.length} del mismo rubro`;
   const dropped = dead - spares.length;
   const note = spares.length
@@ -1200,6 +1325,29 @@ async function refreshScheduledStock() {
   let changed = 0;
   for (const doc of posts) {
     if (await repairCommunityPost(doc, used)) changed += 1;
+  }
+  const artPosts = await SocialPost.find({
+    origin: 'community',
+    kind: { $in: ['imagen', 'dato'] },
+    status: { $in: ['idea', 'scheduled'] },
+    scheduledAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) }
+  }).sort({ scheduledAt: 1 }).limit(8);
+  let restamped = 0;
+  for (const doc of artPosts) {
+    if (restamped >= 2) break;
+    try {
+      const art = await restampCommunityArt(doc);
+      if (!art) continue;
+      doc.creativeHtml = art.html;
+      doc.mediaUrls = [art.mediaUrl];
+      doc.caption = withCampaignLine(doc.caption, doc.planDate);
+      doc.scene = sceneFor(doc.planDate, doc.scene);
+      await doc.save();
+      restamped += 1;
+      changed += 1;
+    } catch (error) {
+      console.error('[community graphic]', doc._id, error.message || error);
+    }
   }
   return changed;
 }
@@ -1230,7 +1378,7 @@ async function paintOpenIdeas() {
         subcategory: doc.subcategory,
         time,
         planDate: doc.planDate,
-        fast: true
+        fast: false
       });
       if (!art.mediaUrl) continue;
       doc.mediaUrls = [art.mediaUrl];
@@ -1239,7 +1387,8 @@ async function paintOpenIdeas() {
       doc.titles = art.titles;
       doc.headline = art.headline;
       doc.brief = art.brief;
-      doc.caption = withOctoberLine(art.caption);
+      doc.caption = withCampaignLine(art.caption, doc.planDate);
+      doc.scene = sceneFor(doc.planDate, doc.scene);
       doc.reason = art.reason;
       await doc.save();
       painted += 1;
@@ -1343,7 +1492,7 @@ function pickFromRow(row, { brand = '', count = 5 } = {}) {
 }
 
 async function writePostProducts(doc, items, label, key, reason) {
-  const payloads = await payloadsFor(items.map((item) => item.id));
+  const payloads = await payloadsFor(items.map((item) => item.id), doc.planDate);
   if (!payloads.length) return false;
   doc.productIds = items.map((item) => item.id);
   doc.titles = items.map((item) => item.productName);
@@ -1352,9 +1501,9 @@ async function writePostProducts(doc, items, label, key, reason) {
   doc.headline = payloads.length === 1
     ? clipName(items[0].productName)
     : `${payloads.length} ${label}`;
-  doc.caption = withOctoberLine(communityCaption(payloads, feedIntro(label, items, '')));
+  doc.caption = withCampaignLine(communityCaption(payloads, feedIntro(label, items, '')), doc.planDate);
   doc.reason = reason;
-  doc.scene = isOctoberRosa() ? 'rosa' : (doc.scene || '');
+  doc.scene = sceneFor(doc.planDate, doc.scene);
   if (['imagen', 'dato'].includes(doc.kind)) {
     doc.mediaUrls = [];
     doc.creativeHtml = '';
@@ -1387,9 +1536,13 @@ async function reviseDayTalk(date, note) {
     error.statusCode = 400;
     throw error;
   }
-  const [labels, products] = await Promise.all([labelMap(), stockPool()]);
+  const [labels, products, memory] = await Promise.all([
+    labelMap(),
+    stockPool(),
+    CommunityDayFocus.findOne({ planDate: dateKey }).lean()
+  ]);
   const rows = catalogRows(groupPool(products), labels, new Set());
-  const aiOps = await askDayOps({
+  const talked = await askDayChat({
     note: text,
     posts: editable.map((doc) => ({
       slot: doc.slot,
@@ -1397,9 +1550,11 @@ async function reviseDayTalk(date, note) {
       subcategoryLabel: doc.subcategoryLabel,
       titles: doc.titles
     })),
-    labels: rows.map((row) => row.label)
+    labels: rows.map((row) => row.label),
+    history: memory && memory.messages,
+    angle: angleOn(dateKey)
   });
-  const ops = (aiOps && aiOps.length ? aiOps : readDayTalk(text))
+  let ops = (talked && talked.ops && talked.ops.length ? talked.ops : readDayTalk(text))
     .map((op) => ({
       type: op.type,
       from: String(op.from || '').trim(),
@@ -1409,13 +1564,34 @@ async function reviseDayTalk(date, note) {
       count: Number(op.count) || 5,
       note: String(op.note || text).trim()
     }));
-  if (!ops.length) {
-    const error = new Error('No entendí el cambio. Por ejemplo: en vez de monitores mostrá memorias RAM. O agregá las notebooks Acer. O en vez de 5 auriculares subí 5 cosas distintas.');
-    error.statusCode = 400;
-    throw error;
+  if (!ops.length && /halloween|hallowen/.test(foldText(text))) {
+    ops = [{ type: 'angle', from: '', to: '', brand: '', all: false, count: 5, note: 'Halloween: esta noche se juega. Setup, monitor o auricular. Nada de Octubre Rosa.' }];
   }
   const notes = [];
+  let focusNote = memory && memory.focus ? memory.focus : '';
   for (const op of ops) {
+    if (op.type === 'angle') {
+      focusNote = op.note;
+      for (const doc of editable) {
+        doc.scene = sceneFor(doc.planDate, doc.scene);
+        const body = cleanCaption(doc.caption);
+        doc.caption = body.includes(op.note.slice(0, 48)) ? body : `${op.note}\n\n${body}`;
+        if (['imagen', 'dato'].includes(doc.kind)) {
+          try {
+            const art = await reviseSuggestion(doc, { note: op.note, time: '' });
+            if (art && art.mediaUrl) {
+              doc.mediaUrls = [art.mediaUrl];
+              doc.creativeHtml = art.html || doc.creativeHtml;
+            }
+          } catch (error) {
+            console.error('[community graphic]', error.message || error);
+          }
+        }
+        await doc.save();
+      }
+      notes.push(`Quedó anotado: ${op.note}`);
+      continue;
+    }
     if (op.type === 'photo') {
       const pieces = editable.filter((doc) => ['imagen', 'dato'].includes(doc.kind));
       if (!pieces.length) {
@@ -1516,7 +1692,8 @@ async function reviseDayTalk(date, note) {
             doc.creativeHtml = art.html || '';
             doc.headline = art.headline || doc.headline;
             doc.brief = art.brief || doc.brief;
-            doc.caption = withOctoberLine(art.caption || doc.caption);
+            doc.caption = withCampaignLine(art.caption || doc.caption, doc.planDate);
+            doc.scene = sceneFor(dateKey, doc.scene);
             await doc.save();
           }
         } catch (error) {
@@ -1528,14 +1705,30 @@ async function reviseDayTalk(date, note) {
       ? `Entraron ${picked.length} ${wanted.label} ${brand}.`
       : `Eso pasó a ${wanted.label}.`);
   }
-  if (!notes.length) {
-    const error = new Error('No pude aplicar ese cambio sobre lo que hay publicado ese día.');
-    error.statusCode = 400;
-    throw error;
-  }
+  const reply = (talked && talked.reply) || notes.join(' ') || 'Anotado. Si querés mover un rubro, decilo así: en vez de monitores mostrá memorias RAM.';
+  const saved = await CommunityDayFocus.findOneAndUpdate(
+    { planDate: dateKey },
+    {
+      $set: { focus: focusNote },
+      $push: {
+        messages: {
+          $each: [
+            { role: 'user', text, at: new Date() },
+            { role: 'assistant', text: reply, at: new Date() }
+          ],
+          $slice: -24
+        }
+      }
+    },
+    { upsert: true, new: true }
+  );
   return {
     date: dateKey,
-    message: notes.join(' ')
+    message: reply,
+    messages: (saved.messages || []).slice(-24).map((item) => ({
+      role: item.role,
+      text: item.text
+    }))
   };
 }
 
@@ -1569,7 +1762,8 @@ async function reviseCommunityPiece(id, { note = '', background = '', swap = fal
     doc.productIds = art.productIds;
     doc.titles = art.titles;
     doc.headline = art.headline;
-    doc.caption = withOctoberLine(art.caption);
+    doc.caption = withCampaignLine(art.caption, doc.planDate);
+    doc.scene = sceneFor(doc.planDate, doc.scene);
     if (art.subcategory) doc.subcategory = art.subcategory;
   }
   doc.brief = art.brief || doc.brief;

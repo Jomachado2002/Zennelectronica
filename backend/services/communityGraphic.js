@@ -3,12 +3,18 @@
 const sharp = require('sharp');
 const Product = require('../models/productModel');
 const { getSharedBrowser } = require('../helpers/sharedChrome');
-const { formatGs, isOctoberRosa } = require('./creativePayload');
+const { formatGs } = require('./creativePayload');
+const { campaignOn, NARANJA } = require('./storeCampaign');
+const { naranjaBanner } = require('./creativeHtml');
 const { getCommunityLogoLight, getCommunityLogoDark, getCutoutDataUri } = require('./creativeImage');
 const { uploadJpeg } = require('./socialPublishService');
-const { revisePieceHtml, designPieceHtml, claudeReady, steerTemplate } = require('./communityAi');
+const { revisePieceHtml, designPieceHtml, claudeReady, steerTemplate, directPiece } = require('./communityAi');
 
 const SIZE = { w: 1080, h: 1350 };
+let reserve = 0;
+function y(n) {
+  return n + reserve;
+}
 const WEEK = ['precio', 'encuesta', 'dato', 'presupuesto', 'meme', 'novedad', 'pregunta'];
 
 function esc(value) {
@@ -139,8 +145,10 @@ function layoutFor(kind, day, label) {
   const text = String(label || '').toLowerCase();
   if (kind === 'dato') return 'fact';
   if (kind === 'reel') return day === 5 ? 'question' : 'poster';
-  if (day === 4 && /teclad/.test(text)) return 'desk';
-  return ['perday', 'poll', 'fact', 'budget', 'poster', 'poster', 'question'][day] || 'poster';
+  if (/teclad/.test(text) && day % 2 === 0) return 'desk';
+  const pool = ['poster', 'question', 'fact', 'poll', 'budget', 'perday', 'poster'];
+  const n = [...text].reduce((sum, char) => sum + char.charCodeAt(0), day * 13);
+  return pool[n % pool.length];
 }
 
 function page(body, css) {
@@ -151,7 +159,7 @@ function page(body, css) {
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: ${SIZE.w}px; height: ${SIZE.h}px; overflow: hidden; }
+  html, body { width: ${SIZE.w}px; height: ${SIZE.h}px; overflow: hidden; position: relative; }
   body { -webkit-font-smoothing: antialiased; }
   img { display: block; }
   .logo { height: 44px; width: auto; }
@@ -166,10 +174,8 @@ function page(body, css) {
 </html>`;
 }
 
-function mark(light) {
-  if (!isOctoberRosa()) return '';
-  const color = light ? '#9D174D' : '#F9A8D4';
-  return `<span style="letter-spacing:.16em;font-size:13px;font-weight:700;text-transform:uppercase;color:${color};font-family:Outfit,sans-serif;">Octubre Rosa</span>`;
+function mark() {
+  return '';
 }
 
 function isDark(hex) {
@@ -198,8 +204,8 @@ function posterHtml({ logo, line, item, photo, tone }) {
       </div>
       <h1 style="padding:28px 48px 0;font-size:78px;line-height:.92;font-weight:700;letter-spacing:-.03em;max-width:980px;">${br(line.title)}</h1>
       <p style="padding:16px 48px 0;font-family:Outfit,sans-serif;font-size:28px;font-weight:500;max-width:820px;">${esc(line.sub)}</p>
-      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:20px;right:20px;bottom:88px;width:${SIZE.w - 40}px;height:760px;">
-      <div style="position:absolute;left:48px;right:48px;bottom:36px;display:flex;justify-content:space-between;font-family:Outfit,sans-serif;font-size:22px;font-weight:700;">
+      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:20px;right:20px;bottom:${y(88)}px;width:${SIZE.w - 40}px;height:${Math.max(320, 760 - reserve)}px;">
+      <div style="position:absolute;left:48px;right:48px;bottom:${y(36)}px;display:flex;justify-content:space-between;font-family:Outfit,sans-serif;font-size:22px;font-weight:700;">
         <span>${esc(clip(item.productName, 46))}</span><span>${esc(priceText(item))}</span>
       </div>
     </div>`, '');
@@ -214,7 +220,7 @@ function deskHtml({ logo, items, photos, tone }) {
       <p style="position:absolute;left:8px;bottom:0;font-family:Outfit,sans-serif;font-size:22px;font-weight:700;">${phrases[index] || ''} · ${esc(priceText(item))}</p>
     </div>`).join('');
   return page(`
-    <div data-canvas="1" style="width:${SIZE.w}px;height:${SIZE.h}px;background:${color.field};color:${color.ink};position:relative;overflow:hidden;padding:36px 40px 28px;display:flex;flex-direction:column;font-family:Fraunces,Georgia,serif;">
+    <div data-canvas="1" style="width:${SIZE.w}px;height:${SIZE.h}px;background:${color.field};color:${color.ink};position:relative;overflow:hidden;padding:36px 40px ${28 + reserve}px;display:flex;flex-direction:column;font-family:Fraunces,Georgia,serif;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <img class="logo" src="${esc(logo)}" alt="Zenn">${mark(!color.dark)}
       </div>
@@ -233,11 +239,11 @@ function pollHtml({ logo, items, photos, ask, tone }) {
     return `
       <div data-canvas="${dark ? '1' : '0'}" style="flex:1;min-height:0;position:relative;background:${field};color:${ink};">
         <img id="product-${index + 1}" class="cut" src="${esc(photos[index])}" alt="" style="position:absolute;left:24px;right:24px;top:70px;width:calc(100% - 48px);height:78%;">
-        <p style="position:absolute;left:36px;bottom:36px;font-family:Outfit,sans-serif;font-size:26px;font-weight:700;">${esc(item.brandName || '')}<br>${esc(priceText(item))}</p>
+        <p style="position:absolute;left:36px;bottom:${y(36)}px;font-family:Outfit,sans-serif;font-size:26px;font-weight:700;">${esc(item.brandName || '')}<br>${esc(priceText(item))}</p>
       </div>`;
   }).join('');
   return page(`
-    <div style="width:${SIZE.w}px;height:${SIZE.h}px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="width:${SIZE.w}px;height:${SIZE.h}px;display:flex;flex-direction:column;overflow:hidden;${reserve ? `padding-bottom:${reserve}px;` : ''}">
       <div style="height:210px;background:#F3EBDD;color:#1A120C;padding:32px 40px 0;font-family:Fraunces,Georgia,serif;">
         <div style="display:flex;justify-content:space-between;"><img class="logo" src="${esc(logo)}" alt="Zenn">${mark(true)}</div>
         <h1 style="margin-top:14px;font-size:54px;line-height:1;font-weight:700;">¿Cuál te llevás?</h1>
@@ -255,8 +261,8 @@ function factHtml({ logo, item, photo, fact, tone }) {
         <img class="logo" src="${esc(logo)}" alt="Zenn">${mark(!color.dark)}
       </div>
       <p style="position:absolute;left:36px;right:36px;top:150px;font-family:Fraunces,Georgia,serif;font-size:150px;line-height:.85;font-weight:700;letter-spacing:-.04em;color:${color.ink};">${esc(fact.big)}</p>
-      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:30px;right:30px;bottom:150px;width:${SIZE.w - 60}px;height:700px;z-index:2;">
-      <p style="position:absolute;left:44px;right:44px;bottom:48px;z-index:3;font-size:28px;font-weight:500;max-width:900px;">${esc(fact.line)}</p>
+      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:30px;right:30px;bottom:${y(150)}px;width:${SIZE.w - 60}px;height:${Math.max(280, 700 - reserve)}px;z-index:2;">
+      <p style="position:absolute;left:44px;right:44px;bottom:${y(48)}px;z-index:3;font-size:28px;font-weight:500;max-width:900px;">${esc(fact.line)}</p>
     </div>`, '');
 }
 
@@ -264,7 +270,7 @@ function questionHtml({ logo, line, item, photo, tone }) {
   const color = tone || toneOf('', '#1C3144');
   return page(`
     <div data-canvas="1" style="width:${SIZE.w}px;height:${SIZE.h}px;position:relative;overflow:hidden;background:${color.field};color:${color.dark ? '#F4EFE6' : '#1A120C'};">
-      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:0;right:0;bottom:0;width:${SIZE.w}px;height:980px;">
+      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:0;right:0;bottom:${y(0)}px;width:${SIZE.w}px;height:${Math.max(420, 980 - reserve)}px;">
       <div style="position:absolute;left:36px;top:36px;right:36px;z-index:3;background:#F4EFE6;color:#1A120C;padding:28px 32px 24px;font-family:Fraunces,Georgia,serif;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <img class="logo" src="${esc(logo)}" alt="Zenn">${mark(true)}
@@ -282,7 +288,7 @@ function budgetHtml({ logo, items, photos, tone }) {
       <img id="product-${index + 1}" class="cut" src="${esc(photos[index])}" alt="" style="width:100%;height:100%;object-fit:contain;">
     </div>`).join('');
   return page(`
-    <div data-canvas="1" style="width:${SIZE.w}px;height:${SIZE.h}px;background:${color.field};color:${color.ink};display:flex;flex-direction:column;padding:32px 28px 24px;font-family:Fraunces,Georgia,serif;">
+    <div data-canvas="1" style="width:${SIZE.w}px;height:${SIZE.h}px;background:${color.field};color:${color.ink};display:flex;flex-direction:column;padding:32px 28px ${24 + reserve}px;font-family:Fraunces,Georgia,serif;">
       <div style="display:flex;justify-content:space-between;"><img class="logo" src="${esc(logo)}" alt="Zenn">${mark(!color.dark)}</div>
       <h1 style="margin-top:12px;font-size:48px;line-height:1;font-weight:700;">Ninguno pasa de ${esc(formatGs(top))}.</h1>
       <div style="flex:1;min-height:0;display:flex;gap:8px;margin-top:12px;">${cols}</div>
@@ -298,7 +304,7 @@ function perDayHtml({ logo, item, photo, tone }) {
       <div style="display:flex;justify-content:space-between;padding:32px 40px 0;"><img class="logo" src="${esc(logo)}" alt="Zenn">${mark(!color.dark)}</div>
       <h1 style="padding:20px 44px 0;font-size:64px;line-height:.95;font-weight:700;">${esc(formatGs(perDay))} por día.</h1>
       <p style="padding:10px 44px 0;font-family:Outfit,sans-serif;font-size:26px;">${esc(formatGs(sell))} en 3 años. Un café sale Gs. 15.000.</p>
-      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:40px;right:40px;bottom:40px;width:${SIZE.w - 80}px;height:820px;">
+      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:40px;right:40px;bottom:${y(40)}px;width:${SIZE.w - 80}px;height:${Math.max(340, 820 - reserve)}px;">
     </div>`, '');
 }
 
@@ -498,10 +504,23 @@ function fillHtml(html, tokens) {
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, '')
     .replace(/src\s*=\s*(["'])https?:[^"']+\1/gi, 'src=""')
-    .replace(/\{\{(\w+)\}\}/g, (_, key) => tokens[key] || '');
+    .replace(/\{\{(\w+)\}\}/g, (_, key) => (key === 'banner' ? '{{banner}}' : (tokens[key] || '')));
   const css = 'img.logo{background:transparent!important;box-shadow:none!important;border:0!important;height:72px;width:auto;object-fit:contain;display:block;}';
   if (filled.includes('</head>')) return filled.replace('</head>', `<style>${css}</style></head>`);
   return filled;
+}
+
+function stampZocalo(html) {
+  const text = String(html || '');
+  if (!text || text.includes('tn-zocalo') || text.includes('{{banner}}')) return text;
+  const bar = '<div class="tn-zocalo" style="position:absolute;left:0;right:0;bottom:14px;z-index:40;line-height:0;pointer-events:none;display:flex;justify-content:center;"><img class="tn-banner" src="{{banner}}" alt="" style="width:auto;max-width:78%;height:148px;object-fit:contain;object-position:center bottom;display:block;"></div>';
+  if (text.includes('</body>')) return text.replace('</body>', `${bar}</body>`);
+  return `${text}${bar}`;
+}
+
+function expandBanner(html) {
+  if (!String(html || '').includes('{{banner}}')) return html;
+  return String(html).split('{{banner}}').join(naranjaBanner());
 }
 
 async function renderPng(html) {
@@ -509,7 +528,7 @@ async function renderPng(html) {
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: SIZE.w, height: SIZE.h, deviceScaleFactor: 2 });
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 25000 });
+    await page.setContent(expandBanner(html), { waitUntil: 'domcontentloaded', timeout: 25000 });
     await Promise.race([
       page.evaluate(async () => {
         if (document.fonts && document.fonts.ready) await document.fonts.ready;
@@ -688,15 +707,41 @@ async function composeSuggestion({
   const photos = await Promise.all(chosen.map((item) => getCutoutDataUri(item.image)));
   if (!photos[0]) return art;
   const [logoWhite, logoInk] = await Promise.all([getCommunityLogoDark(), getCommunityLogoLight()]);
+  const campaign = campaignOn(planDate);
+  reserve = campaign ? NARANJA.reserve : 0;
+  let steerTitle = title || '';
+  let steerAngle = angle || line.angle;
+  let steerBrief = brief || '';
+  if (!fast) {
+    const directed = await directPiece({
+      dateLabel: planDate,
+      kind,
+      label,
+      products: chosen.map((item) => ({ name: item.productName, priceText: priceText(item) })),
+      trends: [],
+      angle: steerAngle
+    });
+    if (directed && directed.title) {
+      steerTitle = directed.title;
+      art.headline = directed.title;
+      const rest = String(art.caption || '').split('\n').slice(1);
+      art.caption = [directed.title, ...rest].join('\n');
+    }
+    if (directed && directed.angle) steerAngle = directed.angle;
+    if (directed && directed.brief) steerBrief = directed.brief;
+  }
   let html = '';
   if (!fast && claudeReady()) {
     try {
       const designed = await designPieceHtml({
         dateLabel: planDate,
-        angle: angle || line.angle,
-        brief,
-        title,
+        angle: steerAngle,
+        brief: steerBrief,
+        title: steerTitle,
         kind,
+        campaign: Boolean(campaign),
+        attempts: 1,
+        timeout: 28000,
         products: chosen.map((item) => ({ name: item.productName, priceText: priceText(item) }))
       });
       if (designed) {
@@ -717,6 +762,7 @@ async function composeSuggestion({
     }
   }
   if (!html) html = buildHtml({ layout, logoInk, logoWhite, line, items: chosen, photos, background });
+  if (campaign) html = stampZocalo(html);
   if (!art.source) art.source = 'local';
   art.html = html;
   const png = await renderPng(html);
@@ -783,6 +829,7 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     error.statusCode = 500;
     throw error;
   }
+  reserve = campaignOn(doc.planDate) ? NARANJA.reserve : 0;
   const logoInk = await getCommunityLogoLight();
   const logoWhite = await getCommunityLogoDark();
   const named = COLOR_WORDS.find(([, hex]) => hex.toLowerCase() === String(color || '').toLowerCase());
@@ -839,6 +886,7 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     }
   }
   if (!filled) filled = localHtml();
+  if (campaignOn(doc.planDate)) filled = stampZocalo(filled);
   const png = await renderPng(filled);
   const mediaUrl = await uploadJpeg(png, `comunidad-revision-${Date.now()}`);
   const arrived = chosen.filter((item) => !ids.includes(item.id)).map((item) => clip(item.productName, 80));
@@ -870,4 +918,20 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
   };
 }
 
-module.exports = { composeSuggestion, reviseSuggestion };
+async function restampCommunityArt(doc) {
+  const html = String(doc && doc.creativeHtml || '');
+  if (!html || !['imagen', 'dato'].includes(doc.kind)) return null;
+  const rosa = /Octubre Rosa/i.test(html);
+  const campaign = campaignOn(doc.planDate);
+  const needsBanner = Boolean(campaign) && !html.includes('tn-zocalo') && !html.includes('{{banner}}');
+  if (!rosa && !needsBanner) return null;
+  reserve = campaign ? NARANJA.reserve : 0;
+  let next = html.replace(/<span[^>]*>\s*Octubre Rosa\s*<\/span>/gi, '');
+  if (needsBanner) next = stampZocalo(next);
+  if (next === html) return null;
+  const png = await renderPng(next);
+  const mediaUrl = await uploadJpeg(png, `comunidad-ajuste-${Date.now()}`);
+  return { html: next, mediaUrl };
+}
+
+module.exports = { composeSuggestion, reviseSuggestion, restampCommunityArt };

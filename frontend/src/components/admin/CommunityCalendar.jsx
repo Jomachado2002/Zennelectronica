@@ -91,8 +91,8 @@ export default function CommunityCalendar() {
 
   const from = gridStart(year, month);
 
-  const load = useCallback(async (startKey) => {
-    setLoading(true);
+  const load = useCallback(async (startKey, quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const res = await axiosInstance.get('/api/creativos/comunidad', {
         params: { from: startKey, days: 42 },
@@ -104,7 +104,7 @@ export default function CommunityCalendar() {
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo leer el calendario');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, []);
 
@@ -228,15 +228,26 @@ export default function CommunityCalendar() {
   };
 
   const talk = async () => {
+    const note = dayAsk.trim();
+    if (!note || busy === 'focus') return;
     setBusy('focus');
+    setDayAsk('');
+    setDays((current) => current.map((day) => (
+      day.date === selected
+        ? { ...day, messages: [...(day.messages || []), { role: 'user', text: note }] }
+        : day
+    )));
     try {
       const res = await axiosInstance.post('/api/creativos/comunidad/dia', {
         date: selected,
-        note: dayAsk
+        note
       }, { timeout: 180000 });
-      toast.success(res.data.message || 'El día se actualizó');
-      setDayAsk('');
-      load(from);
+      if (Array.isArray(res.data.messages)) {
+        setDays((current) => current.map((day) => (
+          day.date === selected ? { ...day, messages: res.data.messages } : day
+        )));
+      }
+      load(from, true);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'No se pudo cambiar el día');
     } finally {
@@ -378,17 +389,37 @@ export default function CommunityCalendar() {
               <p className="mt-1 text-xs text-gray-500">Día cerrado. Solo queda el título de lo que se subió.</p>
             ) : (
               <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
-                <p className="text-xs font-semibold text-gray-800">Hablar con este día</p>
-                <p className="mt-1 text-xs text-gray-500">El plan se cambia con una frase. Por ejemplo: en vez de monitores mostrá memorias RAM. Agregá las notebooks Acer. En vez de 5 auriculares subí 5 cosas distintas. Si hablás de la foto, ese pedido va al HTML de la pieza.</p>
+                <p className="text-xs font-semibold text-gray-800">Plan de este día</p>
+                <p className="mt-1 text-xs text-gray-500">Acá ves lo que va a salir y le decís el ángulo. Por ejemplo: tené en cuenta Halloween. En vez de monitores mostrá memorias RAM. La foto no llama la atención.</p>
+                <div className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+                  {((selectedDay && selectedDay.messages) || []).map((item, index) => (
+                    <p
+                      key={`${item.role}-${index}`}
+                      className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${item.role === 'user' ? 'ml-8 bg-[#F3E8FF] text-gray-900' : 'mr-6 bg-gray-100 text-gray-800'}`}
+                    >
+                      {item.text}
+                    </p>
+                  ))}
+                  {!((selectedDay && selectedDay.messages) || []).length ? (
+                    <p className="text-xs text-gray-500">Todavía no hablaron. El plan de abajo es lo que está armado para subir.</p>
+                  ) : null}
+                  {busy === 'focus' ? <p className="text-xs text-gray-500">Estoy viendo el día…</p> : null}
+                </div>
                 <textarea
                   value={dayAsk}
                   onChange={(event) => setDayAsk(event.target.value)}
-                  rows={3}
-                  placeholder="En vez de monitores mostrá memorias RAM"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      talk();
+                    }
+                  }}
+                  rows={2}
+                  placeholder="Tené en cuenta Halloween"
                   className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
                 />
                 <button type="button" disabled={busy === 'focus' || !dayAsk.trim()} onClick={talk} className="mt-2 text-xs font-semibold" style={{ color: '#7B2CBF' }}>
-                  {busy === 'focus' ? 'Cambiando…' : 'Cambiar el día'}
+                  {busy === 'focus' ? 'Aplicando…' : 'Enviar'}
                 </button>
               </div>
             )}
@@ -413,7 +444,8 @@ export default function CommunityCalendar() {
                   const open = openId === slot.id;
                   const reel = slot.kind === 'reel';
                   const suggestion = slot.kind === 'imagen' || slot.kind === 'dato';
-                  const rosa = slot.scene === 'rosa' || selected.slice(5, 7) === '10';
+                  const naranja = slot.scene === 'naranja';
+                  const halloween = slot.scene === 'halloween';
                   return (
                     <article key={slot.id} className="rounded-lg bg-gray-50 px-3 py-3">
                       <p className={`text-[11px] font-semibold inline-flex rounded px-1.5 py-0.5 ${CHIP[slot.kind] || ''}`}>
@@ -424,7 +456,8 @@ export default function CommunityCalendar() {
                         {slot.waitingUpload ? (reel ? ' · falta el video' : ' · falta tu archivo') : ''}
                       </p>
                       <p className="font-semibold text-gray-900 mt-2 text-sm">{slot.headline}</p>
-                      {rosa && !suggestion ? <p className="text-xs font-semibold text-[#9D174D] mt-1">Flyer Octubre Rosa</p> : null}
+                      {naranja ? <p className="text-xs font-semibold text-[#C2410C] mt-1">Zócalo Reintegro Tienda Naranja</p> : null}
+                      {halloween ? <p className="text-xs font-semibold text-[#C2410C] mt-1">Plantilla Halloween</p> : null}
                       {slot.previewUrl && !reel && !/\.mp4($|\?)/i.test(slot.previewUrl) ? (
                         <div className="relative mt-2 w-full max-w-[260px]">
                           <img key={slot.previewUrl} src={slot.previewUrl} alt="" className="w-full rounded-lg border border-gray-200 bg-white" />

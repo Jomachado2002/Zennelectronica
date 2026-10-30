@@ -46,13 +46,15 @@ ${dossier}
 Cómo decidir:
 - Si una tendencia tiene productos nuestros, el primer feed es ese. Si afuera se buscan Dyson y en la lista hay Dyson, se publica la Dyson. No la cambies por otro rubro.
 - Los ids de cada rubro ya están elegidos. Son los que se van a publicar. No los cambies por otros. Si el rubro es accesorios, esos ids son los accesorios que hay en stock.
-- El hook es una frase para alguien que no nos sigue, usando un precio de esa lista. No nombres el precio de otra tienda. No escribas hashtags: el sistema los agrega. No escribas "nuevo ingreso".
+- El hook es una frase para alguien que no nos sigue, usando un precio o una spec de esa lista. No nombres el precio de otra tienda. No escribas hashtags: el sistema los agrega.
+- Prohibido, porque no frena el scroll: "nuevo ingreso", "imperdible", "aprovechá", "no te lo pierdas", "lo mejor", "increíble", "stock en Zenn", "mirá esto", "descubre". Si la frase sirve para cualquier producto, reescribila con el modelo, la spec o el precio.
 - El día no puede ser un solo rubro. Si el primero es un electrodoméstico, los siguientes tienen que ser otra cosa: placa, accesorio, celular, periférico. Así el feed se llena de todo el catálogo.
 - Historias: un id, el producto que se defiende solo por el precio.
 - Si el dossier marca un precio con "antes" y un porcentaje, esa promoción existe. El primer feed de ese rubro tiene que usar esos ids. No inventes un descuento que no esté escrito.
 - Sugerencias: no escribas una consigna genérica. Decidí la pieza. Si conviene mostrar tres productos de la misma marca a distinto precio, el título es concreto, por ejemplo "Sabías que estos teclados son hermanos". Si conviene una promoción, el título nombra esa promo y usa solo precios de la lista. Si conviene un dato, el título es ese dato. No pidas un meme con famosos ni fotos de personas: la pieza usa las fotos de nuestros productos.
 - La cuenta dice qué publicación orgánica tuvo likes y cuál no, qué formato rindió más, qué busca la gente en la tienda, qué promo es real y qué marca tiene varios modelos. Una pieza para seguidores es una pregunta o una comparación con esos datos. No armes el día solo con el rubro que tiene más unidades.
-- Paleta, la pinta el sistema, no vos: gráfica fondo grafito y logo blanco, reel fondo violeta y logo blanco, dato fondo papel y logo negro. No devuelvas HTML.
+- Si el dossier habla de Reintegro Tienda Naranja, cada hook lo dice en una frase. Es reintegro de Itaú, del 2 al 4 de noviembre, no un descuento del precio. 15% con tope de Gs. 350.000 en cualquier tarjeta de crédito Itaú. 20% con tope de Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés. Aplica a toda la tienda.
+- Paleta, la pinta el sistema, no vos. No devuelvas HTML.
 
 Devolvé solo JSON:
 {
@@ -162,40 +164,56 @@ function fontPairFor(dateLabel, kind) {
   return FONT_PAIRS[seed % FONT_PAIRS.length];
 }
 
-async function designPieceHtml({ dateLabel, angle, kind, products, brief, title, fonts }) {
+const ART_LAYOUTS = [
+  'El producto entra desde la derecha y se corta en el borde. El título vive a la izquierda, en cuatro palabras como máximo, a más de 90px.',
+  'Partí el lienzo en dos campos de color distinto. Arriba una frase. Abajo el producto, grande, sin caja y sin círculo.',
+  'El precio ocupa casi la mitad del alto. El producto queda chico, a un costado, como prueba de que el número es real.',
+  'Tapa de revista: una línea chica arriba, un titular de tres palabras, el producto a sangre por un solo lado.',
+  'El precio es un sello redondo que pisa al producto. El fondo es un color plano saturado, no un degradado violeta.',
+  'Una sola spec enorme (Hz, RTX, pulgadas, GB) y debajo, en chico, por qué importa. El producto flota a la izquierda.'
+];
+
+async function designPieceHtml({ dateLabel, angle, kind, products, brief, title, fonts, campaign = false, attempts = 2, timeout = 50000 }) {
   if (!claudeKey()) return '';
   const lines = (products || []).map((item, index) => (
     `${index + 1}. ${item.name} · ${item.priceText}`
   )).join('\n');
   const pair = fonts && fonts.display ? fonts : fontPairFor(dateLabel, kind);
-  const prompt = `Sos el director de arte de Zenn Electrónicos, en Asunción. Hoy es ${dateLabel}.
-La pieza es un ${kind} de Instagram, lienzo exacto de 1080×1350. No es un aviso ni un flyer de catálogo. Es un meme o una comparación, como si un amigo lo contara: "¿Conocías este teclado? Este es lineal y este es clicky."
-Ángulo: ${angle || 'que alguien comente'}.
-Encargo: ${brief || 'Una pieza orgánica, con el producto flotando y un texto que dé ganas de responder.'}
-${title ? `El título tiene que ser exactamente este, completo y legible: ${title}` : 'El título tiene que sonar hablado, no a publicidad.'}
-Productos reales. No inventes otro ni cambies el precio. No inventes porcentajes, decibeles ni estadísticas:
+  const layoutSeed = [...`${dateLabel || ''}|${kind || ''}|${title || ''}|${(products && products[0] && products[0].name) || ''}`]
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const layout = ART_LAYOUTS[layoutSeed % ART_LAYOUTS.length];
+  const floor = campaign
+    ? 'Los últimos 420px del lienzo quedan vacíos: el sistema pega ahí el banner de Tienda Naranja. No lo dibujes, no escribas 15% ni 20%, no pongas el logo de Itaú.'
+    : 'El texto y el precio terminan al menos a 80px del borde de abajo.';
+  const prompt = `Sos director de arte de una tienda de electrónica en Asunción. Esta pieza se publica en Instagram y tiene que frenar el dedo. Lienzo exacto de 1080×1350. Si se puede cambiar el producto y la pieza sigue igual, está mal hecha.
+Hoy es ${dateLabel}. Tipo de pieza: ${kind}.
+Composición de ESTA pieza, obedecela. No la cambies por un producto centrado con el título arriba:
+${layout}
+Ángulo: ${angle || 'una razón concreta para comentar'}.
+Encargo: ${brief || 'Una sola idea, leíble en medio segundo.'}
+${title ? `El título, exacto y completo: ${title}` : 'El título nombra este modelo, esta spec o este precio. Máximo ocho palabras.'}
+Productos reales. No inventes otro, ni un porcentaje, ni un dato que no esté acá:
 ${lines || 'No hay producto. Hacé la pieza solo con texto.'}
 
 Tipografía de esta pieza, y no otra. Carácter: ${pair.mood}.
-Título: ${pair.display}. Resto, precio y nombre del producto: ${pair.text}.
+Título: ${pair.display}, enorme. Precio y nombre: ${pair.text}.
 Link exacto, en el head:
 <link href="${fontHref(pair)}" rel="stylesheet">
-El título ocupa mucho, como en un afiche de Photoshop: condensada o extrabold, pocas palabras, tracking apretado si es condensada. El precio y el nombre van en ${pair.text}, grandes y legibles. No repitas una ficha centrada con el producto abajo.
 Devolvé solo un HTML, con el CSS en un <style>.
-Usá estos placeholders y ningún otro src de imagen:
-{{logo}} {{product1}} {{name1}} {{price1}} {{product2}} {{name2}} {{price2}}
-El logo va en <img class="logo" src="{{logo}}" alt="">, chico, en una esquina. Sin fondo, sin caja y sin borde. No lo redibujes ni escribas la palabra Zenn aparte.
-La foto del producto ya viene recortada. Va en <img id="product-1" src="{{product1}}" alt=""> grande, a un costado, sin tapar ni una letra.
-Prohibido: fondo #fff o white, círculo blanco, mancha blanca o tarjeta detrás del producto.
-Prohibido bajar fotos de internet, memes de series, Los Simpson o cualquier cara. El chiste se arma con el texto y con la foto del producto.
-Todo el texto entra con 64px de margen. Nada cortado en el borde. El precio se lee entero.`;
+Placeholders, y ningún otro src de imagen: {{logo}} {{product1}} {{name1}} {{price1}} {{product2}} {{name2}} {{price2}}
+El logo va en <img class="logo" src="{{logo}}" alt="">, chico, en una esquina, sin caja. No escribas la palabra Zenn aparte.
+La foto ya viene recortada. Va en <img id="product-1" src="{{product1}}" alt="">, grande, sin tapar una letra.
+Prohibido: fondo #fff o white, círculo blanco, tarjeta blanca detrás del producto, tres chips iguales, ficha de catálogo, degradado violeta de siempre, la frase "nuevo ingreso", Octubre Rosa, lazo rosa, fondo rosa de campaña.
+Prohibido bajar fotos, memes, series o caras. El golpe es el texto más la foto del producto.
+${floor}
+Todo el texto entra. Nada cortado. El precio se lee entero.`;
   let last = '';
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
     const extra = attempt
       ? '\n\nLa respuesta anterior tenía blanco detrás del producto o le faltaba {{product1}}. Hacela de nuevo, con color de campo y el producto flotando.'
       : '';
     try {
-      const html = extractHtml(await askClaudeText(`${prompt}${extra}`, { timeout: 70000, maxTokens: 8000 }));
+      const html = extractHtml(await askClaudeText(`${prompt}${extra}`, { timeout, maxTokens: 8000, temperature: 0.9 }));
       last = html;
       if (!html.includes('<style') || /<script/i.test(html) || hasWhitePlate(html)) continue;
       if (products && products.length && !html.includes('{{product1}}')) continue;
@@ -208,7 +226,7 @@ Todo el texto entra con 64px de margen. Nada cortado en el borde. El precio se l
   return last && !hasWhitePlate(last) ? '' : '';
 }
 
-async function directPiece({ dateLabel, kind, label, products, trends }) {
+async function directPiece({ dateLabel, kind, label, products, trends, angle }) {
   if (!apiKey()) return null;
   const trendText = (trends || [])
     .map((item) => `${item.term}${item.source ? ` (${item.source})` : ''}: ${item.why || ''}`)
@@ -218,11 +236,13 @@ async function directPiece({ dateLabel, kind, label, products, trends }) {
     let raw = await askGemini(`Sos el community manager de Zenn Electrónicos, en Asunción. Hoy es ${dateLabel}.
 Qué se está comprando afuera esta semana:
 ${trendText || 'No hubo búsqueda en vivo. No inventes precios de otras tiendas.'}
-La pieza es un ${kind} del rubro ${label || 'catálogo'}. No es un aviso. Tiene que salir como meme o como comparación de amigo: "¿Conocías este? Este hace tal cosa y este hace tal otra." Orgánico, para comentar, no para vender en voz de catálogo.
+La pieza es un ${kind} del rubro ${label || 'catálogo'}. Tiene que frenar el scroll: una sola idea, con el nombre de este producto o su precio. Si la frase sirve para cualquier tienda, está mal.
+${angle ? `Ángulo que hay que respetar: ${angle}` : ''}
+Prohibido: "nuevo ingreso", "imperdible", "aprovechá", "no te lo pierdas", "lo mejor", "increíble", "descubre", "mirá esto", Octubre Rosa, lazo rosa.
 Productos nuestros, con el precio de Zenn:
 ${lines || 'Elegí el ángulo sin nombrar un producto que no esté.'}
 Devolvé solo JSON:
-{"angle":"la idea en una frase, para que alguien comente","title":"título corto que va en la gráfica","brief":"qué tiene que verse: jerarquía, color de campo que no sea blanco, y el dato o la pregunta"}
+{"angle":"la idea en una frase concreta, para que alguien comente","title":"máximo ocho palabras, con el dato o el precio","brief":"composición distinta a un producto centrado: color de campo que no sea blanco ni violeta, qué es enorme y qué es chico"}
 No pidas famosos, fondo blanco ni una ficha de catálogo. No inventes porcentajes ni decibeles.`, false);
     if (!raw || !raw.title) {
       raw = await askGemini(`Devolvé solo este JSON, sin texto alrededor, para una pieza ${kind} de ${label || 'Zenn'} el ${dateLabel}: {"angle":"una frase","title":"titulo corto","brief":"como disenarla sin fondo blanco"}`, false);
@@ -300,7 +320,7 @@ function knownIds(item, allowedProducts) {
   return [...new Set((item.productIds || []).map(String))].filter((id) => allowed.has(id)).slice(0, 5);
 }
 
-async function chooseCatalogDay({ dossier, catalog }) {
+async function chooseCatalogDay({ dossier, catalog, feedLimit = 8, storyLimit = 4 }) {
   if (!apiKey() || !dossier) return null;
   const byKey = new Map(catalog.map((row) => [row.key, row]));
   let raw = null;
@@ -322,7 +342,7 @@ async function chooseCatalogDay({ dossier, catalog }) {
       hook: String(item.hook || '').slice(0, 220),
       why: String(item.why || '').slice(0, 300)
     });
-    if (feeds.length >= 8) break;
+    if (feeds.length >= Math.max(8, Number(feedLimit) || 8)) break;
   }
   if (!feeds.length) return null;
   const stories = [];
@@ -335,7 +355,7 @@ async function chooseCatalogDay({ dossier, catalog }) {
       productId,
       hook: String(item.hook || '').slice(0, 220)
     });
-    if (stories.length >= 4) break;
+    if (stories.length >= Math.max(4, Number(storyLimit) || 4)) break;
   }
   return {
     feeds,
@@ -357,6 +377,37 @@ swapProduct es true si pide otro producto o dice que la foto no se recortó.`, f
     return { background, swap: Boolean(raw.swapProduct) };
   } catch (error) {
     console.error('[community ai] modificación', error.message || error);
+    return null;
+  }
+}
+
+async function askDayChat({ note, posts, labels, history, angle }) {
+  if (!apiKey()) return null;
+  const memory = (history || [])
+    .slice(-8)
+    .map((item) => `${item.role === 'user' ? 'Vos' : 'Plan'}: ${item.text}`)
+    .join('\n');
+  try {
+    const raw = await askGemini(`Sos el community manager de Zenn Electrónicos, en Asunción. Hablás en un chat corto, como una persona, no como un formulario.
+Octubre Rosa está cerrado. No lo menciones para usarlo. Si queda en un texto, se saca.
+${angle ? `Ángulo de esta fecha: ${angle.brief}` : 'No hay campaña de fecha. Si piden Halloween, Navidad u otra fecha, anotalo.'}
+Historial:
+${memory || 'Todavía no hablaron.'}
+Plan de ese día:
+${(posts || []).map((post) => `${post.slot} · ${post.kind} · ${post.subcategoryLabel} · ${(post.titles || []).slice(0, 3).join(' · ')}`).join('\n')}
+Rubros con stock: ${(labels || []).slice(0, 80).join(', ')}
+Mensaje nuevo: ${String(note || '').slice(0, 500)}
+Devolvé solo JSON:
+{"reply":"2 o 3 frases. Decí qué vas a cambiar y qué queda. Si solo pide opinión, respondé sin inventar un cambio.","ops":[{"type":"replace","from":"monitores","to":"memoria ram","brand":""}]}
+type replace cambia un rubro. type add mete un rubro, brand si nombró marca, all true si dijo todas. type mix separa un grupo en productos distintos. type photo si habla de la foto, el texto de la gráfica o que no llama la atención. type angle si pide una campaña o una fecha: note es la instrucción corta para los copys, por ejemplo Halloween y jugar de noche. Si no hay que tocar piezas, ops va [].`, false);
+    if (!raw) return null;
+    const ops = Array.isArray(raw.ops) ? raw.ops.filter((op) => op && ['replace', 'add', 'mix', 'photo', 'angle'].includes(op.type)).slice(0, 6) : [];
+    return {
+      reply: String(raw.reply || '').replace(/\s+/g, ' ').trim().slice(0, 500),
+      ops
+    };
+  } catch (error) {
+    console.error('[community ai] chat', error.message || error);
     return null;
   }
 }
@@ -438,6 +489,8 @@ La foto va en <img id="product-1" src="{{product1}}" alt=""> grande, flotando, s
 Si el pedido cambia el texto, cambialo. Si pide otra tipografía o otra plantilla, cargá una pareja nueva de Google Fonts y que se note que no es la misma pieza. El logo queda en <img class="logo" src="{{logo}}" alt="">, sin fondo ni caja.
 No uses script. No bajes imágenes de internet, ni de series, ni caras de personas. El logo queda en {{logo}}, no lo redibujes.
 Tiene que parecer hecha por un diseñador: otro margen, otra escala, otro tipo. No una plantilla de catálogo.
+Si hay un div con class="tn-zocalo" o un src {{banner}}, no lo borres y no escribas encima: son los últimos 420px, el zócalo de Tienda Naranja.
+Prohibido repetir la composición anterior. Cambiá el eje, el tamaño del título y el color de campo.
 
 HTML actual:
 ${html}`;
@@ -474,6 +527,7 @@ module.exports = {
   interpretRevision,
   revisePieceHtml,
   askDayOps,
+  askDayChat,
   askGeminiText,
   askClaudeText,
   parseJson,

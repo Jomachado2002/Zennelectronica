@@ -481,30 +481,35 @@ function instagramCaption(payload) {
     : (payload.onOffer
       ? `Precio al ${payload.priceAsOf}: ${payload.price} (antes ${payload.listPrice})`
       : `Precio al ${payload.priceAsOf}: ${payload.price}`);
-  return [
+  const lines = [
     title,
     ...specs,
     priceLine,
     'Entrega 24 h',
     '0973 345 284'
-  ].filter(Boolean).join('\n');
+  ].filter(Boolean);
+  if (payload.scene === 'naranja' && !/reintegro/i.test(lines.join('\n'))) {
+    lines.unshift(NARANJA.lead);
+  }
+  return lines.join('\n');
 }
 
-const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa'];
+const { NARANJA, campaignOn, flyerSceneOn } = require('./storeCampaign');
+
+const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa', 'naranja', 'halloween'];
 const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
+const NARANJA_COPY = NARANJA.detail;
 
-function isOctoberRosa(date = new Date()) {
-  const month = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Asuncion',
-    month: 'numeric'
-  }).format(date);
-  return month === '10';
+function isOctoberRosa() {
+  return false;
 }
 
-function pickScene(requested, family, theme, id) {
-  if (isOctoberRosa()) return 'rosa';
-  const asked = String(requested || '').toLowerCase();
+function pickScene(requested, family, theme, id, when) {
+  let asked = String(requested || '').toLowerCase();
+  if (asked === 'rosa') asked = '';
   if (SCENES.includes(asked)) return asked;
+  const dated = flyerSceneOn(when || new Date());
+  if (dated) return dated;
   const pool = theme === 'gamer'
     ? ['neon', 'haz', 'malla', 'orbita']
     : ['cielo', 'orbita', 'haz', 'malla'];
@@ -524,7 +529,7 @@ function buildCreativePayload(product, options = {}) {
   const images = firstImages(product);
   const imageIndex = Math.max(0, Math.min(Number(options.imageIndex) || 0, Math.max(0, images.length - 1)));
   const title = norm(options.title) || shortTitle(product);
-  const scene = pickScene(options.scene, family, theme, product._id);
+  const scene = pickScene(options.scene, family, theme, product._id, options.when);
 
   const payload = {
     id: String(product._id),
@@ -590,7 +595,9 @@ module.exports = {
   hasDedicatedGpu,
   instagramCaption,
   ROSA_COPY,
+  NARANJA_COPY,
   isOctoberRosa,
+  campaignOn,
   wantsPrice,
   priceAsOfLabel,
   listSelectFields,
