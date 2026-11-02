@@ -417,7 +417,11 @@ sellingPrice: { type: Number, default: 0 },      // Precio de venta final
         sku: { type: String, default: '' },
         environment: { type: String, default: '' },
         lastSyncAt: { type: Date, default: null },
-        lastError: { type: String, default: '' }
+        lastError: { type: String, default: '' },
+        inVisao: { type: Boolean, default: undefined },
+        lastSeenInVisaoAt: { type: Date, default: null },
+        lastRemotePrice: { type: Number, default: null },
+        lastRemoteStock: { type: Number, default: null }
     },
 
     // Campos para presupuestos y seguimiento

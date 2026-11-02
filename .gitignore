@@ -1,2 +1,16 @@
 jobs-api/
 zenn-tech/
+
+# Exports / planillas generadas (no versionar)
+*.xls
+*.xlsx
+*.csv
+tienda-naranja/*.jsonl
+tienda-naranja/zenn-tn-*
+tienda-naranja/ZENN-*
+Google search datos/
+Google search datos 2/
+Google search datos 3/
+backend/visaovip*.csv
+frontend/visaovip*.csv
+frontend/**/visaovip*.csv

@@ -133,7 +133,7 @@ function naranjaToday() {
 
 function halloweenToday() {
   const key = asuncionKey();
-  return key >= '2026-10-30' && key <= '2026-10-31';
+  return key >= '2026-10-30' && key <= '2026-11-01';
 }
 
 function asOfLabel() {
@@ -1118,8 +1118,8 @@ const CreativeStudioPage = () => {
                 {naranjaDays
                   ? 'Del 2 al 4 de noviembre el planner publica con el zócalo de reintegro Tienda Naranja. 15% tope Gs. 350.000 en cualquier tarjeta Itaú. 20% tope Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas. No es un descuento del precio.'
                   : halloweenDays
-                    ? 'Hoy y mañana la plantilla es Halloween: noche, telarañas en las cuatro esquinas, luna y murciélagos. El producto sigue grande. El domingo vuelve a las plantillas de siempre.'
-                    : 'Variar usa las plantillas de siempre. Halloween queda el 30 y el 31. Reintegro Naranja, el 2, 3 y 4 de noviembre.'}
+                    ? 'Desde hoy hasta el domingo la plantilla es Halloween: noche, telarañas en las cuatro esquinas, luna y murciélagos. El producto sigue grande. El lunes vuelve a las plantillas de siempre.'
+                    : 'Variar usa las plantillas de siempre. Halloween queda del 30 de octubre al 1 de noviembre. Reintegro Naranja, el 2, 3 y 4.'}
               </p>
             </div>
           </div>

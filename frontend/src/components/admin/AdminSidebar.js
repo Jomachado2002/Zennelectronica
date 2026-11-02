@@ -80,6 +80,7 @@ export function getAdminNavGroups() {
         { path: 'logos', label: 'Logos', icon: FaTrademark },
         { path: 'sincronizacion-inventario', label: 'Sincronizar inventario', icon: FaSyncAlt },
         { path: 'worker-visao', label: 'Worker Visão', icon: FaSyncAlt },
+        { path: 'tienda-naranja', label: 'Tienda Naranja', icon: FaStore },
         { path: 'exportar-productos', label: 'Exportar productos', icon: FaDownload },
         { path: 'creativos', label: 'Creativos IG / FB', icon: FaBullhorn },
         { path: 'marketing', label: 'Marketing IA', icon: FaMagic },

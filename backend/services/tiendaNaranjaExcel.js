@@ -7,11 +7,16 @@ const { toMerchantJpegUrl } = require('../helpers/merchantJpeg');
 const { weightOf, shortDescriptionOf } = require('./tiendaNaranjaCatalog');
 const { formatTnWeight } = require('./productWeightService');
 const { tnCategoryOf, DEFAULT_CATEGORY } = require('./tiendaNaranjaCategories');
-
-const IVA = 1.1;
-const ZENN_MARGIN = 1.15;
-const ITAU_MARGIN = 1.05;
-const TN_MARKUP = IVA * ZENN_MARGIN * ITAU_MARGIN;
+const {
+  TN_MARKUP,
+  visaoGs,
+  tnListPrice,
+  tnDisplayPrices,
+  tnStockQty,
+  getDiscountBrands,
+  resolveUsdRate,
+  isDiscountBrand
+} = require('./tiendaNaranjaPricing');
 
 const COLUMNS = [
   'nombre',
@@ -31,36 +36,6 @@ const COLUMNS = [
   'imagenes'
 ];
 
-function hash01(sku) {
-  let n = 0;
-  for (const char of String(sku)) n = (n * 33 + char.charCodeAt(0)) >>> 0;
-  return (n % 10000) / 10000;
-}
-
-function visaoGs(product, usdRate) {
-  const fuente = String(product.visaoPrecioFuente || '').toUpperCase();
-  const pyg = Number(product.purchasePrice) || 0;
-  const usd = Number(product.purchasePriceUSD) || 0;
-  const rate = Number(usdRate || product.exchangeRate || 6200);
-  if (fuente === 'PYG' && pyg > 0) return pyg;
-  if (usd > 0 && rate > 0) return usd * rate;
-  if (pyg > 0) return pyg;
-  return Number(product.sellingPrice) || 0;
-}
-
-function tnSalePrice(product, usdRate) {
-  const base = visaoGs(product, usdRate);
-  if (base <= 0) return 0;
-  return Math.round(base * TN_MARKUP);
-}
-
-function randomSpecial(sku, list) {
-  if (!list) return { special: '', pct: 0 };
-  const pct = 40 + Math.round(hash01(sku) * 30);
-  const special = Math.max(1, Math.round(list * (1 - pct / 100)));
-  return { special, pct };
-}
-
 function prefix() {
   return keys().skuPrefix || 'ZEEL';
 }
@@ -75,6 +50,16 @@ function clip(value, max) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).replace(/\s+\S*$/, '').trim()}`;
+}
+
+function safeName(value) {
+  const text = String(value || '')
+    .replace(/(\d)\s*"/g, '$1 pulg.')
+    .replace(/"/g, '')
+    .replace(/[\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clip(text, 180);
 }
 
 function humanize(key) {
@@ -94,21 +79,25 @@ function descriptionOf(product) {
   const lines = Object.entries(specs)
     .filter(([, value]) => value != null && String(value).trim() !== '')
     .map(([key, value]) => `${humanize(key)}: ${String(value).trim()}`);
-  if (lines.length) return lines.join('\n');
+  if (lines.length) return lines.join(' | ');
   return clip(String(product.description || product.productName || '').replace(/<[^>]+>/g, ' '), 2000);
 }
 
+const IMAGE_OK = /^https:\/\/[^\s,]+\.(jpe?g|png|gif|webp)(\?|#|$)/i;
+
 function galleryOf(product) {
+  const seen = new Set();
   return (product.productImage || [])
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url))
-    .map((url) => toMerchantJpegUrl(url))
-    .filter((url) => /\.(jpe?g|png|gif)(\?|#|$)/i.test(url) || /\/api\/gmc\/image\.jpg/i.test(url))
+    .map((url) => toMerchantJpegUrl(url.trim()))
+    .map((url) => String(url || '').trim().replace(/,\s*/g, ''))
+    .filter((url) => IMAGE_OK.test(url))
+    .filter((url) => {
+      if (seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    })
     .slice(0, 8);
-}
-
-function money(value) {
-  const number = Math.round(Number(value) || 0);
-  return number > 0 ? number : '';
 }
 
 function parseBox(product) {
@@ -128,42 +117,38 @@ function parseBox(product) {
   };
 }
 
-function pesoOf(product) {
-  const box = parseBox(product);
-  const liters = (box.ancho * box.alto * box.largo) / 1000;
-  if (liters >= 40) return 8.5;
-  if (liters >= 20) return 3.8;
-  if (liters >= 8) return 1.5;
-  return Number(process.env.TN_DEFAULT_WEIGHT || 0.5);
-}
-
 function categoryOf(product) {
   if (product && (product.category || product.productName)) return tnCategoryOf(product);
   return String(process.env.TN_EXCEL_CATEGORY || DEFAULT_CATEGORY);
 }
 
-function rowOf(product, { usdRate } = {}) {
-  const list = tnSalePrice(product, usdRate);
+function tnSalePrice(product, usdRate, brands) {
+  return tnListPrice(product, usdRate, brands);
+}
+
+function rowOf(product, { usdRate, brands } = {}) {
   const sku = skuOf(product);
-  const promo = randomSpecial(sku, list);
+  const display = tnDisplayPrices(product, usdRate, brands, sku);
   const box = parseBox(product);
   const images = galleryOf(product);
+  const stock = tnStockQty(product);
   return {
-    nombre: clip(product.productName, 180),
+    nombre: safeName(product.productName),
     sku,
     categoria: categoryOf(product),
     breve_descripcion: shortDescriptionOf(product),
     descripcion: descriptionOf(product),
-    precio: list,
-    precio_especial: promo.special || '',
-    precio_especial_fecha_desde: '2026-11-02 00:00:00',
-    precio_especial_fecha_hasta: '2026-11-08 23:59:00',
-    stock: Math.max(0, Number(product.stock) || 0),
+    precio: display.price,
+    precio_especial: display.promo ? display.specialPrice : '',
+    precio_especial_fecha_desde: display.promo ? display.from : '',
+    precio_especial_fecha_hasta: display.promo ? display.to : '',
+    stock,
     peso: Number(formatTnWeight(weightOf(product))),
     ancho: box.ancho,
     alto: box.alto,
     largo: box.largo,
-    imagenes: images.join(',')
+    imagenes: images.join(','),
+    _discountBrand: isDiscountBrand(product, brands)
   };
 }
 
@@ -178,16 +163,16 @@ async function listProducts({ onlyStock = true } = {}) {
     filter.stockStatus = { $ne: 'out_of_stock' };
   }
   return Product.find(filter)
-    .select('codigo productName brandName category subcategory description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus productImage specifications technicalSpecifications shippingWeightKg')
+    .select('codigo productName brandName category subcategory description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus productImage specifications technicalSpecifications shippingWeightKg tiendaNaranja')
     .sort({ codigo: 1 })
     .lean();
 }
 
-function workbookOf(products, { usdRate } = {}) {
+function workbookOf(products, { usdRate, brands } = {}) {
   const rows = products
-    .filter((product) => Number(product.stock) > 0)
-    .map((product) => rowOf(product, { usdRate }))
-    .filter((row) => row.sku && row.nombre && row.imagenes && row.precio && Number(row.stock) > 0);
+    .map((product) => rowOf(product, { usdRate, brands }))
+    .filter((row) => row.sku && row.nombre && row.imagenes && row.precio && Number(row.stock) > 0)
+    .map(({ _discountBrand, ...row }) => row);
   const sheet = XLSX.utils.json_to_sheet(rows, { header: COLUMNS });
   sheet['!cols'] = COLUMNS.map((name) => ({ wch: name === 'descripcion' || name === 'imagenes' ? 60 : 22 }));
   const book = XLSX.utils.book_new();
@@ -195,25 +180,47 @@ function workbookOf(products, { usdRate } = {}) {
   return { book, rows };
 }
 
+function writeXls(book) {
+  return XLSX.write(book, { type: 'buffer', bookType: 'xls', bookSST: true });
+}
+
 async function buildExcel({ onlyStock = true, usdRate } = {}) {
-  let rate = Number(usdRate) || 0;
-  if (!rate) {
-    try {
-      const ExchangeRate = require('../models/exchangeRateModel');
-      const current = await ExchangeRate.getCurrentRate('USD');
-      rate = Number(current && current.toPYG) || 6200;
-    } catch {
-      rate = 6200;
-    }
-  }
+  const rate = await resolveUsdRate(usdRate);
+  const brands = await getDiscountBrands();
   const products = await listProducts({ onlyStock });
-  const { book, rows } = workbookOf(products, { usdRate: rate });
-  const buffer = XLSX.write(book, { type: 'buffer', bookType: 'xls' });
+  const { book, rows } = workbookOf(products, { usdRate: rate, brands });
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
   return {
-    buffer,
+    buffer: writeXls(book),
     filename: `zenn-tienda-naranja-${day}.xls`,
     count: rows.length
+  };
+}
+
+async function buildExcelNuevos({ existingSkus, usdRate } = {}) {
+  const rate = await resolveUsdRate(usdRate);
+  const brands = await getDiscountBrands();
+  const remote = existingSkus instanceof Set
+    ? existingSkus
+    : new Set([...(existingSkus || [])].map((sku) => String(sku).toUpperCase()));
+  const products = await listProducts({ onlyStock: true });
+  const create = products
+    .map((product) => rowOf(product, { usdRate: rate, brands }))
+    .filter((row) => {
+      if (!row.sku || !row.nombre || !row.imagenes || !row.precio || Number(row.stock) <= 0) return false;
+      return !remote.has(String(row.sku).toUpperCase());
+    })
+    .map(({ _discountBrand, ...row }) => row);
+  const sheet = XLSX.utils.json_to_sheet(create, { header: COLUMNS });
+  sheet['!cols'] = COLUMNS.map((name) => ({ wch: name === 'descripcion' || name === 'imagenes' ? 70 : 22 }));
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, 'Hoja1');
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(new Date());
+  return {
+    buffer: writeXls(book),
+    filename: `zenn-tn-solo-nuevos-${day}.xls`,
+    count: create.length,
+    skippedExisting: remote.size
   };
 }
 
@@ -221,9 +228,12 @@ module.exports = {
   COLUMNS,
   skuOf,
   rowOf,
+  galleryOf,
   listProducts,
   workbookOf,
   buildExcel,
+  buildExcelNuevos,
+  writeXls,
   tnSalePrice,
   visaoGs,
   TN_MARKUP

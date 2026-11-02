@@ -6,7 +6,7 @@ const SocialPost = require('../models/socialPostModel');
 const CommunityDayFocus = require('../models/communityDayFocusModel');
 const { communityCaption } = require('./captionComposer');
 const { buildCreativePayload, formatGs, listSelectFields } = require('./creativePayload');
-const { campaignOn, angleOn, flyerSceneOn, ANGLES } = require('./storeCampaign');
+const { campaignOn, angleOn, flyerSceneOn, halloweenOn, HALLOWEEN, ANGLES } = require('./storeCampaign');
 const { focusedSchemaFor } = require('./creativeSpecFocus');
 const { scoutMarket, chooseCatalogDay, communityAiReady, askDayChat, claudeReady } = require('./communityAi');
 const { composeSuggestion, reviseSuggestion, restampCommunityArt } = require('./communityGraphic');
@@ -27,6 +27,8 @@ const SUGGESTION_SLOTS = [
   { slot: 'imagen', time: '13:15', kind: 'imagen' },
   { slot: 'dato', time: '19:15', kind: 'dato' }
 ];
+const HALLOWEEN_FEED_TIMES = ['19:45', '21:10', '22:20'];
+const HALLOWEEN_STORY_TIMES = ['17:50', '21:40'];
 const EXTRA_FEED_TIMES = ['20:15', '21:30', '22:15'];
 const EXTRA_STORY_TIMES = ['10:05', '13:35', '17:35', '21:05'];
 const EXTRA_SUGGESTIONS = [
@@ -650,13 +652,34 @@ function pinTrends(feeds, trendRows, limit = FEED_POSTS) {
   return [...trendRows, ...rest].slice(0, limit);
 }
 
+function nightScore(row) {
+  const blob = `${row.key || ''} ${row.label || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (/memoria|ram|cooler|fuente|cargador|bateria|soporte|funda|mochila|pasta|bolso|base para|pad|alfombrilla/.test(blob)) return 99;
+  if (/\bnotebooks?\b|\blaptops?\b/.test(blob)) return 0;
+  if (/\bmonitores?\b/.test(blob)) return 1;
+  if (/auricular|headset/.test(blob)) return 2;
+  if (/teclados?/.test(blob)) return 3;
+  if (/\bmouses?\b|\bratones?\b/.test(blob)) return 4;
+  return 99;
+}
+
 function slotsFor(dateKey) {
   const campaign = campaignOn(dateKey);
-  if (!campaign) return DAY_SLOTS;
+  if (campaign) {
+    return DAY_SLOTS.concat(
+      EXTRA_FEED_TIMES.slice(0, campaign.extraFeeds).map((_, index) => `feed-${FEED_TIMES.length + index + 1}`),
+      EXTRA_STORY_TIMES.slice(0, campaign.extraStories).map((_, index) => `story-${STORY_TIMES.length + index + 1}`),
+      EXTRA_SUGGESTIONS.map((slot) => slot.slot)
+    );
+  }
+  const night = halloweenOn(dateKey);
+  if (!night) return DAY_SLOTS;
   return DAY_SLOTS.concat(
-    EXTRA_FEED_TIMES.slice(0, campaign.extraFeeds).map((_, index) => `feed-${FEED_TIMES.length + index + 1}`),
-    EXTRA_STORY_TIMES.slice(0, campaign.extraStories).map((_, index) => `story-${STORY_TIMES.length + index + 1}`),
-    EXTRA_SUGGESTIONS.map((slot) => slot.slot)
+    HALLOWEEN_FEED_TIMES.slice(0, night.extraFeeds).map((_, index) => `feed-${FEED_TIMES.length + index + 1}`),
+    HALLOWEEN_STORY_TIMES.slice(0, night.extraStories).map((_, index) => `story-${STORY_TIMES.length + index + 1}`)
   );
 }
 
@@ -963,6 +986,7 @@ function firstOpenDay() {
 }
 
 async function planCommunityDays({ days = 3, startDate } = {}) {
+  await ensureHalloweenPosts(zonedDate());
   const count = Math.max(1, Math.min(21, Number(days) || 3));
   const start = startDate || firstOpenDay();
   const dateKeys = Array.from({ length: count }, (_, index) => addDays(start, index));
@@ -1082,6 +1106,93 @@ function communityRange(start, end) {
   };
 }
 
+async function ensureHalloweenPosts(today) {
+  if (today > HALLOWEEN.to) return 0;
+  const from = today > HALLOWEEN.from ? today : HALLOWEEN.from;
+  await SocialPost.updateMany(
+    {
+      origin: 'community',
+      status: { $in: ['scheduled', 'idea'] },
+      planDate: { $gte: from, $lte: HALLOWEEN.to },
+      scene: { $ne: 'halloween' }
+    },
+    { $set: { scene: 'halloween' } }
+  );
+  const [labels, used, products] = await Promise.all([labelMap(), recentlyUsedIds(), stockPool()]);
+  const rows = catalogRows(groupPool(products), labels, used)
+    .map((row) => ({ ...row, score: nightScore(row) }))
+    .filter((row) => row.score < 99 && row.fresh >= 1)
+    .sort((a, b) => a.score - b.score || b.fresh - a.fresh);
+  if (!rows.length) return 0;
+  let created = 0;
+  let cursor = from;
+  while (cursor <= HALLOWEEN.to) {
+    const night = halloweenOn(cursor);
+    if (!night) {
+      cursor = addDays(cursor, 1);
+      continue;
+    }
+    const taken = await existingSlots(cursor);
+    const slots = [
+      ...HALLOWEEN_FEED_TIMES.slice(0, night.extraFeeds).map((time, index) => ({
+        slot: `feed-${FEED_TIMES.length + index + 1}`,
+        time,
+        kind: 'feed',
+        count: FEED_SIZE
+      })),
+      ...HALLOWEEN_STORY_TIMES.slice(0, night.extraStories).map((time, index) => ({
+        slot: `story-${STORY_TIMES.length + index + 1}`,
+        time,
+        kind: 'story',
+        count: 1
+      }))
+    ];
+    const usedToday = new Set();
+    for (const slot of slots) {
+      if (taken.has(slot.slot)) continue;
+      const when = atAsuncion(cursor, slot.time);
+      if (when.getTime() < Date.now() + 10 * 60 * 1000) continue;
+      const row = rows.find((item) => !usedToday.has(item.key) && item.list.some((product) => !used.has(product.id)));
+      if (!row) continue;
+      let list = row.list.filter((item) => !used.has(item.id));
+      if (row.score === 0) {
+        const vga = list.filter(hasVga);
+        if (vga.length >= 3) list = vga;
+      }
+      const ids = takeSpread(list, used, slot.count);
+      if (!ids.length) continue;
+      const payloads = await payloadsFor(ids.map((item) => item.id), cursor);
+      if (!payloads.length) continue;
+      ids.forEach((item) => used.add(item.id));
+      usedToday.add(row.key);
+      const storyName = clipName(payloads[0].productName || payloads[0].title);
+      const headline = slot.kind === 'story' || payloads.length === 1
+        ? storyName
+        : `${payloads.length} ${row.label}`;
+      await SocialPost.create({
+        productIds: payloads.map((product) => product.id),
+        titles: payloads.map((product) => product.productName || product.title),
+        kind: slot.kind,
+        caption: withCampaignLine(communityCaption(payloads, saleIntro(row, ids)), cursor),
+        showPrice: true,
+        scene: 'halloween',
+        origin: 'community',
+        planDate: cursor,
+        slot: slot.slot,
+        headline,
+        reason: `Halloween: ${row.label} extra para jugar de noche. El precio es el de hoy.`,
+        subcategory: row.key,
+        subcategoryLabel: row.label,
+        status: 'scheduled',
+        scheduledAt: when
+      });
+      created += 1;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  return created;
+}
+
 async function dropOctoberRosa(today) {
   const posts = await SocialPost.find({
     origin: 'community',
@@ -1116,18 +1227,7 @@ async function dropOctoberRosa(today) {
       }), Promise.resolve());
     });
   }
-  if (today <= '2026-10-31') {
-    const from = today > '2026-10-30' ? today : '2026-10-30';
-    await SocialPost.updateMany(
-      {
-        origin: 'community',
-        status: { $in: ['scheduled', 'idea'] },
-        planDate: { $gte: from, $lte: '2026-10-31' },
-        scene: { $ne: 'halloween' }
-      },
-      { $set: { scene: 'halloween' } }
-    );
-  }
+  await ensureHalloweenPosts(today);
   for (const angle of ANGLES) {
     let cursor = angle.from;
     while (cursor <= angle.to) {

@@ -4,7 +4,7 @@ const sharp = require('sharp');
 const Product = require('../models/productModel');
 const { getSharedBrowser } = require('../helpers/sharedChrome');
 const { formatGs } = require('./creativePayload');
-const { campaignOn, NARANJA } = require('./storeCampaign');
+const { campaignOn, halloweenOn, NARANJA } = require('./storeCampaign');
 const { naranjaBanner } = require('./creativeHtml');
 const { getCommunityLogoLight, getCommunityLogoDark, getCutoutDataUri } = require('./creativeImage');
 const { uploadJpeg } = require('./socialPublishService');
@@ -178,6 +178,35 @@ function mark() {
   return '';
 }
 
+function nightWeb(side) {
+  const flip = side === 'tr' ? 'scaleX(-1)' : side === 'bl' ? 'scaleY(-1)' : side === 'br' ? 'scale(-1)' : 'none';
+  const pos = side === 'tl'
+    ? 'left:-8px;top:-8px;'
+    : side === 'tr'
+      ? 'right:-8px;top:-8px;'
+      : side === 'bl'
+        ? 'left:-8px;bottom:-8px;'
+        : 'right:-8px;bottom:-8px;';
+  return `<div style="position:absolute;${pos}width:240px;height:240px;z-index:2;pointer-events:none;opacity:.48;transform:${flip};background:url(&quot;data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240'><g fill='none' stroke='%23F5F5F4' stroke-width='1.6' stroke-linecap='round'><path d='M2 2 L238 2 M2 2 L238 52 M2 2 L214 128 M2 2 L150 232 M2 2 L62 238 M2 2 L2 238' stroke-opacity='0.9'/><path d='M46 2 C72 30 64 58 2 62' stroke-opacity='0.78'/><path d='M98 2 C146 46 136 104 2 116' stroke-opacity='0.68'/><path d='M158 2 C214 78 188 156 2 172' stroke-opacity='0.55'/></g></svg>&quot;) center/100% 100% no-repeat;"></div>`;
+}
+
+function nightHtml({ logo, item, photo, title, price }) {
+  const head = clip(title || item.productName, 42);
+  const money = price || priceText(item);
+  return page(`
+    <div data-canvas="1" data-night="1" style="width:${SIZE.w}px;height:${SIZE.h}px;position:relative;overflow:hidden;background:linear-gradient(165deg,#3A1428 0%,#160812 42%,#09060F 100%);color:#FFF7ED;font-family:Outfit,Helvetica,sans-serif;">
+      <div style="position:absolute;left:50%;top:18px;width:64px;height:64px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle at 32% 32%,#FFF4C8 0%,#FBBF24 42%,#F97316 78%);box-shadow:0 0 42px rgba(251,146,60,.55);z-index:3;"></div>
+      ${nightWeb('tl')}${nightWeb('tr')}${nightWeb('bl')}${nightWeb('br')}
+      <div style="position:relative;z-index:4;display:flex;justify-content:space-between;align-items:center;padding:28px 44px 0;">
+        <img class="logo" src="${esc(logo)}" alt="Zenn">
+        <span style="font-size:14px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#FDBA74;">Esta noche se juega</span>
+      </div>
+      <h1 style="position:relative;z-index:4;padding:36px 48px 0;font-family:Unbounded,Outfit,sans-serif;font-size:64px;line-height:.95;font-weight:800;letter-spacing:-.03em;max-width:920px;text-shadow:0 2px 18px rgba(0,0,0,.75);">${esc(head)}</h1>
+      <p style="position:relative;z-index:4;padding:14px 48px 0;font-size:34px;font-weight:800;color:#FDBA74;text-shadow:0 2px 14px rgba(0,0,0,.75);">${esc(money)}</p>
+      <img id="product-1" class="cut" src="${esc(photo)}" alt="" style="position:absolute;left:40px;right:40px;bottom:48px;width:${SIZE.w - 80}px;height:760px;object-fit:contain;z-index:3;">
+    </div>`, '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Unbounded:wght@700;800&display=swap" rel="stylesheet">');
+}
+
 function isDark(hex) {
   const value = String(hex || '').replace('#', '');
   if (value.length !== 6) return false;
@@ -308,7 +337,16 @@ function perDayHtml({ logo, item, photo, tone }) {
     </div>`, '');
 }
 
-function buildHtml({ layout, logoInk, logoWhite, line, items, photos, background }) {
+function buildHtml({ layout, logoInk, logoWhite, line, items, photos, background, night = false }) {
+  if (night) {
+    return nightHtml({
+      logo: logoWhite,
+      item: items[0],
+      photo: photos[0],
+      title: line.title || items[0].productName,
+      price: priceText(items[0])
+    });
+  }
   const fallback = {
     desk: '#E7D7C3',
     poll: '#1F4F4A',
@@ -695,11 +733,34 @@ async function composeSuggestion({
       mediaUrl: ''
     };
   }
-  const line = { ...voice(label), angle: WEEK[day], label, kicker: WEEK[day] };
-  const copy = copyFor({ layout, line, items: chosen, label, time });
+  const night = Boolean(halloweenOn(planDate));
+  const line = {
+    ...voice(label),
+    angle: night ? 'Esta noche se juega' : WEEK[day],
+    label,
+    kicker: night ? 'Halloween' : WEEK[day],
+    title: night ? clip(chosen[0].productName, 42) : voice(label).title
+  };
+  const copy = copyFor({ layout: night ? 'poster' : layout, line, items: chosen, label, time });
+  if (night) {
+    copy.headline = clip(chosen[0].productName, 80);
+    copy.subhead = `${priceText(chosen[0])} · Esta noche se juega`;
+    copy.caption = [
+      'Esta noche se juega.',
+      '',
+      copy.headline,
+      priceText(chosen[0]),
+      '',
+      'Zenn, Asunción. WhatsApp 0973 345 284',
+      '',
+      `#halloween #${tagOf(label)} #zenn #paraguay #asuncion`
+    ].join('\n');
+  }
   const art = {
     ...copy,
-    reason: 'Hoy la pieza no es un catálogo: está para que la gente comente. Si la autorizás, sale a esta hora.',
+    reason: night
+      ? 'Halloween: fondo de noche, telarañas en las esquinas y el producto grande. Si la autorizás, sale a esta hora.'
+      : 'Hoy la pieza no es un catálogo: está para que la gente comente. Si la autorizás, sale a esta hora.',
     productIds: chosen.map((item) => item.id),
     titles: chosen.map((item) => clip(item.productName, 80)),
     mediaUrl: ''
@@ -709,9 +770,11 @@ async function composeSuggestion({
   const [logoWhite, logoInk] = await Promise.all([getCommunityLogoDark(), getCommunityLogoLight()]);
   const campaign = campaignOn(planDate);
   reserve = campaign ? NARANJA.reserve : 0;
-  let steerTitle = title || '';
+  let steerTitle = title || (night ? clip(chosen[0].productName, 42) : '');
   let steerAngle = angle || line.angle;
-  let steerBrief = brief || '';
+  let steerBrief = brief || (night
+    ? 'Halloween: fondo noche, telarañas solo en las esquinas, producto enorme, precio en naranja. Prohibido Octubre Rosa y fondo lima.'
+    : '');
   if (!fast) {
     const directed = await directPiece({
       dateLabel: planDate,
@@ -721,13 +784,14 @@ async function composeSuggestion({
       trends: [],
       angle: steerAngle
     });
-    if (directed && directed.title) {
+    const weakTitle = /para qu[eé]|no es el m[aá]s|feliz halloween|nuevo ingreso|mir[aá] esto|imperdible|forma distinta|octubre rosa/i.test(directed && directed.title || '');
+    if (directed && directed.title && !weakTitle) {
       steerTitle = directed.title;
       art.headline = directed.title;
       const rest = String(art.caption || '').split('\n').slice(1);
       art.caption = [directed.title, ...rest].join('\n');
     }
-    if (directed && directed.angle) steerAngle = directed.angle;
+    if (directed && directed.angle && !/feliz halloween|octubre rosa/i.test(directed.angle)) steerAngle = directed.angle;
     if (directed && directed.brief) steerBrief = directed.brief;
   }
   let html = '';
@@ -740,11 +804,12 @@ async function composeSuggestion({
         title: steerTitle,
         kind,
         campaign: Boolean(campaign),
-        attempts: 1,
-        timeout: 28000,
+        night,
+        attempts: night ? 2 : 1,
+        timeout: night ? 36000 : 28000,
         products: chosen.map((item) => ({ name: item.productName, priceText: priceText(item) }))
       });
-      if (designed) {
+      if (designed && !/octubre\s*rosa/i.test(designed) && !/#E6F25A|#e6f25a/i.test(designed)) {
         const tokens = { logo: await logoFor(designed) };
         chosen.forEach((item, index) => {
           tokens[`product${index + 1}`] = photos[index] || '';
@@ -752,7 +817,7 @@ async function composeSuggestion({
           tokens[`price${index + 1}`] = esc(priceText(item));
         });
         const filled = /<html/i.test(designed) ? fillHtml(designed, tokens) : page(fillHtml(designed, tokens), '');
-        if (!hasWhitePlate(filled) && filled.includes('data:image')) {
+        if (!hasWhitePlate(filled) && filled.includes('data:image') && !/octubre\s*rosa/i.test(filled)) {
           html = filled;
           art.source = 'claude';
         }
@@ -761,7 +826,10 @@ async function composeSuggestion({
       console.error('[community ai] claude', error.message || error);
     }
   }
-  if (!html) html = buildHtml({ layout, logoInk, logoWhite, line, items: chosen, photos, background });
+  if (!html) {
+    html = buildHtml({ layout, logoInk, logoWhite, line, items: chosen, photos, background, night });
+    art.source = night ? 'halloween-local' : 'local';
+  }
   if (campaign) html = stampZocalo(html);
   if (!art.source) art.source = 'local';
   art.html = html;

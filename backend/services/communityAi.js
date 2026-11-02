@@ -173,7 +173,13 @@ const ART_LAYOUTS = [
   'Una sola spec enorme (Hz, RTX, pulgadas, GB) y debajo, en chico, por qué importa. El producto flota a la izquierda.'
 ];
 
-async function designPieceHtml({ dateLabel, angle, kind, products, brief, title, fonts, campaign = false, attempts = 2, timeout = 50000 }) {
+const NIGHT_LAYOUTS = [
+  'Precio en naranja, enorme, en el tercio de arriba. El producto entra desde abajo y se corta en el borde. Telarañas solo en las esquinas.',
+  'Tres palabras a la izquierda, en blanco. El producto a la derecha, más de la mitad del alto, saliendo del borde. Fondo noche plano.',
+  'Una sola spec real (RTX, Hz, pulgadas o GB) en naranja. Debajo, el precio entero. El producto flota a la izquierda, sin caja.'
+];
+
+async function designPieceHtml({ dateLabel, angle, kind, products, brief, title, fonts, campaign = false, night = false, attempts = 2, timeout = 50000 }) {
   if (!claudeKey()) return '';
   const lines = (products || []).map((item, index) => (
     `${index + 1}. ${item.name} · ${item.priceText}`
@@ -181,7 +187,15 @@ async function designPieceHtml({ dateLabel, angle, kind, products, brief, title,
   const pair = fonts && fonts.display ? fonts : fontPairFor(dateLabel, kind);
   const layoutSeed = [...`${dateLabel || ''}|${kind || ''}|${title || ''}|${(products && products[0] && products[0].name) || ''}`]
     .reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const layout = ART_LAYOUTS[layoutSeed % ART_LAYOUTS.length];
+  const layout = (night ? NIGHT_LAYOUTS : ART_LAYOUTS)[layoutSeed % (night ? NIGHT_LAYOUTS.length : ART_LAYOUTS.length)];
+  const nightBlock = night
+    ? `Halloween, del 30 de octubre al 1 de noviembre. No es un saludo: es una razón para jugar esta noche.
+Fondo #120814. Un resplandor naranja chico, #F97316, en una esquina. Sin violeta de catálogo, sin blanco, sin rosa.
+Telaraña solo en las cuatro esquinas: líneas finas blancas, opacidad menor a 0.5, de no más de 220px. No cruza el producto, el título ni el precio.
+Luna de 70px como máximo, en el margen. Sin murciélagos sobre el texto. Sin calabaza. Sin "feliz Halloween".
+El producto recortado ocupa más de la mitad del alto. Sin tarjeta, sin círculo, sin marco.
+Un titular de hasta 5 palabras, con el modelo o el precio de esta lista. El precio en naranja, enorme y entero.`
+    : '';
   const floor = campaign
     ? 'Los últimos 420px del lienzo quedan vacíos: el sistema pega ahí el banner de Tienda Naranja. No lo dibujes, no escribas 15% ni 20%, no pongas el logo de Itaú.'
     : 'El texto y el precio terminan al menos a 80px del borde de abajo.';
@@ -191,6 +205,7 @@ Composición de ESTA pieza, obedecela. No la cambies por un producto centrado co
 ${layout}
 Ángulo: ${angle || 'una razón concreta para comentar'}.
 Encargo: ${brief || 'Una sola idea, leíble en medio segundo.'}
+${nightBlock}
 ${title ? `El título, exacto y completo: ${title}` : 'El título nombra este modelo, esta spec o este precio. Máximo ocho palabras.'}
 Productos reales. No inventes otro, ni un porcentaje, ni un dato que no esté acá:
 ${lines || 'No hay producto. Hacé la pieza solo con texto.'}
@@ -203,19 +218,21 @@ Devolvé solo un HTML, con el CSS en un <style>.
 Placeholders, y ningún otro src de imagen: {{logo}} {{product1}} {{name1}} {{price1}} {{product2}} {{name2}} {{price2}}
 El logo va en <img class="logo" src="{{logo}}" alt="">, chico, en una esquina, sin caja. No escribas la palabra Zenn aparte.
 La foto ya viene recortada. Va en <img id="product-1" src="{{product1}}" alt="">, grande, sin tapar una letra.
-Prohibido: fondo #fff o white, círculo blanco, tarjeta blanca detrás del producto, tres chips iguales, ficha de catálogo, degradado violeta de siempre, la frase "nuevo ingreso", Octubre Rosa, lazo rosa, fondo rosa de campaña.
+Prohibido: fondo #fff o white, círculo blanco, tarjeta blanca detrás del producto, tres chips iguales, ficha de catálogo, degradado violeta de siempre, la frase "nuevo ingreso", Octubre Rosa, lazo rosa, fondo rosa de campaña, fondo lima #E6F25A, "No es el más caro", "Es el que te cierra".
+Prohibido escribir "Octubre Rosa" en cualquier lado. Octubre ya cerró.
 Prohibido bajar fotos, memes, series o caras. El golpe es el texto más la foto del producto.
 ${floor}
 Todo el texto entra. Nada cortado. El precio se lee entero.`;
   let last = '';
   for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
     const extra = attempt
-      ? '\n\nLa respuesta anterior tenía blanco detrás del producto o le faltaba {{product1}}. Hacela de nuevo, con color de campo y el producto flotando.'
+      ? '\n\nLa respuesta anterior tenía blanco detrás del producto, Octubre Rosa, o le faltaba {{product1}}. Hacela de nuevo: fondo noche, sin rosa, producto flotando.'
       : '';
     try {
       const html = extractHtml(await askClaudeText(`${prompt}${extra}`, { timeout, maxTokens: 8000, temperature: 0.9 }));
       last = html;
       if (!html.includes('<style') || /<script/i.test(html) || hasWhitePlate(html)) continue;
+      if (/octubre\s*rosa|#E6F25A/i.test(html)) continue;
       if (products && products.length && !html.includes('{{product1}}')) continue;
       return html;
     } catch (error) {
@@ -238,7 +255,8 @@ Qué se está comprando afuera esta semana:
 ${trendText || 'No hubo búsqueda en vivo. No inventes precios de otras tiendas.'}
 La pieza es un ${kind} del rubro ${label || 'catálogo'}. Tiene que frenar el scroll: una sola idea, con el nombre de este producto o su precio. Si la frase sirve para cualquier tienda, está mal.
 ${angle ? `Ángulo que hay que respetar: ${angle}` : ''}
-Prohibido: "nuevo ingreso", "imperdible", "aprovechá", "no te lo pierdas", "lo mejor", "increíble", "descubre", "mirá esto", Octubre Rosa, lazo rosa.
+El title nombra el modelo o el precio de este producto. Si la frase sirve para cualquier tienda, está mal. Nada de pregunta vacía.
+Prohibido: "nuevo ingreso", "imperdible", "aprovechá", "no te lo pierdas", "lo mejor", "increíble", "descubre", "mirá esto", "feliz Halloween", Octubre Rosa, lazo rosa.
 Productos nuestros, con el precio de Zenn:
 ${lines || 'Elegí el ángulo sin nombrar un producto que no esté.'}
 Devolvé solo JSON:
@@ -491,6 +509,7 @@ No uses script. No bajes imágenes de internet, ni de series, ni caras de person
 Tiene que parecer hecha por un diseñador: otro margen, otra escala, otro tipo. No una plantilla de catálogo.
 Si hay un div con class="tn-zocalo" o un src {{banner}}, no lo borres y no escribas encima: son los últimos 420px, el zócalo de Tienda Naranja.
 Prohibido repetir la composición anterior. Cambiá el eje, el tamaño del título y el color de campo.
+Prohibido Octubre Rosa, lazo rosa, fondo lima y frases vacías como "No es el más caro". Si el HTML las tiene, sacalas.
 
 HTML actual:
 ${html}`;

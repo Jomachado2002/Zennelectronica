@@ -31,7 +31,19 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const { sitemapController } = require('../controller/seo/sitemapController');
     const { productSeoHtmlController } = require('../controller/seo/productSeoHtmlController');
     const { estadoController: searchConsoleEstado, informeController: searchConsoleInforme } = require('../controller/seo/searchConsoleController');
-    const { estado: tiendaNaranjaEstado, probar: tiendaNaranjaProbar, revisarProducto: tiendaNaranjaRevisar, catalogoExcel: tiendaNaranjaExcel, tick: tiendaNaranjaTick, pesos: tiendaNaranjaPesos } = require('../controller/product/tiendaNaranjaController');
+    const {
+        estado: tiendaNaranjaEstado,
+        probar: tiendaNaranjaProbar,
+        revisarProducto: tiendaNaranjaRevisar,
+        catalogoExcel: tiendaNaranjaExcel,
+        excelNuevos: tiendaNaranjaExcelNuevos,
+        tick: tiendaNaranjaTick,
+        syncPrecios: tiendaNaranjaSyncPrecios,
+        pesos: tiendaNaranjaPesos,
+        diferencias: tiendaNaranjaDiferencias,
+        getMarcas: tiendaNaranjaGetMarcas,
+        putMarcas: tiendaNaranjaPutMarcas
+    } = require('../controller/product/tiendaNaranjaController');
     const searchProduct = require('../controller/product/searchProduct');
     const advancedSearchProduct = require('../controller/product/advancedSearchProduct');
     const filterProductController = require('../controller/product/filterProduct');
@@ -1033,6 +1045,11 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.post("/admin/tienda-naranja/probar", adminAuth, tiendaNaranjaProbar);
     router.get("/admin/tienda-naranja/producto/:id", adminAuth, tiendaNaranjaRevisar);
     router.get("/admin/tienda-naranja/excel", adminAuth, tiendaNaranjaExcel);
+    router.get("/admin/tienda-naranja/excel-nuevos", adminAuth, tiendaNaranjaExcelNuevos);
+    router.post("/admin/tienda-naranja/sync-precios", adminAuth, tiendaNaranjaSyncPrecios);
+    router.get("/admin/tienda-naranja/diferencias", adminAuth, tiendaNaranjaDiferencias);
+    router.get("/admin/tienda-naranja/marcas-descuento", adminAuth, tiendaNaranjaGetMarcas);
+    router.put("/admin/tienda-naranja/marcas-descuento", adminAuth, tiendaNaranjaPutMarcas);
     router.post("/admin/tienda-naranja/pesos", adminAuth, tiendaNaranjaPesos);
     router.get("/tienda-naranja/tick", async (req, res) => {
       const secret = process.env.CRON_SECRET || process.env.TN_EXCEL_TOKEN || '';

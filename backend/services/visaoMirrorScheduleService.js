@@ -111,6 +111,15 @@ async function runScheduledMirrorOnce(label) {
         } catch (seoError) {
             console.error('[Visão schedule] seo', seoError && seoError.message ? seoError.message : seoError);
         }
+        try {
+            const { runTnPriceStockSync } = require('./tiendaNaranjaSyncService');
+            const tn = await runTnPriceStockSync();
+            console.log(
+                `[Visão schedule][${label}] Tienda Naranja precio/stock ok=${tn.ok} fail=${tn.fail} omitidos=${tn.skipped} · ${tn.seconds || 0}s`
+            );
+        } catch (tnError) {
+            console.error('[Visão schedule] tienda-naranja', tnError && tnError.message ? tnError.message : tnError);
+        }
     } catch (err) {
         console.error(
             `[Visão schedule][${label}] Error tras ${Date.now() - t0}ms:`,

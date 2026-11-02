@@ -39,14 +39,16 @@ const ANGLES = [
     label: 'Halloween',
     lead: 'Esta noche se juega. Halloween: el setup, el monitor o el auricular, con el precio de hoy.',
     brief: 'Halloween, del 30 de octubre al 1 de noviembre. El ángulo es jugar de noche: notebook gamer, monitor, auricular, teclado o mouse. Una frase concreta por pieza. Prohibido Octubre Rosa, lazo rosa y un "feliz Halloween" vacío.',
-    opener: 'Del 30 al 1 armo el día para Halloween: jugar de noche, no un saludo vacío. Octubre Rosa ya no entra. Si querés otro rubro o otra frase, decime y lo cambio.'
+    opener: 'Del 30 al domingo 1 armo Halloween y sumo publicaciones de noche: notebook gamer, monitor, auricular, teclado o mouse. La plantilla es la de telarañas. Si querés otro rubro, decime.'
   }
 ];
 
-const HALLOWEEN_SCENE = {
+const HALLOWEEN = {
   scene: 'halloween',
   from: '2026-10-30',
-  to: '2026-10-31'
+  to: '2026-11-01',
+  extraFeeds: 3,
+  extraStories: 2
 };
 
 function campaignOn(date) {
@@ -55,10 +57,16 @@ function campaignOn(date) {
   return null;
 }
 
-function flyerSceneOn(date) {
+function halloweenOn(date) {
   const key = dateKeyOf(date || new Date());
-  if (key >= HALLOWEEN_SCENE.from && key <= HALLOWEEN_SCENE.to) return HALLOWEEN_SCENE.scene;
-  const campaign = campaignOn(key);
+  if (key >= HALLOWEEN.from && key <= HALLOWEEN.to) return HALLOWEEN;
+  return null;
+}
+
+function flyerSceneOn(date) {
+  const night = halloweenOn(date);
+  if (night) return night.scene;
+  const campaign = campaignOn(date);
   return campaign ? campaign.scene : '';
 }
 
@@ -71,6 +79,8 @@ module.exports = {
   NARANJA,
   ANGLES,
   campaignOn,
+  HALLOWEEN,
+  halloweenOn,
   flyerSceneOn,
   angleOn,
   dateKeyOf

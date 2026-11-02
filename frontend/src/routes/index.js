@@ -91,6 +91,7 @@ const AdminCatalogoPDF = lazy(() => import('../pages/admin/AdminCatalogoPDF'));
 const CreativeStudioPage = lazy(() => import('../pages/admin/CreativeStudioPage'));
 const MarketingStudioPage = lazy(() => import('../pages/admin/MarketingStudioPage'));
 const AdminWorkerPage = lazy(() => import('../pages/admin/AdminWorkerPage'));
+const TiendaNaranjaPage = lazy(() => import('../pages/admin/TiendaNaranjaPage'));
 const VisitantesPage = lazy(() => import('../pages/admin/VisitantesPage'));
 const SearchConsolePage = lazy(() => import('../pages/admin/SearchConsolePage'));
 const SeoDailyPage = lazy(() => import('../pages/admin/SeoDailyPage'));
@@ -418,6 +419,10 @@ const router = createBrowserRouter([
                     {
                         path: "worker-visao",
                         element: <Lazy><AdminWorkerPage /></Lazy>
+                    },
+                    {
+                        path: "tienda-naranja",
+                        element: <Lazy><TiendaNaranjaPage /></Lazy>
                     },
                 
                 ]
