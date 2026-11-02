@@ -1937,6 +1937,12 @@ const {
 } = require('../controller/product/creativeStudioController');
 const { getAdPlanner, buildAdPlanner, authorizeAdCampaign } = require('../controller/product/adPlannerController');
 const {
+  themes: campaignThemes,
+  signals: campaignSignals,
+  list: campaignList,
+  compose: campaignCompose
+} = require('../controller/product/campaignPlannerController');
+const {
   composeSocialCaption,
   publishSocialPost,
   listSocialCalendar,
@@ -2068,6 +2074,10 @@ router.post('/creativos/publicar', authToken, (req, res, next) => {
 });
 router.get('/creativos/calendario', authToken, listSocialCalendar);
 router.delete('/creativos/calendario/:id', authToken, cancelSocialPost);
+router.get('/creativos/campanas/temas', authToken, campaignThemes);
+router.get('/creativos/campanas/senales', authToken, campaignSignals);
+router.get('/creativos/campanas', authToken, campaignList);
+router.post('/creativos/campanas/armar', authToken, campaignCompose);
 router.get('/creativos/planner', authToken, getAdPlanner);
 router.post('/creativos/planner/armar', authToken, (req, res, next) => {
   req.setTimeout(3 * 60 * 1000);

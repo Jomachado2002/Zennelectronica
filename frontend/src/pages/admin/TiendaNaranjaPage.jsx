@@ -29,30 +29,55 @@ const TiendaNaranjaPage = () => {
   const [filters, setFilters] = useState({ promo: false, nuevos: false, gap: '' });
 
   const refresh = useCallback(async () => {
-    const [e, m, d] = await Promise.all([
-      axiosInstance.get('/api/admin/tienda-naranja/estado'),
-      axiosInstance.get('/api/admin/tienda-naranja/marcas-descuento'),
-      axiosInstance.get('/api/admin/tienda-naranja/diferencias', {
-        params: {
-          limit: 80,
-          promo: filters.promo ? 1 : undefined,
-          nuevos: filters.nuevos ? 1 : undefined,
-          gap: filters.gap || undefined
-        },
-        timeout: 120000
-      })
+    const [e, m] = await Promise.all([
+      axiosInstance.get('/api/admin/tienda-naranja/estado', { timeout: 15000 }),
+      axiosInstance.get('/api/admin/tienda-naranja/marcas-descuento', { timeout: 15000 })
     ]);
     if (!e.data.success) throw new Error(e.data.message || 'No se pudo leer el estado');
     setEstado(e.data);
     setBrands(m.data.discountBrands || e.data.discountBrands || []);
+
+    // Diferencias solo si el worker ya corrió; si no, vacío sin llamar a TN.
+    if (!e.data.lastPriceStockSyncAt) {
+      setDiffs({
+        total: 0,
+        published: 0,
+        unpublished: 0,
+        items: [],
+        fromWorker: false,
+        message: 'Todavía no hay sync del worker. Cuando Visão actualice TN, acá se ven las diferencias.'
+      });
+      return;
+    }
+
+    const d = await axiosInstance.get('/api/admin/tienda-naranja/diferencias', {
+      params: {
+        limit: 80,
+        promo: filters.promo ? 1 : undefined,
+        nuevos: filters.nuevos ? 1 : undefined,
+        gap: filters.gap || undefined
+      },
+      timeout: 30000
+    });
     setDiffs(d.data);
   }, [filters.gap, filters.nuevos, filters.promo]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     refresh()
-      .catch((err) => toast.error(err.response?.data?.message || err.message))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (!cancelled) {
+          toast.error(err.response?.data?.message || err.message);
+          setDiffs({ total: 0, items: [], fromWorker: false, message: 'No se pudo cargar.' });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
   const syncNow = async () => {
@@ -79,7 +104,7 @@ const TiendaNaranjaPage = () => {
       const response = await axiosInstance.get('/api/admin/tienda-naranja/excel-nuevos', {
         responseType: 'blob',
         timeout: 900000,
-        params: { probe: 1 }
+        params: { probe: 0 }
       });
       const header = response.headers['content-disposition'] || '';
       const match = header.match(/filename="([^"]+)"/);
@@ -110,7 +135,6 @@ const TiendaNaranjaPage = () => {
       if (!data.success) throw new Error(data.message || 'No se guardó');
       setBrands(data.discountBrands || []);
       toast.success('Marcas −5% actualizadas');
-      await refresh();
     } catch (err) {
       toast.error(err.response?.data?.message || err.message);
     } finally {
@@ -134,11 +158,13 @@ const TiendaNaranjaPage = () => {
   };
 
   const lastSync = useMemo(() => {
-    if (!estado?.lastPriceStockSyncAt) return 'Todavía no hubo sync';
+    if (!estado?.lastPriceStockSyncAt) return null;
     return new Date(estado.lastPriceStockSyncAt).toLocaleString('es-PY');
   }, [estado]);
 
-  if (loading && !estado) {
+  const hasWorkerData = Boolean(estado?.lastPriceStockSyncAt);
+
+  if (loading) {
     return (
       <div className="p-8 flex items-center gap-2 text-gray-600">
         <FaSpinner className="animate-spin" /> Cargando Tienda Naranja…
@@ -155,9 +181,7 @@ const TiendaNaranjaPage = () => {
             Tienda Naranja
           </h1>
           <p className="mt-2 text-gray-600 max-w-3xl">
-            Precio de venta TN = costo Visão × 1,10 × 1,15 × 1,10 (Itaú). Marcas de la lista: −5%. Stock TN: 5 si está en Visão, 0 si no.
-            Hasta el <strong>20/11/2026</strong> se manda también un precio tachado (40–70% de descuento visible) para que se vea la promo.
-            Tras el worker Visão se actualizan solos los productos ya publicados.
+            Acá solo se muestra lo que ya mandó el worker (precios/stock). Si todavía no corrió, la tabla queda vacía.
           </p>
         </div>
 
@@ -170,15 +194,19 @@ const TiendaNaranjaPage = () => {
             <p className="text-sm text-gray-500">Markup ×{(estado?.markup || 1.3915).toFixed(4)}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Último sync precio/stock</p>
-            <p className="mt-1 text-lg font-semibold text-gray-900">{lastSync}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Último sync del worker</p>
+            <p className="mt-1 text-lg font-semibold text-gray-900">{lastSync || 'Sin sync todavía'}</p>
             <p className="text-sm text-gray-500">{estado?.lastPriceStockSync?.message || '—'}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-xs uppercase tracking-wide text-gray-500">Diferencias cargadas</p>
-            <p className="mt-1 text-lg font-semibold text-gray-900">{diffs?.total ?? '—'}</p>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Filas del último sync</p>
+            <p className="mt-1 text-lg font-semibold text-gray-900">
+              {hasWorkerData ? (diffs?.total ?? 0) : '—'}
+            </p>
             <p className="text-sm text-gray-500">
-              Publicados {diffs?.published ?? 0} · Sin publicar {diffs?.unpublished ?? 0}
+              {hasWorkerData
+                ? `Publicados ${diffs?.published ?? 0}`
+                : 'Esperando worker Visão + TN'}
             </p>
           </div>
         </div>
@@ -204,18 +232,20 @@ const TiendaNaranjaPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => refresh().catch((err) => toast.error(err.message))}
+            onClick={() => {
+              setLoading(true);
+              refresh()
+                .catch((err) => toast.error(err.message))
+                .finally(() => setLoading(false));
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
           >
-            <FaSyncAlt /> Actualizar tabla
+            <FaSyncAlt /> Actualizar
           </button>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Marcas con −5% en Tienda Naranja</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Estas marcas salen 5% debajo del precio TN normal para empujar venta con Itaú.
-          </p>
           <div className="flex flex-wrap gap-2 mb-4">
             {brands.map((brand) => (
               <span
@@ -234,14 +264,14 @@ const TiendaNaranjaPage = () => {
                 </button>
               </span>
             ))}
-            {!brands.length && <span className="text-sm text-gray-500">Sin marcas cargadas</span>}
+            {!brands.length && <span className="text-sm text-gray-500">Sin marcas</span>}
           </div>
           <div className="flex flex-wrap gap-2">
             <input
               value={brandDraft}
               onChange={(e) => setBrandDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addBrand()}
-              placeholder="Agregar marca (ej. redragon)"
+              placeholder="Agregar marca"
               className="border border-gray-300 rounded-md px-3 py-2 text-sm min-w-[220px]"
             />
             <button
@@ -258,91 +288,87 @@ const TiendaNaranjaPage = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Diferencias Zenn vs Tienda Naranja</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Resultado del worker</h2>
               <p className="text-sm text-gray-600">
-                El precio de TN no es el de zenn.com.py: lleva el margen Itaú (y −5% en marcas de la lista).
+                {diffs?.message
+                  || (hasWorkerData
+                    ? 'Solo productos que el worker ya tocó en Tienda Naranja.'
+                    : 'Sin datos todavía.')}
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={filters.promo}
-                  onChange={(e) => setFilters((f) => ({ ...f, promo: e.target.checked }))}
-                />
-                Solo marcas −5%
-              </label>
-              <label className="inline-flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={filters.nuevos}
-                  onChange={(e) => setFilters((f) => ({ ...f, nuevos: e.target.checked }))}
-                />
-                Solo sin publicar
-              </label>
-              <label className="inline-flex items-center gap-2">
-                Gap % ≥
-                <input
-                  type="number"
-                  min="0"
-                  value={filters.gap}
-                  onChange={(e) => setFilters((f) => ({ ...f, gap: e.target.value }))}
-                  className="w-16 border border-gray-300 rounded px-2 py-1"
-                />
-              </label>
-            </div>
+            {hasWorkerData ? (
+              <div className="flex flex-wrap gap-3 text-sm">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.promo}
+                    onChange={(e) => setFilters((f) => ({ ...f, promo: e.target.checked }))}
+                  />
+                  Solo marcas −5%
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  Gap % ≥
+                  <input
+                    type="number"
+                    min="0"
+                    value={filters.gap}
+                    onChange={(e) => setFilters((f) => ({ ...f, gap: e.target.value }))}
+                    className="w-16 border border-gray-300 rounded px-2 py-1"
+                  />
+                </label>
+              </div>
+            ) : null}
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-3">SKU</th>
-                  <th className="py-2 pr-3">Producto</th>
-                  <th className="py-2 pr-3">Zenn</th>
-                  <th className="py-2 pr-3">TN calc.</th>
-                  <th className="py-2 pr-3">Delta</th>
-                  <th className="py-2 pr-3">Stock TN</th>
-                  <th className="py-2 pr-3">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(diffs?.items || []).map((row) => (
-                  <tr key={row.sku} className="border-b border-gray-100">
-                    <td className="py-2 pr-3 font-mono text-xs">{row.sku}</td>
-                    <td className="py-2 pr-3">
-                      <div className="max-w-xs truncate" title={row.nombre}>
-                        {row.nombre}
-                      </div>
-                      {row.discountBrand ? (
-                        <span className="text-xs text-orange-600">−5% {row.brandName || 'marca'}</span>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">{money(row.zennPrice)}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap font-medium">{money(row.tnPrice)}</td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      {row.deltaPct == null ? '—' : `${row.deltaPct > 0 ? '+' : ''}${row.deltaPct}%`}
-                    </td>
-                    <td className="py-2 pr-3">{row.tnStock}</td>
-                    <td className="py-2 pr-3">
-                      {row.published ? (
-                        <span className="text-green-700">En TN</span>
-                      ) : (
-                        <span className="text-amber-700">Alta pendiente</span>
-                      )}
-                    </td>
+          {!hasWorkerData || !(diffs?.items || []).length ? (
+            <div className="py-12 text-center text-gray-500 text-sm">
+              {hasWorkerData ? 'El último sync no dejó filas para mostrar.' : 'Nada para mostrar hasta que corra el worker.'}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="py-2 pr-3">SKU</th>
+                    <th className="py-2 pr-3">Producto</th>
+                    <th className="py-2 pr-3">Zenn</th>
+                    <th className="py-2 pr-3">TN calc.</th>
+                    <th className="py-2 pr-3">TN remoto</th>
+                    <th className="py-2 pr-3">Stock TN</th>
+                    <th className="py-2 pr-3">Estado</th>
                   </tr>
-                ))}
-                {!diffs?.items?.length && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500">
-                      Sin filas para estos filtros
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {(diffs?.items || []).map((row) => (
+                    <tr key={row.sku} className="border-b border-gray-100">
+                      <td className="py-2 pr-3 font-mono text-xs">{row.sku}</td>
+                      <td className="py-2 pr-3">
+                        <div className="max-w-xs truncate" title={row.nombre}>{row.nombre}</div>
+                        {row.lastError ? (
+                          <span className="text-xs text-red-600">{row.lastError}</span>
+                        ) : row.discountBrand ? (
+                          <span className="text-xs text-orange-600">−5%</span>
+                        ) : null}
+                      </td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{money(row.zennPrice)}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap font-medium">{money(row.tnPrice)}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">
+                        {row.remotePrice == null ? '—' : money(row.remotePrice)}
+                      </td>
+                      <td className="py-2 pr-3">{row.tnStock}</td>
+                      <td className="py-2 pr-3">
+                        {row.lastError ? (
+                          <span className="text-red-700">Error</span>
+                        ) : (
+                          <span className="text-green-700">Sync OK</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

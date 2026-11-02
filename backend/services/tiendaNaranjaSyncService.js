@@ -338,7 +338,13 @@ async function runTnDaily({ limit } = {}) {
 }
 
 function startTnScheduleIfEnabled() {
+  // El alta masiva por API falla (401). Precios/stock los manda runTnPriceStockSync
+  // después del worker Visão. Este loop viejo solo ensuciaba logs cada 2 min.
   if (process.env.VERCEL) return;
+  if (String(process.env.TN_CREATE_SYNC_ENABLED || '') !== '1') {
+    console.log('[tn sync] Alta automática desactivada (solo sync de precios vía worker Visão).');
+    return;
+  }
   if (timer) return;
   const tick = async () => {
     if (running) return;
@@ -359,11 +365,39 @@ function startTnScheduleIfEnabled() {
   setTimeout(tick, 15 * 1000);
 }
 
+/**
+ * Solo datos locales que dejó el worker (lastSyncAt / lastRemotePrice).
+ * No llama a la API de Tienda Naranja en cada carga del panel.
+ */
 async function listDiferencias({ limit = 100, offset = 0, onlyGap, onlyPromo, onlyNew } = {}) {
+  const settings = await getTnSettings();
+  if (!settings.lastPriceStockSyncAt) {
+    return {
+      total: 0,
+      published: 0,
+      unpublished: 0,
+      items: [],
+      usdRate: 0,
+      markup: TN_MARKUP,
+      discountBrands: await getDiscountBrands(),
+      fromWorker: false,
+      message: 'Todavía no hay sync del worker. Cuando corra Visão + TN, acá aparecen las diferencias.'
+    };
+  }
+
   const usdRate = await resolveUsdRate();
   const brands = await getDiscountBrands();
-  const remote = await listRemoteSellerSkus();
-  const products = await excel.listProducts({ onlyStock: false });
+  const products = await Product.find({
+    codigo: { $exists: true, $nin: ['', null] },
+    $or: [
+      { 'tiendaNaranja.lastSyncAt': { $exists: true, $ne: null } },
+      { 'tiendaNaranja.lastRemotePrice': { $gt: 0 } },
+      { 'tiendaNaranja.lastError': { $exists: true, $nin: ['', null] } }
+    ]
+  })
+    .select('codigo productName brandName sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus tiendaNaranja')
+    .lean();
+
   const rows = [];
   for (const product of products) {
     const sku = skuOf(product);
@@ -371,13 +405,20 @@ async function listDiferencias({ limit = 100, offset = 0, onlyGap, onlyPromo, on
     const zenn = Math.round(Number(product.sellingPrice) || 0);
     const tnPrice = tnListPrice(product, usdRate, brands);
     const qty = tnStockQty(product);
-    const published = remote.has(sku.toUpperCase());
-    const remotePrice = Number(product.tiendaNaranja && product.tiendaNaranja.lastRemotePrice) || null;
-    const delta = zenn > 0 ? Math.round(((tnPrice - zenn) / zenn) * 1000) / 10 : null;
+    const tn = product.tiendaNaranja || {};
+    const remotePrice = Number(tn.lastRemotePrice) || null;
+    const published = Boolean(tn.lastSyncAt || remotePrice);
+    const delta = zenn > 0 && tnPrice > 0
+      ? Math.round(((tnPrice - zenn) / zenn) * 1000) / 10
+      : null;
     const promo = isDiscountBrand(product, brands);
+    const hasGap = remotePrice != null && tnPrice > 0 && Math.abs(remotePrice - tnPrice) >= 1;
     if (onlyNew && published) continue;
     if (onlyPromo && !promo) continue;
-    if (onlyGap && !(delta != null && Math.abs(delta) >= Number(onlyGap))) continue;
+    if (onlyGap) {
+      const minGap = Number(onlyGap) || 0;
+      if (!(hasGap || (delta != null && Math.abs(delta) >= minGap))) continue;
+    }
     rows.push({
       sku,
       nombre: product.productName,
@@ -389,10 +430,17 @@ async function listDiferencias({ limit = 100, offset = 0, onlyGap, onlyPromo, on
       tnStock: qty,
       published,
       discountBrand: promo,
-      inVisao: qty > 0
+      inVisao: qty > 0,
+      lastError: tn.lastError || '',
+      lastSyncAt: tn.lastSyncAt || null
     });
   }
-  rows.sort((a, b) => Math.abs(b.deltaPct || 0) - Math.abs(a.deltaPct || 0));
+  rows.sort((a, b) => {
+    const ae = a.lastError ? 1 : 0;
+    const be = b.lastError ? 1 : 0;
+    if (be !== ae) return be - ae;
+    return Math.abs(b.deltaPct || 0) - Math.abs(a.deltaPct || 0);
+  });
   const slice = rows.slice(Number(offset) || 0, (Number(offset) || 0) + (Number(limit) || 100));
   return {
     total: rows.length,
@@ -401,7 +449,10 @@ async function listDiferencias({ limit = 100, offset = 0, onlyGap, onlyPromo, on
     items: slice,
     usdRate,
     markup: TN_MARKUP,
-    discountBrands: brands
+    discountBrands: brands,
+    fromWorker: true,
+    lastPriceStockSyncAt: settings.lastPriceStockSyncAt,
+    lastPriceStockSync: settings.lastPriceStockSync || null
   };
 }
 

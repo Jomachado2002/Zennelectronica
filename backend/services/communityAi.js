@@ -101,7 +101,10 @@ async function askClaudeText(prompt, options = {}) {
     max_tokens: Math.max(1000, Number(options.maxTokens) || 6000),
     messages: [{ role: 'user', content: prompt }]
   };
-  if (options.temperature != null) body.temperature = Number(options.temperature);
+  // Algunos modelos Anthropic nuevos ya no aceptan temperature.
+  if (options.temperature != null && !/claude-sonnet-5|claude-opus-5|claude-haiku-5/i.test(CLAUDE_MODEL)) {
+    body.temperature = Number(options.temperature);
+  }
   const timeoutMs = Math.max(8000, Number(options.timeout) || 20000);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -241,6 +244,98 @@ Todo el texto entra. Nada cortado. El precio se lee entero.`;
     }
   }
   return last && !hasWhitePlate(last) ? '' : '';
+}
+
+const CAMPAIGN_LAYOUTS = [
+  'Cuadrícula 2×2 de productos reales a sangre, cada uno con su categoría chica (mochila, auricular, electro, accesorio) y el precio. Título de 4 palabras arriba. Pregunta abajo que invite a responder o escribir por WhatsApp.',
+  'Un producto héroe enorme a la izquierda (más del 55% del ancho). A la derecha, tres productos chicos apilados con precio. El titular pregunta qué regalo mandan a su equipo.',
+  'Franja superior de color plano con una pregunta corta. Debajo, cuatro productos en fila o 2×2, fotos grandes, sin tarjetas blancas. CTA a WhatsApp al pie, tipografía simple, sin píldora neón.',
+  'Tres columnas de productos distintos (mochila / auricular / electrodoméstico). Título editorial enorme. Precio de cada uno legible. Se siente kit de regalo empresarial, no catálogo genérico.'
+];
+
+/**
+ * Flyer de campaña multi-producto (regalos, oficina, etc.) con Claude.
+ * Placeholders: {{logo}} {{product1..6}} {{name1..6}} {{price1..6}} {{role1..6}} {{hook}} {{cta}} {{wa}}
+ */
+async function designCampaignHtml({
+  dateLabel,
+  themeLabel,
+  audience,
+  title,
+  hook,
+  cta,
+  products,
+  note = '',
+  attempts = 2,
+  timeout = 55000
+} = {}) {
+  if (!claudeKey()) return '';
+  const list = (products || []).slice(0, 6);
+  const lines = list.map((item, index) => (
+    `${index + 1}. [${item.role || 'producto'}] ${item.name} · ${item.priceText}`
+  )).join('\n');
+  const pair = fontPairFor(dateLabel, themeLabel || 'campaign');
+  const layout = CAMPAIGN_LAYOUTS[
+    [...`${dateLabel}|${themeLabel}|${title}`].reduce((sum, char) => sum + char.charCodeAt(0), 0) % CAMPAIGN_LAYOUTS.length
+  ];
+  const slots = list.map((_, i) => `{{product${i + 1}}} {{name${i + 1}}} {{price${i + 1}}} {{role${i + 1}}}`).join(' ');
+  const prompt = `Sos director de arte de Zenn Electrónicos (Asunción). Esta pieza es una CAMPAÑA de Instagram 1080×1350, no una ficha de producto.
+Tiene que parecer hecha por un humano de retail paraguayo: directa, con fotos reales, tipografía de afiche. Si se ve “IA genérica”, está mal.
+
+Tema: ${themeLabel}
+Audiencia: ${audience || 'compradores en Paraguay'}
+Pedido: ${note || 'ninguno'}
+Título exacto: ${title}
+Hook / pregunta: ${hook}
+CTA: ${cta}
+WhatsApp: 0973 345 284
+
+Composición de ESTA pieza (obedecela):
+${layout}
+
+Productos reales a mostrar (usá TODOS, con sus fotos). No inventes otros ni precios:
+${lines}
+
+Tipografía de esta pieza, y no otra. Carácter: ${pair.mood}.
+Título: ${pair.display}, enorme. Precios y nombres: ${pair.text}.
+Link exacto en el head:
+<link href="${fontHref(pair)}" rel="stylesheet">
+
+Devolvé solo HTML con CSS en <style>. Lienzo exacto 1080×1350.
+Placeholders (ningún otro src de imagen): {{logo}} {{hook}} {{cta}} {{wa}} ${slots}
+- Logo: <img class="logo" src="{{logo}}" alt=""> chico, esquina, sin caja. No escribas la palabra Zenn aparte.
+- Cada foto ya viene recortada: <img id="product-N" src="{{productN}}" alt=""> grande, object-fit:contain, sin círculo blanco ni tarjeta detrás.
+- Nombres/precios/roles con los placeholders {{nameN}} {{priceN}} {{roleN}}.
+- El hook va con {{hook}}. El CTA con {{cta}}. El WhatsApp con {{wa}}.
+
+Prohibido: degradado violeta/indigo, fondo #fff, chips de “AI”, tres cards idénticas con sombra suave, “nuevo ingreso”, “imperdible”, “aprovechá”, Octubre Rosa, lima #E6F25A, “Campaña Zenn” como kicker, píldoras neón, iconos genéricos.
+El golpe es: pregunta humana + productos reales grandes + CTA claro a WhatsApp.
+Todo el texto entra. Nada cortado. Precios enteros.`;
+
+  let last = '';
+  for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
+    const extra = attempt
+      ? '\n\nLa anterior parecía plantilla IA o le faltaban fotos. Repetí: productos grandes, sin cards blancas, sin violeta, con todos los {{productN}}.'
+      : '';
+    try {
+      const html = extractHtml(await askClaudeText(`${prompt}${extra}`, { timeout, maxTokens: 9000, temperature: 0.85 }));
+      last = html;
+      if (!html.includes('<style') || /<script/i.test(html) || hasWhitePlate(html)) continue;
+      if (/octubre\s*rosa|#E6F25A|degradado violeta/i.test(html)) continue;
+      if (list.length && !html.includes('{{product1}}')) continue;
+      const need = Math.min(4, list.length);
+      let ok = true;
+      for (let i = 1; i <= need; i += 1) {
+        if (!html.includes(`{{product${i}}}`)) ok = false;
+      }
+      if (!ok) continue;
+      return html;
+    } catch (error) {
+      console.error('[community ai] campaign html', error.message || error);
+      if (timedOut(error)) break;
+    }
+  }
+  return last && !hasWhitePlate(last) ? last : '';
 }
 
 async function directPiece({ dateLabel, kind, label, products, trends, angle }) {
@@ -541,6 +636,7 @@ module.exports = {
   scoutMarket,
   chooseCatalogDay,
   designPieceHtml,
+  designCampaignHtml,
   directPiece,
   steerTemplate,
   interpretRevision,
