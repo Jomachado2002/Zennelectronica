@@ -145,7 +145,7 @@ function putPayload(product, { usdRate, brands }) {
   };
 }
 
-async function runTnPriceStockSync({ limit } = {}) {
+async function runTnPriceStockSync({ limit, fromRemote } = {}) {
   if (priceStockRunning) {
     return { ok: 0, fail: 0, skipped: 0, scanned: 0, message: 'Ya hay un sync TN en curso' };
   }
@@ -156,25 +156,64 @@ async function runTnPriceStockSync({ limit } = {}) {
   try {
     const usdRate = await resolveUsdRate();
     const brands = await getDiscountBrands();
-    const remote = await listRemoteSellerSkus();
-    const skus = [...remote];
-    const max = Number(limit) > 0 ? Math.min(skus.length, Number(limit)) : skus.length;
-    const slice = skus.slice(0, max);
+
+    // Por defecto: productos locales con código (sin paginar el catálogo remoto, que tarda minutos).
+    // fromRemote=1 solo si hace falta descubrir SKUs que no están en Mongo.
+    const useRemote = fromRemote === true || String(process.env.TN_PRICE_SYNC_FROM_REMOTE || '') === '1';
+    let products;
+    if (useRemote) {
+      console.log('[tn price-stock] listando SKUs remotos…');
+      const remote = await listRemoteSellerSkus();
+      const skus = [...remote];
+      const max = Number(limit) > 0 ? Math.min(skus.length, Number(limit)) : skus.length;
+      const slice = skus.slice(0, max);
+      const codes = slice.map((sku) => sku.replace(/^ZEEL-/i, ''));
+      products = await Product.find({ codigo: { $in: codes } })
+        .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
+        .lean();
+    } else {
+      const max = Number(limit) > 0 ? Number(limit) : 0;
+      // Solo lo que ya está (o estuvo) en Tienda Naranja — no todo el catálogo Zenn.
+      let q = Product.find({
+        codigo: { $exists: true, $nin: ['', null] },
+        sellingPrice: { $gt: 0 },
+        $or: [
+          { 'tiendaNaranja.sku': { $exists: true, $nin: ['', null] } },
+          { 'tiendaNaranja.lastSyncAt': { $exists: true, $ne: null } },
+          { 'tiendaNaranja.lastRemotePrice': { $gt: 0 } },
+          { 'tiendaNaranja.entityId': { $exists: true, $nin: ['', null] } }
+        ]
+      })
+        .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
+        .sort({ 'tiendaNaranja.lastSyncAt': -1, stock: -1 });
+      if (max) q = q.limit(max);
+      products = await q.lean();
+      if (!products.length) {
+        console.log('[tn price-stock] sin vínculos locales; cayendo a listado remoto…');
+        const remote = await listRemoteSellerSkus();
+        const skus = [...remote];
+        const codes = skus.map((sku) => sku.replace(/^ZEEL-/i, ''));
+        products = await Product.find({ codigo: { $in: codes }, sellingPrice: { $gt: 0 } })
+          .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
+          .lean();
+      }
+    }
 
     const bySku = new Map();
-    const codes = slice.map((sku) => sku.replace(/^ZEEL-/i, ''));
-    const products = await Product.find({ codigo: { $in: codes } })
-      .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
-      .lean();
+    const slice = [];
     for (const product of products) {
-      bySku.set(skuOf(product).toUpperCase(), product);
+      const sku = skuOf(product).toUpperCase();
+      if (!sku || bySku.has(sku)) continue;
+      bySku.set(sku, product);
+      slice.push(sku);
     }
+    console.log(`[tn price-stock] ${slice.length} SKUs a actualizar (sellingPrice × 1.10)`);
 
     let ok = 0;
     let fail = 0;
     let skipped = 0;
     let index = 0;
-    const CONCURRENCY = 4;
+    const CONCURRENCY = Math.max(4, Math.min(16, Number(process.env.TN_PRICE_SYNC_CONCURRENCY) || 12));
 
     async function worker() {
       while (index < slice.length) {
@@ -234,9 +273,13 @@ async function runTnPriceStockSync({ limit } = {}) {
             message: String(error.message || error).slice(0, 220)
           })}\n`);
         }
-        await sleep(60);
-        if ((ok + fail + skipped) % 50 === 0) {
-          console.log(`[tn price-stock] ${ok + fail + skipped}/${slice.length} · ok ${ok} · fail ${fail}`);
+        await sleep(15);
+        const done = ok + fail + skipped;
+        if (done % 100 === 0 || done === slice.length) {
+          const elapsed = Math.max(1, (Date.now() - started) / 1000);
+          const rate = done / elapsed;
+          const eta = Math.round((slice.length - done) / Math.max(0.1, rate));
+          console.log(`[tn price-stock] ${done}/${slice.length} · ok ${ok} · fail ${fail} · ~${eta}s restantes`);
         }
       }
     }
@@ -248,7 +291,6 @@ async function runTnPriceStockSync({ limit } = {}) {
       fail,
       skipped,
       scanned: slice.length,
-      remote: remote.size,
       seconds: Math.round((Date.now() - started) / 1000),
       message: `ok ${ok} · fail ${fail} · omitidos ${skipped}`
     };

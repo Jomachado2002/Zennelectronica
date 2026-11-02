@@ -112,10 +112,11 @@ async function runScheduledMirrorOnce(label) {
             console.error('[Visão schedule] seo', seoError && seoError.message ? seoError.message : seoError);
         }
         try {
+            // Precio TN = sellingPrice Zenn × 1.10 (única regla; ver tiendaNaranjaPricing.tnListPrice).
             const { runTnPriceStockSync } = require('./tiendaNaranjaSyncService');
             const tn = await runTnPriceStockSync();
             console.log(
-                `[Visão schedule][${label}] Tienda Naranja precio/stock ok=${tn.ok} fail=${tn.fail} omitidos=${tn.skipped} · ${tn.seconds || 0}s`
+                `[Visão schedule][${label}] TN precio=web×1.10 · ok=${tn.ok} fail=${tn.fail} omitidos=${tn.skipped} · ${tn.seconds || 0}s`
             );
         } catch (tnError) {
             console.error('[Visão schedule] tienda-naranja', tnError && tnError.message ? tnError.message : tnError);

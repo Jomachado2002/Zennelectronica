@@ -3,46 +3,21 @@
 const TnSettings = require('../models/tnSettingsModel');
 const { DEFAULT_DISCOUNT_BRANDS } = require('../models/tnSettingsModel');
 
-const IVA = 1.1;
-const ZENN_MARGIN = 1.15;
-const ITAU_MARGIN = 1.1;
-const BRAND_DISCOUNT = 0.95;
-const TN_MARKUP = IVA * ZENN_MARGIN * ITAU_MARGIN;
+/**
+ * Precio TN = precio de venta de la web (sellingPrice) × 1.10.
+ * Nada de Visão × márgenes × marcas.
+ */
+const WEB_MARKUP = 1.1;
+const TN_MARKUP = WEB_MARKUP;
 const TN_STOCK_IN_VISAO = 5;
-/** Hasta esta fecha se manda precio tachado + especial para que se vea el descuento en TN. */
-const DISPLAY_PROMO_UNTIL = '2026-11-20';
-const DISPLAY_PROMO_FROM = '2026-11-01';
-const DISPLAY_DISCOUNT_MIN = 40;
-const DISPLAY_DISCOUNT_MAX = 70;
+
+/** Compat: ya no se usa para armar precio, se deja exportado por si algo lo lee. */
+const IVA = 1.1;
+const ZENN_MARGIN = 1;
+const ITAU_MARGIN = 1;
+const BRAND_DISCOUNT = 1;
 
 let brandsCache = { at: 0, list: [...DEFAULT_DISCOUNT_BRANDS] };
-
-function hash01(sku) {
-  let n = 0;
-  for (const char of String(sku || '')) n = (n * 33 + char.charCodeAt(0)) >>> 0;
-  return (n % 10000) / 10000;
-}
-
-function asuncionYmd(date = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Asuncion' }).format(date);
-}
-
-function displayPromoActive(now = new Date()) {
-  const day = asuncionYmd(now);
-  return day >= DISPLAY_PROMO_FROM && day <= DISPLAY_PROMO_UNTIL;
-}
-
-function displayDiscountPct(sku) {
-  const span = DISPLAY_DISCOUNT_MAX - DISPLAY_DISCOUNT_MIN;
-  return DISPLAY_DISCOUNT_MIN + Math.round(hash01(sku) * span);
-}
-
-function listFromSpecial(special, pct) {
-  const sell = Math.max(1, Math.round(Number(special) || 0));
-  const factor = 1 - Number(pct) / 100;
-  if (!(factor > 0 && factor < 1)) return sell;
-  return Math.max(sell + 1, Math.round(sell / factor));
-}
 
 function normalizeBrand(value) {
   return String(value || '')
@@ -120,57 +95,41 @@ function visaoGs(product, usdRate) {
   return Number(product.sellingPrice) || 0;
 }
 
-function tnListPrice(product, usdRate, brands) {
-  const base = visaoGs(product, usdRate);
+function webSellGs(product) {
+  const sell = Math.round(Number(product && product.sellingPrice) || 0);
+  if (sell > 0) return sell;
+  return Math.round(Number(product && product.price) || 0);
+}
+
+/** Precio a enviar a Tienda Naranja: venta web + 10%. */
+function tnListPrice(product) {
+  const base = webSellGs(product);
   if (base <= 0) return 0;
-  let price = Math.round(base * TN_MARKUP);
-  if (isDiscountBrand(product, brands)) {
-    price = Math.max(1, Math.round(price * BRAND_DISCOUNT));
-  }
-  return price;
+  return Math.max(1, Math.round(base * WEB_MARKUP));
 }
 
 /**
- * Precio real de venta TN (special) + precio tachado (list) para que se vea el descuento.
- * Vigente hasta DISPLAY_PROMO_UNTIL inclusive (America/Asuncion).
+ * Mismo precio en list y sin special inventado.
+ * (Antes había un “tachado” fake hasta el 20/11; eso distorsionaba lo que ve el cliente.)
  */
-function tnDisplayPrices(product, usdRate, brands, sku) {
-  const special = tnListPrice(product, usdRate, brands);
-  if (special <= 0) {
-    return {
-      price: 0,
-      specialPrice: 0,
-      pct: 0,
-      promo: false,
-      from: '',
-      to: ''
-    };
-  }
-  if (!displayPromoActive()) {
-    return {
-      price: special,
-      specialPrice: 0,
-      pct: 0,
-      promo: false,
-      from: '',
-      to: ''
-    };
-  }
-  const code = sku || product.codigo || product.sku || '';
-  const pct = displayDiscountPct(code);
-  const price = listFromSpecial(special, pct);
+function tnDisplayPrices(product) {
+  const price = tnListPrice(product);
   return {
     price,
-    specialPrice: special,
-    pct,
-    promo: true,
-    from: `${DISPLAY_PROMO_FROM} 00:00:00`,
-    to: `${DISPLAY_PROMO_UNTIL} 23:59:00`
+    specialPrice: 0,
+    pct: 0,
+    promo: false,
+    from: '',
+    to: ''
   };
 }
 
 function tnStockQty(product) {
   return inVisao(product) ? TN_STOCK_IN_VISAO : 0;
+}
+
+function displayPromoActive() {
+  return false;
 }
 
 async function resolveUsdRate(usdRate) {
@@ -191,6 +150,7 @@ module.exports = {
   ZENN_MARGIN,
   ITAU_MARGIN,
   BRAND_DISCOUNT,
+  WEB_MARKUP,
   TN_MARKUP,
   TN_STOCK_IN_VISAO,
   DEFAULT_DISCOUNT_BRANDS,
@@ -201,11 +161,12 @@ module.exports = {
   isDiscountBrand,
   inVisao,
   visaoGs,
+  webSellGs,
   tnListPrice,
   tnDisplayPrices,
   tnStockQty,
   displayPromoActive,
-  DISPLAY_PROMO_FROM,
-  DISPLAY_PROMO_UNTIL,
+  DISPLAY_PROMO_FROM: '',
+  DISPLAY_PROMO_UNTIL: '',
   resolveUsdRate
 };

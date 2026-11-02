@@ -181,7 +181,7 @@ const TiendaNaranjaPage = () => {
             Tienda Naranja
           </h1>
           <p className="mt-2 text-gray-600 max-w-3xl">
-            Acá solo se muestra lo que ya mandó el worker (precios/stock). Si todavía no corrió, la tabla queda vacía.
+            El worker manda a TN el precio de venta de Zenn + 10%. Acá solo ves lo que ya sincronizó.
           </p>
         </div>
 
@@ -191,7 +191,9 @@ const TiendaNaranjaPage = () => {
             <p className="mt-1 text-lg font-semibold text-gray-900">
               {estado?.configured ? 'Credenciales OK' : 'Faltan credenciales'}
             </p>
-            <p className="text-sm text-gray-500">Markup ×{(estado?.markup || 1.3915).toFixed(4)}</p>
+            <p className="text-sm text-gray-500">
+              Precio TN = venta Zenn ×{(Number(estado?.markup) || 1.1).toFixed(2)}
+            </p>
           </div>
           <div className="bg-white rounded-lg shadow p-5">
             <p className="text-xs uppercase tracking-wide text-gray-500">Último sync del worker</p>

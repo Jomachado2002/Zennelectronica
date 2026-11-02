@@ -3,37 +3,13 @@
 const { keys, status, saveCatalogProduct } = require('./tiendaNaranjaClient');
 const { formatTnWeight, estimateWeight } = require('./productWeightService');
 const { toMerchantJpegUrl } = require('../helpers/merchantJpeg');
+const { tnListPrice } = require('./tiendaNaranjaPricing');
 
-const ZENN_MARGIN = Number(process.env.ZENN_PRICE_MARGIN || 15);
-const TN_MARGIN = Number(process.env.TN_PRICE_MARGIN || 25);
-
-function marginFactor() {
-  const from = 1 + (Number.isFinite(ZENN_MARGIN) ? ZENN_MARGIN : 15) / 100;
-  const to = 1 + (Number.isFinite(TN_MARGIN) ? TN_MARGIN : 25) / 100;
-  return to / from;
-}
-
-function liftPrice(value) {
-  const number = Number(value) || 0;
-  if (number <= 0) return 0;
-  return Math.round(number * marginFactor());
-}
-
+/** Precio TN = sellingPrice web × 1.10 (misma regla que el sync masivo). */
 function tnPrices(product) {
-  const list = Number(product.price) || 0;
-  const sell = Number(product.sellingPrice) || list;
-  const cost = Number(product.purchasePrice) || 0;
-  const fromCost = cost > 0 ? Math.round(cost * (1 + (Number.isFinite(TN_MARGIN) ? TN_MARGIN : 25) / 100)) : 0;
-  const promo = list > sell && sell > 0;
-  if (promo) {
-    return {
-      price: Math.max(liftPrice(list), fromCost, liftPrice(sell) + 1),
-      specialPrice: Math.max(liftPrice(sell), fromCost || liftPrice(sell)),
-      promo: true
-    };
-  }
+  const price = tnListPrice(product);
   return {
-    price: fromCost || liftPrice(sell || list),
+    price,
     specialPrice: 0,
     promo: false
   };
