@@ -6,6 +6,7 @@ const { getSharedBrowser } = require('../helpers/sharedChrome');
 const { formatGs } = require('./creativePayload');
 const { campaignOn, halloweenOn, NARANJA } = require('./storeCampaign');
 const { naranjaBanner } = require('./creativeHtml');
+const { withNaranjaPrices } = require('./creativePayload');
 const { getCommunityLogoLight, getCommunityLogoDark, getCutoutDataUri } = require('./creativeImage');
 const { uploadJpeg } = require('./socialPublishService');
 const { revisePieceHtml, designPieceHtml, claudeReady, steerTemplate, directPiece } = require('./communityAi');
@@ -54,6 +55,11 @@ function offerOf(item) {
 function priceText(item) {
   const off = offerOf(item);
   return formatGs(off ? off.sell : item.sellingPrice);
+}
+
+function forNaranjaDay(items, planDate) {
+  if (!campaignOn(planDate) || !Array.isArray(items)) return items;
+  return items.map((item) => withNaranjaPrices(item));
 }
 
 function tagOf(label) {
@@ -433,7 +439,7 @@ async function loadPool({ items, subcategory }) {
     stock: { $gt: 0 },
     sellingPrice: { $gt: 0 },
     'productImage.0': { $exists: true, $ne: '' }
-  }).select('productName brandName sellingPrice price productImage').lean();
+  }).select('productName brandName sellingPrice price productImage codigo purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente').lean();
   return docs.map((doc) => ({ ...doc, id: String(doc._id) }));
 }
 
@@ -466,7 +472,7 @@ async function withPhotos(items) {
   const ids = items.map((item) => String(item.id || item._id)).filter(Boolean);
   if (!ids.length) return [];
   const docs = await Product.find({ _id: { $in: ids } })
-    .select('productName brandName sellingPrice price productImage subcategory')
+    .select('productName brandName sellingPrice price productImage subcategory codigo purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente')
     .lean();
   const byId = new Map(docs.map((doc) => [String(doc._id), doc]));
   const rows = [];
@@ -488,7 +494,7 @@ async function productByLink(note) {
   ];
   const unique = [...new Set(keys)];
   if (!unique.length) return null;
-  const select = 'productName brandName sellingPrice price productImage subcategory slug stock';
+  const select = 'productName brandName sellingPrice price productImage subcategory slug stock codigo purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente';
   for (const key of unique) {
     let doc = null;
     if (/^[a-f0-9]{24}$/i.test(key)) {
@@ -514,7 +520,7 @@ async function findMouse(exclude) {
     sellingPrice: { $gt: 120000 },
     productName: /gamer/i,
     'productImage.0': { $exists: true, $ne: '' }
-  }).select('productName brandName sellingPrice price productImage').sort({ sellingPrice: 1 }).limit(30).lean();
+  }).select('productName brandName sellingPrice price productImage codigo purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente').sort({ sellingPrice: 1 }).limit(30).lean();
   const fresh = docs.filter((doc) => !skip.has(String(doc._id)));
   if (!fresh.length) return null;
   const doc = fresh[Math.min(fresh.length - 1, Math.round((fresh.length - 1) * 0.45))];
@@ -733,6 +739,7 @@ async function composeSuggestion({
       mediaUrl: ''
     };
   }
+  chosen = forNaranjaDay(chosen, planDate);
   const night = Boolean(halloweenOn(planDate));
   const line = {
     ...voice(label),
@@ -891,6 +898,7 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     error.statusCode = 400;
     throw error;
   }
+  chosen = forNaranjaDay(chosen, doc.planDate);
   const photos = await Promise.all(chosen.map((item) => getCutoutDataUri(item.image)));
   if (!photos[0]) {
     const error = new Error('No se pudo recortar la foto del producto.');

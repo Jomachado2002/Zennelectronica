@@ -1116,7 +1116,7 @@ const CreativeStudioPage = () => {
               </div>
               <p className="text-xs text-gray-500 mt-3">
                 {naranjaDays
-                  ? 'Del 2 al 4 de noviembre el planner publica con el zócalo de reintegro Tienda Naranja. 15% tope Gs. 350.000 en cualquier tarjeta Itaú. 20% tope Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas. No es un descuento del precio.'
+                  ? 'Del 2 al 4 de noviembre el planner publica con el zócalo de reintegro Tienda Naranja. El precio del flyer es el de Tienda Naranja (no el de zenn.com.py), con tachado visible. 15% reintegro tope Gs. 350.000 en cualquier tarjeta Itaú. 20% tope Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas.'
                   : halloweenDays
                     ? 'Desde hoy hasta el domingo la plantilla es Halloween: noche, telarañas en las cuatro esquinas, luna y murciélagos. El producto sigue grande. El lunes vuelve a las plantillas de siempre.'
                     : 'Variar usa las plantillas de siempre. Halloween queda del 30 de octubre al 1 de noviembre. Reintegro Naranja, el 2, 3 y 4.'}

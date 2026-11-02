@@ -495,6 +495,7 @@ function instagramCaption(payload) {
 }
 
 const { NARANJA, campaignOn, flyerSceneOn } = require('./storeCampaign');
+const { tnDisplayPrices } = require('./tiendaNaranjaPricing');
 
 const SCENES = ['orbita', 'neon', 'haz', 'malla', 'cielo', 'rosa', 'naranja', 'halloween'];
 const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
@@ -522,6 +523,48 @@ function resolveTheme(requested, product, family) {
   return detectTheme(product, family);
 }
 
+/** Precios de flyer: en escena Tienda Naranja usa la fórmula TN, no el sellingPrice de Zenn. */
+function flyerMoney(product, { scene, when, brands } = {}) {
+  const useTn = scene === 'naranja'
+    || (!scene && Boolean(campaignOn(when || new Date())));
+  if (useTn) {
+    const sku = product.codigo
+      ? `ZEEL-${String(product.codigo).toUpperCase().replace(/\s+/g, '')}`
+      : String(product.sku || product._id || '');
+    const display = tnDisplayPrices(product, product.exchangeRate, brands, sku);
+    const sell = display.specialPrice || display.price || 0;
+    const list = display.price || sell;
+    return {
+      sell,
+      list,
+      onOffer: Boolean(display.promo && list > sell),
+      discountPercent: display.pct || (list > sell && list > 0 ? Math.round((list - sell) / list * 100) : 0),
+      source: 'tienda-naranja'
+    };
+  }
+  const sell = Number(product.sellingPrice) || Number(product.price) || 0;
+  const list = Number(product.price) || sell;
+  const onOffer = list > sell && sell > 0 && Math.round((list - sell) / list * 100) >= 1;
+  return {
+    sell,
+    list,
+    onOffer,
+    discountPercent: onOffer ? Math.round((list - sell) / list * 100) : 0,
+    source: 'zenn'
+  };
+}
+
+function withNaranjaPrices(product, brands) {
+  const money = flyerMoney(product, { scene: 'naranja', brands });
+  return {
+    ...product,
+    sellingPrice: money.sell,
+    price: money.list,
+    _tnFlyer: true,
+    _tnDiscountPercent: money.discountPercent
+  };
+}
+
 function buildCreativePayload(product, options = {}) {
   const family = detectFamily(product);
   const hasGpu = hasDedicatedGpu(product);
@@ -530,6 +573,11 @@ function buildCreativePayload(product, options = {}) {
   const imageIndex = Math.max(0, Math.min(Number(options.imageIndex) || 0, Math.max(0, images.length - 1)));
   const title = norm(options.title) || shortTitle(product);
   const scene = pickScene(options.scene, family, theme, product._id, options.when);
+  const money = flyerMoney(product, {
+    scene,
+    when: options.when,
+    brands: options.discountBrands
+  });
 
   const payload = {
     id: String(product._id),
@@ -547,15 +595,13 @@ function buildCreativePayload(product, options = {}) {
     specs: pageSpecs(product, options.specSchema),
     sourceDetail: clipDetail(product.description),
     detail: options.detail !== undefined ? norm(options.detail).slice(0, 700) : clipDetail(product.description),
-    price: formatGs(product.sellingPrice || product.price),
-    listPrice: formatGs(product.price),
-    sellingPrice: product.sellingPrice || product.price || 0,
-    listPriceValue: Number(product.price) || 0,
-    onOffer: Number(product.price) > Number(product.sellingPrice) && Number(product.sellingPrice) > 0
-      && Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100) >= 1,
-    discountPercent: (Number(product.price) > Number(product.sellingPrice) && Number(product.price) > 0)
-      ? Math.round((Number(product.price) - Number(product.sellingPrice)) / Number(product.price) * 100)
-      : 0,
+    price: formatGs(money.sell),
+    listPrice: formatGs(money.list),
+    sellingPrice: money.sell,
+    listPriceValue: money.list,
+    onOffer: money.onOffer,
+    discountPercent: money.discountPercent,
+    priceSource: money.source,
     cta: options.cta || (wantsPrice(options.showPrice) ? 'Pedilo por WhatsApp' : 'Consultá el precio'),
     showPrice: wantsPrice(options.showPrice),
     priceAsOf: priceAsOfLabel(),
@@ -564,7 +610,7 @@ function buildCreativePayload(product, options = {}) {
     imageIndex,
     stock: product.stock || 0,
     whatsapp: '0973 345 284',
-    site: 'zenn.com.py',
+    site: money.source === 'tienda-naranja' ? 'tiendanaranja.com.py' : 'zenn.com.py',
     colors: C
   };
   payload.instagramCaption = instagramCaption(payload);
@@ -575,6 +621,7 @@ function listSelectFields() {
   return [
     'productName', 'brandName', 'category', 'subcategory', 'productImage',
     'sellingPrice', 'price', 'codigo', 'stock', 'slug',
+    'purchasePrice', 'purchasePriceUSD', 'exchangeRate', 'visaoPrecioFuente',
     'processor', 'memory', 'storage', 'disk', 'graphicsCard', 'graphicCardModel', 'notebookScreen', 'notebookBattery',
     'monitorSize', 'monitorResolution', 'monitorRefreshRate', 'monitorPanel', 'monitorPanelType',
     'phoneProcessor', 'phoneRAM', 'phoneStorage', 'phoneScreenSize',
@@ -588,6 +635,8 @@ function listSelectFields() {
 
 module.exports = {
   buildCreativePayload,
+  flyerMoney,
+  withNaranjaPrices,
   shortTitle,
   detectFamily,
   detectTheme,
