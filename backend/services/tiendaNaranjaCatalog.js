@@ -122,7 +122,7 @@ function createPayload(product) {
       short_description: shortDescriptionOf(product),
       description,
       price: money(prices.price),
-      ...(prices.promo ? { special_price: money(prices.specialPrice) } : {}),
+      special_price: '',
       quantity_and_stock_status: {
         qty: String(Math.max(0, Number(product.stock) || 0)),
         is_in_stock: Number(product.stock) > 0 ? '1' : '0'
@@ -146,7 +146,6 @@ function updatePayload(product, fields = {}) {
   }
   const list = Number(product.price) || 0;
   const sell = Number(product.sellingPrice) || list;
-  const onOffer = list > sell && sell > 0;
   const body = {
     type: 'simple',
     product: {
@@ -155,8 +154,9 @@ function updatePayload(product, fields = {}) {
     }
   };
   if (fields.price !== false) {
-    body.product.price = money(list > 0 ? list : sell);
-    if (onOffer) body.product.special_price = money(sell);
+    const { tnListPrice } = require('./tiendaNaranjaPricing');
+    body.product.price = money(tnListPrice(product) || sell || list);
+    body.product.special_price = '';
   }
   if (fields.stock !== false) {
     body.product.quantity_and_stock_status = {
@@ -213,7 +213,9 @@ async function pushProduct(product, { images } = {}) {
       keys().sellerId ? { attribute_code: 'seller_id', value: keys().sellerId } : null,
       { attribute_code: 'description', value: product.description || clip(product.productName, 400) },
       { attribute_code: 'short_description', value: clip(product.productName, 180) },
-      prices.promo ? { attribute_code: 'special_price', value: String(prices.specialPrice) } : null
+      { attribute_code: 'special_price', value: '' },
+      { attribute_code: 'special_from_date', value: '' },
+      { attribute_code: 'special_to_date', value: '' }
     ].filter(Boolean)
   });
   return {

@@ -35,10 +35,13 @@ function sleep(ms) {
 
 async function listRemoteSellerSkus() {
   const found = new Set();
-  for (let page = 1; page <= 40; page += 1) {
+  const pageSize = 100;
+  // Antes el tope era 40×80=3200 y se cortaba el catálogo a medias.
+  const maxPages = Math.max(50, Number(process.env.TN_LIST_MAX_PAGES) || 200);
+  for (let page = 1; page <= maxPages; page += 1) {
     const catalog = await tn.listCatalog({
       page,
-      pageSize: 80,
+      pageSize,
       field: 'seller_id',
       value: process.env.TN_SELLER_ID || tn.keys().sellerId || '353511'
     });
@@ -46,8 +49,12 @@ async function listRemoteSellerSkus() {
     for (const item of items) {
       if (item.sku) found.add(String(item.sku).toUpperCase());
     }
-    if (!items.length || items.length < 80) break;
+    if (page === 1 || page % 10 === 0) {
+      console.log(`[tn] catálogo seller página ${page} · SKUs ${found.size}`);
+    }
+    if (!items.length || items.length < pageSize) break;
   }
+  console.log(`[tn] catálogo seller total SKUs ${found.size}`);
   return found;
 }
 
@@ -115,24 +122,25 @@ function putPayload(product, { usdRate, brands }) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 4000) || short;
+  // Siempre precio único = venta Zenn × 1.10.
+  // BORRAR special_price/from/to: si queda valor viejo Magento muestra tachado.
   const custom = [
     { attribute_code: 'short_description', value: short },
-    { attribute_code: 'description', value: description }
+    { attribute_code: 'description', value: description },
+    { attribute_code: 'special_price', value: '' },
+    { attribute_code: 'special_from_date', value: '' },
+    { attribute_code: 'special_to_date', value: '' }
   ];
-  if (display.promo && display.specialPrice > 0 && display.specialPrice < display.price) {
-    custom.push({ attribute_code: 'special_price', value: String(display.specialPrice) });
-    custom.push({ attribute_code: 'special_from_date', value: display.from });
-    custom.push({ attribute_code: 'special_to_date', value: display.to });
-  }
   return {
     sku,
     price: display.price,
-    specialPrice: display.promo ? display.specialPrice : 0,
+    specialPrice: 0,
     qty,
     body: {
       product: {
         sku,
         price: display.price,
+        special_price: '',
         status: qty > 0 ? 1 : 2,
         visibility: 4,
         weight,
@@ -157,23 +165,29 @@ async function runTnPriceStockSync({ limit, fromRemote } = {}) {
     const usdRate = await resolveUsdRate();
     const brands = await getDiscountBrands();
 
-    // Por defecto: productos locales con código (sin paginar el catálogo remoto, que tarda minutos).
-    // fromRemote=1 solo si hace falta descubrir SKUs que no están en Mongo.
-    const useRemote = fromRemote === true || String(process.env.TN_PRICE_SYNC_FROM_REMOTE || '') === '1';
+    // Catálogo completo del seller en TN (no tope 3200). Local-only solo si fromRemote:false o env=0.
+    const forceLocal = fromRemote === false || String(process.env.TN_PRICE_SYNC_FROM_REMOTE || '') === '0';
+    const useRemote = !forceLocal;
     let products;
     if (useRemote) {
-      console.log('[tn price-stock] listando SKUs remotos…');
+      console.log('[tn price-stock] listando SKUs remotos (catálogo seller completo)…');
       const remote = await listRemoteSellerSkus();
       const skus = [...remote];
       const max = Number(limit) > 0 ? Math.min(skus.length, Number(limit)) : skus.length;
-      const slice = skus.slice(0, max);
-      const codes = slice.map((sku) => sku.replace(/^ZEEL-/i, ''));
-      products = await Product.find({ codigo: { $in: codes } })
+      const sliceSkus = skus.slice(0, max);
+      const codes = sliceSkus.map((sku) => sku.replace(/^ZEEL-/i, ''));
+      const codeSet = new Set(codes.map((c) => String(c).toUpperCase()));
+      // Match case-insensitive: codigo puede venir en distinto casing.
+      const locals = await Product.find({
+        codigo: { $exists: true, $nin: ['', null] },
+        sellingPrice: { $gt: 0 }
+      })
         .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
         .lean();
+      products = locals.filter((p) => codeSet.has(String(p.codigo || '').toUpperCase().replace(/\s+/g, '')));
+      console.log(`[tn price-stock] remotos ${remote.size} · match local ${products.length}`);
     } else {
       const max = Number(limit) > 0 ? Number(limit) : 0;
-      // Solo lo que ya está (o estuvo) en Tienda Naranja — no todo el catálogo Zenn.
       let q = Product.find({
         codigo: { $exists: true, $nin: ['', null] },
         sellingPrice: { $gt: 0 },
@@ -188,15 +202,6 @@ async function runTnPriceStockSync({ limit, fromRemote } = {}) {
         .sort({ 'tiendaNaranja.lastSyncAt': -1, stock: -1 });
       if (max) q = q.limit(max);
       products = await q.lean();
-      if (!products.length) {
-        console.log('[tn price-stock] sin vínculos locales; cayendo a listado remoto…');
-        const remote = await listRemoteSellerSkus();
-        const skus = [...remote];
-        const codes = skus.map((sku) => sku.replace(/^ZEEL-/i, ''));
-        products = await Product.find({ codigo: { $in: codes }, sellingPrice: { $gt: 0 } })
-          .select('codigo productName brandName description seoDescription price sellingPrice purchasePrice purchasePriceUSD exchangeRate visaoPrecioFuente stock stockStatus shippingWeightKg tiendaNaranja')
-          .lean();
-      }
     }
 
     const bySku = new Map();
@@ -273,7 +278,7 @@ async function runTnPriceStockSync({ limit, fromRemote } = {}) {
             message: String(error.message || error).slice(0, 220)
           })}\n`);
         }
-        await sleep(15);
+        await sleep(5);
         const done = ok + fail + skipped;
         if (done % 100 === 0 || done === slice.length) {
           const elapsed = Math.max(1, (Date.now() - started) / 1000);
@@ -380,11 +385,45 @@ async function runTnDaily({ limit } = {}) {
 }
 
 function startTnScheduleIfEnabled() {
-  // El alta masiva por API falla (401). Precios/stock los manda runTnPriceStockSync
-  // después del worker Visão. Este loop viejo solo ensuciaba logs cada 2 min.
   if (process.env.VERCEL) return;
+
+  // Sync masivo de precios TN (venta×1.10 + borrar special_price) al boot y cada N horas.
+  // Desactivar con TN_PRICE_SYNC_SCHEDULE_ENABLED=0.
+  if (String(process.env.TN_PRICE_SYNC_SCHEDULE_ENABLED || '1') !== '0') {
+    const delayMs = Math.max(5_000, Number(process.env.TN_PRICE_SYNC_BOOT_DELAY_MS) || 12_000);
+    const everyMs = Math.max(
+      30 * 60 * 1000,
+      Number(process.env.TN_PRICE_SYNC_INTERVAL_MS) || 6 * 60 * 60 * 1000
+    );
+    const kickPriceSync = async (label) => {
+      if (priceStockRunning) {
+        console.log(`[tn price-stock][${label}] ya en curso, skip`);
+        return;
+      }
+      try {
+        console.log(`[tn price-stock][${label}] arrancando sync completo seller…`);
+        const result = await runTnPriceStockSync({ fromRemote: true });
+        console.log(
+          `[tn price-stock][${label}] ${result.message || ''} · scanned=${result.scanned || 0} · ${result.seconds || 0}s`
+        );
+      } catch (error) {
+        console.error(`[tn price-stock][${label}]`, error.message || error);
+      }
+    };
+    setTimeout(() => {
+      kickPriceSync('boot');
+    }, delayMs);
+    const priceTimer = setInterval(() => {
+      kickPriceSync('schedule');
+    }, everyMs);
+    if (typeof priceTimer.unref === 'function') priceTimer.unref();
+    console.log(
+      `[tn price-stock] Schedule ON · boot en ${Math.round(delayMs / 1000)}s · cada ${Math.round(everyMs / 3600000)}h · venta×1.10 sin tachado`
+    );
+  }
+
+  // Alta masiva por API (create) — opcional, suele fallar 401.
   if (String(process.env.TN_CREATE_SYNC_ENABLED || '') !== '1') {
-    console.log('[tn sync] Alta automática desactivada (solo sync de precios vía worker Visão).');
     return;
   }
   if (timer) return;

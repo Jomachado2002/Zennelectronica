@@ -105,10 +105,15 @@ const tick = async (req, res) => {
 
 const syncPrecios = async (req, res) => {
   try {
-    req.setTimeout(15 * 60 * 1000);
-    res.setTimeout(15 * 60 * 1000);
+    req.setTimeout(20 * 60 * 1000);
+    res.setTimeout(20 * 60 * 1000);
     const limit = Number(req.body && req.body.limit) || Number(req.query.limit) || 0;
-    const data = await runTnPriceStockSync({ limit: limit || undefined });
+    const fromRemote = String((req.body && req.body.fromRemote) || req.query.fromRemote || '') === '1'
+      || (req.body && req.body.fromRemote === true);
+    const data = await runTnPriceStockSync({
+      limit: limit || undefined,
+      fromRemote
+    });
     return res.json({ success: true, ...data });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message || 'No se pudo sincronizar precios TN' });
