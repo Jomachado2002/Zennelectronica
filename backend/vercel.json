@@ -24,6 +24,10 @@
     ],
     "routes" : [
         {
+            "src": "/api/seo/render/(.*)",
+            "dest": "/"
+        },
+        {
             "src": "/api/seo/(.*)",
             "headers": {
                 "Cache-Control": "public, max-age=600, s-maxage=43200, stale-while-revalidate=604800",

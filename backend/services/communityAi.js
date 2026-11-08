@@ -126,6 +126,57 @@ async function askClaudeText(prompt, options = {}) {
   return (data.content || []).map((part) => part.text || '').join('\n');
 }
 
+async function askClaudeMessages({ system, messages, maxTokens = 8000, timeout = 90000 } = {}) {
+  const key = claudeKey();
+  if (!key) {
+    const error = new Error('Falta la clave de Claude (ANTHROPIC_API_KEY)');
+    error.status = 503;
+    throw error;
+  }
+  const turns = [];
+  (Array.isArray(messages) ? messages : []).forEach((item) => {
+    const content = String(item.content || item.text || '').trim();
+    if (!content) return;
+    const role = item.role === 'assistant' ? 'assistant' : 'user';
+    if (!turns.length && role === 'assistant') return;
+    const prev = turns[turns.length - 1];
+    if (prev && prev.role === role) prev.content = `${prev.content}\n\n${content}`;
+    else turns.push({ role, content });
+  });
+  if (!turns.length) {
+    const error = new Error('El chat llegó vacío');
+    error.status = 400;
+    throw error;
+  }
+  const body = {
+    model: CLAUDE_MODEL,
+    max_tokens: Math.max(1000, Number(maxTokens) || 8000),
+    messages: turns
+  };
+  if (system) body.system = String(system);
+  if (!/claude-sonnet-5|claude-opus-5|claude-haiku-5/i.test(CLAUDE_MODEL)) {
+    body.temperature = 0.7;
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(Math.max(8000, Number(timeout) || 90000))
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data?.error?.message || `Claude respondió ${res.status}`;
+    const error = new Error(message);
+    error.status = res.status;
+    throw error;
+  }
+  return (data.content || []).map((part) => part.text || '').join('\n');
+}
+
 async function askGemini(prompt, withSearch) {
   return parseJson(await askGeminiText(prompt, withSearch));
 }
@@ -645,6 +696,7 @@ module.exports = {
   askDayChat,
   askGeminiText,
   askClaudeText,
+  askClaudeMessages,
   parseJson,
   communityAiReady,
   claudeReady

@@ -1,11 +1,12 @@
 /**
  * 1) 301 /producto/{ObjectId} → slug, para todos.
- * 2) Google y los previews de redes reciben título y canónico de ESA url.
- *    Quien entra a comprar sigue recibiendo el mismo HTML de siempre.
+ * 2) Ficha y categoría: la persona y Google reciben el mismo HTML,
+ *    con el producto escrito adentro. React lo reemplaza al cargar.
+ * 3) El resto de las páginas públicas, solo para bots, sigue con título y canónico.
  *    Si algo falla, se deja pasar la página actual.
  */
 
-import { applyHead, planSeo } from './seoHead.mjs';
+import { applyHead, applyRenderedPage, planSeo } from './seoHead.mjs';
 import { productSearchSnippet } from './src/utils/searchSnippet.js';
 
 export const config = {
@@ -86,6 +87,49 @@ async function productHead(slug) {
   }
 }
 
+async function renderedPage(pathname) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 1800);
+  try {
+    const res = await fetch(`${BACKEND}${pathname}`, {
+      signal: ctrl.signal,
+      headers: { Accept: 'application/json' }
+    });
+    if (res.status === 404) return { notFound: true };
+    if (!res.ok) return null;
+    const body = await res.json();
+    if (!body || !body.success) return null;
+    return body;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function notFoundResponse(request) {
+  const headers = {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'private, no-store',
+    'Vercel-CDN-Cache-Control': 'private, no-store',
+    'X-Robots-Tag': 'noindex'
+  };
+  try {
+    const indexRes = await fetch(new URL('/index.html', request.url), {
+      headers: { Accept: 'text/html' }
+    });
+    if (indexRes.ok) {
+      return new Response(await indexRes.text(), { status: 404, headers });
+    }
+  } catch {
+    // Si el shell no está, igual se responde 404 sin cachear.
+  }
+  return new Response('<!doctype html><title>Página no encontrada</title><p>Página no encontrada</p>', {
+    status: 404,
+    headers
+  });
+}
+
 async function categoryHead(category, subcategory) {
   if (!category) return null;
   const ctrl = new AbortController();
@@ -122,11 +166,40 @@ export default async function middleware(request) {
       return;
     }
 
-    const ua = request.headers.get('user-agent') || '';
-    if (!BOT.test(ua)) return;
-
     const plan = planSeo(url.pathname, url.search);
     if (!plan) return;
+
+    if (plan.kind === 'product' || plan.kind === 'category') {
+      const renderPath =
+        plan.kind === 'product'
+          ? `/api/seo/render/producto/${encodeURIComponent(plan.slug)}`
+          : `/api/seo/render/categoria?${new URL(plan.canonical).searchParams.toString()}`;
+      const page = await renderedPage(renderPath);
+      if (page?.notFound) return notFoundResponse(request);
+      if (page?.redirect) return Response.redirect(page.redirect, 301);
+      if (page?.bodyHtml && page.canonical) {
+        const indexRes = await fetch(new URL('/index.html', request.url), {
+          headers: { Accept: 'text/html' }
+        });
+        if (indexRes.ok) {
+          const raw = await indexRes.text();
+          const html = applyRenderedPage(raw, page);
+          if (html.includes('<h1') && html.includes('id="root"') && html.includes('<link rel="canonical"')) {
+            return new Response(html, {
+              status: 200,
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600',
+                'Vercel-CDN-Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600'
+              }
+            });
+          }
+        }
+      }
+    }
+
+    const ua = request.headers.get('user-agent') || '';
+    if (!BOT.test(ua)) return;
 
     if (plan.kind === 'category') {
       const target = new URL(plan.canonical);

@@ -751,6 +751,13 @@ const CreativeStudioPage = () => {
                 >
                   Calendario
                 </Link>
+                <Link
+                  to="/panel-admin/imagenes-ai"
+                  className="px-4 py-2 rounded-full text-sm font-semibold border"
+                  style={{ background: '#fff', color: '#1E1B4B', borderColor: '#C7D2FE' }}
+                >
+                  Imágenes AI
+                </Link>
                 <button
                   type="button"
                   onClick={() => setStudioMode('publish')}

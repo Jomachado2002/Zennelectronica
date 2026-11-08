@@ -202,3 +202,33 @@ export function applyHead(html, meta) {
 
   return out;
 }
+
+function upsertMeta(html, attr, key, content) {
+  const tag = `<meta ${attr}="${key}" content="${escapeAttr(content)}"/>`;
+  const pattern = new RegExp(`<meta ${attr}="${key}" content="[^"]*"\\s*\\/?>`, 'i');
+  if (pattern.test(html)) return html.replace(pattern, () => tag);
+  return html.replace('</head>', `${tag}\n</head>`);
+}
+
+/**
+ * Mete título, canónico, JSON-LD y el cuerpo visible en el HTML de la app.
+ * React después reemplaza #root. Google ya leyó el producto.
+ */
+export function applyRenderedPage(html, page) {
+  if (!html || !page || !page.canonical || !page.bodyHtml) return html;
+  let out = applyHead(html, page);
+  if (page.image) out = upsertMeta(out, 'property', 'og:image', page.image);
+  if (page.ogType) out = upsertMeta(out, 'property', 'og:type', page.ogType);
+  if (page.priceAmount) {
+    out = upsertMeta(out, 'property', 'product:price:amount', String(page.priceAmount));
+    out = upsertMeta(out, 'property', 'product:price:currency', 'PYG');
+  }
+  const blocks = (Array.isArray(page.jsonLd) ? page.jsonLd : [])
+    .map((data) => `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`)
+    .join('\n');
+  if (blocks) out = out.replace('</head>', `${blocks}\n</head>`);
+  out = out.replace('Necesitas habilitar JavaScript para ejecutar esta aplicación.', '');
+  if (!out.includes('<div id="root"></div>')) return html;
+  out = out.replace('<div id="root"></div>', () => `<div id="root">${page.bodyHtml}</div>`);
+  return out;
+}

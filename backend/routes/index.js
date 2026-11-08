@@ -1039,6 +1039,9 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/seo/producto/:slugOrId", productSeoHtmlController);
     const { categorySeoController } = require('../controller/seo/categorySeoController');
     router.get("/seo/categoria", categorySeoController);
+    const { renderProductController, renderCategoryController } = require('../controller/seo/seoRenderController');
+    router.get("/seo/render/producto/:slug", renderProductController);
+    router.get("/seo/render/categoria", renderCategoryController);
     router.get("/admin/search-console/estado", adminAuth, searchConsoleEstado);
     router.get("/admin/search-console/informe", adminAuth, searchConsoleInforme);
     router.get("/admin/tienda-naranja/estado", adminAuth, tiendaNaranjaEstado);
@@ -2189,6 +2192,28 @@ router.post('/creativos/historias-marcas/exportar', authToken, (req, res, next) 
     res.setTimeout(5 * 60 * 1000);
     return exportBrandStoriesZip(req, res, next);
 });
+
+const {
+  list: listAiImages,
+  detail: getAiImage,
+  chat: chatAiImage,
+  finalize: finalizeAiImage,
+  remove: deleteAiImage
+} = require('../controller/product/aiImageController');
+
+router.get('/creativos/imagenes-ai', authToken, listAiImages);
+router.post('/creativos/imagenes-ai', authToken, (req, res, next) => {
+  req.setTimeout(3 * 60 * 1000);
+  res.setTimeout(3 * 60 * 1000);
+  return chatAiImage(req, res, next);
+});
+router.get('/creativos/imagenes-ai/:id', authToken, getAiImage);
+router.post('/creativos/imagenes-ai/:id/finalizar', authToken, (req, res, next) => {
+  req.setTimeout(2 * 60 * 1000);
+  res.setTimeout(2 * 60 * 1000);
+  return finalizeAiImage(req, res, next);
+});
+router.delete('/creativos/imagenes-ai/:id', authToken, deleteAiImage);
 
 router.get('/creativos/iconos', authToken, listHighlightCoversController);
 router.get('/creativos/iconos/html', authToken, previewHighlightCoverHtml);

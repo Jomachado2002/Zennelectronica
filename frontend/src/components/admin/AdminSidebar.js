@@ -83,6 +83,7 @@ export function getAdminNavGroups() {
         { path: 'tienda-naranja', label: 'Tienda Naranja', icon: FaStore },
         { path: 'exportar-productos', label: 'Exportar productos', icon: FaDownload },
         { path: 'creativos', label: 'Creativos IG / FB', icon: FaBullhorn },
+        { path: 'imagenes-ai', label: 'Imágenes AI', icon: FaImage },
         { path: 'marketing', label: 'Marketing IA', icon: FaMagic },
         { path: 'calendario-ig', label: 'Calendario', icon: FaCalendarAlt },
         { path: 'catalogo-pdf', label: 'Catálogo PDF', icon: FaFilePdf },
