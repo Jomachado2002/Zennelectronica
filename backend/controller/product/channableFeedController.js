@@ -411,10 +411,13 @@ function generateProductURL(slug) {
     return `${XML_CONFIG.STORE_URL}/producto/${slug}`;
 }
 
-function catalogImageUrl(product, fallback) {
-    const plate = String(product.catalogPlateUrl || '').trim();
-    if (/^https:\/\/cdn\.zenn\.com\.py\/catalog-plates\//.test(plate)) return plate;
-    return fallback;
+/**
+ * Feeds de catálogo (Google / Meta / TikTok): siempre imagen natural del producto.
+ * Las placas con logo Zenn + precio (`catalogPlateUrl`) quedan para creativos, no para Merchant/Ads catalog.
+ */
+function catalogFeedImage(productImages) {
+    const validImages = getValidImages(productImages);
+    return validImages[0] || '';
 }
 
 function buildItemXml(product, taxonomy, forMeta) {
@@ -435,7 +438,7 @@ function buildItemXml(product, taxonomy, forMeta) {
     const mpn = String(product.codigo || '').trim();
     const price = formatPrice(discountInfo.hasDiscount ? discountInfo.originalPrice : discountInfo.finalPrice);
     const salePrice = discountInfo.hasDiscount ? formatPrice(discountInfo.finalPrice) : null;
-    const mainImage = validImages[0];
+    const mainImage = catalogFeedImage(product.productImage) || validImages[0];
     const additionalImages = validImages.slice(1, 10);
     const stock = Math.max(0, Math.round(Number(product.stock) || 0));
 
@@ -445,7 +448,7 @@ function buildItemXml(product, taxonomy, forMeta) {
             <g:description>${escapeXML(description)}</g:description>
             <g:link>${escapeXML(generateProductURL(product.slug))}</g:link>
             <link>${escapeXML(generateProductURL(product.slug))}</link>
-            <g:image_link>${escapeXML(forMeta ? catalogImageUrl(product, mainImage) : mainImage)}</g:image_link>\n`;
+            <g:image_link>${escapeXML(mainImage)}</g:image_link>\n`;
 
     additionalImages.forEach((img) => {
         xml += `            <g:additional_image_link>${escapeXML(img)}</g:additional_image_link>\n`;
@@ -584,7 +587,7 @@ function buildTikTokRow(product, taxonomy) {
         price,
         salePrice,
         generateProductURL(product.slug),
-        catalogImageUrl(product, validImages[0]),
+        catalogFeedImage(product.productImage) || validImages[0],
         extras,
         brand,
         `${categoryLabel} > ${subcategoryLabel}`,
