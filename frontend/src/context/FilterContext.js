@@ -20,6 +20,9 @@ export const FilterProvider = ({
     const p = new URLSearchParams();
     if (category) p.set('category', category);
     if (subcategory) p.set('subcategory', subcategory);
+    // Conservar landing SEO de envío (?envio=concepcion) al filtrar.
+    const envio = urlSearch.get('envio');
+    if (envio) p.set('envio', envio);
     const q = p.toString();
     return q ? `${basePath}?${q}` : basePath;
   };

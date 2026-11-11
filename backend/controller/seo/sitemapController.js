@@ -90,6 +90,7 @@ function priorityForType(entityType) {
   if (entityType === 'brand') return '0.75';
   if (entityType === 'category') return '0.7';
   if (entityType === 'subcategory') return '0.75';
+  if (entityType === 'geo_hub') return '0.65';
   if (entityType === 'product') return '0.8';
   return '0.5';
 }
@@ -97,6 +98,7 @@ function priorityForType(entityType) {
 function changefreqForType(entityType) {
   if (entityType === 'product') return 'weekly';
   if (entityType === 'brand') return 'daily';
+  if (entityType === 'geo_hub') return 'weekly';
   return 'weekly';
 }
 

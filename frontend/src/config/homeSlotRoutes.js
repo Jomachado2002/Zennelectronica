@@ -23,10 +23,11 @@ export const HOME_SECTION_SUBTITLES = {
   teclados: 'Mecánicos, gamer, multimedia y combos'
 };
 
-export function categoriaProductoHref(categoryValue, subcategoryValue) {
+export function categoriaProductoHref(categoryValue, subcategoryValue, envioSlug) {
   const p = new URLSearchParams();
   p.set('category', categoryValue);
   if (subcategoryValue) p.set('subcategory', subcategoryValue);
+  if (envioSlug) p.set('envio', envioSlug);
   return `/categoria-producto?${p.toString()}`;
 }
 

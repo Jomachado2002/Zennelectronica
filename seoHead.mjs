@@ -93,13 +93,18 @@ export function planSeo(pathname, search) {
   if (path === '/categoria-producto') {
     const category = params.get('category') || '';
     const subcategory = params.get('subcategory') || '';
+    const envio = params.get('envio') || '';
     const clean = new URLSearchParams();
     if (category) clean.set('category', category);
     if (subcategory) clean.set('subcategory', subcategory);
+    if (envio) clean.set('envio', envio);
     const q = clean.toString();
     const heading = categoryHeading(category, subcategory);
     return {
       kind: 'category',
+      category,
+      subcategory,
+      envio,
       canonical: `${SITE}/categoria-producto${q ? `?${q}` : ''}`,
       title: `${heading} | Zenn Paraguay`,
       description: `Comprá ${heading.toLowerCase()} en Zenn Paraguay. Precio en guaraníes, stock real, garantía y envío a Asunción y todo el país.`

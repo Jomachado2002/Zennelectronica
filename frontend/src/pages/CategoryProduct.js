@@ -438,9 +438,15 @@ const CategoryProductContent = () => {
   
   const categories = useMemo(() => getCategories(), [getCategories]);
   const [hub, setHub] = useState(null);
+  const [geoHub, setGeoHub] = useState(null);
   const listRef = useRef(data);
   if (!mobileFilterOpen) listRef.current = data;
   const listData = mobileFilterOpen ? listRef.current : data;
+
+  const envioSlug = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    return String(params.get('envio') || '').trim();
+  }, [location.search]);
 
   const department = findShopperDepartment(filterCategoryList[0], filterSubcategoryList[0]);
   const mobileTitle = !filterSubcategoryList[0] && department ? department.label : null;
@@ -462,6 +468,7 @@ const CategoryProductContent = () => {
     const p = new URLSearchParams();
     if (filterCategoryList[0]) p.set('category', filterCategoryList[0]);
     if (filterSubcategoryList[0]) p.set('subcategory', filterSubcategoryList[0]);
+    if (envioSlug) p.set('envio', envioSlug);
     const q = p.toString();
     return q ? `/categoria-producto?${q}` : '/categoria-producto';
   })();
@@ -488,19 +495,47 @@ const CategoryProductContent = () => {
     };
   }, [filterCategoryList, filterSubcategoryList, onlyDiscounted]);
 
-  const hubHeading = hub?.seoTitle
-    ? String(hub.seoTitle).replace(/\s*\|\s*Zenn.*$/i, '').trim()
+  useEffect(() => {
+    const category = filterCategoryList[0];
+    if (!category || onlyDiscounted || !envioSlug) {
+      setGeoHub(null);
+      return undefined;
+    }
+    const subcategory = filterSubcategoryList[0] || '';
+    let cancelled = false;
+    const query = new URLSearchParams({ category, subcategory, envio: envioSlug });
+    fetch(`${SummaryApi.baseURL}/api/seo/envio?${query}`)
+      .then((response) => response.json())
+      .then((body) => {
+        if (!cancelled) setGeoHub(body?.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setGeoHub(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterCategoryList, filterSubcategoryList, onlyDiscounted, envioSlug]);
+
+  const geoMeta = geoHub?.hub || null;
+  const place = geoHub?.place || null;
+
+  const hubHeading = (geoMeta?.h1 || geoMeta?.seoTitle || hub?.seoTitle)
+    ? String(geoMeta?.h1 || geoMeta?.seoTitle || hub?.seoTitle).replace(/\s*\|\s*Zenn.*$/i, '').trim()
     : '';
   const visibleHeading = hubHeading || mobileTitle || pageHeading;
 
-  const seoTitle = hub?.seoTitle
+  const seoTitle = geoMeta?.seoTitle
+    || hub?.seoTitle
     || (onlyDiscounted
       ? (filterCategoryList[0] || filterSubcategoryList[0]
           ? `${pageHeading} | Zenn`
           : 'Promociones y Ofertas | Zenn Paraguay')
       : `${pageHeading} | Zenn Paraguay`);
 
-  const seoDescription = hub?.intro
+  const seoDescription = geoMeta?.seoDescription
+    || geoMeta?.intro
+    || hub?.intro
     || (onlyDiscounted
       ? 'Productos en promoción en Zenn Paraguay. Filtrá por categoría y subcategoría. Descuentos reales y envío a todo el país.'
       : `${pageHeading} en Paraguay. Precio en guaraníes y envío a Asunción y todo Paraguay.`);
@@ -543,8 +578,19 @@ const CategoryProductContent = () => {
         <h1 className="text-[22px] font-semibold tracking-[0.08em] uppercase text-gray-900">
           {visibleHeading}
         </h1>
-        {seoDescription && (
-          <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">{seoDescription}</p>
+        {place?.name ? (
+          <p className="mt-3 text-sm font-medium normal-case tracking-normal text-gray-800">
+            Envío a {place.name}
+            {place.departmentName && place.departmentName !== place.name
+              ? `, ${place.departmentName}`
+              : ''}
+            . Coordiná tu pedido por WhatsApp.
+          </p>
+        ) : null}
+        {(geoMeta?.intro || seoDescription) && (
+          <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">
+            {geoMeta?.intro || seoDescription}
+          </p>
         )}
         {department?.chips?.length > 0 && (
           <div className="mt-4 -mx-4 px-4 flex gap-2 overflow-x-auto scrollbar-none">
@@ -597,6 +643,11 @@ const CategoryProductContent = () => {
               <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
                 {visibleHeading}
               </h1>
+              {place?.name ? (
+                <span className="hidden sm:inline ml-3 shrink-0 text-xs text-gray-600">
+                  Envío a {place.name}
+                </span>
+              ) : null}
               {onlyDiscounted && (
                 <button
                   type="button"

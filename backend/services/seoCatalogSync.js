@@ -625,6 +625,27 @@ async function runSeoCatalogSync({ trigger = 'worker', dryRun = false, force = f
     await syncBrands({ runId, stats, dryRun, seenKeys });
     await syncTaxonomy({ runId, stats, dryRun, seenKeys });
     await syncProducts({ runId, stats, dryRun, seenKeys });
+
+    // Landings categoría + ciudad/departamento (envío Paraguay).
+    try {
+      const { syncGeoShippingHubs } = require('./geoShippingSeo');
+      const geo = await syncGeoShippingHubs({ runId, dryRun });
+      stats.examined += geo.examined || 0;
+      stats.writes += geo.writes || 0;
+      stats.unchanged += geo.unchanged || 0;
+      stats.reads += geo.reads || 0;
+      stats.geoHubs = geo.indexable || 0;
+      stats.geoPlaces = geo.places || 0;
+      // Marcar keys geo como vistas para no retirarlas en retireMissing genérico
+      if (!dryRun) {
+        const geoKeys = await SeoCatalogIndex.find({ entityType: 'geo_hub' }).select('entityKey').lean();
+        stats.reads += geoKeys.length;
+        for (const row of geoKeys) seenKeys.add(row.entityKey);
+      }
+    } catch (geoError) {
+      stats.geoError = geoError.message;
+    }
+
     await retireMissing({ runId, stats, dryRun, seenKeys });
     await countIndexable(stats, dryRun);
 

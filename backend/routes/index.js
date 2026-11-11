@@ -1050,6 +1050,38 @@ router.post("/actualizar-producto", authToken, updateProductController);
         res.status(500).json({ success: false, message: error.message });
       }
     });
+    router.get("/seo/envio", async (req, res) => {
+      try {
+        const { getGeoHub, getPlaceBySlug } = require('../services/geoShippingSeo');
+        const envio = String(req.query.envio || req.query.slug || '').trim();
+        const category = String(req.query.category || '').trim();
+        const subcategory = String(req.query.subcategory || '').trim();
+        if (!envio) {
+          return res.json({ success: true, data: null });
+        }
+        if (category) {
+          const data = await getGeoHub(category, subcategory, envio);
+          res.set('Cache-Control', 'public, max-age=300, s-maxage=900');
+          return res.json({ success: true, data });
+        }
+        const place = await getPlaceBySlug(envio);
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=900');
+        return res.json({ success: true, data: place ? { place } : null });
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
+    router.get("/envios/lugares", async (req, res) => {
+      try {
+        const { listPlaces } = require('../services/geoShippingSeo');
+        const placeType = String(req.query.type || '').trim();
+        const data = await listPlaces(placeType ? { placeType } : {});
+        res.set('Cache-Control', 'public, max-age=600, s-maxage=3600');
+        res.json({ success: true, data });
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
     const { renderProductController, renderCategoryController } = require('../controller/seo/seoRenderController');
     router.get("/seo/render/producto/:slug", renderProductController);
     router.get("/seo/render/categoria", renderCategoryController);

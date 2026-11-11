@@ -171,6 +171,61 @@ export default async function middleware(request) {
     const plan = planSeo(url.pathname, url.search);
     if (!plan) return;
 
+    // Landings categoría + ciudad/departamento (?envio=slug): title/H1 locales para Google.
+    if (plan.kind === 'category' && plan.envio && plan.category) {
+      try {
+        const qs = new URLSearchParams({
+          category: plan.category,
+          subcategory: plan.subcategory || '',
+          envio: plan.envio
+        });
+        const geoRes = await fetch(`${BACKEND}/api/seo/envio?${qs}`, {
+          headers: { Accept: 'application/json' }
+        });
+        if (geoRes.ok) {
+          const body = await geoRes.json();
+          const hub = body && body.data && body.data.hub;
+          const place = body && body.data && body.data.place;
+          if (hub && place && hub.seoTitle) {
+            const esc = (v) =>
+              String(v || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            const geoPage = {
+              title: hub.seoTitle,
+              description: hub.seoDescription || plan.description,
+              canonical: hub.canonicalUrl || plan.canonical,
+              bodyHtml: [
+                '<article>',
+                `<h1>${esc(hub.h1 || hub.seoTitle)}</h1>`,
+                `<p>Envío a ${esc(place.name)}. ${esc(hub.intro || hub.seoDescription || '')}</p>`,
+                '</article>'
+              ].join('')
+            };
+            const indexRes = await fetch(new URL('/index.html', request.url), {
+              headers: { Accept: 'text/html' }
+            });
+            if (indexRes.ok) {
+              const raw = await indexRes.text();
+              const html = applyRenderedPage(raw, geoPage);
+              if (html.includes('<h1') && html.includes('rel="canonical"')) {
+                return new Response(html, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600'
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // Continúa con render de categoría normal.
+      }
+    }
+
     if (plan.kind === 'product' || plan.kind === 'category') {
       const renderPath =
         plan.kind === 'product'

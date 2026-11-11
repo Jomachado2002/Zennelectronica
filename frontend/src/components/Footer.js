@@ -57,6 +57,25 @@ const Footer = () => {
                 Devoluciones y garantía
               </Link>
             </div>
+            <p className="font-semibold mt-6 mb-2">Envíos a todo el país</p>
+            <div className="space-y-2 text-sm">
+              {[
+                ['Celulares Alto Paraná', HOME_SLOT_ROUTES.celulares, 'alto-parana'],
+                ['Celulares Ciudad del Este', HOME_SLOT_ROUTES.celulares, 'ciudad-del-este'],
+                ['Celulares Santaní', HOME_SLOT_ROUTES.celulares, 'santani'],
+                ['Placas madre Concepción', { category: 'placas_madre', subcategory: '' }, 'concepcion'],
+                ['Notebooks Encarnación', HOME_SLOT_ROUTES.notebooks, 'encarnacion'],
+                ['Monitores Pedro Juan Caballero', HOME_SLOT_ROUTES.monitores, 'pedro-juan-caballero']
+              ].map(([label, route, envio]) => (
+                <Link
+                  key={label}
+                  to={categoriaProductoHref(route.category, route.subcategory, envio)}
+                  className="block text-white/90 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
           
           {/* Horarios */}

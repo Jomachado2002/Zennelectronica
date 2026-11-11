@@ -9,8 +9,12 @@ const mongoose = require('mongoose');
 
 const seoCatalogIndexSchema = new mongoose.Schema(
   {
-    /** product | category | subcategory | brand */
-    entityType: { type: String, required: true, enum: ['product', 'category', 'subcategory', 'brand'] },
+    /** product | category | subcategory | brand | geo_hub */
+    entityType: {
+      type: String,
+      required: true,
+      enum: ['product', 'category', 'subcategory', 'brand', 'geo_hub']
+    },
     /** Clave estable única: product:<id> | category:<value> | subcategory:<cat>::<sub> | brand:<normalized> */
     entityKey: { type: String, required: true },
     entityId: { type: String, default: '' },
