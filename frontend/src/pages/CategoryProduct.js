@@ -488,6 +488,11 @@ const CategoryProductContent = () => {
     };
   }, [filterCategoryList, filterSubcategoryList, onlyDiscounted]);
 
+  const hubHeading = hub?.seoTitle
+    ? String(hub.seoTitle).replace(/\s*\|\s*Zenn.*$/i, '').trim()
+    : '';
+  const visibleHeading = hubHeading || mobileTitle || pageHeading;
+
   const seoTitle = hub?.seoTitle
     || (onlyDiscounted
       ? (filterCategoryList[0] || filterSubcategoryList[0]
@@ -536,7 +541,7 @@ const CategoryProductContent = () => {
 
       <div className="lg:hidden bg-white px-4 pt-6 pb-4 text-center">
         <h1 className="text-[22px] font-semibold tracking-[0.08em] uppercase text-gray-900">
-          {mobileTitle || pageHeading}
+          {visibleHeading}
         </h1>
         {seoDescription && (
           <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">{seoDescription}</p>
@@ -590,7 +595,7 @@ const CategoryProductContent = () => {
           <div className="flex flex-col sm:flex-row items-center">
             <div className="flex items-center w-full">
               <h1 className="text-base sm:text-lg font-semibold text-gray-800 truncate flex-grow">
-                {pageHeading}
+                {visibleHeading}
               </h1>
               {onlyDiscounted && (
                 <button

@@ -107,7 +107,31 @@ export function planSeo(pathname, search) {
   }
 
   if (path === '/') {
-    return { kind: 'home', canonical: `${SITE}/` };
+    return {
+      kind: 'home',
+      canonical: `${SITE}/`,
+      title: 'Zenn | Lo Mejor en Tecnología en Paraguay',
+      description:
+        'Descubre los mejores productos de informática, notebooks, placas madre, computadoras ensambladas, monitores y más en Zenn. ¡Ofertas exclusivas en Paraguay!',
+      bodyHtml: [
+        '<div class="sr-only">',
+        '<h1>Zenn - Especialistas en Computadoras Gamer y Soluciones IT en Paraguay</h1>',
+        '<p>En Zenn somos especialistas en tecnología en Paraguay. Ofrecemos la mejor selección de computadoras gamer, equipos de última generación, componentes de PC y soluciones informáticas completas para profesionales y entusiastas de la tecnología.</p>',
+        '</div>'
+      ].join('')
+    };
+  }
+
+  if (path === '/buscar') {
+    const q = String(params.get('q') || '').trim();
+    if (!q) return null;
+    return {
+      kind: 'brand_search',
+      query: q,
+      canonical: `${SITE}/buscar?q=${encodeURIComponent(q)}`,
+      title: `${q} | Búsqueda Zenn`,
+      description: `Resultados de ${q} en Zenn Paraguay.`
+    };
   }
 
   if (path === '/nosotros') {

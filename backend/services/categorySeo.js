@@ -4,6 +4,7 @@ const productModel = require('../models/productModel');
 const Category = require('../models/categoryModel');
 const CategorySeo = require('../models/categorySeoModel');
 const { formatGuaranies } = require('./productSearchCopy');
+const { priorityCategoryHub } = require('./priorityCategoryHubs');
 
 const HUBS_PER_RUN = 3;
 
@@ -41,6 +42,21 @@ function clip(value, max) {
 }
 
 function localHub(row) {
+  const priority = priorityCategoryHub(row.category, row.subcategory);
+  if (priority) {
+    const min = formatGuaranies(row.minPrice);
+    return {
+      seoTitle: clip(priority.seoTitle, 60),
+      intro: clip(
+        priority.buildIntro({
+          total: row.count,
+          minLabel: min,
+          brands: row.brands || []
+        }),
+        240
+      )
+    };
+  }
   const phrase = searchLabel(row.label);
   const min = formatGuaranies(row.minPrice);
   return {

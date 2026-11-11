@@ -54,11 +54,9 @@ const HOME_SLOT_DEFS = [
     {
         key: 'discos',
         limit: 20,
+        // Hub SSD activo (ssd__21_03). Las 4 SSD legacy están isActive:false → 404.
         pairs: [
-            { category: 'almacenamiento', subcategory: 'ssd_m_2_nvme__21_03_03' },
-            { category: 'almacenamiento', subcategory: 'ssd_2_5__21_03_02' },
-            { category: 'almacenamiento', subcategory: 'ssd_externo__21_03_01' },
-            { category: 'almacenamiento', subcategory: 'ssd_m_2_sata__21_03_04' },
+            { category: 'almacenamiento', subcategory: 'ssd__21_03' },
             { category: 'almacenamiento', subcategory: 'disco_duro_interno__21_02_01' },
             { category: 'almacenamiento', subcategory: 'disco_duro_externo__21_02_02' },
             { category: 'almacenamiento', subcategory: 'pendrive__21_04' }

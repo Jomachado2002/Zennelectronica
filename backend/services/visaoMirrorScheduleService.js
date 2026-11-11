@@ -111,6 +111,19 @@ async function runScheduledMirrorOnce(label) {
         } catch (seoError) {
             console.error('[Visão schedule] seo', seoError && seoError.message ? seoError.message : seoError);
         }
+        // Solo tras mirror OK: índice SEO completo (marcas/categorías/subs/productos).
+        try {
+            const { runSeoCatalogSync } = require('./seoCatalogSync');
+            const catalog = await runSeoCatalogSync({ trigger: 'worker', dryRun: false });
+            console.log(
+                `[Visão schedule][${label}] SEO catálogo status=${catalog?.status} indexable=${catalog?.indexable} brands=${catalog?.brands} products=${catalog?.products} writes=${catalog?.writes} ${catalog?.durationMs || 0}ms`
+            );
+        } catch (catalogError) {
+            console.error(
+                '[Visão schedule] seo-catalog',
+                catalogError && catalogError.message ? catalogError.message : catalogError
+            );
+        }
         try {
             // Precio TN = sellingPrice Zenn × 1.10 + limpia special_price en TODO el catálogo seller.
             const { runTnPriceStockSync } = require('./tiendaNaranjaSyncService');

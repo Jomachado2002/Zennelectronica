@@ -16,7 +16,7 @@ export const HOME_SECTION_SUBTITLES = {
   mouses: 'Gaming, ergonómico, inalámbrico y con cable',
   monitores: 'Gaming, 4K, ultrawide y profesionales',
   memorias_ram: 'DDR4, DDR5, kits dual y alta frecuencia',
-  discos: 'SSD NVMe, SATA, HDD y almacenamiento externo',
+  discos: 'SSD NVMe y SATA, HDD y almacenamiento externo',
   tarjetas_graficas: 'NVIDIA GeForce, AMD Radeon y estaciones de trabajo',
   apple: 'iPhone, MacBook, iPad y accesorios',
   procesadores: 'Intel Core, AMD Ryzen y coolers compatibles',

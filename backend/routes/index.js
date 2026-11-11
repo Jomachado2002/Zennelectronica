@@ -28,7 +28,7 @@ const getCategoriesFromDB = require('../controller/product/getCategoriesFromDB')
     const channableFeedController = require('../controller/product/channableFeedController');
     const catalogPlateController = require('../controller/product/catalogPlateController');
     const { merchantJpegController } = require('../controller/product/merchantJpegController');
-    const { sitemapController } = require('../controller/seo/sitemapController');
+    const { sitemapController, sitemapPartController } = require('../controller/seo/sitemapController');
     const { productSeoHtmlController } = require('../controller/seo/productSeoHtmlController');
     const { estadoController: searchConsoleEstado, informeController: searchConsoleInforme } = require('../controller/seo/searchConsoleController');
     const {
@@ -1036,9 +1036,20 @@ router.post("/actualizar-producto", authToken, updateProductController);
     router.get("/google/merchant-feed.xml", channableFeedController);
     router.get("/gmc/image.jpg", merchantJpegController);
     router.get("/sitemap.xml", sitemapController);
+    router.get("/sitemap-:part.xml", sitemapPartController);
     router.get("/seo/producto/:slugOrId", productSeoHtmlController);
     const { categorySeoController } = require('../controller/seo/categorySeoController');
     router.get("/seo/categoria", categorySeoController);
+    router.get("/seo/marca", async (req, res) => {
+      try {
+        const { getBrandSeoByQuery } = require('../services/seoCatalogSync');
+        const data = await getBrandSeoByQuery(req.query.q || req.query.brand || '');
+        res.set('Cache-Control', 'public, max-age=300, s-maxage=900');
+        res.json({ success: true, data });
+      } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+      }
+    });
     const { renderProductController, renderCategoryController } = require('../controller/seo/seoRenderController');
     router.get("/seo/render/producto/:slug", renderProductController);
     router.get("/seo/render/categoria", renderCategoryController);

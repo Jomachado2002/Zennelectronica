@@ -306,9 +306,10 @@ ${productUrl}
   const canonicalPath = productPath({ slug: data.slug, _id: data.slug ? undefined : params.id });
   const canonicalUrl = siteUrl(canonicalPath);
   const heroImage = data.productImage?.[0] || activeImage;
-  const schemaImages = (data.productImage || [])
-    .map((img) => (typeof img === 'string' && img.startsWith('http') ? img : getAbsoluteImageUrl(img)))
-    .filter(Boolean);
+  // Solo URLs absolutas http(s) reales: no inventar absolutas desde paths relativos.
+  const schemaImages = (data.productImage || []).filter(
+    (img) => typeof img === 'string' && /^https?:\/\//i.test(img.trim())
+  );
   const hasValidOffer = Boolean(data.productName && Number(data.sellingPrice) > 0 && schemaImages.length);
   const searchSnippet = productSearchSnippet({
     productName: data.productName,

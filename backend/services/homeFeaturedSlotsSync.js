@@ -53,9 +53,21 @@ function remapPairsToActiveSubcategories(pairs, categoryDocs) {
 
         if (matches.length) {
             matches.forEach((s) => push(category, s.value));
-        } else {
-            push(category, subcategory);
+            continue;
         }
+
+        // Legacy Visão: ssd_m_2_nvme__21_03_03 → hub activo ssd__21_03
+        const parentSuffix = suffix.replace(/_\d+$/, '');
+        const parentMatches =
+            parentSuffix && parentSuffix !== suffix
+                ? active.filter((s) => visaoIdSuffix(s.value) === parentSuffix)
+                : [];
+        if (parentMatches.length) {
+            parentMatches.forEach((s) => push(category, s.value));
+            continue;
+        }
+
+        // No reemitir pares inactivos (evita "Ver más" / sitemap hacia 404).
     }
 
     return resolved.length ? resolved : pairs || [];

@@ -32,7 +32,7 @@ export const HOME_SLOT_ROUTES = {
   },
   discos: {
     category: 'almacenamiento',
-    subcategory: 'ssd_m_2_nvme__21_03_03'
+    subcategory: 'ssd__21_03'
   },
   tarjetas_graficas: {
     category: 'tarjetas_graficas',

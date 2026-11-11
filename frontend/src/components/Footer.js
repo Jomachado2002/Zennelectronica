@@ -34,6 +34,7 @@ const Footer = () => {
                 ['Notebooks en Paraguay', HOME_SLOT_ROUTES.notebooks],
                 ['Celulares en Paraguay', HOME_SLOT_ROUTES.celulares],
                 ['Monitores en Paraguay', HOME_SLOT_ROUTES.monitores],
+                ['SSD en Paraguay', HOME_SLOT_ROUTES.discos],
                 ['Teclados en Paraguay', HOME_SLOT_ROUTES.teclados],
                 ['Auriculares en Paraguay', { category: 'perifericos', subcategory: 'auriculares_y_accesorios__30_05' }],
                 ['Adaptadores en Paraguay', { category: 'perifericos', subcategory: 'adaptadores__30_09_01' }]

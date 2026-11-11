@@ -9,6 +9,7 @@
 const productModel = require('../models/productModel');
 const Category = require('../models/categoryModel');
 const { readCategoryHub } = require('./categorySeo');
+const { priorityCategoryHub } = require('./priorityCategoryHubs');
 const { SITE, humanizeTaxonomy, offerShippingAndReturns } = require('../helpers/productStructuredData');
 
 const SPEC_FIELDS = [
@@ -134,7 +135,15 @@ function productDescription(product) {
   return clip(`${name}. ${price ? `${price}. ` : ''}${availability} Envío a Paraguay.`, 160);
 }
 
+/**
+ * Product JSON-LD solo con imagen absoluta http(s) real.
+ * Sin imagen válida: no emitir Product/Offer (evita Merchant Listing incompleto).
+ * Offer solo si hay precio > 0; disponibilidad refleja stock real.
+ */
 function productJsonLd(product, canonical, image) {
+  const imageUrl = absoluteImage(image);
+  if (!imageUrl) return null;
+
   const stock = inStock(product);
   const price = Math.round(Number(product.sellingPrice) || 0);
   const shipping = offerShippingAndReturns(canonical);
@@ -143,7 +152,8 @@ function productJsonLd(product, canonical, image) {
     '@type': 'Product',
     name: clip(product.productName, 150),
     description: clip(stripHtml(product.description) || productDescription(product), 500),
-    brand: { '@type': 'Brand', name: clip(product.brandName, 70) || 'Zenn' }
+    brand: { '@type': 'Brand', name: clip(product.brandName, 70) || 'Zenn' },
+    image: [imageUrl]
   };
   if (price > 0) {
     json.offers = {
@@ -160,7 +170,6 @@ function productJsonLd(product, canonical, image) {
       validFrom: shipping.validFrom
     };
   }
-  if (image) json.image = [image];
   if (product.codigo) {
     json.sku = String(product.codigo);
     json.mpn = String(product.codigo);
@@ -258,6 +267,7 @@ function composeProductPage(product, related, labels) {
   }
   crumbItems.push({ name: clip(product.productName, 120), url: canonical });
 
+  const productLd = productJsonLd(product, canonical, image);
   return {
     title,
     description,
@@ -265,7 +275,7 @@ function composeProductPage(product, related, labels) {
     image,
     ogType: 'product',
     priceAmount: Math.round(Number(product.sellingPrice) || 0),
-    jsonLd: [breadcrumbJsonLd(crumbItems), productJsonLd(product, canonical, image)],
+    jsonLd: [breadcrumbJsonLd(crumbItems), productLd].filter(Boolean),
     bodyHtml
   };
 }
@@ -287,9 +297,35 @@ function categoryCountLine(totalProducts, shown, minLabel) {
   return `${totalProducts} productos con stock.${price}`;
 }
 
-function composeCategoryPage({ category, subcategory, label, hub, products, siblings, totalProducts, totalStock, minPrice }) {
+function mergeCategoryLinks(priorityRelated, siblings) {
+  const seen = new Set();
+  const out = [];
+  for (const item of [...(priorityRelated || []), ...(siblings || [])]) {
+    const href = String(item?.href || '').trim();
+    const name = String(item?.name || '').trim();
+    if (!href || !name || seen.has(href)) continue;
+    seen.add(href);
+    out.push({ href, name });
+  }
+  return out.slice(0, 16);
+}
+
+function composeCategoryPage({
+  category,
+  subcategory,
+  label,
+  hub,
+  products,
+  siblings,
+  totalProducts,
+  totalStock,
+  minPrice,
+  brands
+}) {
   const canonical = `${SITE}${categoryPath(category, subcategory)}`;
-  const phrase = label || humanizeTaxonomy(subcategory) || humanizeTaxonomy(category) || 'Tecnología';
+  const priority = priorityCategoryHub(category, subcategory);
+  const phrase =
+    priority?.label || label || humanizeTaxonomy(subcategory) || humanizeTaxonomy(category) || 'Tecnología';
   const list = Array.isArray(products) ? products : [];
   const total = Number.isFinite(Number(totalProducts)) ? Number(totalProducts) : list.length;
   const units = Number.isFinite(Number(totalStock)) ? Number(totalStock) : 0;
@@ -297,10 +333,17 @@ function composeCategoryPage({ category, subcategory, label, hub, products, sibl
     ? Number(minPrice)
     : Math.min(...list.map((item) => Number(item.sellingPrice) || 0).filter((value) => value > 0), Infinity);
   const minLabel = formatGuaranies(Number.isFinite(floor) ? floor : 0);
-  const title = clip(hub?.seoTitle || `${phrase} en Paraguay`, 60);
-  const intro = categoryIntro(phrase, total, minLabel);
+  const brandList = Array.isArray(brands) ? brands : [];
+  const title = clip(priority?.seoTitle || hub?.seoTitle || `${phrase} en Paraguay`, 60);
+  const intro = clip(
+    priority?.buildIntro
+      ? priority.buildIntro({ total, minLabel, brands: brandList })
+      : categoryIntro(phrase, total, minLabel),
+    500
+  );
   const description = clip(intro, 160);
-  const heading = /paraguay/i.test(title) ? title : `${phrase} en Paraguay`;
+  const heading = priority?.h1 || (/paraguay/i.test(title) ? title : `${phrase} en Paraguay`);
+  const links = mergeCategoryLinks(priority?.related, siblings);
 
   const cards = list
     .map((item) => {
@@ -328,10 +371,7 @@ function composeCategoryPage({ category, subcategory, label, hub, products, sibl
     `<p>${escapeHtml(clip(intro, 500))}</p>`,
     `<p>${escapeHtml(categoryCountLine(total, list.length, minLabel))}</p>`,
     cards ? `<section><h2>${escapeHtml(phrase)} disponibles</h2>${cards}</section>` : '',
-    linkList(
-      'Otras categorías',
-      (siblings || []).map((item) => ({ href: item.href, name: item.name }))
-    ),
+    linkList('Otras categorías', links),
     '</article>'
   ]
     .filter(Boolean)
@@ -450,7 +490,7 @@ async function loadCategoryPage(category, subcategory) {
   const query = { category: categoryValue, stock: { $gt: 0 }, slug: { $nin: ['', null] } };
   if (subcategoryValue) query.subcategory = subcategoryValue;
 
-  const [products, totalProducts, totals, hub] = await Promise.all([
+  const [products, totalProducts, totals, brandRows, hub] = await Promise.all([
     productModel
       .find(query)
       .select('productName slug sellingPrice productImage brandName')
@@ -461,6 +501,12 @@ async function loadCategoryPage(category, subcategory) {
     productModel.aggregate([
       { $match: query },
       { $group: { _id: null, totalStock: { $sum: '$stock' }, minPrice: { $min: '$sellingPrice' } } }
+    ]),
+    productModel.aggregate([
+      { $match: { ...query, brandName: { $nin: ['', null] } } },
+      { $group: { _id: '$brandName', n: { $sum: 1 } } },
+      { $sort: { n: -1 } },
+      { $limit: 6 }
     ]),
     readCategoryHub(categoryValue, subcategoryValue)
   ]);
@@ -484,12 +530,15 @@ async function loadCategoryPage(category, subcategory) {
     siblings,
     totalProducts,
     totalStock: Number(stats.totalStock) || 0,
-    minPrice: Number(stats.minPrice) || 0
+    minPrice: Number(stats.minPrice) || 0,
+    brands: brandRows.map((row) => row._id).filter(Boolean)
   });
 }
 
 module.exports = {
   escapeHtml,
+  absoluteImage,
+  productJsonLd,
   composeProductPage,
   composeCategoryPage,
   loadProductPage,

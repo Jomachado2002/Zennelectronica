@@ -11,6 +11,8 @@ import { productSearchSnippet } from './src/utils/searchSnippet.js';
 
 export const config = {
   matcher: [
+    '/',
+    '/buscar',
     '/producto/:path*',
     '/categoria-producto',
     '/promociones',
@@ -194,6 +196,80 @@ export default async function middleware(request) {
               }
             });
           }
+        }
+      }
+    }
+
+    // Landings de marca vía /buscar?q=Marca (solo si el índice SEO la marca indexable).
+    if (plan.kind === 'brand_search' && plan.query) {
+      try {
+        const brandRes = await fetch(
+          `${BACKEND}/api/seo/marca?q=${encodeURIComponent(plan.query)}`,
+          { headers: { Accept: 'application/json' } }
+        );
+        if (brandRes.ok) {
+          const body = await brandRes.json();
+          const hub = body && body.data;
+          if (hub && hub.indexable && hub.seoTitle) {
+            const brandPage = {
+              title: hub.seoTitle,
+              description: hub.seoDescription || plan.description,
+              canonical: hub.canonicalUrl || plan.canonical,
+              bodyHtml: [
+                '<article>',
+                `<h1>${String(hub.h1 || hub.brandName || plan.query)
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')}</h1>`,
+                hub.seoDescription
+                  ? `<p>${String(hub.seoDescription)
+                      .replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')}</p>`
+                  : '',
+                '</article>'
+              ].join('')
+            };
+            const indexRes = await fetch(new URL('/index.html', request.url), {
+              headers: { Accept: 'text/html' }
+            });
+            if (indexRes.ok) {
+              const raw = await indexRes.text();
+              const html = applyRenderedPage(raw, brandPage);
+              if (html.includes('<h1') && html.includes('rel="canonical"')) {
+                return new Response(html, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600'
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallthrough: búsqueda genérica noindex vía SPA.
+      }
+    }
+
+    // Home: H1 + canonical en HTML inicial para todos (Googlebot sin depender de JS).
+    if (plan.kind === 'home' && plan.bodyHtml && plan.canonical) {
+      const indexRes = await fetch(new URL('/index.html', request.url), {
+        headers: { Accept: 'text/html' }
+      });
+      if (indexRes.ok) {
+        const raw = await indexRes.text();
+        const html = applyRenderedPage(raw, plan);
+        if (html.includes('<h1') && html.includes('id="root"') && html.includes('<link rel="canonical"')) {
+          return new Response(html, {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=1800',
+              'Vercel-CDN-Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800'
+            }
+          });
         }
       }
     }
