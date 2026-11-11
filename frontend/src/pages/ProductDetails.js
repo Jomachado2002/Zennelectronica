@@ -17,6 +17,7 @@ import { getLastQuery, rememberProduct } from '../helpers/searchMemory';
 import { flushEvents, trackProduct } from '../helpers/behaviorTracker';
 import { ProductEmailOffer } from '../components/EmailCaptureModal';
 import { productSearchSnippet } from '../utils/searchSnippet';
+import { buildWhatsAppHref } from '../helpers/shippingIntent';
 
 
     // Las especificaciones ahora se cargan dinámicamente desde la base de datos
@@ -271,9 +272,9 @@ ${productUrl}
     }
     // Google Analytics 4
     trackGAWhatsApp(data);
-    
-    const whatsappUrl = `https://wa.me/+595973345284?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+
+    // Si llegó desde landing ?envio=ciudad, el mensaje agrega esa ciudad; si no, pregunta destino.
+    window.open(buildWhatsAppHref(message), '_blank');
   };
 
   // Calcula el porcentaje de descuento 

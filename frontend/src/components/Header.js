@@ -24,6 +24,7 @@ import { shopperHrefForQuery } from '../config/shopperNav';
 import { hasSearchMemory, rememberQuery } from '../helpers/searchMemory';
 import { flushEvents, trackEvent } from '../helpers/behaviorTracker';
 import ShopperNavBar from './ShopperNavBar';
+import { buildWhatsAppHref } from '../helpers/shippingIntent';
 
 const SearchPreview = lazy(() => import('./SearchPreview'));
 const MenuCategorias = lazy(() => import('./MenuCategorias'));
@@ -665,9 +666,18 @@ const Header = () => {
         </Link>
         
         <a 
-          href="https://wa.me/595973345284?text=Hola,%20estoy%20interesado%20en%20obtener%20información%20sobre%20insumos%20de%20tecnología." 
+          href="https://wa.me/595973345284"
           target="_blank" 
           rel="noopener noreferrer"
+          onClick={(e) => {
+            e.preventDefault();
+            window.open(
+              buildWhatsAppHref(
+                'Hola, estoy interesado en obtener información sobre insumos de tecnología.'
+              ),
+              '_blank'
+            );
+          }}
           className="flex flex-col items-center text-gray-600 hover:text-green-600 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-green-50 group"
         >
           <FaWhatsapp className="text-2xl group-hover:scale-110 transition-transform" />

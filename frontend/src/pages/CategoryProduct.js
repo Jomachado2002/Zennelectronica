@@ -14,6 +14,7 @@ import VerticalCardGrid from '../components/VerticalCardGrid';
 import { siteUrl, SITE_ORIGIN } from '../config/siteUrl';
 import { findShopperDepartment } from '../config/shopperNav';
 import { categoriaProductoHref } from '../config/homeSlotRoutes';
+import { setShippingIntent, buildWhatsAppHref } from '../helpers/shippingIntent';
 
 // Hook para detectar dirección del scroll
 const useScrollDirection = () => {
@@ -520,6 +521,10 @@ const CategoryProductContent = () => {
   const geoMeta = geoHub?.hub || null;
   const place = geoHub?.place || null;
 
+  useEffect(() => {
+    if (place?.slug && place?.name) setShippingIntent(place);
+  }, [place]);
+
   const hubHeading = (geoMeta?.h1 || geoMeta?.seoTitle || hub?.seoTitle)
     ? String(geoMeta?.h1 || geoMeta?.seoTitle || hub?.seoTitle).replace(/\s*\|\s*Zenn.*$/i, '').trim()
     : '';
@@ -584,9 +589,23 @@ const CategoryProductContent = () => {
             {place.departmentName && place.departmentName !== place.name
               ? `, ${place.departmentName}`
               : ''}
-            . Coordiná tu pedido por WhatsApp.
+            .{' '}
+            <a
+              href={buildWhatsAppHref(
+                `Hola, quiero consultar por ${visibleHeading || 'productos'} con envío a ${place.name}.`
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 text-[#128C7E]"
+            >
+              Escribinos por WhatsApp
+            </a>
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">
+            Enviamos a todo Paraguay. Indicá tu ciudad por WhatsApp o al coordinar la compra.
+          </p>
+        )}
         {(geoMeta?.intro || seoDescription) && (
           <p className="mt-3 text-sm font-normal normal-case tracking-normal text-gray-600">
             {geoMeta?.intro || seoDescription}
