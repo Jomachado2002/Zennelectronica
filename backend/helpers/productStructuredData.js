@@ -22,7 +22,8 @@ function offerShippingAndReturns(pageUrl) {
       '@type': 'OfferShippingDetails',
       shippingRate: {
         '@type': 'MonetaryAmount',
-        value: '30000',
+        // Envío gratuito en Google: el precio del producto no debe sumar delivery extra.
+        value: '0',
         currency: 'PYG'
       },
       shippingDestination: {

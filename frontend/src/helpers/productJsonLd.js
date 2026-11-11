@@ -68,7 +68,7 @@ export function buildProductJsonLd({
         '@type': 'OfferShippingDetails',
         shippingRate: {
           '@type': 'MonetaryAmount',
-          value: '30000',
+          value: '0',
           currency: 'PYG'
         },
         shippingDestination: {
