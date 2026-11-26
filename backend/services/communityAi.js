@@ -48,12 +48,12 @@ Cómo decidir:
 - Los ids de cada rubro ya están elegidos. Son los que se van a publicar. No los cambies por otros. Si el rubro es accesorios, esos ids son los accesorios que hay en stock.
 - El hook es una frase para alguien que no nos sigue, usando un precio o una spec de esa lista. No nombres el precio de otra tienda. No escribas hashtags: el sistema los agrega.
 - Prohibido, porque no frena el scroll: "nuevo ingreso", "imperdible", "aprovechá", "no te lo pierdas", "lo mejor", "increíble", "stock en Zenn", "mirá esto", "descubre". Si la frase sirve para cualquier producto, reescribila con el modelo, la spec o el precio.
-- El día no puede ser un solo rubro. Si el primero es un electrodoméstico, los siguientes tienen que ser otra cosa: placa, accesorio, celular, periférico. Así el feed se llena de todo el catálogo.
+- El día no puede ser un solo rubro. Cada feed es un rubro distinto. Si el dossier dice que notebook ya salió estos días, no lo elijas: pasá a auriculares, monitores, gabinetes, teclados u otro rubro de la lista. Las historias tampoco repiten el rubro de un feed.
 - Historias: un id, el producto que se defiende solo por el precio.
 - Si el dossier marca un precio con "antes" y un porcentaje, esa promoción existe. El primer feed de ese rubro tiene que usar esos ids. No inventes un descuento que no esté escrito.
 - Sugerencias: no escribas una consigna genérica. Decidí la pieza. Si conviene mostrar tres productos de la misma marca a distinto precio, el título es concreto, por ejemplo "Sabías que estos teclados son hermanos". Si conviene una promoción, el título nombra esa promo y usa solo precios de la lista. Si conviene un dato, el título es ese dato. No pidas un meme con famosos ni fotos de personas: la pieza usa las fotos de nuestros productos.
 - La cuenta dice qué publicación orgánica tuvo likes y cuál no, qué formato rindió más, qué busca la gente en la tienda, qué promo es real y qué marca tiene varios modelos. Una pieza para seguidores es una pregunta o una comparación con esos datos. No armes el día solo con el rubro que tiene más unidades.
-- Si el dossier habla de Reintegro Tienda Naranja, cada hook lo dice en una frase. Es reintegro de Itaú, del 2 al 4 de noviembre, no un descuento del precio. 15% con tope de Gs. 350.000 en cualquier tarjeta de crédito Itaú. 20% con tope de Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés. Aplica a toda la tienda.
+- Si el dossier habla de Black Friday Tienda Naranja, la primera frase del texto es: "Este 27 de noviembre aprovechá los beneficios que tenemos para vos en Tienda Naranja." La segunda aclara que el reintegro de Tienda Naranja es solo el 27 de noviembre, y que los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. El 27: 20% de reintegro con tarjeta de crédito Itaú (tope Gs. 500.000) o 25% con Amex Platinum o Visa Infinite (tope Gs. 700.000), más hasta 18 cuotas sin interés. Cada publicación lleva el flyer de Itaú y después hasta 9 productos con descuento que ya están en Tienda Naranja. Elegí lo que genera comentarios: gabinetes, monitores, notebooks, sillas, auriculares, teclados, placas. No uses un procesador viejo ni un accesorio de oficina que sale poco. No elijas el más caro del catálogo. El precio escrito es el de Tienda Naranja: antes, ahora y el %. No publiques un producto sin porcentaje de descuento.
 - Paleta, la pinta el sistema, no vos. No devuelvas HTML.
 
 Devolvé solo JSON:
@@ -251,7 +251,7 @@ El producto recortado ocupa más de la mitad del alto. Sin tarjeta, sin círculo
 Un titular de hasta 5 palabras, con el modelo o el precio de esta lista. El precio en naranja, enorme y entero.`
     : '';
   const floor = campaign
-    ? 'Los últimos 420px del lienzo quedan vacíos: el sistema pega ahí el banner de Tienda Naranja. No lo dibujes, no escribas 15% ni 20%, no pongas el logo de Itaú.'
+    ? 'Los últimos 240px del lienzo quedan vacíos: el sistema pega ahí el zócalo de Tienda Naranja (20% y 25% de reintegro Itaú, hasta el 27). No lo dibujes, no escribas los porcentajes, no pongas el logo de Itaú.'
     : 'El texto y el precio terminan al menos a 80px del borde de abajo.';
   const prompt = `Sos director de arte de una tienda de electrónica en Asunción. Esta pieza se publica en Instagram y tiene que frenar el dedo. Lienzo exacto de 1080×1350. Si se puede cambiar el producto y la pieza sigue igual, está mal hecha.
 Hoy es ${dateLabel}. Tipo de pieza: ${kind}.
@@ -495,10 +495,12 @@ async function chooseCatalogDay({ dossier, catalog, feedLimit = 8, storyLimit = 
     return null;
   }
   if (!raw) return null;
+  const seen = new Set();
   const feeds = [];
   for (const item of raw.feeds || []) {
     const row = byKey.get(item && item.subcategory);
-    if (!row) continue;
+    if (!row || seen.has(row.key)) continue;
+    seen.add(row.key);
     const productIds = knownIds(item, row.productIds);
     feeds.push({
       subcategory: row.key,
@@ -512,7 +514,8 @@ async function chooseCatalogDay({ dossier, catalog, feedLimit = 8, storyLimit = 
   const stories = [];
   for (const item of raw.stories || []) {
     const row = byKey.get(item && item.subcategory);
-    if (!row) continue;
+    if (!row || seen.has(row.key)) continue;
+    seen.add(row.key);
     const productId = knownIds({ productIds: [item.productId] }, row.productIds)[0] || '';
     stories.push({
       subcategory: row.key,

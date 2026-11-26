@@ -529,7 +529,7 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
       linear-gradient(#fff, #fff) padding-box,
       linear-gradient(135deg, #FB7185 0%, #9D174D 100%) border-box;
   }
-  .art.scene-naranja { padding-bottom: 252px; }
+  .art.scene-naranja { padding-bottom: 228px; }
   .scene-naranja .chip .v { font-size: 28px; white-space: nowrap; }
   .scene-naranja .seal,
   .scene-naranja .row,
@@ -615,17 +615,18 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
     justify-content: center;
     align-items: flex-end;
     position: absolute;
-    left: 40px;
-    right: 40px;
-    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
     z-index: 12;
     line-height: 0;
     pointer-events: none;
   }
   .scene-naranja .naranja-banner img {
-    width: auto;
+    width: 100%;
     max-width: 100%;
-    height: 220px;
+    height: auto;
+    max-height: 210px;
     object-fit: contain;
     object-position: center bottom;
     display: block;
@@ -634,8 +635,8 @@ function renderCreativeHtml(payload, format = 'feed', assets = {}) {
   .fmt-feed.scene-naranja footer { padding: 4px 48px 4px; }
   .fmt-square.scene-naranja footer { padding-bottom: 2px; }
   .art.fmt-story.scene-naranja { padding-bottom: 248px; }
-  .fmt-story.scene-naranja .naranja-banner img { height: 216px; }
-  .fmt-square.scene-naranja .naranja-banner img { height: 168px; }
+  .fmt-story.scene-naranja .naranja-banner img { max-height: 220px; height: auto; }
+  .fmt-square.scene-naranja .naranja-banner img { max-height: 150px; height: auto; }
   .fmt-square.scene-naranja.art, .art.fmt-square.scene-naranja { padding-bottom: 196px; }
   .rosa-sash, .rosa-badge, .rosa-pattern { display: none; }
   .scene-rosa .rosa-pattern {

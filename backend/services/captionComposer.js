@@ -145,7 +145,15 @@ function hashtagsFor(products) {
   return unique;
 }
 
-function closer() {
+function closer(naranja) {
+  if (naranja) {
+    return [
+      'Este precio y el reintegro están solo en Tienda Naranja.',
+      'tiendanaranja.com.py',
+      '',
+      `WhatsApp ${WHATSAPP}`
+    ].join('\n');
+  }
   return [
     `Pedilo en ${SITE}`,
     'Entrega en Asunción en 24 horas',
@@ -168,7 +176,7 @@ function composeVariant(products, mood, variantIndex, voices) {
   const start = hash(`${day}|${products.map((p) => p.id).join(',')}|${mood}`) % hooks.length;
   const hook = hooks[(start + variantIndex) % hooks.length];
   const tags = hashtagsFor(products);
-  const caption = [hook, '', ...products.map(lineOf), '', closer(), '', tags.join(' ')].join('\n');
+  const caption = [hook, '', ...products.map(lineOf), '', closer(naranja), '', tags.join(' ')].join('\n');
   const alts = products.map((product) => {
     const name = norm(product.title || product.productName);
     const brand = norm(product.brandName);
@@ -194,7 +202,9 @@ function composeCaptions(products, voices) {
         '',
         ...list.map(lineOf),
         '',
-        `www.zenn.com.py · WhatsApp ${WHATSAPP}`,
+        naranja
+          ? `Solo en tiendanaranja.com.py · WhatsApp ${WHATSAPP}`
+          : `www.zenn.com.py · WhatsApp ${WHATSAPP}`,
         '',
         tags.join(' ')
       ].join('\n');

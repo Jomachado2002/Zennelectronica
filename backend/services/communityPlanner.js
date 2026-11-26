@@ -515,7 +515,7 @@ function clipName(value) {
 
 function postedRecently(freshness, key, dateKey) {
   const last = freshness.get(key) || '';
-  return Boolean(last && last >= addDays(dateKey, -1));
+  return Boolean(last && last >= addDays(dateKey, -4));
 }
 
 function offerOf(item) {
@@ -676,7 +676,11 @@ function slotsFor(dateKey) {
     );
   }
   const night = halloweenOn(dateKey);
-  if (!night) return DAY_SLOTS;
+  const base = [
+    ...FEED_TIMES.map((_, index) => `feed-${index + 1}`),
+    ...STORY_TIMES.map((_, index) => `story-${index + 1}`)
+  ];
+  if (!night) return base;
   return DAY_SLOTS.concat(
     HALLOWEEN_FEED_TIMES.slice(0, night.extraFeeds).map((_, index) => `feed-${FEED_TIMES.length + index + 1}`),
     HALLOWEEN_STORY_TIMES.slice(0, night.extraStories).map((_, index) => `story-${STORY_TIMES.length + index + 1}`)
@@ -684,6 +688,7 @@ function slotsFor(dateKey) {
 }
 
 async function planDay(dateKey, groups, labels, used, freshness, trends, account) {
+  if (campaignOn(dateKey) && campaignOn(dateKey).blackFriday) return [];
   const taken = await existingSlots(dateKey);
   const daySlots = slotsFor(dateKey);
   if (daySlots.every((slot) => taken.has(slot))) return [];
@@ -927,7 +932,6 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
 
   const feedTimes = campaign ? FEED_TIMES.concat(EXTRA_FEED_TIMES.slice(0, campaign.extraFeeds)) : FEED_TIMES;
   const storyTimes = campaign ? STORY_TIMES.concat(EXTRA_STORY_TIMES.slice(0, campaign.extraStories)) : STORY_TIMES;
-  const suggestionSlots = campaign ? SUGGESTION_SLOTS.concat(EXTRA_SUGGESTIONS) : SUGGESTION_SLOTS;
   for (let index = 0; index < feeds.length; index += 1) {
     const row = feeds[index];
     const ids = pickChosen(row, feedProducts.get(row.key), used, row.onlyIds ? Math.min(FEED_SIZE, row.onlyIds.length) : FEED_SIZE);
@@ -937,21 +941,6 @@ async function planDay(dateKey, groups, labels, used, freshness, trends, account
     const row = stories[index];
     const ids = pickChosen(row, storyProducts.get(row.key), used, 1);
     await placeProducts(`story-${index + 1}`, storyTimes[index], row, ids, 'story');
-  }
-  const suggestionRows = feeds.length ? feeds : stories;
-  for (let index = 0; index < suggestionSlots.length; index += 1) {
-    const slot = suggestionSlots[index];
-    const focus = promoLocked || trendRows[0] || null;
-    const row = focus || suggestionRows[index % suggestionRows.length];
-    if (!row) continue;
-    const custom = (ai && ai.suggestions || []).find((item) => item.type === slot.kind);
-    const pack = suggestionPack(slot.kind, row.label, slot.time, promoLocked ? promoLocked.list : null, focus);
-    if (custom && slot.kind !== 'reel' && custom.brief) pack.brief = custom.brief;
-    if (custom && custom.caption) pack.caption = custom.caption;
-    if (custom && slot.kind !== 'reel' && custom.title) pack.headline = custom.title;
-    if (custom && custom.subhead) pack.subhead = custom.subhead;
-    if (custom && (custom.title || custom.caption)) pack.useCopy = true;
-    await placeSuggestion(slot, row, pack);
   }
   return created;
 }
@@ -987,6 +976,12 @@ function firstOpenDay() {
 
 async function planCommunityDays({ days = 3, startDate } = {}) {
   await ensureHalloweenPosts(zonedDate());
+  try {
+    const { ensureBlackFridayPosts } = require('./tnBlackFriday');
+    await ensureBlackFridayPosts(zonedDate());
+  } catch (error) {
+    console.error('[tn bf]', error.message || error);
+  }
   const count = Math.max(1, Math.min(21, Number(days) || 3));
   const start = startDate || firstOpenDay();
   const dateKeys = Array.from({ length: count }, (_, index) => addDays(start, index));
@@ -1340,9 +1335,10 @@ async function repairCommunityPost(doc, used) {
   if (!['feed', 'story'].includes(doc.kind)) return false;
   const ids = (doc.productIds || []).map(String);
   if (!ids.length) return false;
-  const promoPost = String(doc.headline || '').startsWith('Promociones');
+  const promoPost = /^(Promociones|Black Friday)/.test(String(doc.headline || ''));
+  const onTnOnly = doc.scene === 'naranja';
   const products = await Product.find({ _id: { $in: ids } })
-    .select('stock subcategory productName productImage price sellingPrice')
+    .select('stock subcategory productName productImage price sellingPrice tiendaNaranja.onTn')
     .lean();
   const byId = new Map(products.map((product) => [String(product._id), product]));
   const alive = [];
@@ -1351,7 +1347,8 @@ async function repairCommunityPost(doc, used) {
     const product = byId.get(id);
     const image = product && Array.isArray(product.productImage) && product.productImage[0];
     const onOffer = !promoPost || offerOf(product);
-    if (product && Number(product.stock) > 0 && image && onOffer) alive.push(product);
+    const onTn = !onTnOnly || Boolean(product && product.tiendaNaranja && product.tiendaNaranja.onTn);
+    if (product && Number(product.stock) > 0 && image && onOffer && onTn) alive.push(product);
     else {
       dead += 1;
       if (used) used.delete(id);
@@ -1478,7 +1475,7 @@ async function paintOpenIdeas() {
         subcategory: doc.subcategory,
         time,
         planDate: doc.planDate,
-        fast: false
+        fast: true
       });
       if (!art.mediaUrl) continue;
       doc.mediaUrls = [art.mediaUrl];

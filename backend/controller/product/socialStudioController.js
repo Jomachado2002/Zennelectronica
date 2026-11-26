@@ -174,13 +174,31 @@ async function publishUploaded(doc) {
   return publishToNetworks(doc, doc.mediaUrls, [doc.headline || 'Zenn']);
 }
 
+async function withBlackFridayCover(doc, urls) {
+  if (doc.scene !== 'naranja' || doc.kind !== 'feed' || doc.slot === 'story-bf') return urls;
+  try {
+    const { flyerUrl } = require('../../services/tnBlackFriday');
+    const cover = await flyerUrl('feed');
+    if (!cover || urls[0] === cover) return urls;
+    return [cover, ...urls].slice(0, 10);
+  } catch (error) {
+    console.error('[tn bf] portada', error.message || error);
+    return urls;
+  }
+}
+
 async function publishNow(doc, payloads) {
-  if ((doc.mediaUrls || []).length) return publishUploaded(doc);
+  if ((doc.mediaUrls || []).length && doc.slot === 'story-bf') return publishUploaded(doc);
+  if ((doc.mediaUrls || []).length && doc.kind !== 'feed') return publishUploaded(doc);
   const format = doc.kind === 'story' ? 'story' : 'feed';
-  const urls = await renderUrls(payloads, format);
-  const alts = payloads.map((p) => `${p.title} ${p.brandName} en Zenn Electrónicos, Paraguay`.replace(/\s+/g, ' ').trim());
+  const rendered = (doc.mediaUrls || []).length ? doc.mediaUrls : await renderUrls(payloads, format);
+  const urls = await withBlackFridayCover(doc, rendered);
+  const productAlts = payloads.map((p) => `${p.title} ${p.brandName} en Zenn Electrónicos, Paraguay`.replace(/\s+/g, ' ').trim());
+  const alts = urls.length > rendered.length
+    ? ['Black Friday Tienda Naranja', ...productAlts]
+    : (productAlts.length ? productAlts : [doc.headline || 'Zenn']);
   doc.mediaUrls = urls;
-  return publishToNetworks(doc, urls, alts);
+  return publishToNetworks(doc, urls, alts.slice(0, urls.length));
 }
 
 const publishSocialPost = async (req, res) => {

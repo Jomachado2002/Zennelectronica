@@ -114,8 +114,8 @@ async function errorFromAxios(err, fallback) {
 }
 
 const ROSA_COPY = 'Octubre Rosa. Elegí el tuyo y llevátelo hoy.';
-const NARANJA_COPY = 'Reintegro Itaú del 2 al 4. Toda la tienda.';
-const NARANJA_CAPTION = 'Del 2 al 4 de noviembre hay reintegro Itaú en toda la tienda. 15% con tope de Gs. 350.000 con cualquier tarjeta de crédito Itaú. 20% con tope de Gs. 500.000 con Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés. El reintegro lo asume Tienda Naranja: no es un descuento del precio.';
+const NARANJA_COPY = 'El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles ahí.';
+const NARANJA_CAPTION = 'Este 27 de noviembre aprovechá los beneficios que tenemos para vos en Tienda Naranja. El reintegro es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. El 27: 20% con tope de Gs. 500.000 en tarjetas de crédito Itaú, o 25% con tope de Gs. 700.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés.';
 
 function asuncionKey() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -128,7 +128,7 @@ function asuncionKey() {
 
 function naranjaToday() {
   const key = asuncionKey();
-  return key >= '2026-11-02' && key <= '2026-11-04';
+  return key >= '2026-11-26' && key <= '2026-11-27';
 }
 
 function halloweenToday() {
@@ -1123,11 +1123,20 @@ const CreativeStudioPage = () => {
               </div>
               <p className="text-xs text-gray-500 mt-3">
                 {naranjaDays
-                  ? 'Del 2 al 4 de noviembre el planner publica con el zócalo de reintegro Tienda Naranja. El precio del flyer es el de Tienda Naranja (no el de zenn.com.py), con tachado visible. 15% reintegro tope Gs. 350.000 en cualquier tarjeta Itaú. 20% tope Gs. 500.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas.'
+                  ? 'El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. El 27: 20% de reintegro, tope Gs. 500.000, en tarjetas de crédito Itaú, o 25%, tope Gs. 700.000, en Amex Platinum y Visa Infinite. Hasta 18 cuotas.'
                   : halloweenDays
                     ? 'Desde hoy hasta el domingo la plantilla es Halloween: noche, telarañas en las cuatro esquinas, luna y murciélagos. El producto sigue grande. El lunes vuelve a las plantillas de siempre.'
-                    : 'Variar usa las plantillas de siempre. Halloween queda del 30 de octubre al 1 de noviembre. Reintegro Naranja, el 2, 3 y 4.'}
+                    : 'Variar usa las plantillas de siempre. Halloween queda del 30 de octubre al 1 de noviembre. El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos ya están disponibles.'}
               </p>
+              {scene === 'naranja' ? (
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-700">Flyer de Itaú. Sale primero, antes de los productos.</p>
+                  <img src="/black-friday/feed.jpg" alt="Flyer Black Friday para publicación" className="w-full rounded-lg border border-gray-200" />
+                  <img src="/black-friday/story.jpg" alt="Flyer Black Friday para historia" className="w-full max-w-[220px] rounded-lg border border-gray-200" />
+                  <p className="text-xs font-semibold text-gray-700">Zócalo que se pega abajo de cada producto.</p>
+                  <img src="/black-friday/zocalo.png" alt="Zócalo de reintegro Tienda Naranja" className="w-full rounded-lg border border-gray-200 bg-white" />
+                </div>
+              ) : null}
             </div>
           </div>
 

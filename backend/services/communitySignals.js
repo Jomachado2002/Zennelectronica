@@ -114,9 +114,11 @@ function dossierText({ dateLabel, recentLabels, trends, candidates, account, cam
   const push = campaign
     ? [
       '',
-      `Reintegro Tienda Naranja, del ${campaign.from} al ${campaign.to}. No es un descuento del precio.`,
+      campaign.blackFriday
+        ? `Black Friday Tienda Naranja. El reintegro es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. Solo productos con porcentaje de descuento que ya están publicados ahí. El precio que se escribe es el de TN (Zenn + 10%).`
+        : `Reintegro Tienda Naranja, del ${campaign.from} al ${campaign.to}.`,
       campaign.lead,
-      'Hoy hacen falta más piezas: publicalas en rubros distintos. Cada hook nombra el reintegro en una frase.',
+      'Hoy hacen falta más piezas: cada post abre con el flyer de Itaú y sigue con hasta 9 productos que generan interacción (gabinete, monitor, notebook, auricular, teclado). Nada de procesadores viejos ni del artículo más caro. La primera frase es: Este 27 de noviembre aprovechá los beneficios que tenemos para vos en Tienda Naranja. Aclará que el reintegro es solo el 27 de noviembre y que los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja.',
       'Prohibido Octubre Rosa.'
     ]
     : (angle

@@ -802,7 +802,7 @@ async function composeSuggestion({
     if (directed && directed.brief) steerBrief = directed.brief;
   }
   let html = '';
-  if (!fast && claudeReady()) {
+  if (false && !fast && claudeReady()) {
     try {
       const designed = await designPieceHtml({
         dateLabel: planDate,
@@ -921,10 +921,10 @@ async function reviseSuggestion(doc, { note = '', background = '', swap = false,
     photos,
     background: color
   });
-  const designAsk = String(note || '').trim();
+  const designAsk = '';
   let filled = '';
   let viaClaude = false;
-  if (designAsk && claudeReady()) {
+  if (false && designAsk && claudeReady()) {
     const wantsTemplate = /plantilla|otro dise|otra pieza|rehac|otra grafica|otro estilo|otro formato/.test(plain(note));
     const steered = wantsTemplate
       ? await steerTemplate(note, chosen.map((item) => ({ name: item.productName })))

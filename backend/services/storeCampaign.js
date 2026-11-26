@@ -3,20 +3,22 @@
 const ZONE = 'America/Asuncion';
 
 const NARANJA = {
-  id: 'naranja',
+  id: 'naranja-bf',
   scene: 'naranja',
-  from: '2026-11-02',
-  to: '2026-11-04',
-  label: 'Reintegro Tienda Naranja',
+  from: '2026-11-26',
+  to: '2026-11-27',
+  label: 'Black Friday Tienda Naranja',
   reserve: 176,
-  extraFeeds: 3,
-  extraStories: 4,
-  detail: 'Reintegro Itaú del 2 al 4. Toda la tienda.',
-  lead: 'Del 2 al 4 de noviembre hay reintegro Itaú en toda la tienda. 15% con tope de Gs. 350.000 con cualquier tarjeta de crédito Itaú. 20% con tope de Gs. 500.000 con Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés. El reintegro lo asume Tienda Naranja: no es un descuento del precio.',
+  extraFeeds: 1,
+  extraStories: 0,
+  blackFriday: true,
+  productPosts: 9,
+  detail: 'El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. El 27: 20% de reintegro con tope de Gs. 500.000 en tarjetas de crédito Itaú, o 25% con tope de Gs. 700.000 en Amex Platinum y Visa Infinite. Hasta 18 cuotas sin interés.',
+  lead: 'El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles en Tienda Naranja. El 27 hay 20% de reintegro con tope de Gs. 500.000 en tarjetas de crédito Itaú, o 25% con tope de Gs. 700.000 en Amex Platinum y Visa Infinite, más hasta 18 cuotas sin interés.',
   hooks: [
-    'Del 2 al 4 tu tarjeta Itaú te devuelve plata en toda la tienda.',
-    '15% de reintegro, tope Gs. 350.000. Con Amex Platinum o Visa Infinite, 20% y tope Gs. 500.000.',
-    'Hasta 18 cuotas sin interés, más el reintegro Itaú. Del 2 al 4, en todo el catálogo.'
+    'El reintegro de Tienda Naranja es solo el 27 de noviembre. Los descuentos y las mejoras de precio ya están disponibles ahí.',
+    'El 27: 20% de reintegro con tarjeta Itaú, tope Gs. 500.000. Con Amex Platinum o Visa Infinite, 25% y tope Gs. 700.000.',
+    'Hasta 18 cuotas sin interés el 27, más el reintegro. El precio con descuento ya está en Tienda Naranja.'
   ]
 };
 
