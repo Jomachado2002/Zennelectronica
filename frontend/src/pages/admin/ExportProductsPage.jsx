@@ -154,13 +154,13 @@ const ExportProductsPage = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `productos_${selectedSubcategory.toLowerCase()}.zip`);
+            link.setAttribute('download', `autolist_${selectedSubcategory.toLowerCase()}.zip`);
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
 
-            toast.success('Exportación completada exitosamente');
+            toast.success('ZIP AutoList listo (CSV + Excel + fotos)');
         } catch (error) {
             console.error('Error en exportación:', error);
             toast.error('Error en la exportación');
@@ -221,7 +221,7 @@ const ExportProductsPage = () => {
                         Exportar Productos
                     </h1>
                     <p className="mt-2 text-gray-600">
-                        Exporta información detallada de productos con stock > 0 en Excel junto con sus imágenes organizadas. Las descripciones incluyen automáticamente el mensaje de contacto para reventa.
+                        Exportá productos con stock &gt; 0 listos para AutoList: CSV limpio (1 producto por línea, sin saltos dentro de la descripción), Image URLs en JPEG y carpeta <code>autolist_images</code> con nombres RowN_SKU_i.
                     </p>
                 </div>
 
@@ -453,12 +453,12 @@ const ExportProductsPage = () => {
                             Instrucciones de Uso
                         </h3>
                         <ol className="list-decimal list-inside text-blue-800 space-y-2">
-                            <li>Selecciona una categoría y subcategoría para filtrar los productos</li>
-                            <li>Revisa la lista de productos encontrados (solo productos con stock > 0)</li>
-                            <li>Selecciona los productos que deseas exportar (o selecciona todos)</li>
-                            <li>Haz clic en "Exportar" para descargar el archivo ZIP</li>
-                            <li>El archivo incluirá un Excel con los datos y carpetas organizadas con las imágenes</li>
-                            <li>Las descripciones incluyen automáticamente el mensaje de contacto para reventa</li>
+                            <li>Elegí categoría y subcategoría (solo salen productos con stock &gt; 0)</li>
+                            <li>Seleccioná los productos (o todos) y exportá el ZIP</li>
+                            <li>Abrí el ZIP: usá el archivo <strong>autolist_….csv</strong> en la extensión AutoList</li>
+                            <li>En AutoList mapeá una vez: Title, Price, Category, Condition, Description, Image URLs</li>
+                            <li>Abrí Marketplace → Crear publicación y usá Fill / Fill next en la cola</li>
+                            <li>Las carpetas numeradas con fotos quedan de respaldo; AutoList puede bajar las Image URLs solo</li>
                         </ol>
                     </div>
                 )}

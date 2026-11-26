@@ -1,24 +1,24 @@
 'use strict';
 
 const { keys, status, saveCatalogProduct } = require('./tiendaNaranjaClient');
-const { formatTnWeight, estimateWeight } = require('./productWeightService');
+const { formatTnWeight, estimateWeight, weightMeta } = require('./productWeightService');
 const { toMerchantJpegUrl } = require('../helpers/merchantJpeg');
-const { tnListPrice } = require('./tiendaNaranjaPricing');
+const { tnDisplayPrices, tnStockQty } = require('./tiendaNaranjaPricing');
 
-/** Precio TN = sellingPrice web × 1.10 (misma regla que el sync masivo). */
+/** Precio TN = Zenn × 1.10 (venta + anterior si aplica). */
 function tnPrices(product) {
-  const price = tnListPrice(product);
+  const display = tnDisplayPrices(product);
   return {
-    price,
-    specialPrice: 0,
-    promo: false
+    price: display.price,
+    specialPrice: display.promo ? display.specialPrice : 0,
+    promo: display.promo,
+    from: display.from,
+    to: display.to
   };
 }
 
 function weightOf(product) {
-  const saved = Number(product.shippingWeightKg);
-  if (Number.isFinite(saved) && saved > 0) return saved;
-  return estimateWeight(product).kg;
+  return weightMeta(product).kg;
 }
 
 const IMAGE_OK = /\.(jpe?g|png|gif)(\?|#|$)/i;
@@ -112,6 +112,7 @@ function createPayload(product) {
   const prices = tnPrices(product);
   const description = product.description || `<p>${clip(product.productName, 180)}</p>`;
   const weight = formatTnWeight(weightOf(product));
+  const qty = tnStockQty(product);
   return {
     type: 'simple',
     set: '4',
@@ -122,10 +123,10 @@ function createPayload(product) {
       short_description: shortDescriptionOf(product),
       description,
       price: money(prices.price),
-      special_price: '',
+      special_price: prices.promo ? money(prices.specialPrice) : '',
       quantity_and_stock_status: {
-        qty: String(Math.max(0, Number(product.stock) || 0)),
-        is_in_stock: Number(product.stock) > 0 ? '1' : '0'
+        qty: String(qty),
+        is_in_stock: qty > 0 ? '1' : '0'
       },
       visibility: '4',
       weight,
@@ -154,13 +155,14 @@ function updatePayload(product, fields = {}) {
     }
   };
   if (fields.price !== false) {
-    const { tnListPrice } = require('./tiendaNaranjaPricing');
-    body.product.price = money(tnListPrice(product) || sell || list);
-    body.product.special_price = '';
+    const prices = tnPrices(product);
+    body.product.price = money(prices.price || sell || list);
+    body.product.special_price = prices.promo ? money(prices.specialPrice) : '';
   }
   if (fields.stock !== false) {
+    const qty = tnStockQty(product);
     body.product.quantity_and_stock_status = {
-      qty: String(Math.max(0, Number(product.stock) || 0))
+      qty: String(qty)
     };
   }
   if (fields.images === 'replace' || fields.images === 'append') {
@@ -193,15 +195,33 @@ async function pushProduct(product, { images } = {}) {
     throw error;
   }
   const prices = tnPrices(product);
-  const qty = Math.max(0, Number(product.stock) || 0);
+  const qty = tnStockQty(product);
   const cats = categoryIdsOf(product);
   const weight = Number(formatTnWeight(weightOf(product)));
+  const custom = [
+    keys().sellerId ? { attribute_code: 'seller_id', value: keys().sellerId } : null,
+    { attribute_code: 'description', value: product.description || clip(product.productName, 400) },
+    { attribute_code: 'short_description', value: shortDescriptionOf(product) }
+  ];
+  if (prices.promo && prices.specialPrice > 0) {
+    custom.push(
+      { attribute_code: 'special_price', value: String(prices.specialPrice) },
+      { attribute_code: 'special_from_date', value: prices.from },
+      { attribute_code: 'special_to_date', value: prices.to }
+    );
+  } else {
+    custom.push(
+      { attribute_code: 'special_price', value: '' },
+      { attribute_code: 'special_from_date', value: '' },
+      { attribute_code: 'special_to_date', value: '' }
+    );
+  }
   const saved = await saveCatalogProduct(sku, {
     sku,
     name: clip(product.productName, 180),
     price: prices.price,
     weight,
-    status: 1,
+    status: qty > 0 ? 1 : 2,
     visibility: 4,
     type_id: 'simple',
     attribute_set_id: 4,
@@ -209,14 +229,7 @@ async function pushProduct(product, { images } = {}) {
       stock_item: { qty, is_in_stock: qty > 0 },
       category_links: cats.map((id, position) => ({ position, category_id: String(id) }))
     },
-    custom_attributes: [
-      keys().sellerId ? { attribute_code: 'seller_id', value: keys().sellerId } : null,
-      { attribute_code: 'description', value: product.description || clip(product.productName, 400) },
-      { attribute_code: 'short_description', value: clip(product.productName, 180) },
-      { attribute_code: 'special_price', value: '' },
-      { attribute_code: 'special_from_date', value: '' },
-      { attribute_code: 'special_to_date', value: '' }
-    ].filter(Boolean)
+    custom_attributes: custom.filter(Boolean)
   });
   return {
     error: 0,

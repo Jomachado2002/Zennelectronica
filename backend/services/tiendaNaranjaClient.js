@@ -209,11 +209,24 @@ async function listSellerProducts() {
   return request('GET', '/rest/V1/mpapi/sellers/me/product');
 }
 
-async function listCatalog({ page = 1, pageSize = 20, field, value } = {}) {
+async function listCatalog({
+  page = 1,
+  pageSize = 20,
+  field,
+  value,
+  fields,
+  sortField,
+  sortDir
+} = {}) {
   const query = {
     'searchCriteria[currentPage]': page,
     'searchCriteria[pageSize]': pageSize
   };
+  if (fields) query.fields = fields;
+  if (sortField) {
+    query['searchCriteria[sortOrders][0][field]'] = sortField;
+    query['searchCriteria[sortOrders][0][direction]'] = sortDir || 'ASC';
+  }
   if (field && value) {
     query['searchCriteria[filter_groups][0][filters][0][field]'] = field;
     query['searchCriteria[filter_groups][0][filters][0][value]'] = value;

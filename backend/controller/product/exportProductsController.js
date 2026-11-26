@@ -8,14 +8,29 @@ const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const { toMerchantJpegUrl } = require('../../helpers/merchantJpeg');
 
 const EXPORT_CONTACTO =
     'Para más información podrías escribirnos al 0973/345/284 contamos con productos al por mayor para reventa';
+
+/** Columnas que AutoList (Chrome) mapea al formulario de Facebook Marketplace. */
+const AUTOLIST_COLUMNS = [
+    'Title',
+    'Price',
+    'Category',
+    'Condition',
+    'Description',
+    'Image URLs',
+    'SKU',
+    'Stock'
+];
 
 /** Máx. descargas simultáneas (sin esto el export abre cientos de sockets y el CDN corta/timeout). */
 const IMAGE_DOWNLOAD_CONCURRENCY = 6;
 const IMAGE_DOWNLOAD_TIMEOUT_MS = 45000;
 const IMAGE_DOWNLOAD_RETRIES = 3;
+const AUTOLIST_MAX_IMAGES = 10;
+const AUTOLIST_MAX_TITLE = 100;
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -130,6 +145,131 @@ function buildExportDescription(product) {
     parts.push(EXPORT_CONTACTO);
 
     return parts.join('\n');
+}
+
+function clipText(value, max) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (text.length <= max) return text;
+    return `${text.slice(0, max - 1).replace(/\s+\S*$/, '').trim()}`;
+}
+
+function taxonomyLabels(categoryDoc, categoryValue, subcategoryValue) {
+    const categoryLabel = categoryDoc?.label || humanizeSpecKey(categoryValue) || String(categoryValue || '');
+    const sub = (categoryDoc?.subcategories || []).find(
+        (item) => String(item.value || '').trim() === String(subcategoryValue || '').trim()
+    );
+    const subcategoryLabel = sub?.label || humanizeSpecKey(subcategoryValue) || String(subcategoryValue || '');
+    return { categoryLabel, subcategoryLabel };
+}
+
+/**
+ * En Marketplace (EN) de esta cuenta el drawer útil es Electronics / Computers.
+ * Una sola etiqueta estable para que AutoList (o el clic manual) sea siempre la misma.
+ */
+function marketplaceCategory() {
+    return 'Electronics';
+}
+
+function listingPrice(product) {
+    const selling = Number(product.sellingPrice);
+    if (Number.isFinite(selling) && selling > 0) return Math.round(selling);
+    const price = Number(product.price);
+    if (Number.isFinite(price) && price > 0) return Math.round(price);
+    return 0;
+}
+
+function safeAutolistId(product, rowNumber) {
+    const sku = String(product.codigo || '')
+        .trim()
+        .replace(/[^\w.-]+/g, '_')
+        .slice(0, 40);
+    return sku || `item${rowNumber}`;
+}
+
+/**
+ * URLs para AutoList: JPEG (CDN hermano / proxy), no WebP.
+ * AutoList suele fallar al bajar .webp del CDN → Items quedan "(no images)".
+ */
+function imageUrlsForAutolist(product) {
+    const seen = new Set();
+    return (Array.isArray(product.productImage) ? product.productImage : [])
+        .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url.trim()))
+        .map((url) => String(toMerchantJpegUrl(url.trim()) || url.trim()).replace(/,\s*/g, ''))
+        .filter((url) => /^https?:\/\//i.test(url))
+        .filter((url) => {
+            if (seen.has(url)) return false;
+            seen.add(url);
+            return true;
+        })
+        .slice(0, AUTOLIST_MAX_IMAGES);
+}
+
+/**
+ * AutoList parte mal el CSV si una celda trae saltos de línea reales
+ * (cuenta cientos/miles de "rows" fantasma). Una sola línea por celda.
+ */
+function flattenAutolistText(value) {
+    return String(value ?? '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .map((line) => line.replace(/\t+/g, ': ').trim())
+        .filter(Boolean)
+        .join(' | ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/** Specs en una sola línea (sin tabs ni \\n) para el CSV de AutoList. */
+function buildAutolistDescription(product) {
+    const parts = [];
+    const desc = flattenAutolistText(product.description || '');
+    if (desc) parts.push(desc);
+
+    const specs = Object.entries(mergedSpecifications(product))
+        .filter(([key, value]) => key && value != null && String(value).trim() !== '')
+        .map(([key, value]) => `${humanizeSpecKey(key)}: ${flattenAutolistText(value)}`);
+    if (specs.length) parts.push(specs.join(' | '));
+
+    parts.push(flattenAutolistText(EXPORT_CONTACTO));
+    return flattenAutolistText(parts.join(' | '));
+}
+
+/**
+ * Una fila lista para AutoList / Excel / CSV.
+ * Image URLs van separadas por coma; Description siempre en una sola línea.
+ */
+function buildAutolistRow(product, categoryDoc) {
+    return {
+        Title: flattenAutolistText(clipText(product.productName, AUTOLIST_MAX_TITLE)),
+        Price: listingPrice(product),
+        Category: marketplaceCategory(),
+        Condition: 'New',
+        Description: buildAutolistDescription(product),
+        'Image URLs': imageUrlsForAutolist(product).join(','),
+        SKU: flattenAutolistText(product.codigo || ''),
+        Stock: Math.max(0, Math.round(Number(product.stock) || 0))
+    };
+}
+
+function csvCell(value) {
+    // Defensa final: nunca escribir \\n/\\r dentro de una celda del CSV AutoList.
+    const text = flattenAutolistText(value);
+    if (/[",]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+}
+
+function buildAutolistCsv(rows) {
+    const lines = [AUTOLIST_COLUMNS.join(',')];
+    rows.forEach((row) => {
+        const line = AUTOLIST_COLUMNS.map((col) => csvCell(row[col])).join(',');
+        if (/[\r\n]/.test(line)) {
+            throw new Error('AutoList CSV inválido: una fila todavía tiene saltos de línea');
+        }
+        lines.push(line);
+    });
+    // BOM para que Excel abra bien tildes/ñ. 1 header + N productos = N+1 líneas.
+    return `\uFEFF${lines.join('\n')}\n`;
 }
 
 /**
@@ -382,37 +522,50 @@ async function downloadProductImagesController(req, res) {
         const subcategoryDir = path.join(exportDir, subcategory);
         fs.mkdirSync(subcategoryDir, { recursive: true });
 
-        // Generar Excel
-        const excelData = filteredProducts.map((product, index) => ({
-            'N°': index + 1,
-            'Título del producto': product.productName,
-            'Descripción': buildExportDescription(product),
-            'Precio de venta': product.sellingPrice,
-            'Stock': product.stock
-        }));
+        // Planilla AutoList: Title / Price / Category / Condition / Description / Image URLs
+        const excelData = filteredProducts.map((product) => buildAutolistRow(product, categoryDoc));
 
-        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const worksheet = XLSX.utils.json_to_sheet(excelData, { header: AUTOLIST_COLUMNS });
         worksheet['!cols'] = [
-            { wch: 5 },
-            { wch: 48 },
-            { wch: 90 },
-            { wch: 14 },
-            { wch: 8 }
+            { wch: 42 }, // Title
+            { wch: 12 }, // Price
+            { wch: 36 }, // Category
+            { wch: 12 }, // Condition
+            { wch: 80 }, // Description
+            { wch: 70 }, // Image URLs
+            { wch: 16 }, // SKU
+            { wch: 8 } // Stock
         ];
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos');
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'AutoList');
 
-        // Guardar Excel
-        const excelPath = path.join(subcategoryDir, `productos_${subcategory.toLowerCase()}.xlsx`);
+        const safeSub = String(subcategory || 'productos').toLowerCase().replace(/[^\w.-]+/g, '_');
+        const excelPath = path.join(subcategoryDir, `autolist_${safeSub}.xlsx`);
         XLSX.writeFile(workbook, excelPath);
 
-        // Cola plana: 1 job por imagen. Antes se abrían cientos de sockets a la vez → ECONNRESET/timeouts.
+        // CSV limpio para AutoList: 1 producto = 1 línea (sin \\n dentro de celdas).
+        const csvBody = buildAutolistCsv(excelData);
+        const expectedLines = excelData.length + 1; // header + filas
+        const actualLines = csvBody.replace(/^\uFEFF/, '').replace(/\n$/, '').split('\n').length;
+        if (actualLines !== expectedLines) {
+            throw new Error(
+                `AutoList CSV corrupto: ${actualLines} líneas vs ${expectedLines} esperadas`
+            );
+        }
+        const csvPath = path.join(subcategoryDir, `autolist_${safeSub}.csv`);
+        fs.writeFileSync(csvPath, csvBody, 'utf8');
+
+        // Fotos locales con nombre AutoList: Row{n}_{sku}_{i}.jpg (sección 5 de la extensión).
+        const autolistImagesDir = path.join(subcategoryDir, 'autolist_images');
+        fs.mkdirSync(autolistImagesDir, { recursive: true });
+
         const downloadJobs = [];
         filteredProducts.forEach((product, index) => {
-            const productDir = path.join(subcategoryDir, `${index + 1}`);
+            const rowNumber = index + 1;
+            const productDir = path.join(subcategoryDir, String(rowNumber));
             fs.mkdirSync(productDir, { recursive: true });
 
-            const images = Array.isArray(product.productImage) ? product.productImage : [];
+            const images = imageUrlsForAutolist(product);
             if (!images.length) {
                 fs.writeFileSync(
                     path.join(productDir, 'sin_imagenes.txt'),
@@ -421,30 +574,35 @@ async function downloadProductImagesController(req, res) {
                 return;
             }
 
+            const rowId = safeAutolistId(product, rowNumber);
             images.forEach((imageUrl, imageIndex) => {
-                downloadJobs.push({ product, productDir, imageUrl, imageIndex });
+                downloadJobs.push({
+                    product,
+                    productDir,
+                    imageUrl,
+                    imageIndex,
+                    rowNumber,
+                    rowId
+                });
             });
         });
 
         console.log(
-            `[export] Descargando ${downloadJobs.length} imágenes (máx ${IMAGE_DOWNLOAD_CONCURRENCY} en paralelo)…`
+            `[export] Descargando ${downloadJobs.length} imágenes JPEG (máx ${IMAGE_DOWNLOAD_CONCURRENCY} en paralelo)…`
         );
 
         let okCount = 0;
         let failCount = 0;
 
         await mapWithConcurrency(downloadJobs, IMAGE_DOWNLOAD_CONCURRENCY, async (job) => {
-            const { product, productDir, imageUrl, imageIndex } = job;
-            let ext = '.jpg';
-            try {
-                ext = path.extname(new URL(imageUrl).pathname) || '.jpg';
-            } catch {
-                /* URL rara: dejar .jpg */
-            }
-            const imagePath = path.join(productDir, `imagen_${imageIndex + 1}${ext}`);
+            const { product, productDir, imageUrl, imageIndex, rowNumber, rowId } = job;
+            const fileName = `Row${rowNumber}_${rowId}_${imageIndex + 1}.jpg`;
+            const imagePath = path.join(productDir, fileName);
+            const flatPath = path.join(autolistImagesDir, fileName);
 
             try {
                 await downloadImageToFile(imageUrl, imagePath);
+                fs.copyFileSync(imagePath, flatPath);
                 okCount += 1;
                 console.log(
                     `✅ Imagen ${imageIndex + 1} descargada para producto ${product.productName}`
@@ -474,7 +632,10 @@ async function downloadProductImagesController(req, res) {
             output.on('close', () => {
                 // Enviar archivo ZIP
                 res.setHeader('Content-Type', 'application/zip');
-                res.setHeader('Content-Disposition', `attachment; filename="productos_${subcategory.toLowerCase()}.zip"`);
+                res.setHeader(
+                    'Content-Disposition',
+                    `attachment; filename="autolist_${String(subcategory || 'productos').toLowerCase().replace(/[^\w.-]+/g, '_')}.zip"`
+                );
                 
                 const fileStream = fs.createReadStream(zipPath);
                 fileStream.pipe(res);

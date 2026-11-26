@@ -421,7 +421,8 @@ sellingPrice: { type: Number, default: 0 },      // Precio de venta final
         inVisao: { type: Boolean, default: undefined },
         lastSeenInVisaoAt: { type: Date, default: null },
         lastRemotePrice: { type: Number, default: null },
-        lastRemoteStock: { type: Number, default: null }
+        lastRemoteStock: { type: Number, default: null },
+        onTn: { type: Boolean, default: undefined }
     },
 
     // Campos para presupuestos y seguimiento

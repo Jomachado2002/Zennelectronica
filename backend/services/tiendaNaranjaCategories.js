@@ -81,7 +81,7 @@ function electroFromName(name) {
   return TN.cocinaOtros;
 }
 
-function tnCategoryOf(product) {
+function tnCategoryOfHeuristic(product) {
   const cat = norm(product.category);
   const sub = norm(product.subcategory);
   const name = norm(product.productName);
@@ -166,8 +166,14 @@ function tnCategoryOf(product) {
   return DEFAULT_CATEGORY;
 }
 
+/** Compat: misma heurística. Preferir resolveTnPath (tabla DB) en Excel/sync. */
+function tnCategoryOf(product) {
+  return tnCategoryOfHeuristic(product);
+}
+
 module.exports = {
   DEFAULT_CATEGORY,
   tnCategoryOf,
+  tnCategoryOfHeuristic,
   TN
 };

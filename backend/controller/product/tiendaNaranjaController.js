@@ -8,15 +8,22 @@ const {
   runTnPriceStockSync,
   collectExistingSkus,
   listDiferencias,
+  listPendingCreates,
   listRemoteSellerSkus
 } = require('../../services/tiendaNaranjaSyncService');
-const { fillMissingWeights } = require('../../services/productWeightService');
+const {
+  fillMissingWeights,
+  listHeavyWeights,
+  recheckSuspiciousWeights,
+  HEAVY_KG
+} = require('../../services/productWeightService');
 const {
   getTnSettings,
   getDiscountBrands,
   setDiscountBrands,
   TN_MARKUP
 } = require('../../services/tiendaNaranjaPricing');
+const categoryMap = require('../../services/tiendaNaranjaCategoryMap');
 
 const estado = async (req, res) => {
   try {
@@ -27,7 +34,11 @@ const estado = async (req, res) => {
       markup: TN_MARKUP,
       discountBrands: settings.discountBrands || [],
       lastPriceStockSyncAt: settings.lastPriceStockSyncAt,
-      lastPriceStockSync: settings.lastPriceStockSync || null
+      lastPriceStockSync: settings.lastPriceStockSync || null,
+      pendingCreateCount: settings.pendingCreateCount || 0,
+      pendingCreateUpdatedAt: settings.pendingCreateUpdatedAt || null,
+      remoteCatalogCount: settings.remoteCatalogCount || 0,
+      zennStockCount: settings.zennStockCount || 0
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'No se pudo leer el estado de Tienda Naranja' });
@@ -57,10 +68,13 @@ const catalogoExcel = async (req, res) => {
     const onlyStock = String(req.query.todos || '') !== '1';
     const file = await excel.buildExcel({ onlyStock });
     res.set({
-      'Content-Type': 'application/vnd.ms-excel',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${file.filename}"`,
       'Cache-Control': 'no-store',
-      'X-TN-Rows': String(file.count)
+      'X-TN-Rows': String(file.count),
+      'X-TN-Heavy': String(file.heavyCount || 0),
+      'X-TN-Sheets': String(file.sheets || 0),
+      'X-TN-Skipped': String(file.skipped || 0)
     });
     return res.send(file.buffer);
   } catch (error) {
@@ -73,16 +87,37 @@ const excelNuevos = async (req, res) => {
   try {
     req.setTimeout(10 * 60 * 1000);
     res.setTimeout(10 * 60 * 1000);
-    const probe = String(req.query.probe || '1') !== '0';
-    const existing = probe
-      ? await collectExistingSkus({ probeMissing: true })
-      : await listRemoteSellerSkus();
+    const live = String(req.query.live || '') === '1';
+    let existing;
+    if (live) {
+      const probe = String(req.query.probe || '1') !== '0';
+      existing = probe
+        ? await collectExistingSkus({ probeMissing: true })
+        : await listRemoteSellerSkus();
+    } else {
+      const Product = require('../../models/productModel');
+      const prefix = (tn.keys().skuPrefix || 'ZEEL').toUpperCase();
+      const rows = await Product.find({ 'tiendaNaranja.onTn': true }).select('codigo').lean();
+      existing = new Set(rows.map((product) => {
+        const code = String(product.codigo || '').toUpperCase().replace(/\s+/g, '');
+        return code ? `${prefix}-${code}` : '';
+      }).filter(Boolean));
+      if (!existing.size) {
+        return res.status(409).json({
+          success: false,
+          message: 'Todavía no hay una pasada del worker. Cuando termine Visão, el Excel sale solo con los que faltan en TN.'
+        });
+      }
+    }
     const file = await excel.buildExcelNuevos({ existingSkus: existing });
     res.set({
-      'Content-Type': 'application/vnd.ms-excel',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${file.filename}"`,
       'Cache-Control': 'no-store',
       'X-TN-Rows': String(file.count),
+      'X-TN-Heavy': String(file.heavyCount || 0),
+      'X-TN-Sheets': String(file.sheets || 0),
+      'X-TN-Skipped': String(file.skipped || 0),
       'X-TN-Skipped-Existing': String(file.skippedExisting || existing.size)
     });
     return res.send(file.buffer);
@@ -108,8 +143,11 @@ const syncPrecios = async (req, res) => {
     req.setTimeout(20 * 60 * 1000);
     res.setTimeout(20 * 60 * 1000);
     const limit = Number(req.body && req.body.limit) || Number(req.query.limit) || 0;
-    const fromRemote = String((req.body && req.body.fromRemote) || req.query.fromRemote || '') === '1'
-      || (req.body && req.body.fromRemote === true);
+    // Por defecto sincroniza contra el catálogo remoto del seller.
+    const fromRemote = !(
+      (req.body && req.body.fromRemote === false)
+      || String((req.body && req.body.fromRemote) || req.query.fromRemote || '1') === '0'
+    );
     const data = await runTnPriceStockSync({
       limit: limit || undefined,
       fromRemote
@@ -122,10 +160,38 @@ const syncPrecios = async (req, res) => {
 
 const pesos = async (req, res) => {
   try {
-    const data = await fillMissingWeights({ useAi: String(req.query.ai || '') === '1', limit: Number(req.query.limit) || 0 });
-    return res.json({ success: true, ...data });
+    req.setTimeout(10 * 60 * 1000);
+    res.setTimeout(10 * 60 * 1000);
+    const useAi = String(req.query.ai || req.body?.ai || '') === '1';
+    const limit = Number(req.query.limit || req.body?.limit) || 0;
+    const recheck = String(req.query.recheck || req.body?.recheck || '1') !== '0';
+    const filled = await fillMissingWeights({ useAi, limit });
+    const corrected = recheck
+      ? await recheckSuspiciousWeights({ useAi, limit })
+      : { scanned: 0, updated: 0, fixed: 0, stillHeavy: 0, samples: [] };
+    const heavy = await listHeavyWeights({ minKg: HEAVY_KG, onlyStock: true, limit: 80 });
+    return res.json({
+      success: true,
+      heavyKg: HEAVY_KG,
+      filled,
+      corrected,
+      heavy
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message || 'No se pudo cargar el peso' });
+  }
+};
+
+const pesosRevisar = async (req, res) => {
+  try {
+    const data = await listHeavyWeights({
+      minKg: Number(req.query.minKg) || HEAVY_KG,
+      onlyStock: String(req.query.todos || '') !== '1',
+      limit: Number(req.query.limit) || 200
+    });
+    return res.json({ success: true, heavyKg: HEAVY_KG, ...data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo listar pesos pesados' });
   }
 };
 
@@ -137,6 +203,18 @@ const revisarProducto = async (req, res) => {
     return res.json({ success: true, ...catalog.readiness(product), sku: catalog.skuOf(product) });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message || 'No se pudo revisar el producto' });
+  }
+};
+
+const pendientes = async (req, res) => {
+  try {
+    const data = await listPendingCreates({
+      limit: Number(req.query.limit) || 400,
+      offset: Number(req.query.offset) || 0
+    });
+    return res.json({ success: true, ...data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo listar lo que falta en TN' });
   }
 };
 
@@ -174,6 +252,68 @@ const putMarcas = async (req, res) => {
   }
 };
 
+const getCategoriasMap = async (req, res) => {
+  try {
+    const [pairs, tnPaths] = await Promise.all([
+      categoryMap.listZennPairs(),
+      Promise.resolve(categoryMap.listTnCategoryPaths())
+    ]);
+    const mapped = pairs.filter((p) => p.mapped).length;
+    return res.json({
+      success: true,
+      total: pairs.length,
+      mapped,
+      unmapped: pairs.length - mapped,
+      pairs,
+      tnPaths
+    });
+  } catch (error) {
+    console.error('[tn] categorias-map', error);
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo leer el mapeo' });
+  }
+};
+
+const putCategoriaMap = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const doc = await categoryMap.upsertMap({
+      zennCategory: body.zennCategory,
+      zennSubcategory: body.zennSubcategory || '',
+      tnPath: body.tnPath,
+      zennCategoryLabel: body.zennCategoryLabel,
+      zennSubcategoryLabel: body.zennSubcategoryLabel,
+      tnCategoryIds: body.tnCategoryIds,
+      productCount: body.productCount,
+      source: 'manual'
+    });
+    return res.json({ success: true, map: doc });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'No se pudo guardar el mapeo'
+    });
+  }
+};
+
+const seedCategoriasMap = async (req, res) => {
+  try {
+    const force = String((req.body && req.body.force) || req.query.force || '') === '1';
+    const data = await categoryMap.seedFromHeuristic({ force });
+    return res.json({ success: true, ...data });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo sembrar el mapeo' });
+  }
+};
+
+const deleteCategoriaMap = async (req, res) => {
+  try {
+    await categoryMap.deleteMap(req.params.id);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'No se pudo borrar el mapeo' });
+  }
+};
+
 module.exports = {
   estado,
   probar,
@@ -183,7 +323,13 @@ module.exports = {
   tick,
   syncPrecios,
   pesos,
+  pesosRevisar,
   diferencias,
+  pendientes,
   getMarcas,
-  putMarcas
+  putMarcas,
+  getCategoriasMap,
+  putCategoriaMap,
+  seedCategoriasMap,
+  deleteCategoriaMap
 };

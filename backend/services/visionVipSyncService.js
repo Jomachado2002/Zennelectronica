@@ -1877,8 +1877,26 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         stockCleanupCount,
         firebaseImageCleanup,
         persistResults,
-        mirrorSummary
+        mirrorSummary,
+        tiendaNaranja: await runTnAfterVisaoMirror()
     };
+}
+
+/** Precio TN = Zenn ×1.10 y stock 5 si hay saldo, 0 si no. No corta el mirror si TN falla. */
+async function runTnAfterVisaoMirror() {
+    if (String(process.env.TN_AFTER_VISAO || '1') === '0') {
+        return { skipped: true };
+    }
+    try {
+        const { runTnPriceStockSync } = require('./tiendaNaranjaSyncService');
+        console.log('[Visão mirror] TN: precio ×1.10 y stock 5/0 de lo ya publicado…');
+        const tn = await runTnPriceStockSync({ fromRemote: true });
+        console.log(`[Visão mirror] TN ${tn && tn.message ? tn.message : ''}`);
+        return tn;
+    } catch (error) {
+        console.error('[Visão mirror] TN', error && error.message ? error.message : error);
+        return { ok: false, message: error && error.message ? error.message : 'error' };
+    }
 }
 
 /**

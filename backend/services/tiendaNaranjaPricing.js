@@ -4,14 +4,16 @@ const TnSettings = require('../models/tnSettingsModel');
 const { DEFAULT_DISCOUNT_BRANDS } = require('../models/tnSettingsModel');
 
 /**
- * Precio TN = precio de venta de la web (sellingPrice) × 1.10.
- * Nada de Visão × márgenes × marcas.
+ * Precio TN = lo mismo que Zenn, +10%.
+ * - venta TN   = sellingPrice × 1.10
+ * - anterior TN = price × 1.10 (si price > sellingPrice)
+ * En Magento/TN: `price` = anterior (tachado), `special_price` = venta.
  */
 const WEB_MARKUP = 1.1;
 const TN_MARKUP = WEB_MARKUP;
 const TN_STOCK_IN_VISAO = 5;
 
-/** Compat: ya no se usa para armar precio, se deja exportado por si algo lo lee. */
+/** Compat legacy exports */
 const IVA = 1.1;
 const ZENN_MARGIN = 1;
 const ITAU_MARGIN = 1;
@@ -78,10 +80,17 @@ function isDiscountBrand(product, brands) {
   return list.some((brand) => brand && hay.includes(brand));
 }
 
+/** Stock vendible real en Zenn (no usa el flag viejo inVisao). */
+function hasZennStock(product) {
+  const qty = Number(product && product.stock);
+  if (!Number.isFinite(qty) || qty <= 0) return false;
+  if (String(product && product.stockStatus || '') === 'out_of_stock') return false;
+  return true;
+}
+
 function inVisao(product) {
-  if (product && product.tiendaNaranja && product.tiendaNaranja.inVisao === true) return true;
-  if (product && product.tiendaNaranja && product.tiendaNaranja.inVisao === false) return false;
-  return Number(product && product.stock) > 0 && String(product.stockStatus || '') !== 'out_of_stock';
+  // El stock de Mongo manda: sin stock en Zenn = sin stock en TN / Excel.
+  return hasZennStock(product);
 }
 
 function visaoGs(product, usdRate) {
@@ -101,31 +110,89 @@ function webSellGs(product) {
   return Math.round(Number(product && product.price) || 0);
 }
 
-/** Precio a enviar a Tienda Naranja: venta web + 10%. */
-function tnListPrice(product) {
-  const base = webSellGs(product);
+function webListGs(product) {
+  return Math.round(Number(product && product.price) || 0);
+}
+
+function withMarkup(amount) {
+  const base = Math.round(Number(amount) || 0);
   if (base <= 0) return 0;
   return Math.max(1, Math.round(base * WEB_MARKUP));
 }
 
+/** Precio de venta a enviar a TN (sellingPrice × 1.10). */
+function tnListPrice(product) {
+  return withMarkup(webSellGs(product));
+}
+
+/** Promos TN: desde hoy 00:00 hasta dentro de 3 días 23:59 (hora Asunción aproximada local). */
+function promoDateRange({ days = 3 } = {}) {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + Number(days || 3), 23, 59, 0);
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${day} ${h}:${min}:${s}`;
+  };
+  return { from: fmt(from), to: fmt(to) };
+}
+
 /**
- * Mismo precio en list y sin special inventado.
- * (Antes había un “tachado” fake hasta el 20/11; eso distorsionaba lo que ve el cliente.)
+ * Misma lógica que ve el cliente en Zenn, pero ×1.10.
+ * Si hay precio anterior mayor → TN muestra tachado (price) + especial (venta).
  */
 function tnDisplayPrices(product) {
-  const price = tnListPrice(product);
+  const sell = webSellGs(product);
+  const list = webListGs(product);
+  const saleTn = withMarkup(sell);
+  if (saleTn <= 0) {
+    return {
+      price: 0,
+      specialPrice: 0,
+      pct: 0,
+      promo: false,
+      from: '',
+      to: '',
+      zennSell: sell,
+      zennList: list
+    };
+  }
+
+  const hasStrike = list > sell && list > 0;
+  if (hasStrike) {
+    const listTn = withMarkup(list);
+    const dates = promoDateRange();
+    return {
+      price: listTn,
+      specialPrice: saleTn,
+      pct: listTn > 0 ? Math.round(((listTn - saleTn) / listTn) * 1000) / 10 : 0,
+      promo: true,
+      from: dates.from,
+      to: dates.to,
+      zennSell: sell,
+      zennList: list
+    };
+  }
+
   return {
-    price,
+    price: saleTn,
     specialPrice: 0,
     pct: 0,
     promo: false,
     from: '',
-    to: ''
+    to: '',
+    zennSell: sell,
+    zennList: list
   };
 }
 
 function tnStockQty(product) {
-  return inVisao(product) ? TN_STOCK_IN_VISAO : 0;
+  return hasZennStock(product) ? TN_STOCK_IN_VISAO : 0;
 }
 
 function displayPromoActive() {
@@ -160,12 +227,16 @@ module.exports = {
   setDiscountBrands,
   isDiscountBrand,
   inVisao,
+  hasZennStock,
   visaoGs,
   webSellGs,
+  webListGs,
+  withMarkup,
   tnListPrice,
   tnDisplayPrices,
   tnStockQty,
   displayPromoActive,
+  promoDateRange,
   DISPLAY_PROMO_FROM: '',
   DISPLAY_PROMO_UNTIL: '',
   resolveUsdRate

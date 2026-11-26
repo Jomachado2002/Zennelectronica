@@ -17,8 +17,15 @@ const tnSettingsSchema = new mongoose.Schema(
       fail: { type: Number, default: 0 },
       skipped: { type: Number, default: 0 },
       scanned: { type: Number, default: 0 },
+      orphansOff: { type: Number, default: 0 },
+      pendingCreate: { type: Number, default: 0 },
+      remoteCount: { type: Number, default: 0 },
       message: { type: String, default: '' }
-    }
+    },
+    pendingCreateCount: { type: Number, default: 0 },
+    pendingCreateUpdatedAt: { type: Date, default: null },
+    remoteCatalogCount: { type: Number, default: 0 },
+    zennStockCount: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
