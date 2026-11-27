@@ -183,10 +183,12 @@ function putPayload(product, { usdRate, brands }) {
       { attribute_code: 'special_to_date', value: display.to }
     );
   } else {
+    // Un string vacío Magento lo guarda como 0 y la tienda muestra Gs. 0.
+    // null borra el precio especial y deja visible el precio de lista.
     custom.push(
-      { attribute_code: 'special_price', value: '' },
-      { attribute_code: 'special_from_date', value: '' },
-      { attribute_code: 'special_to_date', value: '' }
+      { attribute_code: 'special_price', value: null },
+      { attribute_code: 'special_from_date', value: null },
+      { attribute_code: 'special_to_date', value: null }
     );
   }
   const name = String(product.productName || '')
