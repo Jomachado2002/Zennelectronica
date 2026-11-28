@@ -191,6 +191,50 @@ function tnDisplayPrices(product) {
   };
 }
 
+function pastStamp() {
+  const date = new Date();
+  date.setDate(date.getDate() - 2);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day} 00:00:00`;
+}
+
+/**
+ * Atributos que se pueden mandar a Magento.
+ * Nunca incluye 0 ni vacío: un especial vacío Magento lo guarda como Gs. 0.
+ * Sin promo, el especial es el mismo precio de venta y ya está vencido.
+ */
+function tnPriceAttributes(display) {
+  const price = Math.round(Number(display && display.price) || 0);
+  const special = Math.round(Number(display && display.specialPrice) || 0);
+  if (!(price > 0)) return null;
+  const promo = Boolean(display && display.promo) && special > 0 && special < price;
+  if (promo) {
+    return {
+      price,
+      specialPrice: special,
+      promo: true,
+      custom: [
+        { attribute_code: 'special_price', value: String(special) },
+        { attribute_code: 'special_from_date', value: display.from },
+        { attribute_code: 'special_to_date', value: display.to }
+      ]
+    };
+  }
+  const past = pastStamp();
+  return {
+    price,
+    specialPrice: price,
+    promo: false,
+    custom: [
+      { attribute_code: 'special_price', value: String(price) },
+      { attribute_code: 'special_from_date', value: past },
+      { attribute_code: 'special_to_date', value: past }
+    ]
+  };
+}
+
 function tnStockQty(product) {
   return hasZennStock(product) ? TN_STOCK_IN_VISAO : 0;
 }
@@ -234,6 +278,7 @@ module.exports = {
   withMarkup,
   tnListPrice,
   tnDisplayPrices,
+  tnPriceAttributes,
   tnStockQty,
   displayPromoActive,
   promoDateRange,

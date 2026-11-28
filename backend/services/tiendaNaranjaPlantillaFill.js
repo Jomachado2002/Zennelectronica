@@ -15,6 +15,7 @@ const {
 const { resolveTnPath, DEFAULT_CATEGORY } = require('./tiendaNaranjaCategoryMap');
 const {
   tnDisplayPrices,
+  tnPriceAttributes,
   tnStockQty,
   hasZennStock,
   resolveUsdRate,
@@ -147,6 +148,7 @@ async function ensureWeightsLoaded() {
 function buildCodeValues(product, sheetMeta, schema) {
   const sku = skuOf(product);
   const display = tnDisplayPrices(product);
+  const priced = tnPriceAttributes(display);
   const box = parseBox(product);
   const images = galleryOf(product);
   const stock = tnStockQty(product);
@@ -168,17 +170,17 @@ function buildCodeValues(product, sheetMeta, schema) {
     sku,
     short_description: shortDescriptionOf(product),
     description: descriptionOf(product),
-    // price = anterior×1.10 (tachado) o venta×1.10; special_price = venta×1.10 si hay promo
-    price: display.price,
+    // price y special_price siempre > 0. Un especial vacío Magento lo importa como Gs. 0.
+    price: priced ? priced.price : '',
     qty: stock,
     images: images.join(','),
     weight: peso,
     ts_dimensions_width: box.ancho,
     ts_dimensions_height: box.alto,
     ts_dimensions_length: box.largo,
-    special_price: display.promo ? display.specialPrice : '',
-    special_from_date: display.promo ? display.from : '',
-    special_to_date: display.promo ? display.to : '',
+    special_price: priced ? priced.specialPrice : '',
+    special_from_date: priced ? priced.custom[1].value : '',
+    special_to_date: priced ? priced.custom[2].value : '',
     ...attrs
   };
 

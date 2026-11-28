@@ -131,7 +131,8 @@ const VISAO_VIP_DELIVERY_PYG =
  * 4. Envío
  * USD: ((dólar × 1,10) / divisor) × cotización + envío
  * Gs.: (monto × 1,10) / divisor + envío
- * Si hay precio lista (tachado): `price` usa la misma fórmula; si no, `price` = 0
+ * Si hay precio lista (tachado): `price` usa la misma fórmula.
+ * Si no hay lista mayor, `price` queda igual a la venta. Nunca se guarda 0.
  */
 function calculateVisaoVipPrices(opts = {}) {
     const {
@@ -213,7 +214,7 @@ function calculateVisaoVipPrices(opts = {}) {
         profitAmount: Math.round(profitAmount),
         sellingPrice,
         totalCost: purchasePrice + delivery,
-        price: listPrice,
+        price: listPrice > sellingPrice ? listPrice : sellingPrice,
         precioFuente: sale.fuente,
         precioBasePyg: sale.basePyg,
         visaoMarginDivisor: divisor

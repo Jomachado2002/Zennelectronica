@@ -12,6 +12,7 @@ const {
   getTnSettings,
   resolveUsdRate,
   tnDisplayPrices,
+  tnPriceAttributes,
   tnStockQty,
   isDiscountBrand,
   TN_MARKUP
@@ -167,29 +168,31 @@ async function collectExistingSkus({ probeMissing = true } = {}) {
   return remote;
 }
 
+function assertPositivePrices(body) {
+  const product = body && body.product;
+  if (!product || !Object.prototype.hasOwnProperty.call(product, 'price')) return;
+  if (!(Number(product.price) > 0)) {
+    throw new Error('Precio en 0 bloqueado');
+  }
+  for (const attr of product.custom_attributes || []) {
+    if (attr.attribute_code === 'special_price' && !(Number(attr.value) > 0)) {
+      throw new Error('Precio especial en 0 bloqueado');
+    }
+  }
+}
+
 function putPayload(product, { usdRate, brands }) {
   const sku = skuOf(product);
   const qty = tnStockQty(product);
   const display = tnDisplayPrices(product, usdRate, brands, sku);
+  const priced = tnPriceAttributes(display);
   const weight = Number(formatTnWeight(weightOf(product)));
   // Magento rechaza special_price en la raíz del producto
   // ("%fieldName" / SpecialPrice is not supported). Va solo como custom attribute.
   // El POST /mpapi/sellers/me/addproduct de la doc v3.0 responde ReCaptcha, no sirve para el worker.
-  const custom = [];
-  if (display.promo && display.specialPrice > 0) {
-    custom.push(
-      { attribute_code: 'special_price', value: String(display.specialPrice) },
-      { attribute_code: 'special_from_date', value: display.from },
-      { attribute_code: 'special_to_date', value: display.to }
-    );
-  } else {
-    // Un string vacío Magento lo guarda como 0 y la tienda muestra Gs. 0.
-    // null borra el precio especial y deja visible el precio de lista.
-    custom.push(
-      { attribute_code: 'special_price', value: null },
-      { attribute_code: 'special_from_date', value: null },
-      { attribute_code: 'special_to_date', value: null }
-    );
+  // Sin un precio mayor a 0 no se manda precio: el producto se oculta.
+  if (!priced) {
+    return { sku, price: 0, specialPrice: 0, qty, hide: true, body: orphanOffPayload(sku).body };
   }
   const name = String(product.productName || '')
     .replace(/(\d)\s*"/g, '$1 pulg.')
@@ -198,25 +201,28 @@ function putPayload(product, { usdRate, brands }) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 180);
+  const body = {
+    product: {
+      sku,
+      name: name || undefined,
+      price: priced.price,
+      status: qty > 0 ? 1 : 2,
+      visibility: 4,
+      weight,
+      extension_attributes: {
+        stock_item: { qty, is_in_stock: qty > 0 }
+      },
+      custom_attributes: priced.custom
+    }
+  };
+  assertPositivePrices(body);
   return {
     sku,
-    price: display.price,
-    specialPrice: display.promo ? display.specialPrice : 0,
+    price: priced.price,
+    specialPrice: priced.promo ? priced.specialPrice : priced.price,
     qty,
-    body: {
-      product: {
-        sku,
-        name: name || undefined,
-        price: display.price,
-        status: qty > 0 ? 1 : 2,
-        visibility: 4,
-        weight,
-        extension_attributes: {
-          stock_item: { qty, is_in_stock: qty > 0 }
-        },
-        custom_attributes: custom
-      }
-    }
+    hide: false,
+    body
   };
 }
 
@@ -377,9 +383,24 @@ async function runTnPriceStockSync({ limit, fromRemote } = {}) {
           continue;
         }
         const payload = putPayload(product, { usdRate, brands });
-        if (!payload.price && payload.qty > 0) {
-          skipped += 1;
-          fs.appendFileSync(logFile, `${JSON.stringify({ sku, ok: false, skipped: true, message: 'sin precio' })}\n`);
+        if (payload.hide || !(payload.price > 0)) {
+          try {
+            await tn.request('PUT', `/rest/V1/products/${encodeURIComponent(sku)}`, {
+              auth: 'bearer',
+              environment: 'production',
+              body: orphanOffPayload(sku).body
+            });
+            orphansOff += 1;
+            fs.appendFileSync(logFile, `${JSON.stringify({ sku, ok: true, hidden: true, message: 'sin precio, oculto' })}\n`);
+          } catch (error) {
+            fail += 1;
+            fs.appendFileSync(logFile, `${JSON.stringify({
+              sku,
+              ok: false,
+              hidden: true,
+              message: String(error.message || error).slice(0, 220)
+            })}\n`);
+          }
           continue;
         }
         try {
@@ -449,6 +470,50 @@ async function runTnPriceStockSync({ limit, fromRemote } = {}) {
     }
 
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+    // En TN, con ficha local, pero sin precio de venta: se ocultan. No se les manda 0.
+    if (useRemote && remote.size) {
+      const noPriceLocals = await Product.find({
+        codigo: { $exists: true, $nin: ['', null] },
+        $or: [
+          { sellingPrice: { $lte: 0 } },
+          { sellingPrice: null },
+          { sellingPrice: { $exists: false } }
+        ]
+      }).select('codigo').lean();
+      const noPriceCodes = new Set(
+        noPriceLocals
+          .map((p) => String(p.codigo || '').toUpperCase().replace(/\s+/g, ''))
+          .filter(Boolean)
+      );
+      const hideForNoPrice = [...remote].filter((sku) => {
+        const upper = String(sku).toUpperCase();
+        if (!upper.startsWith(`${prefix}-`)) return false;
+        const code = upper.replace(new RegExp(`^${prefix}-`), '');
+        return code && noPriceCodes.has(code);
+      });
+      console.log(`[tn price-stock] sin precio de venta, se ocultan: ${hideForNoPrice.length}`);
+      for (const sku of hideForNoPrice) {
+        try {
+          await tn.request('PUT', `/rest/V1/products/${encodeURIComponent(sku)}`, {
+            auth: 'bearer',
+            environment: 'production',
+            body: orphanOffPayload(sku).body
+          });
+          orphansOff += 1;
+          fs.appendFileSync(logFile, `${JSON.stringify({ sku, ok: true, hidden: true, message: 'sin precio de venta' })}\n`);
+        } catch (error) {
+          fail += 1;
+          fs.appendFileSync(logFile, `${JSON.stringify({
+            sku,
+            ok: false,
+            hidden: true,
+            message: String(error.message || error).slice(0, 220)
+          })}\n`);
+        }
+        await sleep(5);
+      }
+    }
 
     // SKUs en TN sin producto local (borrados en Zenn) → stock 0 + status disabled.
     if (useRemote && remote.size) {

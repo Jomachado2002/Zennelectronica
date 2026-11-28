@@ -1418,7 +1418,9 @@ async function persistOneVisaoProduct(scraped, ctx) {
             existing.technicalSpecifications = specCanonical;
             existing.specifications = { ...specCanonical };
             applyCanonicalSpecsToDocument(existing, specCanonical);
-            existing.price = Number.isFinite(prices.price) && prices.price > 0 ? prices.price : 0;
+            existing.price = Number.isFinite(prices.price) && prices.price > prices.sellingPrice
+                ? prices.price
+                : prices.sellingPrice;
             existing.purchasePriceUSD = prices.purchasePriceUSD;
             existing.exchangeRate = prices.exchangeRate;
             existing.purchasePrice = prices.purchasePrice;
@@ -1485,7 +1487,9 @@ async function persistOneVisaoProduct(scraped, ctx) {
             description: descriptionNew,
             technicalSpecifications: specCanonical,
             specifications: { ...specCanonical },
-            price: Number.isFinite(prices.price) && prices.price > 0 ? prices.price : 0,
+            price: Number.isFinite(prices.price) && prices.price > prices.sellingPrice
+                ? prices.price
+                : prices.sellingPrice,
             codigo: code,
             slug: uniqueSlug,
             syncSource: SYNC_SOURCE,
@@ -1845,6 +1849,13 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         exportFrontendReport
     });
 
+    let healedListPrices = 0;
+    try {
+        healedListPrices = await healZeroListPrices();
+    } catch (healErr) {
+        console.warn('[Visão mirror] no pude corregir precios en 0:', healErr.message || healErr);
+    }
+
     return {
         mirror: true,
         mirrorStrict,
@@ -1878,8 +1889,25 @@ async function syncVisionVipMirrorToMongo(opts = {}) {
         firebaseImageCleanup,
         persistResults,
         mirrorSummary,
+        healedListPrices,
         tiendaNaranja: await runTnAfterVisaoMirror()
     };
+}
+
+/** El precio de lista en 0 no es un precio: si hay venta, la lista queda igual a la venta. */
+async function healZeroListPrices() {
+    const res = await productModel.updateMany(
+        {
+            sellingPrice: { $gt: 0 },
+            $or: [{ price: { $lte: 0 } }, { price: null }, { price: { $exists: false } }]
+        },
+        [{ $set: { price: '$sellingPrice' } }]
+    );
+    const count = res.modifiedCount || 0;
+    if (count) {
+        console.log(`[Visão mirror] precio de lista en 0 corregido a la venta: ${count}`);
+    }
+    return count;
 }
 
 /** Precio TN = Zenn ×1.10 y stock 5 si hay saldo, 0 si no. No corta el mirror si TN falla. */
